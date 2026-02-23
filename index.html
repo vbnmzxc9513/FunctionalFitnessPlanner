@@ -39,7 +39,7 @@ const DEFAULT_SCHEDULE = [
   { day: 5, name: '星期五', theme: '爆發力與動力鏈整合', concept: '將整週建立的穩定度轉化為力量傳導，進行高心率功能性輸出。', routine: ['bear_crawl', 'squat_jump', 'lunge_press', 'farmer_walk', 'stretch_10m'] }
 ];
 
-const TOTAL_WEEKLY_EXERCISES = 25; // Estimate 5 per day
+const TOTAL_WEEKLY_EXERCISES = 25; 
 
 // --- Helper functions ---
 const getWeekString = (date = new Date(), offsetWeeks = 0) => {
@@ -60,26 +60,32 @@ const getMonthFromWeek = (weekStr) => {
 };
 
 // --- Gemini AI Function ---
-const generateAIPlan = async (lastWeekData, currentLevel) => {
-  const apiKey = ""; // Injected by environment
+const generateAIPlan = async (lastWeekData, currentLevel, lastWeekFeedback) => {
+  const apiKey = ""; 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
   
   const completedCount = lastWeekData ? Object.values(lastWeekData).filter(Boolean).length : 0;
+  
+  let feedbackText = "無反饋紀錄";
+  if (lastWeekFeedback === -1) feedbackText = "覺得太困難 (請考慮增加動態恢復、減少高衝擊動作)";
+  if (lastWeekFeedback === 0) feedbackText = "覺得強度剛好 (請維持目前的主題與強度架構)";
+  if (lastWeekFeedback === 1) feedbackText = "覺得太簡單 (請增加動作複雜度或替換為爆發力導向動作)";
   
   const prompt = `
   你是一位專業的功能性健身教練。使用者每週預期運動5天，每天30分鐘。
   請根據使用者的數據，為本週（星期一到星期五）安排一份全新課表。
   
-  【使用者狀態】
+  【使用者上週狀態】
   - 上週完成動作數: ${completedCount} / 25
-  - 當前難度等級: ${currentLevel} (0=減壓, 1=建構, 2=高強度)
+  - 當前難度參數: ${currentLevel} (0=減壓, 1=建構, 2=高強度)
+  - 上週體感反饋: ${feedbackText}
   
   【可用動作代碼與名稱】
   ${Object.entries(EXERCISES).map(([k, v]) => `${k}: ${v.name} (${v.type})`).join('\n')}
   
   【任務】
-  1. 根據上週完成率給予一段客製化的結論（例如：若上週完成率低，這週請安排較多動態恢復與低強度動作；若完成率高，請增加爆發力與核心動作）。
-  2. 安排星期一到星期五的課表，每天請挑選 4 到 5 個動作代碼。
+  1. 根據上週完成率與「體感反饋」給予一段客製化的結論。如果使用者覺得太困難，請給予鼓勵並在課表中多安排伸展；如果太簡單，請說明你將如何強化訓練。
+  2. 安排星期一到星期五的課表，每天請挑選 4 到 5 個動作代碼。確保每天有明確的主題(theme)與理念(concept)。
   `;
 
   const payload = {
@@ -108,7 +114,6 @@ const generateAIPlan = async (lastWeekData, currentLevel) => {
     }
   };
 
-  // Exponential backoff retry logic
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -124,7 +129,7 @@ const generateAIPlan = async (lastWeekData, currentLevel) => {
 
 export default function App() {
   const [user, setUser] = useState(null);
-  const [authMode, setAuthMode] = useState('pending'); // pending, login, authenticated
+  const [authMode, setAuthMode] = useState('pending'); 
   const [activeTab, setActiveTab] = useState('train'); 
   const [activeDay, setActiveDay] = useState(new Date().getDay() === 0 || new Date().getDay() === 6 ? 1 : new Date().getDay());
   
@@ -145,7 +150,6 @@ export default function App() {
         setAuthMode('authenticated');
       } else {
         setUser(null);
-        // If there's an injected token, try custom token first, else show login
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
           signInWithCustomToken(auth, __initial_auth_token).catch(() => setAuthMode('login'));
         } else {
@@ -182,7 +186,7 @@ export default function App() {
       if (docSnap.exists()) {
         setWeeklyPlan(docSnap.data());
       } else {
-        setWeeklyPlan(null); // Will fallback to default
+        setWeeklyPlan(null); 
       }
     });
 
@@ -205,8 +209,11 @@ export default function App() {
     if (!user) return;
     setIsGeneratingPlan(true);
     try {
-      const lastWeekData = allProgress[lastWeek]?.completed || {};
-      const aiResponse = await generateAIPlan(lastWeekData, difficultyLevel);
+      const lastWeekDoc = allProgress[lastWeek] || {};
+      const lastWeekData = lastWeekDoc.completed || {};
+      const lastWeekFeedback = lastWeekDoc.feedbackValue; // Retrieve exact feedback value
+      
+      const aiResponse = await generateAIPlan(lastWeekData, difficultyLevel, lastWeekFeedback);
       
       const planDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'plans', currentWeek);
       await setDoc(planDocRef, aiResponse);
@@ -222,7 +229,7 @@ export default function App() {
     if (!user) return;
     const key = `day${day}_${exerciseKey}`;
     const newProgress = { ...progress, [key]: !progress[key] };
-    setProgress(newProgress); // Optimistic
+    setProgress(newProgress); 
 
     try {
       const progressDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'progress', currentWeek);
@@ -235,11 +242,16 @@ export default function App() {
     let newLevel = Math.max(0, Math.min(2, difficultyLevel + adjustment));
     setDifficultyLevel(newLevel);
     try {
+      // 1. Update Profile (affects immediate reps)
       const profileDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'settings');
       await setDoc(profileDocRef, { difficultyLevel: newLevel }, { merge: true });
+      
+      // 2. Update current week's progress doc (records feedback state for AI)
       const progressDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'progress', currentWeek);
       await setDoc(progressDocRef, { feedbackProvided: true, feedbackValue: adjustment }, { merge: true });
-    } catch (err) {}
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const getExerciseParams = (exerciseKey) => {
@@ -258,7 +270,6 @@ export default function App() {
 
   const getDifficultyLabel = () => ['減壓恢復期 (低)', '功能性建構期 (中)', '神經適應期 (高)'][difficultyLevel];
 
-  // Render Login Screen
   if (authMode === 'pending') return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">載入中...</div>;
   if (authMode === 'login') {
     return (
@@ -278,12 +289,14 @@ export default function App() {
     );
   }
 
-  // Main App Data
   const currentSchedule = weeklyPlan?.schedule || DEFAULT_SCHEDULE;
   const activeSchedule = currentSchedule.find(s => s.day === activeDay) || currentSchedule[0];
   const completedCount = Object.values(progress).filter(Boolean).length;
   const totalThisWeek = currentSchedule.reduce((acc, curr) => acc + curr.routine.length, 0);
   const progressPercent = Math.round((completedCount / totalThisWeek) * 100) || 0;
+  
+  // Retrieve the feedback value for THIS week to light up the corresponding button
+  const currentWeekFeedbackValue = allProgress[currentWeek]?.feedbackValue;
 
   const monthlyData = Object.values(Object.entries(allProgress).reduce((acc, [weekId, data]) => {
     if (!weekId.includes('-W')) return acc;
@@ -296,7 +309,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-200 font-sans pb-24">
-      {/* Header */}
       <header className="bg-slate-800 p-6 rounded-b-3xl shadow-lg border-b border-slate-700 relative">
         <button onClick={handleLogout} className="absolute top-6 right-6 text-slate-400 hover:text-white transition-colors">
           <LogOut size={20} />
@@ -329,7 +341,6 @@ export default function App() {
         {activeTab === 'train' && (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             
-            {/* AI Coach Banner */}
             <div className={`mb-6 p-5 rounded-2xl border ${weeklyPlan ? 'bg-indigo-900/30 border-indigo-500/30' : 'bg-slate-800 border-slate-700'}`}>
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-bold flex items-center text-indigo-400">
@@ -346,11 +357,10 @@ export default function App() {
                 )}
               </div>
               <p className="text-sm text-slate-300 leading-relaxed">
-                {weeklyPlan ? weeklyPlan.conclusion : "這是一份基礎模板課表。點擊右上角按鈕，讓我根據你上週的實際完成狀況與難度，為你重新規劃這週的動作與主題。"}
+                {weeklyPlan ? weeklyPlan.conclusion : "點擊右上角按鈕，讓我根據你上週的實際完成狀況與難度反饋，為你重新規劃這週的主題。"}
               </p>
             </div>
 
-            {/* Days Navigation */}
             <div className="flex justify-between bg-slate-800 rounded-xl p-2 mb-6 shadow-inner overflow-x-auto">
               {currentSchedule.map((schedule) => {
                 const isSelected = activeDay === schedule.day;
@@ -364,18 +374,16 @@ export default function App() {
               })}
             </div>
 
-            {/* Daily Theme Card */}
             <div className="bg-gradient-to-br from-slate-800 to-slate-800/80 rounded-2xl p-5 mb-6 border border-slate-700 shadow-lg">
               <h2 className="text-lg font-bold text-white mb-1">{activeSchedule?.theme}</h2>
               <p className="text-sm text-slate-300 leading-relaxed bg-slate-900/50 p-3 rounded-lg mt-3">{activeSchedule?.concept}</p>
             </div>
 
-            {/* Exercises List */}
             <div className="space-y-4">
               <h3 className="text-md font-semibold text-slate-300 ml-1 mb-2">本日課表</h3>
               {activeSchedule?.routine.map((exKey, index) => {
                 const exercise = EXERCISES[exKey];
-                if (!exercise) return null; // Safety check if AI hallucinates an unknown key
+                if (!exercise) return null; 
                 const isCompleted = !!progress[`day${activeSchedule.day}_${exKey}`];
                 const params = getExerciseParams(exKey);
 
@@ -403,14 +411,28 @@ export default function App() {
               })}
             </div>
 
-            {/* Weekly Feedback Section */}
             <div className="mt-10 bg-slate-800 rounded-2xl p-5 border border-slate-700">
-              <h3 className="text-md font-bold text-white mb-2">組數/次數微調反饋</h3>
-              <p className="text-xs text-slate-400 mb-4">這會立即改變你下一次動作的組數與秒數要求。</p>
+              <h3 className="text-md font-bold text-white mb-2">本週體感反饋</h3>
+              <p className="text-xs text-slate-400 mb-4">這會立即改變你當前的組數要求，並作為 AI 下週為你更換動作的科學依據。</p>
               <div className="grid grid-cols-3 gap-2">
-                <button onClick={() => handleFeedback(-1)} className="py-2 px-1 text-sm bg-slate-700 hover:bg-slate-600 rounded-lg text-slate-200">太困難<br/><span className="text-xs opacity-60">降階</span></button>
-                <button onClick={() => handleFeedback(0)} className="py-2 px-1 text-sm bg-blue-600/20 border border-blue-500/50 rounded-lg text-blue-400">剛好<br/><span className="text-xs opacity-60">維持</span></button>
-                <button onClick={() => handleFeedback(1)} className="py-2 px-1 text-sm bg-slate-700 hover:bg-slate-600 rounded-lg text-slate-200">太簡單<br/><span className="text-xs opacity-60">增量</span></button>
+                <button 
+                  onClick={() => handleFeedback(-1)} 
+                  className={`py-2 px-1 text-sm rounded-lg transition-colors border ${currentWeekFeedbackValue === -1 ? 'bg-red-500/20 border-red-500 text-red-400 font-bold' : 'bg-slate-700 border-slate-700 hover:bg-slate-600 text-slate-200'}`}
+                >
+                  太困難<span className="block text-xs opacity-60 mt-1">需降階</span>
+                </button>
+                <button 
+                  onClick={() => handleFeedback(0)} 
+                  className={`py-2 px-1 text-sm rounded-lg transition-colors border ${currentWeekFeedbackValue === 0 ? 'bg-blue-500/20 border-blue-500 text-blue-400 font-bold' : 'bg-slate-700 border-slate-700 hover:bg-slate-600 text-slate-200'}`}
+                >
+                  剛好<span className="block text-xs opacity-60 mt-1">維持架構</span>
+                </button>
+                <button 
+                  onClick={() => handleFeedback(1)} 
+                  className={`py-2 px-1 text-sm rounded-lg transition-colors border ${currentWeekFeedbackValue === 1 ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400 font-bold' : 'bg-slate-700 border-slate-700 hover:bg-slate-600 text-slate-200'}`}
+                >
+                  太簡單<span className="block text-xs opacity-60 mt-1">需增量</span>
+                </button>
               </div>
             </div>
           </div>
@@ -443,7 +465,6 @@ export default function App() {
         )}
       </main>
 
-      {/* Bottom Navigation */}
       <nav className="fixed bottom-0 w-full max-w-md left-1/2 -translate-x-1/2 bg-slate-800 border-t border-slate-700 px-6 py-3 flex justify-around items-center z-50">
         <button onClick={() => setActiveTab('train')} className={`flex flex-col items-center p-2 transition-colors ${activeTab === 'train' ? 'text-blue-400' : 'text-slate-500 hover:text-slate-300'}`}>
           <Dumbbell size={24} className="mb-1" /> <span className="text-[10px] font-medium">今日課表</span>
