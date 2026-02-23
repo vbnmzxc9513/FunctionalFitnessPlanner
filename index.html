@@ -1,0 +1,457 @@
+import React, { useState, useEffect } from 'react';
+import { CheckCircle2, Circle, Activity, Flame, Shield, Zap, RefreshCw, Info, CalendarDays, Dumbbell, BarChart3, LogIn, LogOut, Brain, Loader2 } from 'lucide-react';
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
+import { getFirestore, doc, setDoc, onSnapshot, collection, getDoc } from 'firebase/firestore';
+
+// --- Firebase Initialization ---
+const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'functional-fitness-app';
+
+// --- Exercise Pool ---
+const EXERCISES = {
+  stretch_10m: { name: '10分鐘大腿小腿拉筋伸展', type: 'mobility', tip: '專注於呼吸，每個動作停留至少30秒，感受肌肉與筋膜延展。' },
+  bulgarian: { name: '保佳利亞蹲', type: 'lower', tip: '前腳全腳掌踩穩，後腳背輕放，下蹲時保持軀幹直立，感受臀大肌發力。' },
+  bear_crawl: { name: '熊爬式', type: 'core', tip: '膝蓋微浮離地，核心收緊，對側手腳同步小步移動，背部保持水平。' },
+  dead_bug: { name: '死蟲式', type: 'core', tip: '下背部緊貼地面，四肢延伸時核心絕對不可放鬆或拱腰。' },
+  plank_row: { name: '平板啞鈴划船', type: 'upper_pull', tip: '雙腳微張保持骨盆穩定，手肘貼緊軀幹向後拉，極力避免身體翻轉。' },
+  thoracic: { name: '胸椎靈活性動作', type: 'mobility', tip: '動作放慢，配合吐氣加深旋轉或下壓幅度，避免下背代償。' },
+  pull_up: { name: '引體向上', type: 'upper_pull', tip: '肩胛先下沉收緊，胸口迎向單槓，控制下放速度以建立離心力量。' },
+  single_dl: { name: '單腿硬拉', type: 'lower', tip: '支撐腳微彎，髖部向後推，背部打直，感受腿後側張力。' },
+  shoulder_press: { name: '肩推', type: 'upper_push', tip: '核心收緊避免過度挺腰，啞鈴推至頭頂正上方，穩定肩關節。' },
+  one_arm_plank: { name: '平板稱體 (單手)', type: 'core', tip: '雙腳張開增加底面積，肩膀主動推地，核心出力對抗身體旋轉。' },
+  farmer_walk: { name: '農夫行走', type: 'full', tip: '挺胸收腹，視線直視前方，步伐穩健不搖晃，考驗核心抗側屈。' },
+  lunge_press: { name: '弓步單側啞鈴上推', type: 'power', tip: '後腳蹬地發力，力量順暢傳導至手部上推，動作需具備爆發與連貫性。' },
+  weighted_lunge: { name: '單側負重前弓步蹲', type: 'lower', tip: '保持軀幹抗側屈，下蹲時前腳膝蓋與腳尖同向，強化煞車控制。' },
+  finger_pushup: { name: '手指俯臥撐', type: 'upper_push', tip: '十指張開微曲撐地，核心繃緊，動作需極度控制以保護指關節。' },
+  squat_jump: { name: '啞鈴快速蹲跳', type: 'power', tip: '落地時保持柔軟緩衝，下肢發力要迅速，強化肌肉彈性與收縮速率。' }
+};
+
+// Default fallback schedule
+const DEFAULT_SCHEDULE = [
+  { day: 1, name: '星期一', theme: '下肢啟動與單邊穩定', concept: '專注於單腳支撐與髖關節鉸鏈，建立穩固的地基。', routine: ['thoracic', 'single_dl', 'bulgarian', 'weighted_lunge', 'stretch_10m'] },
+  { day: 2, name: '星期二', theme: '上肢推拉與核心抗旋', concept: '強化背部與胸肩力量，並在不穩定狀態下維持軀幹剛性。', routine: ['dead_bug', 'pull_up', 'plank_row', 'shoulder_press', 'finger_pushup'] },
+  { day: 3, name: '星期三', theme: '動態恢復與中軸流動', concept: '主動恢復日，以輕度核心控制與全身關節活動度為主。', routine: ['thoracic', 'bear_crawl', 'dead_bug', 'stretch_10m'] },
+  { day: 4, name: '星期四', theme: '極限抗扭轉與抓握', concept: '挑戰不對稱負重，全面提升核心抗側屈與前臂抓握耐力。', routine: ['thoracic', 'one_arm_plank', 'plank_row', 'farmer_walk'] },
+  { day: 5, name: '星期五', theme: '爆發力與動力鏈整合', concept: '將整週建立的穩定度轉化為力量傳導，進行高心率功能性輸出。', routine: ['bear_crawl', 'squat_jump', 'lunge_press', 'farmer_walk', 'stretch_10m'] }
+];
+
+const TOTAL_WEEKLY_EXERCISES = 25; // Estimate 5 per day
+
+// --- Helper functions ---
+const getWeekString = (date = new Date(), offsetWeeks = 0) => {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  d.setDate(d.getDate() + (offsetWeeks * 7));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+  const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+  return `${d.getUTCFullYear()}-W${weekNo.toString().padStart(2, '0')}`;
+};
+
+const getMonthFromWeek = (weekStr) => {
+  if (!weekStr || !weekStr.includes('-W')) return '未知月份';
+  const [year, week] = weekStr.split('-W');
+  const d = new Date(year, 0, 1 + (parseInt(week) - 1) * 7);
+  return `${d.getFullYear()}年 ${d.getMonth() + 1}月`;
+};
+
+// --- Gemini AI Function ---
+const generateAIPlan = async (lastWeekData, currentLevel) => {
+  const apiKey = ""; // Injected by environment
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+  
+  const completedCount = lastWeekData ? Object.values(lastWeekData).filter(Boolean).length : 0;
+  
+  const prompt = `
+  你是一位專業的功能性健身教練。使用者每週預期運動5天，每天30分鐘。
+  請根據使用者的數據，為本週（星期一到星期五）安排一份全新課表。
+  
+  【使用者狀態】
+  - 上週完成動作數: ${completedCount} / 25
+  - 當前難度等級: ${currentLevel} (0=減壓, 1=建構, 2=高強度)
+  
+  【可用動作代碼與名稱】
+  ${Object.entries(EXERCISES).map(([k, v]) => `${k}: ${v.name} (${v.type})`).join('\n')}
+  
+  【任務】
+  1. 根據上週完成率給予一段客製化的結論（例如：若上週完成率低，這週請安排較多動態恢復與低強度動作；若完成率高，請增加爆發力與核心動作）。
+  2. 安排星期一到星期五的課表，每天請挑選 4 到 5 個動作代碼。
+  `;
+
+  const payload = {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: "OBJECT",
+        properties: {
+          conclusion: { type: "STRING" },
+          schedule: {
+            type: "ARRAY",
+            items: {
+              type: "OBJECT",
+              properties: {
+                day: { type: "INTEGER" },
+                name: { type: "STRING" },
+                theme: { type: "STRING" },
+                concept: { type: "STRING" },
+                routine: { type: "ARRAY", items: { type: "STRING" } }
+              }
+            }
+          }
+        }
+      }
+    }
+  };
+
+  // Exponential backoff retry logic
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const data = await response.json();
+      const resultText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      return JSON.parse(resultText);
+    } catch (e) {
+      if (attempt === 2) throw e;
+      await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));
+    }
+  }
+};
+
+export default function App() {
+  const [user, setUser] = useState(null);
+  const [authMode, setAuthMode] = useState('pending'); // pending, login, authenticated
+  const [activeTab, setActiveTab] = useState('train'); 
+  const [activeDay, setActiveDay] = useState(new Date().getDay() === 0 || new Date().getDay() === 6 ? 1 : new Date().getDay());
+  
+  const [currentWeek] = useState(getWeekString(new Date(), 0));
+  const [lastWeek] = useState(getWeekString(new Date(), -1));
+  
+  // Data State
+  const [allProgress, setAllProgress] = useState({});
+  const [progress, setProgress] = useState({});
+  const [weeklyPlan, setWeeklyPlan] = useState(null);
+  const [difficultyLevel, setDifficultyLevel] = useState(1);
+  const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+        setAuthMode('authenticated');
+      } else {
+        setUser(null);
+        // If there's an injected token, try custom token first, else show login
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          signInWithCustomToken(auth, __initial_auth_token).catch(() => setAuthMode('login'));
+        } else {
+          setAuthMode('login');
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+
+    // Listen to ALL progress
+    const progressColRef = collection(db, 'artifacts', appId, 'users', user.uid, 'progress');
+    const unsubProgress = onSnapshot(progressColRef, (snapshot) => {
+      const data = {};
+      snapshot.forEach(doc => { data[doc.id] = doc.data(); });
+      setAllProgress(data);
+      setProgress(data[currentWeek]?.completed || {});
+    });
+
+    // Listen to Profile
+    const profileDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'settings');
+    getDoc(profileDocRef).then((docSnap) => {
+      if (docSnap.exists() && docSnap.data().difficultyLevel !== undefined) {
+        setDifficultyLevel(docSnap.data().difficultyLevel);
+      }
+    });
+
+    // Listen to current week's AI Plan
+    const planDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'plans', currentWeek);
+    const unsubPlan = onSnapshot(planDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setWeeklyPlan(docSnap.data());
+      } else {
+        setWeeklyPlan(null); // Will fallback to default
+      }
+    });
+
+    return () => { unsubProgress(); unsubPlan(); };
+  }, [user, currentWeek]);
+
+  const handleGoogleLogin = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+    } catch (error) {
+      console.error("Login failed:", error);
+      alert("登入失敗，請確認彈出視窗未被阻擋。");
+    }
+  };
+
+  const handleLogout = () => signOut(auth);
+
+  const requestAIPlan = async () => {
+    if (!user) return;
+    setIsGeneratingPlan(true);
+    try {
+      const lastWeekData = allProgress[lastWeek]?.completed || {};
+      const aiResponse = await generateAIPlan(lastWeekData, difficultyLevel);
+      
+      const planDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'plans', currentWeek);
+      await setDoc(planDocRef, aiResponse);
+    } catch (err) {
+      console.error("AI Generation Error:", err);
+      alert("AI 安排課表時發生錯誤，請稍後再試。");
+    } finally {
+      setIsGeneratingPlan(false);
+    }
+  };
+
+  const toggleExercise = async (day, exerciseKey) => {
+    if (!user) return;
+    const key = `day${day}_${exerciseKey}`;
+    const newProgress = { ...progress, [key]: !progress[key] };
+    setProgress(newProgress); // Optimistic
+
+    try {
+      const progressDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'progress', currentWeek);
+      await setDoc(progressDocRef, { completed: newProgress }, { merge: true });
+    } catch (err) { setProgress(progress); }
+  };
+
+  const handleFeedback = async (adjustment) => {
+    if (!user) return;
+    let newLevel = Math.max(0, Math.min(2, difficultyLevel + adjustment));
+    setDifficultyLevel(newLevel);
+    try {
+      const profileDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'settings');
+      await setDoc(profileDocRef, { difficultyLevel: newLevel }, { merge: true });
+      const progressDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'progress', currentWeek);
+      await setDoc(progressDocRef, { feedbackProvided: true, feedbackValue: adjustment }, { merge: true });
+    } catch (err) {}
+  };
+
+  const getExerciseParams = (exerciseKey) => {
+    let sets = 3; let value = ""; 
+    if (['stretch_10m', 'thoracic'].includes(exerciseKey)) {
+      sets = 1; value = difficultyLevel === 0 ? "5分鐘" : difficultyLevel === 1 ? "10分鐘" : "12分鐘";
+    } else if (['farmer_walk', 'one_arm_plank', 'bear_crawl'].includes(exerciseKey)) {
+      sets = difficultyLevel === 0 ? 3 : difficultyLevel === 1 ? 4 : 5; value = difficultyLevel === 0 ? "30秒" : difficultyLevel === 1 ? "45秒" : "60秒";
+    } else if (['squat_jump', 'lunge_press', 'finger_pushup'].includes(exerciseKey)) {
+      sets = difficultyLevel === 0 ? 3 : 4; value = difficultyLevel === 0 ? "8下" : difficultyLevel === 1 ? "12下" : "15下";
+    } else {
+      sets = difficultyLevel === 2 ? 4 : 3; value = difficultyLevel === 0 ? "8-10下" : difficultyLevel === 1 ? "10-12下" : "12-15下";
+    }
+    return `${sets} 組 x ${value}`;
+  };
+
+  const getDifficultyLabel = () => ['減壓恢復期 (低)', '功能性建構期 (中)', '神經適應期 (高)'][difficultyLevel];
+
+  // Render Login Screen
+  if (authMode === 'pending') return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">載入中...</div>;
+  if (authMode === 'login') {
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 font-sans">
+        <div className="bg-slate-800 p-8 rounded-3xl shadow-2xl max-w-sm w-full text-center border border-slate-700">
+          <Dumbbell size={48} className="mx-auto text-blue-500 mb-6" />
+          <h1 className="text-2xl font-bold text-white mb-2">功能性健身管理</h1>
+          <p className="text-slate-400 text-sm mb-8">綁定 Google 帳號，讓 AI 追蹤你的長期訓練數據並動態排表。</p>
+          <button 
+            onClick={handleGoogleLogin}
+            className="w-full flex items-center justify-center py-3 px-4 bg-white text-slate-900 rounded-xl font-bold hover:bg-slate-200 transition-colors"
+          >
+            <LogIn className="mr-2" size={20} /> 使用 Google 帳號登入
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Main App Data
+  const currentSchedule = weeklyPlan?.schedule || DEFAULT_SCHEDULE;
+  const activeSchedule = currentSchedule.find(s => s.day === activeDay) || currentSchedule[0];
+  const completedCount = Object.values(progress).filter(Boolean).length;
+  const totalThisWeek = currentSchedule.reduce((acc, curr) => acc + curr.routine.length, 0);
+  const progressPercent = Math.round((completedCount / totalThisWeek) * 100) || 0;
+
+  const monthlyData = Object.values(Object.entries(allProgress).reduce((acc, [weekId, data]) => {
+    if (!weekId.includes('-W')) return acc;
+    const m = getMonthFromWeek(weekId);
+    if (!acc[m]) acc[m] = { completed: 0, totalWeeks: 0, monthKey: m };
+    acc[m].completed += data.completed ? Object.values(data.completed).filter(Boolean).length : 0;
+    acc[m].totalWeeks += 1;
+    return acc;
+  }, {})).sort((a, b) => b.monthKey.localeCompare(a.monthKey));
+
+  return (
+    <div className="min-h-screen bg-slate-900 text-slate-200 font-sans pb-24">
+      {/* Header */}
+      <header className="bg-slate-800 p-6 rounded-b-3xl shadow-lg border-b border-slate-700 relative">
+        <button onClick={handleLogout} className="absolute top-6 right-6 text-slate-400 hover:text-white transition-colors">
+          <LogOut size={20} />
+        </button>
+        <div className="max-w-md mx-auto">
+          <h1 className="text-2xl font-bold text-white mb-2">功能性健身管理</h1>
+          {activeTab === 'train' ? (
+            <>
+              <div className="flex justify-between items-end mt-4">
+                <div>
+                  <p className="text-sm text-slate-400">週次: {currentWeek}</p>
+                  <p className="text-sm text-emerald-400 font-medium mt-1">難度: {getDifficultyLabel()}</p>
+                </div>
+                <div className="text-right">
+                  <div className="text-3xl font-bold text-blue-400">{progressPercent}%</div>
+                  <p className="text-xs text-slate-400">本週完成率</p>
+                </div>
+              </div>
+              <div className="w-full bg-slate-700 rounded-full h-2 mt-4">
+                <div className="bg-blue-500 h-2 rounded-full transition-all duration-500" style={{ width: `${progressPercent}%` }}></div>
+              </div>
+            </>
+          ) : (
+            <div className="pt-2"><p className="text-slate-400 text-sm">持之以恆是功能性訓練的基石。檢視每個月的累積成果。</p></div>
+          )}
+        </div>
+      </header>
+
+      <main className="max-w-md mx-auto p-4 mt-2">
+        {activeTab === 'train' && (
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            
+            {/* AI Coach Banner */}
+            <div className={`mb-6 p-5 rounded-2xl border ${weeklyPlan ? 'bg-indigo-900/30 border-indigo-500/30' : 'bg-slate-800 border-slate-700'}`}>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-bold flex items-center text-indigo-400">
+                  <Brain className="mr-2" size={20} /> AI 專屬教練
+                </h3>
+                {!weeklyPlan && (
+                  <button 
+                    onClick={requestAIPlan} 
+                    disabled={isGeneratingPlan}
+                    className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center"
+                  >
+                    {isGeneratingPlan ? <><Loader2 size={12} className="mr-1 animate-spin" /> 運算中...</> : '✨ 根據上週動態排表'}
+                  </button>
+                )}
+              </div>
+              <p className="text-sm text-slate-300 leading-relaxed">
+                {weeklyPlan ? weeklyPlan.conclusion : "這是一份基礎模板課表。點擊右上角按鈕，讓我根據你上週的實際完成狀況與難度，為你重新規劃這週的動作與主題。"}
+              </p>
+            </div>
+
+            {/* Days Navigation */}
+            <div className="flex justify-between bg-slate-800 rounded-xl p-2 mb-6 shadow-inner overflow-x-auto">
+              {currentSchedule.map((schedule) => {
+                const isSelected = activeDay === schedule.day;
+                const allDone = schedule.routine.every(exKey => progress[`day${schedule.day}_${exKey}`]);
+                return (
+                  <button key={schedule.day} onClick={() => setActiveDay(schedule.day)} className={`flex flex-col items-center justify-center min-w-[3rem] h-14 rounded-lg transition-colors ${isSelected ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-700'}`}>
+                    <span className="text-xs font-medium mb-1">{schedule.name.replace('星期', '週')}</span>
+                    {allDone ? <CheckCircle2 size={16} className={isSelected ? 'text-white' : 'text-emerald-400'} /> : <Circle size={16} className="opacity-50" />}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Daily Theme Card */}
+            <div className="bg-gradient-to-br from-slate-800 to-slate-800/80 rounded-2xl p-5 mb-6 border border-slate-700 shadow-lg">
+              <h2 className="text-lg font-bold text-white mb-1">{activeSchedule?.theme}</h2>
+              <p className="text-sm text-slate-300 leading-relaxed bg-slate-900/50 p-3 rounded-lg mt-3">{activeSchedule?.concept}</p>
+            </div>
+
+            {/* Exercises List */}
+            <div className="space-y-4">
+              <h3 className="text-md font-semibold text-slate-300 ml-1 mb-2">本日課表</h3>
+              {activeSchedule?.routine.map((exKey, index) => {
+                const exercise = EXERCISES[exKey];
+                if (!exercise) return null; // Safety check if AI hallucinates an unknown key
+                const isCompleted = !!progress[`day${activeSchedule.day}_${exKey}`];
+                const params = getExerciseParams(exKey);
+
+                return (
+                  <div key={exKey} className={`flex flex-col p-4 rounded-xl transition-all border ${isCompleted ? 'bg-emerald-900/10 border-emerald-800/50' : 'bg-slate-800 border-slate-700'}`}>
+                    <div className="flex items-center cursor-pointer" onClick={() => toggleExercise(activeSchedule.day, exKey)}>
+                      <button className="mr-4 flex-shrink-0">
+                        {isCompleted ? <CheckCircle2 size={24} className="text-emerald-500" /> : <Circle size={24} className="text-slate-500" />}
+                      </button>
+                      <div className="flex-grow">
+                        <h4 className={`font-medium ${isCompleted ? 'line-through decoration-emerald-500/50 text-slate-500' : 'text-slate-100'}`}>
+                          {index + 1}. {exercise.name}
+                        </h4>
+                        <p className={`text-xs mt-1 ${isCompleted ? 'text-slate-600' : 'text-slate-400'}`}>{params}</p>
+                      </div>
+                    </div>
+                    {!isCompleted && (
+                      <div className="mt-3 ml-10 pl-3 border-l-2 border-blue-500/30 flex items-start text-xs text-slate-400 bg-slate-800/50 py-2 pr-2 rounded-r-lg">
+                        <Info size={14} className="text-blue-400 mr-2 flex-shrink-0 mt-0.5" />
+                        <span className="leading-relaxed">{exercise.tip}</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Weekly Feedback Section */}
+            <div className="mt-10 bg-slate-800 rounded-2xl p-5 border border-slate-700">
+              <h3 className="text-md font-bold text-white mb-2">組數/次數微調反饋</h3>
+              <p className="text-xs text-slate-400 mb-4">這會立即改變你下一次動作的組數與秒數要求。</p>
+              <div className="grid grid-cols-3 gap-2">
+                <button onClick={() => handleFeedback(-1)} className="py-2 px-1 text-sm bg-slate-700 hover:bg-slate-600 rounded-lg text-slate-200">太困難<br/><span className="text-xs opacity-60">降階</span></button>
+                <button onClick={() => handleFeedback(0)} className="py-2 px-1 text-sm bg-blue-600/20 border border-blue-500/50 rounded-lg text-blue-400">剛好<br/><span className="text-xs opacity-60">維持</span></button>
+                <button onClick={() => handleFeedback(1)} className="py-2 px-1 text-sm bg-slate-700 hover:bg-slate-600 rounded-lg text-slate-200">太簡單<br/><span className="text-xs opacity-60">增量</span></button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'history' && (
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-4">
+            <h2 className="text-lg font-bold text-white mb-4 flex items-center">
+              <CalendarDays className="mr-2 text-blue-400" size={20} /> 各月完成狀況
+            </h2>
+            {monthlyData.length === 0 ? (
+               <div className="text-center p-8 bg-slate-800 rounded-xl border border-slate-700"><p className="text-slate-400">尚無歷史紀錄。</p></div>
+            ) : (
+              monthlyData.map((data) => {
+                const targetForMonth = data.totalWeeks * TOTAL_WEEKLY_EXERCISES;
+                const monthPercent = Math.round((data.completed / targetForMonth) * 100);
+                return (
+                  <div key={data.monthKey} className="bg-slate-800 p-5 rounded-2xl border border-slate-700 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 h-1 bg-emerald-500/50" style={{ width: `${monthPercent}%`}}></div>
+                    <div className="flex justify-between items-center mb-3">
+                      <h3 className="font-bold text-lg text-slate-100">{data.monthKey}</h3>
+                      <div className="text-2xl font-black text-emerald-400">{monthPercent}%</div>
+                    </div>
+                    <div className="flex items-center text-sm text-slate-400 mb-1"><CheckCircle2 size={16} className="mr-2 text-emerald-500" /> 總計完成: <span className="text-slate-200 ml-2 font-medium">{data.completed} 個動作</span></div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+      </main>
+
+      {/* Bottom Navigation */}
+      <nav className="fixed bottom-0 w-full max-w-md left-1/2 -translate-x-1/2 bg-slate-800 border-t border-slate-700 px-6 py-3 flex justify-around items-center z-50">
+        <button onClick={() => setActiveTab('train')} className={`flex flex-col items-center p-2 transition-colors ${activeTab === 'train' ? 'text-blue-400' : 'text-slate-500 hover:text-slate-300'}`}>
+          <Dumbbell size={24} className="mb-1" /> <span className="text-[10px] font-medium">今日課表</span>
+        </button>
+        <button onClick={() => setActiveTab('history')} className={`flex flex-col items-center p-2 transition-colors ${activeTab === 'history' ? 'text-blue-400' : 'text-slate-500 hover:text-slate-300'}`}>
+          <BarChart3 size={24} className="mb-1" /> <span className="text-[10px] font-medium">成效紀錄</span>
+        </button>
+      </nav>
+    </div>
+  );
+}
