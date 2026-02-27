@@ -301,7 +301,7 @@ export default function App() {
           !m.includes('latest') &&
           !m.includes('image') &&
           !m.includes('tts') &&
-          !m.includes('preview')
+          (!m.includes('preview') || m.includes('3.0') || m.includes('3.1'))
         )
         .sort((a, b) => b.localeCompare(a)) // Put newer versions first
         .map(m => {
