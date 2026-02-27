@@ -225,7 +225,7 @@ export { ErrorBoundary };
 
 export default function App() {
   const [user, setUser] = useState(null);
-  const [authMode, setAuthMode] = useState('pending');
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('train'); // train | ai | exercises | metrics | history | settings
   const [activeDay, setActiveDay] = useState(new Date().getDay() === 0 || new Date().getDay() === 6 ? 1 : new Date().getDay());
 
@@ -335,13 +335,13 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
-        setAuthMode('authenticated');
+        setIsAuthLoading(false);
       } else {
         setUser(null);
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          signInWithCustomToken(auth, __initial_auth_token).catch(() => setAuthMode('login'));
+          signInWithCustomToken(auth, __initial_auth_token).finally(() => setIsAuthLoading(false));
         } else {
-          setAuthMode('login');
+          setIsAuthLoading(false);
         }
       }
     });
@@ -471,7 +471,10 @@ export default function App() {
   };
 
   const toggleExercise = async (day, exerciseKey) => {
-    if (!user) return;
+    if (!user) {
+      showToast(t('toastRequireLogin'));
+      return;
+    }
     const key = `day${day}_${exerciseKey}`;
     const newProgress = { ...progress, [key]: !progress[key] };
     setProgress(newProgress);
@@ -483,7 +486,10 @@ export default function App() {
   };
 
   const handleFeedback = async (adjustment) => {
-    if (!user) return;
+    if (!user) {
+      showToast(t('toastRequireLogin'));
+      return;
+    }
     let newLevel = Math.max(0, Math.min(2, difficultyLevel + adjustment));
     setDifficultyLevel(newLevel);
     try {
@@ -585,30 +591,23 @@ export default function App() {
 
   const getDifficultyLabel = () => [t('diffLow'), t('diffMid'), t('diffHigh')][difficultyLevel];
 
-  if (authMode === 'pending') return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-800"><Loader2 className="animate-spin mr-2" />{lang === 'zh' ? '載入中...' : 'Loading...'}</div>;
-  if (authMode === 'login') {
-    return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 font-sans">
-        <div className="bg-white p-8 rounded-3xl shadow-2xl max-w-sm w-full text-center border border-sky-100 relative overflow-hidden">
-          {/* 羽球場地線條意象 */}
-          <div className="absolute top-0 right-0 w-32 h-32 border-l-2 border-b-2 border-sky-300/10 rounded-bl-xl pointer-events-none"></div>
-          <div className="absolute bottom-0 left-0 w-24 h-24 border-t-2 border-r-2 border-sky-300/10 rounded-tr-xl pointer-events-none"></div>
-
-          <div className="relative z-10">
-            <Feather size={48} className="mx-auto text-sky-600 mb-6" />
-            <h1 className="text-2xl font-bold text-slate-800 mb-2">{t('appTitle')}</h1>
-            <p className="text-slate-500 text-sm mb-8">{t('loginSubtitle')}</p>
-            <button
-              onClick={handleGoogleLogin}
-              className="w-full flex items-center justify-center py-3 px-4 bg-sky-500 text-white rounded-xl font-bold hover:bg-sky-400 transition-colors shadow-lg shadow-sky-500/20"
-            >
-              <LogIn className="mr-2" size={20} /> {t('loginBtn')}
-            </button>
-          </div>
-        </div>
+  const LoginPrompt = ({ title, desc }) => (
+    <div className="flex flex-col items-center justify-center p-8 text-center bg-white rounded-2xl border border-sky-100 mt-6 shadow-sm">
+      <div className="w-16 h-16 bg-sky-50 rounded-full flex items-center justify-center mb-4">
+        <Feather size={32} className="text-sky-500" />
       </div>
-    );
-  }
+      <h3 className="text-lg font-bold text-slate-800 mb-2">{title || t('promoLoginTitle')}</h3>
+      <p className="text-sm text-slate-500 mb-6 max-w-xs leading-relaxed">{desc || t('promoLoginDesc')}</p>
+      <button
+        onClick={handleGoogleLogin}
+        className="flex items-center justify-center py-3 px-6 bg-sky-600 text-white rounded-xl font-bold hover:bg-sky-500 transition-colors shadow-lg shadow-sky-600/20 w-full max-w-xs mx-auto"
+      >
+        <LogIn className="mr-2" size={20} /> {t('promoLoginBtn')}
+      </button>
+    </div>
+  );
+
+  if (isAuthLoading) return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-800"><Loader2 className="animate-spin mr-2" />{lang === 'zh' ? '載入中...' : 'Loading...'}</div>;
 
   const currentSchedule = weeklyPlan?.schedule || DEFAULT_SCHEDULE;
   const activeSchedule = currentSchedule.find(s => s.day === activeDay) || currentSchedule[0];
@@ -699,9 +698,17 @@ export default function App() {
       )}
 
       <header className="bg-white p-6 rounded-b-3xl shadow-lg border-b border-sky-100 relative">
-        <div className="absolute top-6 right-6 flex items-center space-x-2">
+        <div className="absolute top-6 right-6 flex items-center space-x-3">
           <button onClick={toggleLang} className="text-xs font-bold bg-sky-100 hover:bg-sky-200 text-sky-700 px-2.5 py-1 rounded-full transition-colors">🌐 {t('langToggle')}</button>
-          <button onClick={handleLogout} className="text-slate-500 hover:text-sky-600 transition-colors"><LogOut size={20} /></button>
+          {user ? (
+            <button onClick={handleLogout} className="text-sm font-medium text-slate-500 hover:text-sky-600 transition-colors flex items-center">
+              <LogOut size={16} className="mr-1" /> {lang === 'zh' ? '登出' : 'Logout'}
+            </button>
+          ) : (
+            <button onClick={handleGoogleLogin} title={t('promoLoginBtn')} className="text-sm font-bold text-sky-600 hover:text-sky-500 transition-colors flex items-center bg-sky-50 px-3 py-1.5 rounded-full">
+              <LogIn size={16} className="mr-1" /> {lang === 'zh' ? '登入' : 'Login'}
+            </button>
+          )}
         </div>
         <div className="max-w-md mx-auto">
           <h1 className="text-2xl font-bold text-slate-800 mb-2 flex items-center">
@@ -844,454 +851,461 @@ export default function App() {
         )}
 
         {activeTab === 'ai' && (
-          <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <div className={`p-6 rounded-2xl border ${weeklyPlan ? 'bg-indigo-50/30 border-indigo-200/30' : 'bg-white border-sky-100'}`}>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold flex items-center text-indigo-600 text-lg">
-                  <Brain className="mr-2" size={24} /> {t('aiCoachTitle')}
-                </h3>
-                {(!weeklyPlan || isEditingPlan) && (
-                  <button
-                    onClick={requestAIPlan}
-                    disabled={isGeneratingPlan}
-                    className="text-sm bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl font-medium transition-colors flex items-center shadow-lg shadow-indigo-600/20"
-                  >
-                    {isGeneratingPlan ? <><Loader2 size={16} className="mr-2 animate-spin" /> {t('aiGenerating')}</> : weeklyPlan ? t('aiRegenerateBtn') : t('aiGenerateBtn')}
-                  </button>
-                )}
-              </div>
-
-              {!apiKey && !weeklyPlan && (
-                <div className="bg-amber-50/30 border border-amber-200/50 rounded-xl p-4 mb-4 flex items-start shadow-inner">
-                  <Key size={18} className="text-amber-600 mr-3 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-amber-700">{t('aiNoKey')}</p>
-                </div>
-              )}
-
-              {weeklyPlan && !isEditingPlan && (
-                <div className="bg-slate-50/50 p-6 rounded-xl border border-sky-100/50 relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none"></div>
-
-                  <div className="flex justify-between items-center mb-4 border-b border-slate-900/5 pb-3">
-                    <h4 className="text-sm font-bold text-slate-600 flex items-center"><Brain size={16} className="mr-2 text-indigo-600" /> {t('aiConclusionTitle')}</h4>
+          !user ? <div className="animate-in fade-in slide-in-from-bottom-2 duration-300"><LoginPrompt title={t('aiCoachTitle')} /></div> :
+            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className={`p-6 rounded-2xl border ${weeklyPlan ? 'bg-indigo-50/30 border-indigo-200/30' : 'bg-white border-sky-100'}`}>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-bold flex items-center text-indigo-600 text-lg">
+                    <Brain className="mr-2" size={24} /> {t('aiCoachTitle')}
+                  </h3>
+                  {(!weeklyPlan || isEditingPlan) && (
                     <button
-                      onClick={() => setIsEditingPlan(true)}
-                      className="text-xs bg-white hover:bg-blue-50 text-slate-600 px-3 py-1.5 rounded-lg transition-colors border border-sky-100 flex items-center"
+                      onClick={requestAIPlan}
+                      disabled={isGeneratingPlan}
+                      className="text-sm bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl font-medium transition-colors flex items-center shadow-lg shadow-indigo-600/20"
                     >
-                      <RefreshCw size={12} className="mr-1" /> {t('aiTweakBtn')}
+                      {isGeneratingPlan ? <><Loader2 size={16} className="mr-2 animate-spin" /> {t('aiGenerating')}</> : weeklyPlan ? t('aiRegenerateBtn') : t('aiGenerateBtn')}
                     </button>
-                  </div>
-
-                  <div className="w-full text-sm text-slate-700 leading-relaxed font-normal space-y-4">
-                    <ReactMarkdown
-                      components={{
-                        h3: ({ node, ...props }) => <h3 className="text-lg font-bold text-indigo-700 mt-8 mb-3 border-b-2 border-indigo-100 pb-2" {...props} />,
-                        p: ({ node, ...props }) => <p className="mb-5 leading-loose text-slate-700" {...props} />,
-                        strong: ({ node, ...props }) => <strong className="font-bold text-indigo-800 bg-indigo-50/80 px-1.5 py-0.5 rounded shadow-sm" {...props} />,
-                        ul: ({ node, ...props }) => <ul className="list-disc pl-5 mb-5 space-y-2 text-slate-700" {...props} />,
-                        ol: ({ node, ...props }) => <ol className="list-decimal pl-5 mb-5 space-y-2 text-slate-700" {...props} />,
-                        li: ({ node, ...props }) => <li className="pl-1" {...props} />
-                      }}
-                    >
-                      {weeklyPlan.conclusion}
-                    </ReactMarkdown>
-                  </div>
+                  )}
                 </div>
-              )}
 
-              {(!weeklyPlan || isEditingPlan) && (
-                <div className="mb-6 mt-4 space-y-5 bg-slate-50/60 p-6 rounded-xl border border-sky-100 shadow-inner">
-                  {isEditingPlan && (
-                    <div className="bg-indigo-50/20 border border-indigo-200/30 rounded-lg p-3 mb-2 flex items-start">
-                      <RefreshCw size={16} className="text-indigo-600 mr-2 flex-shrink-0 mt-0.5" />
-                      <p className="text-xs text-indigo-700 leading-relaxed">
-                        {t('aiEditingHint')}
-                      </p>
-                    </div>
-                  )}
+                {!apiKey && !weeklyPlan && (
+                  <div className="bg-amber-50/30 border border-amber-200/50 rounded-xl p-4 mb-4 flex items-start shadow-inner">
+                    <Key size={18} className="text-amber-600 mr-3 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-amber-700">{t('aiNoKey')}</p>
+                  </div>
+                )}
 
-                  <div>
-                    <label className="block text-sm font-medium text-slate-600 mb-2">{t('aiGoalLabel')}</label>
-                    <input
-                      type="text"
-                      value={aiGoalInput}
-                      onChange={(e) => setAiGoalInput(e.target.value)}
-                      placeholder={t('aiGoalPlaceholder')}
-                      className="w-full bg-white border border-sky-200 rounded-xl p-3 text-sm text-slate-700 placeholder-slate-500 focus:outline-none focus:border-indigo-200 focus:ring-1 focus:ring-indigo-500 transition-all shadow-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-600 mb-2">{t('aiTimeLabel')}</label>
-                    <input
-                      type="number"
-                      value={aiTimeInput}
-                      onChange={(e) => setAiTimeInput(e.target.value)}
-                      placeholder="30"
-                      className="w-full bg-white border border-sky-200 rounded-xl p-3 text-sm text-slate-700 placeholder-slate-500 focus:outline-none focus:border-indigo-200 focus:ring-1 focus:ring-indigo-500 transition-all shadow-sm"
-                    />
-                  </div>
-                  {!isEditingPlan && (
-                    <div className="bg-sky-100/20 border border-sky-200/40 rounded-lg p-3">
-                      <p className="text-xs text-sky-600 leading-relaxed flex items-start">
-                        <span className="mr-1.5">💡</span>
-                        {t('aiTip')}
-                      </p>
-                    </div>
-                  )}
-                  <div>
-                    <label className="block text-sm font-medium text-slate-600 mb-2">{t('aiMessageLabel')} {isEditingPlan ? <span className="text-indigo-600 text-xs ml-1">{t('aiMessageLabelEditing')}</span> : <span className="text-slate-500 text-xs ml-1">{t('aiMessageLabelOptional')}</span>}</label>
-                    <textarea
-                      value={aiMessageInput}
-                      onChange={(e) => setAiMessageInput(e.target.value)}
-                      placeholder={isEditingPlan ? t('aiMessagePlaceholderEditing') : t('aiMessagePlaceholder')}
-                      className="w-full bg-white border border-sky-200 rounded-xl p-3 text-sm text-slate-700 placeholder-slate-500 focus:outline-none focus:border-indigo-200 focus:ring-1 focus:ring-indigo-500 transition-all resize-none h-24 shadow-sm"
-                    />
-                  </div>
+                {weeklyPlan && !isEditingPlan && (
+                  <div className="bg-slate-50/50 p-6 rounded-xl border border-sky-100/50 relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none"></div>
 
-                  {isEditingPlan && (
-                    <div className="flex justify-end pt-2 border-t border-sky-100/50 space-x-3">
-                      {backupPlan && (
-                        <button
-                          onClick={restoreBackupPlan}
-                          className="text-sm bg-white hover:bg-blue-50 text-slate-600 px-4 py-2 rounded-xl transition-colors border border-sky-200"
-                        >
-                          {t('aiRestoreBtn')}
-                        </button>
-                      )}
+                    <div className="flex justify-between items-center mb-4 border-b border-slate-900/5 pb-3">
+                      <h4 className="text-sm font-bold text-slate-600 flex items-center"><Brain size={16} className="mr-2 text-indigo-600" /> {t('aiConclusionTitle')}</h4>
                       <button
-                        onClick={() => setIsEditingPlan(false)}
-                        className="text-sm bg-transparent hover:bg-white text-slate-500 px-4 py-2 rounded-xl transition-colors"
+                        onClick={() => setIsEditingPlan(true)}
+                        className="text-xs bg-white hover:bg-blue-50 text-slate-600 px-3 py-1.5 rounded-lg transition-colors border border-sky-100 flex items-center"
                       >
-                        {t('aiCancelBtn')}
+                        <RefreshCw size={12} className="mr-1" /> {t('aiTweakBtn')}
                       </button>
                     </div>
-                  )}
-                </div>
-              )}
 
-              {!weeklyPlan && (
-                <p className="text-sm text-slate-500 leading-relaxed mt-4 text-center font-medium">
-                  {t('aiReadyMsg')}
-                </p>
-              )}
+                    <div className="w-full text-sm text-slate-700 leading-relaxed font-normal space-y-4">
+                      <ReactMarkdown
+                        components={{
+                          h3: ({ node, ...props }) => <h3 className="text-lg font-bold text-indigo-700 mt-8 mb-3 border-b-2 border-indigo-100 pb-2" {...props} />,
+                          p: ({ node, ...props }) => <p className="mb-5 leading-loose text-slate-700" {...props} />,
+                          strong: ({ node, ...props }) => <strong className="font-bold text-indigo-800 bg-indigo-50/80 px-1.5 py-0.5 rounded shadow-sm" {...props} />,
+                          ul: ({ node, ...props }) => <ul className="list-disc pl-5 mb-5 space-y-2 text-slate-700" {...props} />,
+                          ol: ({ node, ...props }) => <ol className="list-decimal pl-5 mb-5 space-y-2 text-slate-700" {...props} />,
+                          li: ({ node, ...props }) => <li className="pl-1" {...props} />
+                        }}
+                      >
+                        {weeklyPlan.conclusion}
+                      </ReactMarkdown>
+                    </div>
+                  </div>
+                )}
+
+                {(!weeklyPlan || isEditingPlan) && (
+                  <div className="mb-6 mt-4 space-y-5 bg-slate-50/60 p-6 rounded-xl border border-sky-100 shadow-inner">
+                    {isEditingPlan && (
+                      <div className="bg-indigo-50/20 border border-indigo-200/30 rounded-lg p-3 mb-2 flex items-start">
+                        <RefreshCw size={16} className="text-indigo-600 mr-2 flex-shrink-0 mt-0.5" />
+                        <p className="text-xs text-indigo-700 leading-relaxed">
+                          {t('aiEditingHint')}
+                        </p>
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-600 mb-2">{t('aiGoalLabel')}</label>
+                      <input
+                        type="text"
+                        value={aiGoalInput}
+                        onChange={(e) => setAiGoalInput(e.target.value)}
+                        placeholder={t('aiGoalPlaceholder')}
+                        className="w-full bg-white border border-sky-200 rounded-xl p-3 text-sm text-slate-700 placeholder-slate-500 focus:outline-none focus:border-indigo-200 focus:ring-1 focus:ring-indigo-500 transition-all shadow-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-600 mb-2">{t('aiTimeLabel')}</label>
+                      <input
+                        type="number"
+                        value={aiTimeInput}
+                        onChange={(e) => setAiTimeInput(e.target.value)}
+                        placeholder="30"
+                        className="w-full bg-white border border-sky-200 rounded-xl p-3 text-sm text-slate-700 placeholder-slate-500 focus:outline-none focus:border-indigo-200 focus:ring-1 focus:ring-indigo-500 transition-all shadow-sm"
+                      />
+                    </div>
+                    {!isEditingPlan && (
+                      <div className="bg-sky-100/20 border border-sky-200/40 rounded-lg p-3">
+                        <p className="text-xs text-sky-600 leading-relaxed flex items-start">
+                          <span className="mr-1.5">💡</span>
+                          {t('aiTip')}
+                        </p>
+                      </div>
+                    )}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-600 mb-2">{t('aiMessageLabel')} {isEditingPlan ? <span className="text-indigo-600 text-xs ml-1">{t('aiMessageLabelEditing')}</span> : <span className="text-slate-500 text-xs ml-1">{t('aiMessageLabelOptional')}</span>}</label>
+                      <textarea
+                        value={aiMessageInput}
+                        onChange={(e) => setAiMessageInput(e.target.value)}
+                        placeholder={isEditingPlan ? t('aiMessagePlaceholderEditing') : t('aiMessagePlaceholder')}
+                        className="w-full bg-white border border-sky-200 rounded-xl p-3 text-sm text-slate-700 placeholder-slate-500 focus:outline-none focus:border-indigo-200 focus:ring-1 focus:ring-indigo-500 transition-all resize-none h-24 shadow-sm"
+                      />
+                    </div>
+
+                    {isEditingPlan && (
+                      <div className="flex justify-end pt-2 border-t border-sky-100/50 space-x-3">
+                        {backupPlan && (
+                          <button
+                            onClick={restoreBackupPlan}
+                            className="text-sm bg-white hover:bg-blue-50 text-slate-600 px-4 py-2 rounded-xl transition-colors border border-sky-200"
+                          >
+                            {t('aiRestoreBtn')}
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setIsEditingPlan(false)}
+                          className="text-sm bg-transparent hover:bg-white text-slate-500 px-4 py-2 rounded-xl transition-colors"
+                        >
+                          {t('aiCancelBtn')}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {!weeklyPlan && (
+                  <p className="text-sm text-slate-500 leading-relaxed mt-4 text-center font-medium">
+                    {t('aiReadyMsg')}
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
         )}
 
         {
           activeTab === 'exercises' && (
-            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6">
-              <div className="bg-white p-6 rounded-2xl border border-sky-100">
-                <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center">
-                  <Dumbbell className="mr-2 text-indigo-600" size={20} /> 自訂動作庫
-                </h2>
-                <p className="text-sm text-slate-500 mb-4 leading-relaxed">
-                  新增你想練的動作，AI 會自動為其分類並標註發力技巧。排表時 AI 只會從「啟用」的動作中挑選。
-                </p>
+            !user ? <div className="animate-in fade-in slide-in-from-bottom-2 duration-300"><LoginPrompt title={t('exercisesTitle')} /></div> :
+              <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6">
+                <div className="bg-white p-6 rounded-2xl border border-sky-100">
+                  <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center">
+                    <Dumbbell className="mr-2 text-indigo-600" size={20} /> 自訂動作庫
+                  </h2>
+                  <p className="text-sm text-slate-500 mb-4 leading-relaxed">
+                    新增你想練的動作，AI 會自動為其分類並標註發力技巧。排表時 AI 只會從「啟用」的動作中挑選。
+                  </p>
 
-                <div className="flex space-x-2 mb-6">
-                  <input
-                    type="text"
-                    value={newExName}
-                    onChange={e => setNewExName(e.target.value)}
-                    placeholder="輸入動作名稱 (例如：高腳杯深蹲)"
-                    className="flex-1 bg-slate-50 border border-sky-200 rounded-xl px-4 py-2 text-slate-700 text-sm focus:outline-none focus:border-indigo-200"
-                  />
-                  <button
-                    onClick={handleAddExercise}
-                    disabled={isAddingEx || !newExName.trim()}
-                    className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-blue-50 disabled:text-slate-500 text-white px-4 py-2 rounded-xl transition-colors text-sm font-medium flex items-center justify-center min-w-[5rem]"
-                  >
-                    {isAddingEx ? <Loader2 size={16} className="animate-spin" /> : '新增'}
-                  </button>
-                </div>
+                  <div className="flex space-x-2 mb-6">
+                    <input
+                      type="text"
+                      value={newExName}
+                      onChange={e => setNewExName(e.target.value)}
+                      placeholder="輸入動作名稱 (例如：高腳杯深蹲)"
+                      className="flex-1 bg-slate-50 border border-sky-200 rounded-xl px-4 py-2 text-slate-700 text-sm focus:outline-none focus:border-indigo-200"
+                    />
+                    <button
+                      onClick={handleAddExercise}
+                      disabled={isAddingEx || !newExName.trim()}
+                      className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-blue-50 disabled:text-slate-500 text-white px-4 py-2 rounded-xl transition-colors text-sm font-medium flex items-center justify-center min-w-[5rem]"
+                    >
+                      {isAddingEx ? <Loader2 size={16} className="animate-spin" /> : '新增'}
+                    </button>
+                  </div>
 
-                <div className="space-y-3">
-                  {Object.entries(exercisesData).filter(([_, ex]) => !ex.deleted).map(([key, ex]) => {
-                    const isActive = ex.active !== false;
-                    return (
-                      <div key={key} className={`p-4 rounded-xl border transition-all flex items-start justify-between ${isActive ? 'bg-slate-50/50 border-sky-200' : 'bg-slate-50/20 border-slate-800 opacity-60'}`}>
-                        <div className="flex-1 pr-4">
-                          <div className="flex items-center">
-                            <h4 className={`font-semibold text-sm ${isActive ? 'text-slate-700' : 'text-slate-500'}`}>{ex.name}</h4>
-                            <span className={`ml-2 text-[10px] px-2 py-0.5 rounded-full ${isActive ? 'bg-blue-50 text-slate-600' : 'bg-green-900/30 text-sky-600/50'}`}>{ex.type}</span>
+                  <div className="space-y-3">
+                    {Object.entries(exercisesData).filter(([_, ex]) => !ex.deleted).map(([key, ex]) => {
+                      const isActive = ex.active !== false;
+                      return (
+                        <div key={key} className={`p-4 rounded-xl border transition-all flex items-start justify-between ${isActive ? 'bg-slate-50/50 border-sky-200' : 'bg-slate-50/20 border-slate-800 opacity-60'}`}>
+                          <div className="flex-1 pr-4">
+                            <div className="flex items-center">
+                              <h4 className={`font-semibold text-sm ${isActive ? 'text-slate-700' : 'text-slate-500'}`}>{ex.name}</h4>
+                              <span className={`ml-2 text-[10px] px-2 py-0.5 rounded-full ${isActive ? 'bg-blue-50 text-slate-600' : 'bg-green-900/30 text-sky-600/50'}`}>{ex.type}</span>
+                            </div>
+                            <p className={`text-xs mt-1 leading-relaxed ${isActive ? 'text-slate-500' : 'text-slate-600'}`}>{ex.tip}</p>
                           </div>
-                          <p className={`text-xs mt-1 leading-relaxed ${isActive ? 'text-slate-500' : 'text-slate-600'}`}>{ex.tip}</p>
+                          <div className="flex flex-col items-end gap-2 mt-1 flex-shrink-0">
+                            <button
+                              onClick={() => toggleExerciseActive(key)}
+                              className={`w-12 h-6 rounded-full relative transition-colors ${isActive ? 'bg-sky-500' : 'bg-blue-50'}`}
+                            >
+                              <div className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${isActive ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                            </button>
+                            <button
+                              onClick={() => deleteExercise(key)}
+                              className="text-red-400 hover:text-red-600 transition-colors p-1"
+                              title={lang === 'zh' ? '刪除動作' : 'Delete Exercise'}
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex flex-col items-end gap-2 mt-1 flex-shrink-0">
-                          <button
-                            onClick={() => toggleExerciseActive(key)}
-                            className={`w-12 h-6 rounded-full relative transition-colors ${isActive ? 'bg-sky-500' : 'bg-blue-50'}`}
-                          >
-                            <div className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${isActive ? 'translate-x-6' : 'translate-x-0'}`}></div>
-                          </button>
-                          <button
-                            onClick={() => deleteExercise(key)}
-                            className="text-red-400 hover:text-red-600 transition-colors p-1"
-                            title={lang === 'zh' ? '刪除動作' : 'Delete Exercise'}
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
-            </div>
           )
         }
 
         {
           activeTab === 'metrics' && (
-            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6">
-              <div className="bg-white p-6 rounded-2xl border border-sky-100">
-                <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center">
-                  <Activity className="mr-2 text-sky-600" size={20} /> {t('metricsTitle')}
-                </h2>
-                <form onSubmit={saveMetrics} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs text-slate-500 mb-1">{t('labelDate')}</label>
-                      <input type="date" name="date" value={metricForm.date} onChange={handleMetricChange} className="w-full bg-slate-50 border border-sky-200 rounded-lg px-3 py-2 text-slate-700 text-sm" required />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-slate-500 mb-1">{t('labelAge')}</label>
-                      <input type="number" step="1" name="age" value={metricForm.age} onChange={handleMetricChange} placeholder={t('labelAgePlaceholder')} className="w-full bg-slate-50 border border-sky-200 rounded-lg px-3 py-2 text-slate-700 text-sm" />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-slate-500 mb-1">{t('labelHeight')}</label>
-                      <input type="number" step="0.1" name="height" value={metricForm.height} onChange={handleMetricChange} placeholder="cm" className="w-full bg-slate-50 border border-sky-200 rounded-lg px-3 py-2 text-slate-700 text-sm" />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-slate-500 mb-1">{t('labelWeight')}</label>
-                      <input type="number" step="0.1" name="weight" value={metricForm.weight} onChange={handleMetricChange} placeholder="kg" className="w-full bg-slate-50 border border-sky-200 rounded-lg px-3 py-2 text-slate-700 text-sm" />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-slate-500 mb-1">{t('labelBodyFat')}</label>
-                      <input type="number" step="0.1" name="bodyFat" value={metricForm.bodyFat} onChange={handleMetricChange} placeholder="%" className="w-full bg-slate-50 border border-sky-200 rounded-lg px-3 py-2 text-slate-700 text-sm" />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-slate-500 mb-1">{t('labelBMR')}</label>
-                      <input type="number" step="1" name="bmr" value={metricForm.bmr} onChange={handleMetricChange} placeholder="kcal" className="w-full bg-slate-50 border border-sky-200 rounded-lg px-3 py-2 text-slate-700 text-sm" />
-                    </div>
-                  </div>
-
-                  <div className="mt-6">
-                    <h3 className="text-sm font-semibold text-sky-600 mb-3 border-b border-emerald-900 pb-2">{t('labelMuscle')}</h3>
+            !user ? <div className="animate-in fade-in slide-in-from-bottom-2 duration-300"><LoginPrompt title={t('metricsTitle')} /></div> :
+              <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6">
+                <div className="bg-white p-6 rounded-2xl border border-sky-100">
+                  <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center">
+                    <Activity className="mr-2 text-sky-600" size={20} /> {t('metricsTitle')}
+                  </h2>
+                  <form onSubmit={saveMetrics} className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs text-slate-500 mb-1">{t('labelLArm')}</label>
-                        <input type="number" step="0.1" name="muscleLarm" value={metricForm.muscleLarm} onChange={handleMetricChange} placeholder="kg" className="w-full bg-slate-50 border border-sky-200 rounded-lg px-3 py-2 text-slate-700 text-sm" />
+                        <label className="block text-xs text-slate-500 mb-1">{t('labelDate')}</label>
+                        <input type="date" name="date" value={metricForm.date} onChange={handleMetricChange} className="w-full bg-slate-50 border border-sky-200 rounded-lg px-3 py-2 text-slate-700 text-sm" required />
                       </div>
                       <div>
-                        <label className="block text-xs text-slate-500 mb-1">{t('labelRArm')}</label>
-                        <input type="number" step="0.1" name="muscleRarm" value={metricForm.muscleRarm} onChange={handleMetricChange} placeholder="kg" className="w-full bg-slate-50 border border-sky-200 rounded-lg px-3 py-2 text-slate-700 text-sm" />
+                        <label className="block text-xs text-slate-500 mb-1">{t('labelAge')}</label>
+                        <input type="number" step="1" name="age" value={metricForm.age} onChange={handleMetricChange} placeholder={t('labelAgePlaceholder')} className="w-full bg-slate-50 border border-sky-200 rounded-lg px-3 py-2 text-slate-700 text-sm" />
                       </div>
                       <div>
-                        <label className="block text-xs text-slate-500 mb-1">{t('labelLLeg')}</label>
-                        <input type="number" step="0.1" name="muscleLleg" value={metricForm.muscleLleg} onChange={handleMetricChange} placeholder="kg" className="w-full bg-slate-50 border border-sky-200 rounded-lg px-3 py-2 text-slate-700 text-sm" />
+                        <label className="block text-xs text-slate-500 mb-1">{t('labelHeight')}</label>
+                        <input type="number" step="0.1" name="height" value={metricForm.height} onChange={handleMetricChange} placeholder="cm" className="w-full bg-slate-50 border border-sky-200 rounded-lg px-3 py-2 text-slate-700 text-sm" />
                       </div>
                       <div>
-                        <label className="block text-xs text-slate-500 mb-1">{t('labelRLeg')}</label>
-                        <input type="number" step="0.1" name="muscleRleg" value={metricForm.muscleRleg} onChange={handleMetricChange} placeholder="kg" className="w-full bg-slate-50 border border-sky-200 rounded-lg px-3 py-2 text-slate-700 text-sm" />
+                        <label className="block text-xs text-slate-500 mb-1">{t('labelWeight')}</label>
+                        <input type="number" step="0.1" name="weight" value={metricForm.weight} onChange={handleMetricChange} placeholder="kg" className="w-full bg-slate-50 border border-sky-200 rounded-lg px-3 py-2 text-slate-700 text-sm" />
                       </div>
-                      <div className="col-span-2">
-                        <label className="block text-xs text-slate-500 mb-1">{t('labelTrunk')}</label>
-                        <input type="number" step="0.1" name="muscleTrunk" value={metricForm.muscleTrunk} onChange={handleMetricChange} placeholder="kg" className="w-full bg-slate-50 border border-sky-200 rounded-lg px-3 py-2 text-slate-700 text-sm" />
+                      <div>
+                        <label className="block text-xs text-slate-500 mb-1">{t('labelBodyFat')}</label>
+                        <input type="number" step="0.1" name="bodyFat" value={metricForm.bodyFat} onChange={handleMetricChange} placeholder="%" className="w-full bg-slate-50 border border-sky-200 rounded-lg px-3 py-2 text-slate-700 text-sm" />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-slate-500 mb-1">{t('labelBMR')}</label>
+                        <input type="number" step="1" name="bmr" value={metricForm.bmr} onChange={handleMetricChange} placeholder="kcal" className="w-full bg-slate-50 border border-sky-200 rounded-lg px-3 py-2 text-slate-700 text-sm" />
                       </div>
                     </div>
-                  </div>
 
-                  <button type="submit" className="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-3 mt-4 rounded-xl transition-colors shadow-lg shadow-emerald-600/20">
-                    {t('metricsSaveBtn')}
-                  </button>
-                </form>
-              </div>
-
-              {metricsHistory.length > 0 && (
-                <div className="bg-white p-6 rounded-2xl border border-sky-100">
-                  <h2 className="text-lg font-bold text-slate-800 mb-6 flex items-center">
-                    <TrendingUp className="mr-2 text-sky-600" size={20} /> {t('metricsTrendTitle')}
-                  </h2>
-                  <div className="h-64 mb-8">
-                    <h3 className="text-xs text-slate-500 mb-2 text-center">{t('metricsChartWeight')}</h3>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={metricsHistory} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                        <XAxis dataKey="date" stroke="#94a3b8" fontSize={10} tickFormatter={(tick) => tick.slice(5)} />
-                        <YAxis yAxisId="left" stroke="#94a3b8" fontSize={10} domain={['auto', 'auto']} />
-                        <YAxis yAxisId="right" orientation="right" stroke="#94a3b8" fontSize={10} domain={['auto', 'auto']} />
-                        <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }} />
-                        <Legend wrapperStyle={{ fontSize: '12px' }} />
-                        <Line yAxisId="left" type="monotone" dataKey="weight" name={t('chartWeightName')} stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                        <Line yAxisId="right" type="monotone" dataKey="bodyFat" name={t('chartBodyFatName')} stroke="#f59e0b" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-
-                  <div className="h-64">
-                    <h3 className="text-xs text-slate-500 mb-2 text-center">{t('metricsChartMuscle')}</h3>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={metricsHistory} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                        <XAxis dataKey="date" stroke="#94a3b8" fontSize={10} tickFormatter={(tick) => tick.slice(5)} />
-                        <YAxis stroke="#94a3b8" fontSize={10} domain={['auto', 'auto']} />
-                        <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }} />
-                        <Legend wrapperStyle={{ fontSize: '10px' }} />
-                        <Line type="monotone" dataKey="muscleRarm" name={t('chartRArm')} stroke="#ef4444" strokeWidth={2} />
-                        <Line type="monotone" dataKey="muscleLarm" name={t('chartLArm')} stroke="#ef4444" strokeDasharray="5 5" strokeWidth={2} />
-                        <Line type="monotone" dataKey="muscleRleg" name={t('chartRLeg')} stroke="#10b981" strokeWidth={2} />
-                        <Line type="monotone" dataKey="muscleLleg" name={t('chartLLeg')} stroke="#10b981" strokeDasharray="5 5" strokeWidth={2} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              )}
-            </div>
-          )
-        }
-
-        {
-          activeTab === 'history' && stats && (
-            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6">
-
-              {/* Highlight Stats Row */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white p-5 rounded-2xl border border-sky-100 flex flex-col items-center justify-center text-center shadow-lg relative overflow-hidden">
-                  <div className="absolute -top-4 -right-4 w-16 h-16 bg-blue-100/10 rounded-full blur-xl"></div>
-                  <Flame size={24} className="text-orange-500 mb-2 drop-shadow-[0_0_8px_rgba(249,115,22,0.6)]" />
-                  <div className="text-3xl font-black text-slate-800">{stats.totalActiveDays} <span className="text-sm font-medium text-slate-500">{t('historyDaysUnit')}</span></div>
-                  <div className="text-xs text-slate-500 mt-1 font-medium">{t('historyActiveDays')}</div>
-                </div>
-                <div className="bg-white p-5 rounded-2xl border border-sky-100 flex flex-col items-center justify-center text-center shadow-lg relative overflow-hidden">
-                  <div className="absolute -top-4 -left-4 w-16 h-16 bg-sky-500/10 rounded-full blur-xl"></div>
-                  <CheckCircle2 size={24} className="text-sky-600 mb-2 drop-shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
-                  <div className="text-3xl font-black text-slate-800">{stats.totalCompleted} <span className="text-sm font-medium text-slate-500">{t('historyCompletedUnit')}</span></div>
-                  <div className="text-xs text-slate-500 mt-1 font-medium">{t('historyCompleted')}</div>
-                </div>
-              </div>
-
-              {/* Heatmap Section */}
-              <div className="bg-white p-6 rounded-2xl border border-sky-100 shadow-lg">
-                <h2 className="text-md font-bold text-slate-800 mb-4 flex items-center">
-                  <Zap className="mr-2 text-yellow-400" size={18} /> {t('heatmapTitle')}
-                </h2>
-
-                {heatmapWeeks.length === 0 ? (
-                  <p className="text-sm text-slate-500 text-center py-4">{t('heatmapEmpty')}</p>
-                ) : (
-                  <div className="overflow-x-auto pb-2">
-                    <div className="flex space-x-1.5 min-w-max">
-                      {heatmapWeeks.map(weekId => (
-                        <div key={weekId} className="flex flex-col space-y-1.5">
-                          {[1, 2, 3, 4, 5].map(dayIdx => {
-                            const count = stats.dailyMap[`${weekId}-${dayIdx}`] || 0;
-                            // Activity levels: 0 (bg-blue-50), 1-2 (emerald-900), 3-4 (emerald-600), 5+ (emerald-400)
-                            let bgClass = "bg-blue-50/50";
-                            if (count > 0 && count <= 2) bgClass = "bg-sky-100/60";
-                            else if (count > 2 && count < 5) bgClass = "bg-sky-600";
-                            else if (count >= 5) bgClass = "bg-sky-400 shadow-[0_0_5px_rgba(52,211,153,0.5)]";
-
-                            return (
-                              <div
-                                key={`${weekId}-${dayIdx}`}
-                                className={`w-4 h-4 rounded-sm ${bgClass} transition-colors`}
-                                title={`${weekId} ${t('heatmapTooltip')}${dayIdx}: ${count} ${t('heatmapActions')}`}
-                              ></div>
-                            );
-                          })}
+                    <div className="mt-6">
+                      <h3 className="text-sm font-semibold text-sky-600 mb-3 border-b border-emerald-900 pb-2">{t('labelMuscle')}</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs text-slate-500 mb-1">{t('labelLArm')}</label>
+                          <input type="number" step="0.1" name="muscleLarm" value={metricForm.muscleLarm} onChange={handleMetricChange} placeholder="kg" className="w-full bg-slate-50 border border-sky-200 rounded-lg px-3 py-2 text-slate-700 text-sm" />
                         </div>
-                      ))}
-                    </div>
-                    <div className="flex justify-between items-center mt-3 text-[10px] text-slate-500 font-medium">
-                      <span>{t('heatmapOldest')}</span>
-                      <div className="flex items-center space-x-1">
-                        <span className="mr-1">{t('heatmapLess')}</span>
-                        <div className="w-3 h-3 rounded-sm bg-blue-50/50"></div>
-                        <div className="w-3 h-3 rounded-sm bg-sky-100/60"></div>
-                        <div className="w-3 h-3 rounded-sm bg-sky-600"></div>
-                        <div className="w-3 h-3 rounded-sm bg-sky-400"></div>
-                        <span className="ml-1">{t('heatmapMore')}</span>
+                        <div>
+                          <label className="block text-xs text-slate-500 mb-1">{t('labelRArm')}</label>
+                          <input type="number" step="0.1" name="muscleRarm" value={metricForm.muscleRarm} onChange={handleMetricChange} placeholder="kg" className="w-full bg-slate-50 border border-sky-200 rounded-lg px-3 py-2 text-slate-700 text-sm" />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-slate-500 mb-1">{t('labelLLeg')}</label>
+                          <input type="number" step="0.1" name="muscleLleg" value={metricForm.muscleLleg} onChange={handleMetricChange} placeholder="kg" className="w-full bg-slate-50 border border-sky-200 rounded-lg px-3 py-2 text-slate-700 text-sm" />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-slate-500 mb-1">{t('labelRLeg')}</label>
+                          <input type="number" step="0.1" name="muscleRleg" value={metricForm.muscleRleg} onChange={handleMetricChange} placeholder="kg" className="w-full bg-slate-50 border border-sky-200 rounded-lg px-3 py-2 text-slate-700 text-sm" />
+                        </div>
+                        <div className="col-span-2">
+                          <label className="block text-xs text-slate-500 mb-1">{t('labelTrunk')}</label>
+                          <input type="number" step="0.1" name="muscleTrunk" value={metricForm.muscleTrunk} onChange={handleMetricChange} placeholder="kg" className="w-full bg-slate-50 border border-sky-200 rounded-lg px-3 py-2 text-slate-700 text-sm" />
+                        </div>
                       </div>
-                      <span>{t('heatmapNewest')}</span>
+                    </div>
+
+                    <button type="submit" className="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-3 mt-4 rounded-xl transition-colors shadow-lg shadow-emerald-600/20">
+                      {t('metricsSaveBtn')}
+                    </button>
+                  </form>
+                </div>
+
+                {metricsHistory.length > 0 && (
+                  <div className="bg-white p-6 rounded-2xl border border-sky-100">
+                    <h2 className="text-lg font-bold text-slate-800 mb-6 flex items-center">
+                      <TrendingUp className="mr-2 text-sky-600" size={20} /> {t('metricsTrendTitle')}
+                    </h2>
+                    <div className="h-64 mb-8">
+                      <h3 className="text-xs text-slate-500 mb-2 text-center">{t('metricsChartWeight')}</h3>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={metricsHistory} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                          <XAxis dataKey="date" stroke="#94a3b8" fontSize={10} tickFormatter={(tick) => tick.slice(5)} />
+                          <YAxis yAxisId="left" stroke="#94a3b8" fontSize={10} domain={['auto', 'auto']} />
+                          <YAxis yAxisId="right" orientation="right" stroke="#94a3b8" fontSize={10} domain={['auto', 'auto']} />
+                          <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }} />
+                          <Legend wrapperStyle={{ fontSize: '12px' }} />
+                          <Line yAxisId="left" type="monotone" dataKey="weight" name={t('chartWeightName')} stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                          <Line yAxisId="right" type="monotone" dataKey="bodyFat" name={t('chartBodyFatName')} stroke="#f59e0b" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+
+                    <div className="h-64">
+                      <h3 className="text-xs text-slate-500 mb-2 text-center">{t('metricsChartMuscle')}</h3>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={metricsHistory} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                          <XAxis dataKey="date" stroke="#94a3b8" fontSize={10} tickFormatter={(tick) => tick.slice(5)} />
+                          <YAxis stroke="#94a3b8" fontSize={10} domain={['auto', 'auto']} />
+                          <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }} />
+                          <Legend wrapperStyle={{ fontSize: '10px' }} />
+                          <Line type="monotone" dataKey="muscleRarm" name={t('chartRArm')} stroke="#ef4444" strokeWidth={2} />
+                          <Line type="monotone" dataKey="muscleLarm" name={t('chartLArm')} stroke="#ef4444" strokeDasharray="5 5" strokeWidth={2} />
+                          <Line type="monotone" dataKey="muscleRleg" name={t('chartRLeg')} stroke="#10b981" strokeWidth={2} />
+                          <Line type="monotone" dataKey="muscleLleg" name={t('chartLLeg')} stroke="#10b981" strokeDasharray="5 5" strokeWidth={2} />
+                        </LineChart>
+                      </ResponsiveContainer>
                     </div>
                   </div>
                 )}
               </div>
+          )
+        }
 
-              {/* Radar/Bar Chart Alternative for Parts */}
-              <div className="bg-white p-6 rounded-2xl border border-sky-100 shadow-lg">
-                <h2 className="text-md font-bold text-slate-800 mb-4 flex items-center">
-                  <Shield className="mr-2 text-indigo-600" size={18} /> {t('radarTitle')}
-                </h2>
-                <div className="space-y-3">
-                  <div className="flex items-center text-sm">
-                    <span className="w-16 text-slate-500 text-xs">{t('radarLower')}</span>
-                    <div className="flex-1 h-3 bg-blue-50 rounded-full mx-3 overflow-hidden">
-                      <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${Math.min(100, (stats.typeStats.lower / Math.max(1, stats.totalCompleted)) * 250)}%` }}></div>
-                    </div>
-                    <span className="w-8 text-right text-slate-600 font-medium">{stats.typeStats.lower}</span>
-                  </div>
-                  <div className="flex items-center text-sm">
-                    <span className="w-16 text-slate-500 text-xs">{t('radarCore')}</span>
-                    <div className="flex-1 h-3 bg-blue-50 rounded-full mx-3 overflow-hidden">
-                      <div className="h-full bg-blue-100 rounded-full" style={{ width: `${Math.min(100, (stats.typeStats.core / Math.max(1, stats.totalCompleted)) * 250)}%` }}></div>
-                    </div>
-                    <span className="w-8 text-right text-slate-600 font-medium">{stats.typeStats.core}</span>
-                  </div>
-                  <div className="flex items-center text-sm">
-                    <span className="w-16 text-slate-500 text-xs">{t('radarUpper')}</span>
-                    <div className="flex-1 h-3 bg-blue-50 rounded-full mx-3 overflow-hidden">
-                      <div className="h-full bg-sky-500 rounded-full" style={{ width: `${Math.min(100, ((stats.typeStats.upper_push + stats.typeStats.upper_pull) / Math.max(1, stats.totalCompleted)) * 250)}%` }}></div>
-                    </div>
-                    <span className="w-8 text-right text-slate-600 font-medium">{stats.typeStats.upper_push + stats.typeStats.upper_pull}</span>
-                  </div>
-                  <div className="flex items-center text-sm">
-                    <span className="w-16 text-slate-500 text-xs">{t('radarMobility')}</span>
-                    <div className="flex-1 h-3 bg-blue-50 rounded-full mx-3 overflow-hidden">
-                      <div className="h-full bg-teal-400 rounded-full" style={{ width: `${Math.min(100, (stats.typeStats.mobility / Math.max(1, stats.totalCompleted)) * 250)}%` }}></div>
-                    </div>
-                    <span className="w-8 text-right text-slate-600 font-medium">{stats.typeStats.mobility}</span>
-                  </div>
-                  <div className="flex items-center text-sm">
-                    <span className="w-16 text-slate-500 text-xs">{t('radarPower')}</span>
-                    <div className="flex-1 h-3 bg-blue-50 rounded-full mx-3 overflow-hidden">
-                      <div className="h-full bg-orange-500 rounded-full" style={{ width: `${Math.min(100, ((stats.typeStats.power + stats.typeStats.full) / Math.max(1, stats.totalCompleted)) * 250)}%` }}></div>
-                    </div>
-                    <span className="w-8 text-right text-slate-600 font-medium">{stats.typeStats.power + stats.typeStats.full}</span>
-                  </div>
-                </div>
-              </div>
+        {
+          activeTab === 'history' && (
+            !user ? <div className="animate-in fade-in slide-in-from-bottom-2 duration-300"><LoginPrompt title={t('monthlyTitle')} /></div> :
+              stats && (
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6">
 
-              <h2 className="text-lg font-bold text-slate-800 mb-4 mt-8 flex items-center">
-                <CalendarDays className="mr-2 text-blue-600" size={20} /> {t('monthlyTitle')}
-              </h2>
-              {monthlyData.length === 0 ? (
-                <div className="text-center p-8 bg-white rounded-xl border border-sky-100"><p className="text-slate-500">{t('historyEmpty')}</p></div>
-              ) : (
-                monthlyData.map((data) => {
-                  const targetForMonth = data.totalWeeks * TOTAL_WEEKLY_EXERCISES;
-                  const monthPercent = Math.round((data.completed / targetForMonth) * 100);
-                  return (
-                    <div key={data.monthKey} className="bg-white p-5 rounded-2xl border border-sky-100 relative overflow-hidden mb-4">
-                      <div className="absolute top-0 left-0 h-1 bg-sky-500/50" style={{ width: `${monthPercent}%` }}></div>
-                      <div className="flex justify-between items-center mb-3">
-                        <h3 className="font-bold text-lg text-slate-800">{data.monthKey}</h3>
-                        <div className="text-2xl font-black text-sky-600">{monthPercent}%</div>
+                  {/* Highlight Stats Row */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-white p-5 rounded-2xl border border-sky-100 flex flex-col items-center justify-center text-center shadow-lg relative overflow-hidden">
+                      <div className="absolute -top-4 -right-4 w-16 h-16 bg-blue-100/10 rounded-full blur-xl"></div>
+                      <Flame size={24} className="text-orange-500 mb-2 drop-shadow-[0_0_8px_rgba(249,115,22,0.6)]" />
+                      <div className="text-3xl font-black text-slate-800">{stats.totalActiveDays} <span className="text-sm font-medium text-slate-500">{t('historyDaysUnit')}</span></div>
+                      <div className="text-xs text-slate-500 mt-1 font-medium">{t('historyActiveDays')}</div>
+                    </div>
+                    <div className="bg-white p-5 rounded-2xl border border-sky-100 flex flex-col items-center justify-center text-center shadow-lg relative overflow-hidden">
+                      <div className="absolute -top-4 -left-4 w-16 h-16 bg-sky-500/10 rounded-full blur-xl"></div>
+                      <CheckCircle2 size={24} className="text-sky-600 mb-2 drop-shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
+                      <div className="text-3xl font-black text-slate-800">{stats.totalCompleted} <span className="text-sm font-medium text-slate-500">{t('historyCompletedUnit')}</span></div>
+                      <div className="text-xs text-slate-500 mt-1 font-medium">{t('historyCompleted')}</div>
+                    </div>
+                  </div>
+
+                  {/* Heatmap Section */}
+                  <div className="bg-white p-6 rounded-2xl border border-sky-100 shadow-lg">
+                    <h2 className="text-md font-bold text-slate-800 mb-4 flex items-center">
+                      <Zap className="mr-2 text-yellow-400" size={18} /> {t('heatmapTitle')}
+                    </h2>
+
+                    {heatmapWeeks.length === 0 ? (
+                      <p className="text-sm text-slate-500 text-center py-4">{t('heatmapEmpty')}</p>
+                    ) : (
+                      <div className="overflow-x-auto pb-2">
+                        <div className="flex space-x-1.5 min-w-max">
+                          {heatmapWeeks.map(weekId => (
+                            <div key={weekId} className="flex flex-col space-y-1.5">
+                              {[1, 2, 3, 4, 5].map(dayIdx => {
+                                const count = stats.dailyMap[`${weekId}-${dayIdx}`] || 0;
+                                // Activity levels: 0 (bg-blue-50), 1-2 (emerald-900), 3-4 (emerald-600), 5+ (emerald-400)
+                                let bgClass = "bg-blue-50/50";
+                                if (count > 0 && count <= 2) bgClass = "bg-sky-100/60";
+                                else if (count > 2 && count < 5) bgClass = "bg-sky-600";
+                                else if (count >= 5) bgClass = "bg-sky-400 shadow-[0_0_5px_rgba(52,211,153,0.5)]";
+
+                                return (
+                                  <div
+                                    key={`${weekId}-${dayIdx}`}
+                                    className={`w-4 h-4 rounded-sm ${bgClass} transition-colors`}
+                                    title={`${weekId} ${t('heatmapTooltip')}${dayIdx}: ${count} ${t('heatmapActions')}`}
+                                  ></div>
+                                );
+                              })}
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex justify-between items-center mt-3 text-[10px] text-slate-500 font-medium">
+                          <span>{t('heatmapOldest')}</span>
+                          <div className="flex items-center space-x-1">
+                            <span className="mr-1">{t('heatmapLess')}</span>
+                            <div className="w-3 h-3 rounded-sm bg-blue-50/50"></div>
+                            <div className="w-3 h-3 rounded-sm bg-sky-100/60"></div>
+                            <div className="w-3 h-3 rounded-sm bg-sky-600"></div>
+                            <div className="w-3 h-3 rounded-sm bg-sky-400"></div>
+                            <span className="ml-1">{t('heatmapMore')}</span>
+                          </div>
+                          <span>{t('heatmapNewest')}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center text-sm text-slate-500 mb-1"><CheckCircle2 size={16} className="mr-2 text-sky-600" /> {t('historyTotal')} <span className="text-slate-700 ml-2 font-medium">{data.completed} {t('historyActionsUnit')}</span></div>
+                    )}
+                  </div>
+
+                  {/* Radar/Bar Chart Alternative for Parts */}
+                  <div className="bg-white p-6 rounded-2xl border border-sky-100 shadow-lg">
+                    <h2 className="text-md font-bold text-slate-800 mb-4 flex items-center">
+                      <Shield className="mr-2 text-indigo-600" size={18} /> {t('radarTitle')}
+                    </h2>
+                    <div className="space-y-3">
+                      <div className="flex items-center text-sm">
+                        <span className="w-16 text-slate-500 text-xs">{t('radarLower')}</span>
+                        <div className="flex-1 h-3 bg-blue-50 rounded-full mx-3 overflow-hidden">
+                          <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${Math.min(100, (stats.typeStats.lower / Math.max(1, stats.totalCompleted)) * 250)}%` }}></div>
+                        </div>
+                        <span className="w-8 text-right text-slate-600 font-medium">{stats.typeStats.lower}</span>
+                      </div>
+                      <div className="flex items-center text-sm">
+                        <span className="w-16 text-slate-500 text-xs">{t('radarCore')}</span>
+                        <div className="flex-1 h-3 bg-blue-50 rounded-full mx-3 overflow-hidden">
+                          <div className="h-full bg-blue-100 rounded-full" style={{ width: `${Math.min(100, (stats.typeStats.core / Math.max(1, stats.totalCompleted)) * 250)}%` }}></div>
+                        </div>
+                        <span className="w-8 text-right text-slate-600 font-medium">{stats.typeStats.core}</span>
+                      </div>
+                      <div className="flex items-center text-sm">
+                        <span className="w-16 text-slate-500 text-xs">{t('radarUpper')}</span>
+                        <div className="flex-1 h-3 bg-blue-50 rounded-full mx-3 overflow-hidden">
+                          <div className="h-full bg-sky-500 rounded-full" style={{ width: `${Math.min(100, ((stats.typeStats.upper_push + stats.typeStats.upper_pull) / Math.max(1, stats.totalCompleted)) * 250)}%` }}></div>
+                        </div>
+                        <span className="w-8 text-right text-slate-600 font-medium">{stats.typeStats.upper_push + stats.typeStats.upper_pull}</span>
+                      </div>
+                      <div className="flex items-center text-sm">
+                        <span className="w-16 text-slate-500 text-xs">{t('radarMobility')}</span>
+                        <div className="flex-1 h-3 bg-blue-50 rounded-full mx-3 overflow-hidden">
+                          <div className="h-full bg-teal-400 rounded-full" style={{ width: `${Math.min(100, (stats.typeStats.mobility / Math.max(1, stats.totalCompleted)) * 250)}%` }}></div>
+                        </div>
+                        <span className="w-8 text-right text-slate-600 font-medium">{stats.typeStats.mobility}</span>
+                      </div>
+                      <div className="flex items-center text-sm">
+                        <span className="w-16 text-slate-500 text-xs">{t('radarPower')}</span>
+                        <div className="flex-1 h-3 bg-blue-50 rounded-full mx-3 overflow-hidden">
+                          <div className="h-full bg-orange-500 rounded-full" style={{ width: `${Math.min(100, ((stats.typeStats.power + stats.typeStats.full) / Math.max(1, stats.totalCompleted)) * 250)}%` }}></div>
+                        </div>
+                        <span className="w-8 text-right text-slate-600 font-medium">{stats.typeStats.power + stats.typeStats.full}</span>
+                      </div>
                     </div>
-                  );
-                })
-              )}
-            </div>
+                  </div>
+
+                  <h2 className="text-lg font-bold text-slate-800 mb-4 mt-8 flex items-center">
+                    <CalendarDays className="mr-2 text-blue-600" size={20} /> {t('monthlyTitle')}
+                  </h2>
+                  {monthlyData.length === 0 ? (
+                    <div className="text-center p-8 bg-white rounded-xl border border-sky-100"><p className="text-slate-500">{t('historyEmpty')}</p></div>
+                  ) : (
+                    monthlyData.map((data) => {
+                      const targetForMonth = data.totalWeeks * TOTAL_WEEKLY_EXERCISES;
+                      const monthPercent = Math.round((data.completed / targetForMonth) * 100);
+                      return (
+                        <div key={data.monthKey} className="bg-white p-5 rounded-2xl border border-sky-100 relative overflow-hidden mb-4">
+                          <div className="absolute top-0 left-0 h-1 bg-sky-500/50" style={{ width: `${monthPercent}%` }}></div>
+                          <div className="flex justify-between items-center mb-3">
+                            <h3 className="font-bold text-lg text-slate-800">{data.monthKey}</h3>
+                            <div className="text-2xl font-black text-sky-600">{monthPercent}%</div>
+                          </div>
+                          <div className="flex items-center text-sm text-slate-500 mb-1"><CheckCircle2 size={16} className="mr-2 text-sky-600" /> {t('historyTotal')} <span className="text-slate-700 ml-2 font-medium">{data.completed} {t('historyActionsUnit')}</span></div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              )
           )
         }
 
         {
           activeTab === 'settings' && (
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6">
+              {!user && <div className="mb-6"><LoginPrompt title={t('settingsTitle')} /></div>}
               <div className="bg-white p-6 rounded-2xl border border-sky-100">
                 <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center">
                   <Key className="mr-2 text-blue-600" size={20} /> {t('settingsTitle')}

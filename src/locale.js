@@ -8,6 +8,10 @@ export const TRANSLATIONS = {
         // Login
         loginSubtitle: '專為羽球愛好者打造。登入並設定你的 API 金鑰，讓專屬 AI 規劃體能訓練。',
         loginBtn: '使用 Google 帳號登入',
+        // Intro
+        introTitle: '專為羽球人打造的功能性訓練',
+        introDesc: '不只是流汗，更是針對羽球發力與步伐的進化。讓 AI 教練為你量身打造科學化的每週訓練課表。',
+        introStartBtn: '開始體驗',
         // Header subtitles
         headerAI: '與專業 AI 功能性教練溝通，為您量身打造並解說最佳每週訓練。',
         headerMetrics: '追蹤您的身體組成，包含四肢肌肉質量，精確掌握訓練成效與發力基礎。',
@@ -154,6 +158,10 @@ export const TRANSLATIONS = {
         // Login
         loginSubtitle: 'Built for badminton players. Sign in and set your API key to let AI plan your fitness training.',
         loginBtn: 'Sign in with Google',
+        // Intro
+        introTitle: 'Functional Training for Badminton',
+        introDesc: 'Not just sweating, but evolving your badminton power and footwork. Let the AI coach customize a scientific weekly training plan for you.',
+        introStartBtn: 'Get Started',
         // Header subtitles
         headerAI: 'Chat with your professional AI functional coach to get a customized weekly training plan.',
         headerMetrics: 'Track your body composition, including limb muscle mass, to monitor your training effectiveness.',
