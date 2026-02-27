@@ -270,9 +270,11 @@ export default function App() {
   const [lang, setLang] = useState(localStorage.getItem('app_lang') || 'zh');
   const t = (key) => TRANSLATIONS[lang]?.[key] ?? TRANSLATIONS.zh[key];
   const toggleLang = () => {
-    const newLang = lang === 'zh' ? 'en' : 'zh';
-    setLang(newLang);
-    localStorage.setItem('app_lang', newLang);
+    setLang(prev => {
+      const newLang = prev === 'zh' ? 'en' : 'zh';
+      localStorage.setItem('app_lang', newLang);
+      return newLang;
+    });
   };
   // Locale-aware exercise pool and schedule
   const EXERCISES = EXERCISES_I18N[lang];
