@@ -276,12 +276,43 @@ export default function App() {
   const [apiKey, setApiKey] = useState(localStorage.getItem('gemini_byok_key') || '');
   const [tempKeyInput, setTempKeyInput] = useState(localStorage.getItem('gemini_byok_key') || '');
   const [selectedAiModel, setSelectedAiModel] = useState(localStorage.getItem('app_ai_model') || 'gemini-2.5-flash');
+  const [availableModels, setAvailableModels] = useState(['gemini-2.5-flash']);
   const [toastMsg, setToastMsg] = useState('');
 
   const showToast = (msg) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(''), 3000);
   };
+
+  const checkAvailableModels = async (key) => {
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
+      if (!response.ok) return ['gemini-2.5-flash'];
+      const data = await response.json();
+      const validModels = (data.models || [])
+        .filter(m => m.supportedGenerationMethods?.includes('generateContent') && m.name.startsWith('models/gemini-'))
+        .map(m => m.name.replace('models/', ''));
+
+      const options = ['gemini-2.5-flash'];
+      if (validModels.some(m => m.includes('2.5-pro'))) options.push('gemini-2.5-pro');
+      if (validModels.some(m => m.includes('3.0-pro') || m.includes('gemini-exp'))) options.push('gemini-3.0-pro');
+      return options;
+    } catch (e) {
+      return ['gemini-2.5-flash'];
+    }
+  };
+
+  useEffect(() => {
+    if (apiKey) {
+      checkAvailableModels(apiKey).then(models => {
+        setAvailableModels(models);
+        if (!models.includes(selectedAiModel)) {
+          setSelectedAiModel(models[0]);
+          localStorage.setItem('app_ai_model', models[0]);
+        }
+      });
+    }
+  }, [apiKey]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -1260,9 +1291,9 @@ export default function App() {
                     }}
                     className="w-full bg-slate-50 border border-sky-200 rounded-xl px-4 py-3 text-slate-700 focus:outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-500 transition-all text-sm"
                   >
-                    <option value="gemini-2.5-flash">{t('settingsModelFlash')}</option>
-                    <option value="gemini-2.5-pro">{t('settingsModelPro')}</option>
-                    <option value="gemini-3.0-pro">{t('settingsModel3Pro')}</option>
+                    {availableModels.includes('gemini-2.5-flash') && <option value="gemini-2.5-flash">{t('settingsModelFlash')}</option>}
+                    {availableModels.includes('gemini-2.5-pro') && <option value="gemini-2.5-pro">{t('settingsModelPro')}</option>}
+                    {availableModels.includes('gemini-3.0-pro') && <option value="gemini-3.0-pro">{t('settingsModel3Pro')} 💎</option>}
                   </select>
                 </div>
 
