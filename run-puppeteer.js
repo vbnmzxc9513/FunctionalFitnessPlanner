@@ -1,54 +1,42 @@
-// Puppeteer debug script - captures ALL logs and errors including those happening after page load
 import puppeteer from 'puppeteer';
 import fs from 'fs';
 
 (async () => {
-    const browser = await puppeteer.launch({ headless: false, devtools: true }); // open devtools
+    const browser = await puppeteer.launch({ headless: 'new' });
     const page = await browser.newPage();
 
     const logs = [];
     const log = (msg) => { logs.push(msg); console.log(msg); };
 
-    page.on('console', msg => {
-        log(`[${msg.type().toUpperCase()}] ${msg.text()}`);
-        // Try to get arg values for error messages
-        if (msg.type() === 'error') {
-            msg.args().forEach(async (arg) => {
-                try {
-                    const val = await arg.jsonValue();
-                    log(`  ARG: ${JSON.stringify(val)}`);
-                } catch (e) { }
-            });
+    page.on('console', msg => log(`[${msg.type().toUpperCase()}] ${msg.text()}`));
+    page.on('pageerror', err => {
+        log(`[PAGEERROR] ${err.toString()}`);
+        log(`[STACK] ${err.stack}`);
+    });
+    page.on('requestfailed', req => log(`[REQFAIL] ${req.url()} - ${req.failure()?.errorText}`));
+    page.on('response', async resp => {
+        if (!resp.ok() && resp.url().includes('github.io')) {
+            log(`[HTTP_ERR] ${resp.status()} ${resp.url()}`);
         }
     });
 
-    page.on('pageerror', err => {
-        log(`[PAGEERROR] ${err.toString()}`);
-        log(`[PAGEERROR STACK] ${err.stack}`);
+    log('Navigating to GitHub Pages...');
+    await page.goto('https://vbnmzxc9513.github.io/FunctionalFitnessPlanner/', {
+        waitUntil: 'networkidle0',
+        timeout: 30000
     });
 
-    page.on('requestfailed', req => {
-        log(`[REQFAIL] ${req.url()} - ${req.failure()?.errorText}`);
-    });
-
-    await page.goto('http://localhost:5173/FunctionalFitnessPlanner/', { timeout: 15000 });
-    log('=== Page loaded ===');
-
-    // Wait for the login button and click it to simulate login
-    await page.waitForSelector('button', { timeout: 5000 }).catch(() => log('No button found'));
-
-    log('Waiting 8s for any data-driven crashes...');
-    await new Promise(r => setTimeout(r, 8000));
+    log('Waiting 5s...');
+    await new Promise(r => setTimeout(r, 5000));
 
     const bodyText = await page.evaluate(() => document.body.innerText);
-    log(`\n=== PAGE BODY (first 3000 chars) ===\n${bodyText.substring(0, 3000)}`);
+    log(`\n=== PAGE BODY ===\n${bodyText.substring(0, 2000)}`);
 
-    fs.writeFileSync('debug_log.txt', logs.join('\n'));
-    log('\nSaved debug log to debug_log.txt');
+    // Check if #root has content
+    const rootHTML = await page.evaluate(() => document.getElementById('root')?.innerHTML || 'NO ROOT');
+    log(`\n=== ROOT HTML (first 500) ===\n${rootHTML.substring(0, 500)}`);
 
-    // Keep browser open 30s for manual inspection
-    log('Browser open for 30 more seconds for manual inspection...');
-    await new Promise(r => setTimeout(r, 30000));
-
+    fs.writeFileSync('debug_github_pages.txt', logs.join('\n'));
+    log('Saved to debug_github_pages.txt');
     await browser.close();
 })();

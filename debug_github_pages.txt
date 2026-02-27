@@ -1,0 +1,13 @@
+Navigating to GitHub Pages...
+[HTTP_ERR] 404 https://vbnmzxc9513.github.io/src/main.jsx
+[ERROR] Failed to load resource: the server responded with a status of 404 ()
+[REQFAIL] https://vbnmzxc9513.github.io/src/main.jsx - net::ERR_ABORTED
+[HTTP_ERR] 404 https://vbnmzxc9513.github.io/icon.png
+[ERROR] Failed to load resource: the server responded with a status of 404 ()
+Waiting 5s...
+
+=== PAGE BODY ===
+
+
+=== ROOT HTML (first 500) ===
+NO ROOT

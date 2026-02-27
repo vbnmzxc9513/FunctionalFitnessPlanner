@@ -4,6 +4,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
 import { getFirestore, doc, setDoc, onSnapshot, collection, getDoc } from 'firebase/firestore';
+import { TRANSLATIONS, EXERCISES_I18N, DEFAULT_SCHEDULE_I18N } from './locale.js';
 
 // --- Debug Error Boundary ---
 class ErrorBoundary extends React.Component {
@@ -52,26 +53,8 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = "my-fitness-app-yp";
 
-// --- Exercise Pool ---
-const EXERCISES = {
-  stretch_10m: { name: '10分鐘大腿小腿拉筋伸展', type: 'mobility', tip: '專注於呼吸，每個動作停留至少30秒，感受肌肉與筋膜延展。' },
-  bulgarian: { name: '保佳利亞蹲', type: 'lower', tip: '前腳全腳掌踩穩，後腳背輕放，下蹲時保持軀幹直立，感受臀大肌發力。' },
-  bear_crawl: { name: '熊爬式', type: 'core', tip: '膝蓋微浮離地，核心收緊，對側手腳同步小步移動，背部保持水平。' },
-  dead_bug: { name: '死蟲式', type: 'core', tip: '下背部緊貼地面，四肢延伸時核心絕對不可放鬆或拱腰。' },
-  plank_row: { name: '平板啞鈴划船', type: 'upper_pull', tip: '雙腳微張保持骨盆穩定，手肘貼緊軀幹向後拉，極力避免身體翻轉。' },
-  thoracic: { name: '胸椎靈活性動作', type: 'mobility', tip: '動作放慢，配合吐氣加深旋轉或下壓幅度，避免下背代償。' },
-  pull_up: { name: '引體向上', type: 'upper_pull', tip: '肩胛先下沉收緊，胸口迎向單槓，控制下放速度以建立離心力量。' },
-  single_dl: { name: '單腿硬拉', type: 'lower', tip: '支撐腳微彎，髖部向後推，背部打直，感受腿後側張力。' },
-  shoulder_press: { name: '肩推', type: 'upper_push', tip: '核心收緊避免過度挺腰，啞鈴推至頭頂正上方，穩定肩關節。' },
-  one_arm_plank: { name: '平板稱體 (單手)', type: 'core', tip: '雙腳張開增加底面積，肩膀主動推地，核心出力對抗身體旋轉。' },
-  farmer_walk: { name: '農夫行走', type: 'full', tip: '挺胸收腹，視線直視前方，步伐穩健不搖晃，考驗核心抗側屈。' },
-  lunge_press: { name: '弓步單側啞鈴上推', type: 'power', tip: '後腳蹬地發力，力量順暢傳導至手部上推，動作需具備爆發與連貫性。' },
-  weighted_lunge: { name: '單側負重前弓步蹲', type: 'lower', tip: '保持軀幹抗側屈，下蹲時前腳膝蓋與腳尖同向，強化煞車控制。' },
-  finger_pushup: { name: '手指俯臥撐', type: 'upper_push', tip: '十指張開微曲撐地，核心繃緊，動作需極度控制以保護指關節。' },
-  squat_jump: { name: '啞鈴快速蹲跳', type: 'power', tip: '落地時保持柔軟緩衝，下肢發力要迅速，強化肌肉彈性與收縮速率。' }
-};
-
-const DEFAULT_SCHEDULE = [
+// EXERCISES and DEFAULT_SCHEDULE are now in locale.js as EXERCISES_I18N and DEFAULT_SCHEDULE_I18N
+const _LEGACY_SCHEDULE_PLACEHOLDER = [
   { day: 1, name: '星期一', theme: '單邊穩定與網前急停', concept: '【羽球連結：上網撲球與防守步伐】\n原理：透過單腳支撐與髖關節鉸鏈的訓練，強化大腿後側與臀部煞車能力，讓你在網前迅速急停而不失去平衡。', routine: ['thoracic', 'single_dl', 'bulgarian', 'weighted_lunge', 'stretch_10m'], coachAdvice: '今天是本週的開始，針對下肢的急停煞車會讓你的大腿前側與臀部較有感。明天會進行上半身的抗旋轉訓練，因此今天最後的伸展請務必確實放鬆下半身，避免明天的發力受到代償影響。' },
   { day: 2, name: '星期二', theme: '核心抗旋轉與殺球力量傳導', concept: '【羽球連結：躍起殺球與平抽擋】\n原理：殺球的力量來自於軀幹抗旋轉後的反作用力。此模組強化背部與胸肩力量，讓你在擊球瞬間維持強大的空中核心剛性。', routine: ['dead_bug', 'pull_up', 'plank_row', 'shoulder_press', 'finger_pushup'], coachAdvice: '昨天的大量下肢訓練可能會讓你今天覺得腿部痠痛，因此今天的重點會轉移到上半身與核心。請注意在做平板划船等抗旋轉動作時，不要利用腿部的搖晃來代償。明天是動態恢復日，今天可以盡情發揮上半身的力量！' },
   { day: 3, name: '星期三', theme: '動態恢復與關節活動度', concept: '【羽球連結：救球延展與降低受傷率】\n原理：羽球中常有極端角度的救球動作（如大跨步救球）。主動恢復與胸椎、髖關節活動度能增加救球的安全範圍。', routine: ['thoracic', 'bear_crawl', 'dead_bug', 'stretch_10m'], coachAdvice: '經過前兩天的高強度訓練，你的肌肉現在應該處於輕微疲勞緊繃狀態。今天的目的是疏通筋骨、增加關節活動度。明天會加入不對稱負重的挑戰，所以今天好好把脊椎與髖部打開，為明天的核心耐力戰做好準備。' },
@@ -152,7 +135,7 @@ const getLatestGeminiModel = async (apiKey) => {
 };
 
 // --- Gemini AI Function ---
-const generateAIPlan = async (lastWeekData, currentLevel, lastWeekFeedback, userApiKey, allProgress, metricsHistory, userGoal, dailyTime, userMessage, availableExercises) => {
+const generateAIPlan = async (lastWeekData, currentLevel, lastWeekFeedback, userApiKey, allProgress, metricsHistory, userGoal, dailyTime, userMessage, availableExercises, lang = 'zh') => {
   if (!userApiKey) throw new Error("API_KEY_MISSING");
 
   const modelName = await getLatestGeminiModel(userApiKey);
@@ -219,6 +202,7 @@ const generateAIPlan = async (lastWeekData, currentLevel, lastWeekFeedback, user
   3. 每天的主題 (theme) 必須是明確的「羽球專項訓練目標」 (例如：單邊穩定與網前急停)。
   4. 每天的評語 (concept) 必須說明當天的訓練如何連結到「羽球的特定動作 (如躍起殺球、防守接殺、米字步)」，以及「背後的發力與穩定原理」。請分為【羽球連結】與【原理】兩部分撰寫，中間務必使用 \\n 換行。
   5. 每天的教練叮嚀 (coachAdvice) 必須是非常具體的「每日銜接建議」：綜合考量「昨天練了什麼/哪裡會痠痛」、「今天要注意什麼代償/該如何放鬆」，以及「明天預計要練什麼/所以今天該做什麼準備」。例如：『因為昨天做了大量下肢，今天大腿前側可能較痠，所以今天的核心訓練要注意不要用腿部代償；明天預計會練肩推，因此今天的最後請務必確實拉伸胸大肌。』
+  ${lang === 'en' ? '\n  [IMPORTANT] The user interface is currently set to English. Please write ALL your responses (conclusion, schedule themes, concepts, and coachAdvice) in ENGLISH.' : ''}
   `;
 
   const payload = {
@@ -279,8 +263,20 @@ export { ErrorBoundary };
 export default function App() {
   const [user, setUser] = useState(null);
   const [authMode, setAuthMode] = useState('pending');
-  const [activeTab, setActiveTab] = useState('train'); // train | metrics | history | settings
+  const [activeTab, setActiveTab] = useState('train'); // train | ai | exercises | metrics | history | settings
   const [activeDay, setActiveDay] = useState(new Date().getDay() === 0 || new Date().getDay() === 6 ? 1 : new Date().getDay());
+
+  // Language State
+  const [lang, setLang] = useState(localStorage.getItem('app_lang') || 'zh');
+  const t = (key) => TRANSLATIONS[lang]?.[key] ?? TRANSLATIONS.zh[key];
+  const toggleLang = () => {
+    const newLang = lang === 'zh' ? 'en' : 'zh';
+    setLang(newLang);
+    localStorage.setItem('app_lang', newLang);
+  };
+  // Locale-aware exercise pool and schedule
+  const EXERCISES = EXERCISES_I18N[lang];
+  const DEFAULT_SCHEDULE = DEFAULT_SCHEDULE_I18N[lang];
 
   const [currentWeek] = useState(getWeekString(new Date(), 0));
   const [lastWeek] = useState(getWeekString(new Date(), -1));
@@ -299,7 +295,7 @@ export default function App() {
   const [backupPlan, setBackupPlan] = useState(null);
 
   // Exercises State
-  const [exercisesData, setExercisesData] = useState(EXERCISES);
+  const [exercisesData, setExercisesData] = useState(() => EXERCISES_I18N.zh);
   const [newExName, setNewExName] = useState('');
   const [isAddingEx, setIsAddingEx] = useState(false);
 
@@ -405,13 +401,13 @@ export default function App() {
   const saveKeyToLocal = () => {
     localStorage.setItem('gemini_byok_key', tempKeyInput.trim());
     setApiKey(tempKeyInput.trim());
-    showToast("金鑰已安全儲存於本地瀏覽器！");
+    showToast(t('toastKeySaved'));
   };
 
   const requestAIPlan = async () => {
     if (!user) return;
     if (!apiKey) {
-      showToast("請先至設定頁面輸入您的 Gemini API Key！");
+      showToast(t('toastNoKey'));
       setActiveTab('settings');
       return;
     }
@@ -423,7 +419,7 @@ export default function App() {
       const lastWeekFeedback = lastWeekDoc.feedbackValue;
 
       const activeExercises = Object.fromEntries(Object.entries(exercisesData).filter(([k, v]) => v.active !== false));
-      const aiResponse = await generateAIPlan(lastWeekData, difficultyLevel, lastWeekFeedback, apiKey, allProgress, metricsHistory, aiGoalInput, aiTimeInput, aiMessageInput, activeExercises);
+      const aiResponse = await generateAIPlan(lastWeekData, difficultyLevel, lastWeekFeedback, apiKey, allProgress, metricsHistory, aiGoalInput, aiTimeInput, aiMessageInput, activeExercises, lang);
 
       const planDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'plans', currentWeek);
       await setDoc(planDocRef, aiResponse);
@@ -432,13 +428,13 @@ export default function App() {
       setAiGoalInput('');
       setAiTimeInput('30');
       setAiMessageInput('');
-      showToast("AI 教練排表成功！");
+      showToast(t('toastAISuccess'));
     } catch (err) {
       console.error("AI Generation Error:", err);
       if (err.message.includes("API_KEY_INVALID") || err.message.includes("API key not valid")) {
-        showToast("API 金鑰無效，請至設定頁面重新確認。");
+        showToast(t('toastKeyInvalid'));
       } else {
-        showToast("AI 安排課表時發生錯誤，請稍後再試。");
+        showToast(t('toastAIError'));
       }
     } finally {
       setIsGeneratingPlan(false);
@@ -558,9 +554,9 @@ export default function App() {
     return `${sets} 組 x ${value}`;
   };
 
-  const getDifficultyLabel = () => ['減壓恢復期 (低)', '功能性建構期 (中)', '神經適應期 (高)'][difficultyLevel];
+  const getDifficultyLabel = () => [t('diffLow'), t('diffMid'), t('diffHigh')][difficultyLevel];
 
-  if (authMode === 'pending') return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-800"><Loader2 className="animate-spin mr-2" />載入中...</div>;
+  if (authMode === 'pending') return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-800"><Loader2 className="animate-spin mr-2" />{lang === 'zh' ? '載入中...' : 'Loading...'}</div>;
   if (authMode === 'login') {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 font-sans">
@@ -571,13 +567,13 @@ export default function App() {
 
           <div className="relative z-10">
             <Feather size={48} className="mx-auto text-sky-600 mb-6" />
-            <h1 className="text-2xl font-bold text-slate-800 mb-2">羽球功能性健身管理</h1>
-            <p className="text-slate-500 text-sm mb-8">專為羽球愛好者打造。登入並設定你的 API 金鑰，讓專屬 AI 規劃體能訓練。</p>
+            <h1 className="text-2xl font-bold text-slate-800 mb-2">{t('appTitle')}</h1>
+            <p className="text-slate-500 text-sm mb-8">{t('loginSubtitle')}</p>
             <button
               onClick={handleGoogleLogin}
               className="w-full flex items-center justify-center py-3 px-4 bg-sky-500 text-white rounded-xl font-bold hover:bg-sky-400 transition-colors shadow-lg shadow-sky-500/20"
             >
-              <LogIn className="mr-2" size={20} /> 使用 Google 帳號登入
+              <LogIn className="mr-2" size={20} /> {t('loginBtn')}
             </button>
           </div>
         </div>
@@ -674,23 +670,24 @@ export default function App() {
       )}
 
       <header className="bg-white p-6 rounded-b-3xl shadow-lg border-b border-sky-100 relative">
-        <button onClick={handleLogout} className="absolute top-6 right-6 text-slate-500 hover:text-sky-600 transition-colors">
-          <LogOut size={20} />
-        </button>
+        <div className="absolute top-6 right-6 flex items-center space-x-2">
+          <button onClick={toggleLang} className="text-xs font-bold bg-sky-100 hover:bg-sky-200 text-sky-700 px-2.5 py-1 rounded-full transition-colors">🌐 {t('langToggle')}</button>
+          <button onClick={handleLogout} className="text-slate-500 hover:text-sky-600 transition-colors"><LogOut size={20} /></button>
+        </div>
         <div className="max-w-md mx-auto">
           <h1 className="text-2xl font-bold text-slate-800 mb-2 flex items-center">
-            <Feather size={24} className="mr-2 text-sky-600" /> 羽球功能性健身管理
+            <Feather size={24} className="mr-2 text-sky-600" /> {t('appTitle')}
           </h1>
           {activeTab === 'train' && (
             <>
               <div className="flex justify-between items-end mt-4">
                 <div>
-                  <p className="text-sm text-slate-500">週次: {currentWeek}</p>
-                  <p className="text-sm text-sky-600 font-medium mt-1">難度: {getDifficultyLabel()}</p>
+                  <p className="text-sm text-slate-500">{t('weekLabel')}: {currentWeek}</p>
+                  <p className="text-sm text-sky-600 font-medium mt-1">{t('difficultyLabel')}: {getDifficultyLabel()}</p>
                 </div>
                 <div className="text-right">
                   <div className="text-3xl font-bold text-sky-600">{progressPercent}%</div>
-                  <p className="text-xs text-slate-500">本週完成率</p>
+                  <p className="text-xs text-slate-500">{t('weekCompletion')}</p>
                 </div>
               </div>
               <div className="w-full bg-blue-50 rounded-full h-2 mt-4">
@@ -698,11 +695,11 @@ export default function App() {
               </div>
             </>
           )}
-          {activeTab === 'ai' && <div className="pt-2"><p className="text-slate-500 text-sm">與專業 AI 功能性教練溝通，為您量身打造並解說最佳每週訓練。</p></div>}
-          {activeTab === 'metrics' && <div className="pt-2"><p className="text-slate-500 text-sm">追蹤您的身體組成，包含四肢肌肉質量，精確掌握訓練成效與發力基礎。</p></div>}
-          {activeTab === 'exercises' && <div className="pt-2"><p className="text-slate-500 text-sm">管理專屬動作庫，讓 AI 教練從中自由安排。</p></div>}
-          {activeTab === 'history' && <div className="pt-2"><p className="text-slate-500 text-sm">持之以恆是功能性訓練的基石。檢視每個月的累積成果。</p></div>}
-          {activeTab === 'settings' && <div className="pt-2"><p className="text-slate-500 text-sm">系統設定與 BYOK 金鑰管理。</p></div>}
+          {activeTab === 'ai' && <div className="pt-2"><p className="text-slate-500 text-sm">{t('headerAI')}</p></div>}
+          {activeTab === 'metrics' && <div className="pt-2"><p className="text-slate-500 text-sm">{t('headerMetrics')}</p></div>}
+          {activeTab === 'exercises' && <div className="pt-2"><p className="text-slate-500 text-sm">{t('headerExercises')}</p></div>}
+          {activeTab === 'history' && <div className="pt-2"><p className="text-slate-500 text-sm">{t('headerHistory')}</p></div>}
+          {activeTab === 'settings' && <div className="pt-2"><p className="text-slate-500 text-sm">{t('headerSettings')}</p></div>}
         </div>
       </header>
 
@@ -715,7 +712,7 @@ export default function App() {
                 const allDone = schedule.routine.every(exKey => progress[`day${schedule.day}_${exKey}`]);
                 return (
                   <button key={schedule.day} onClick={() => setActiveDay(schedule.day)} className={`flex flex-col items-center justify-center min-w-[3rem] h-14 rounded-lg transition-colors ${isSelected ? 'bg-sky-600 text-white shadow-md' : 'text-slate-500 hover:bg-blue-50'}`}>
-                    <span className="text-xs font-medium mb-1">{(schedule.name || `週${schedule.day}`).replace('星期', '週')}</span>
+                    <span className="text-xs font-medium mb-1">{schedule.name || `${t('dayShort')[schedule.day - 1]}`}</span>
                     {allDone ? <CheckCircle2 size={16} className={isSelected ? 'text-slate-800' : 'text-sky-600'} /> : <Circle size={16} className="opacity-50" />}
                   </button>
                 );
@@ -805,7 +802,7 @@ export default function App() {
             <div className={`p-6 rounded-2xl border ${weeklyPlan ? 'bg-indigo-50/30 border-indigo-200/30' : 'bg-white border-sky-100'}`}>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-bold flex items-center text-indigo-600 text-lg">
-                  <Brain className="mr-2" size={24} /> AI 專屬教練診斷室
+                  <Brain className="mr-2" size={24} /> {t('aiCoachTitle')}
                 </h3>
                 {(!weeklyPlan || isEditingPlan) && (
                   <button
@@ -813,7 +810,7 @@ export default function App() {
                     disabled={isGeneratingPlan}
                     className="text-sm bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl font-medium transition-colors flex items-center shadow-lg shadow-indigo-600/20"
                   >
-                    {isGeneratingPlan ? <><Loader2 size={16} className="mr-2 animate-spin" /> 運算中...</> : weeklyPlan ? '🔄 重新生成課表' : '✨ 綜合分析並排表'}
+                    {isGeneratingPlan ? <><Loader2 size={16} className="mr-2 animate-spin" /> {t('aiGenerating')}</> : weeklyPlan ? t('aiRegenerateBtn') : t('aiGenerateBtn')}
                   </button>
                 )}
               </div>
@@ -821,7 +818,7 @@ export default function App() {
               {!apiKey && !weeklyPlan && (
                 <div className="bg-amber-50/30 border border-amber-200/50 rounded-xl p-4 mb-4 flex items-start shadow-inner">
                   <Key size={18} className="text-amber-600 mr-3 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-amber-700">偵測到尚未設定 API 金鑰，請先至「設定」綁定金鑰以解鎖 AI 診斷與排表功能。</p>
+                  <p className="text-sm text-amber-700">{t('aiNoKey')}</p>
                 </div>
               )}
 
@@ -830,12 +827,12 @@ export default function App() {
                   <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none"></div>
 
                   <div className="flex justify-between items-center mb-4 border-b border-slate-900/5 pb-3">
-                    <h4 className="text-sm font-bold text-slate-600 flex items-center"><Brain size={16} className="mr-2 text-indigo-600" /> 教練本週總結與診斷</h4>
+                    <h4 className="text-sm font-bold text-slate-600 flex items-center"><Brain size={16} className="mr-2 text-indigo-600" /> {t('aiConclusionTitle')}</h4>
                     <button
                       onClick={() => setIsEditingPlan(true)}
                       className="text-xs bg-white hover:bg-blue-50 text-slate-600 px-3 py-1.5 rounded-lg transition-colors border border-sky-100 flex items-center"
                     >
-                      <RefreshCw size={12} className="mr-1" /> 微調與重抽
+                      <RefreshCw size={12} className="mr-1" /> {t('aiTweakBtn')}
                     </button>
                   </div>
 
@@ -869,23 +866,23 @@ export default function App() {
                     <div className="bg-indigo-50/20 border border-indigo-200/30 rounded-lg p-3 mb-2 flex items-start">
                       <RefreshCw size={16} className="text-indigo-600 mr-2 flex-shrink-0 mt-0.5" />
                       <p className="text-xs text-indigo-700 leading-relaxed">
-                        覺得剛才排的課表方向不對嗎？你可以補充更多細節，並請教練重新規劃。如果有需要，你可以在生成後隨時透過「復原按鈕」換回上一份課表。
+                        {t('aiEditingHint')}
                       </p>
                     </div>
                   )}
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-600 mb-2">近期訓練寫實目標</label>
+                    <label className="block text-sm font-medium text-slate-600 mb-2">{t('aiGoalLabel')}</label>
                     <input
                       type="text"
                       value={aiGoalInput}
                       onChange={(e) => setAiGoalInput(e.target.value)}
-                      placeholder="例如：想加強反手高遠球發力、想改善網前撲球速度..."
+                      placeholder={t('aiGoalPlaceholder')}
                       className="w-full bg-white border border-sky-200 rounded-xl p-3 text-sm text-slate-700 placeholder-slate-500 focus:outline-none focus:border-indigo-200 focus:ring-1 focus:ring-indigo-500 transition-all shadow-sm"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-600 mb-2">每天最多騰出運動時間 (分鐘)</label>
+                    <label className="block text-sm font-medium text-slate-600 mb-2">{t('aiTimeLabel')}</label>
                     <input
                       type="number"
                       value={aiTimeInput}
@@ -898,16 +895,16 @@ export default function App() {
                     <div className="bg-sky-100/20 border border-sky-200/40 rounded-lg p-3">
                       <p className="text-xs text-sky-600 leading-relaxed flex items-start">
                         <span className="mr-1.5">💡</span>
-                        填寫目標後，AI 教練會結合分析您過去填寫的「身體組成數據趨勢」，診斷潛在問題，為您客製化精準排表，並詳細說明背後的依據。
+                        {t('aiTip')}
                       </p>
                     </div>
                   )}
                   <div>
-                    <label className="block text-sm font-medium text-slate-600 mb-2">另外想對教練說的話 {isEditingPlan ? <span className="text-indigo-600 text-xs ml-1">(強烈建議說明需要修改的原因)</span> : <span className="text-slate-500 text-xs ml-1">(選填)</span>}</label>
+                    <label className="block text-sm font-medium text-slate-600 mb-2">{t('aiMessageLabel')} {isEditingPlan ? <span className="text-indigo-600 text-xs ml-1">{t('aiMessageLabelEditing')}</span> : <span className="text-slate-500 text-xs ml-1">{t('aiMessageLabelOptional')}</span>}</label>
                     <textarea
                       value={aiMessageInput}
                       onChange={(e) => setAiMessageInput(e.target.value)}
-                      placeholder={isEditingPlan ? "例如：我覺得這次排的腿部動作太多了，幫我換成多一點核心！" : "任何想補充的都可以寫在這裡，例如：這週特別累、膝蓋有點酸痛..."}
+                      placeholder={isEditingPlan ? t('aiMessagePlaceholderEditing') : t('aiMessagePlaceholder')}
                       className="w-full bg-white border border-sky-200 rounded-xl p-3 text-sm text-slate-700 placeholder-slate-500 focus:outline-none focus:border-indigo-200 focus:ring-1 focus:ring-indigo-500 transition-all resize-none h-24 shadow-sm"
                     />
                   </div>
@@ -919,14 +916,14 @@ export default function App() {
                           onClick={restoreBackupPlan}
                           className="text-sm bg-white hover:bg-blue-50 text-slate-600 px-4 py-2 rounded-xl transition-colors border border-sky-200"
                         >
-                          ↩ 復原上一次的課表
+                          {t('aiRestoreBtn')}
                         </button>
                       )}
                       <button
                         onClick={() => setIsEditingPlan(false)}
                         className="text-sm bg-transparent hover:bg-white text-slate-500 px-4 py-2 rounded-xl transition-colors"
                       >
-                        取消修改
+                        {t('aiCancelBtn')}
                       </button>
                     </div>
                   )}
@@ -935,7 +932,7 @@ export default function App() {
 
               {!weeklyPlan && (
                 <p className="text-sm text-slate-500 leading-relaxed mt-4 text-center font-medium">
-                  完成設定後，點擊右上角按鈕，教練將全面為您分析數據與規畫課表。
+                  {t('aiReadyMsg')}
                 </p>
               )}
             </div>
@@ -1002,17 +999,17 @@ export default function App() {
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6">
               <div className="bg-white p-6 rounded-2xl border border-sky-100">
                 <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center">
-                  <Activity className="mr-2 text-sky-600" size={20} /> 新增/更新測量紀錄
+                  <Activity className="mr-2 text-sky-600" size={20} /> {t('metricsTitle')}
                 </h2>
                 <form onSubmit={saveMetrics} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs text-slate-500 mb-1">測量日期</label>
+                      <label className="block text-xs text-slate-500 mb-1">{t('labelDate')}</label>
                       <input type="date" name="date" value={metricForm.date} onChange={handleMetricChange} className="w-full bg-slate-50 border border-sky-200 rounded-lg px-3 py-2 text-slate-700 text-sm" required />
                     </div>
                     <div>
-                      <label className="block text-xs text-slate-500 mb-1">年齡</label>
-                      <input type="number" step="1" name="age" value={metricForm.age} onChange={handleMetricChange} placeholder="歲" className="w-full bg-slate-50 border border-sky-200 rounded-lg px-3 py-2 text-slate-700 text-sm" />
+                      <label className="block text-xs text-slate-500 mb-1">{t('labelAge')}</label>
+                      <input type="number" step="1" name="age" value={metricForm.age} onChange={handleMetricChange} placeholder={t('labelAgePlaceholder')} className="w-full bg-slate-50 border border-sky-200 rounded-lg px-3 py-2 text-slate-700 text-sm" />
                     </div>
                     <div>
                       <label className="block text-xs text-slate-500 mb-1">身高 (cm)</label>
@@ -1298,22 +1295,22 @@ export default function App() {
 
       <nav className="fixed bottom-0 w-full max-w-md left-1/2 -translate-x-1/2 bg-white border-t border-sky-100 px-2 py-3 flex justify-between items-center z-50">
         <button onClick={() => setActiveTab('train')} className={`flex flex-col items-center p-2 flex-1 transition-colors ${activeTab === 'train' ? 'text-sky-600' : 'text-slate-500 hover:text-slate-600'}`}>
-          <Feather size={20} className="mb-1" /> <span className="text-[10px] font-medium">每天</span>
+          <Feather size={20} className="mb-1" /> <span className="text-[10px] font-medium">{t('navTrain')}</span>
         </button>
         <button onClick={() => setActiveTab('ai')} className={`flex flex-col items-center p-2 flex-1 transition-colors ${activeTab === 'ai' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-600'}`}>
-          <Brain size={20} className="mb-1" /> <span className="text-[10px] font-medium">教練</span>
+          <Brain size={20} className="mb-1" /> <span className="text-[10px] font-medium">{t('navAI')}</span>
         </button>
         <button onClick={() => setActiveTab('exercises')} className={`flex flex-col items-center p-2 flex-1 transition-colors ${activeTab === 'exercises' ? 'text-sky-600' : 'text-slate-500 hover:text-slate-600'}`}>
-          <Dumbbell size={20} className="mb-1" /> <span className="text-[10px] font-medium">動作庫</span>
+          <Dumbbell size={20} className="mb-1" /> <span className="text-[10px] font-medium">{t('navExercises')}</span>
         </button>
         <button onClick={() => setActiveTab('metrics')} className={`flex flex-col items-center p-2 flex-1 transition-colors ${activeTab === 'metrics' ? 'text-sky-600' : 'text-slate-500 hover:text-slate-600'}`}>
-          <Activity size={20} className="mb-1" /> <span className="text-[10px] font-medium">數據</span>
+          <Activity size={20} className="mb-1" /> <span className="text-[10px] font-medium">{t('navMetrics')}</span>
         </button>
         <button onClick={() => setActiveTab('history')} className={`flex flex-col items-center p-2 flex-1 transition-colors ${activeTab === 'history' ? 'text-sky-600' : 'text-slate-500 hover:text-slate-600'}`}>
-          <BarChart3 size={20} className="mb-1" /> <span className="text-[10px] font-medium">成效</span>
+          <BarChart3 size={20} className="mb-1" /> <span className="text-[10px] font-medium">{t('navHistory')}</span>
         </button>
         <button onClick={() => setActiveTab('settings')} className={`flex flex-col items-center p-2 flex-1 transition-colors ${activeTab === 'settings' ? 'text-sky-600' : 'text-slate-500 hover:text-slate-600'}`}>
-          <Settings size={20} className="mb-1" /> <span className="text-[10px] font-medium">設定</span>
+          <Settings size={20} className="mb-1" /> <span className="text-[10px] font-medium">{t('navSettings')}</span>
         </button>
       </nav>
     </div >
