@@ -893,7 +893,7 @@ export default function App() {
                         li: ({ node, ...props }) => <li className="pl-1" {...props} />
                       }}
                     >
-                      {weeklyPlan.conclusion.replace(/([^ \n])(### )/g, '$1\n\n$2').replace(/(### [^\n]+)(?![\n])/g, '$1\n\n')}
+                      {weeklyPlan.conclusion}
                     </ReactMarkdown>
                   </div>
                 </div>
