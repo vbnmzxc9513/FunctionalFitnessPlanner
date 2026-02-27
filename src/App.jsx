@@ -82,6 +82,21 @@ const getMonthFromWeek = (weekStr) => {
   return `${d.getFullYear()}年 ${d.getMonth() + 1}月`;
 };
 
+// Returns the calendar date for a given ISO week string + weekday (1=Mon, 5=Fri)
+const getDateForWeekDay = (weekStr, dayNum) => {
+  if (!weekStr || !weekStr.includes('-W')) return '';
+  const [year, week] = weekStr.split('-W');
+  // ISO week: find the Monday of that week
+  const jan4 = new Date(Date.UTC(parseInt(year), 0, 4));
+  const jan4Day = jan4.getUTCDay() || 7; // 1=Mon...7=Sun
+  const monday = new Date(jan4);
+  monday.setUTCDate(jan4.getUTCDate() - (jan4Day - 1) + (parseInt(week) - 1) * 7);
+  // Add (dayNum - 1) days to Monday
+  const target = new Date(monday);
+  target.setUTCDate(monday.getUTCDate() + (dayNum - 1));
+  return `${target.getUTCMonth() + 1}/${target.getUTCDate()}`;
+};
+
 // --- Gemini AI Configuration ---
 let cachedModelName = null;
 
@@ -714,8 +729,9 @@ export default function App() {
                 const allDone = schedule.routine.every(exKey => progress[`day${schedule.day}_${exKey}`]);
                 return (
                   <button key={schedule.day} onClick={() => setActiveDay(schedule.day)} className={`flex flex-col items-center justify-center min-w-[3rem] h-14 rounded-lg transition-colors ${isSelected ? 'bg-sky-600 text-white shadow-md' : 'text-slate-500 hover:bg-blue-50'}`}>
-                    <span className="text-xs font-medium mb-1">{schedule.name || `${t('dayShort')[schedule.day - 1]}`}</span>
-                    {allDone ? <CheckCircle2 size={16} className={isSelected ? 'text-slate-800' : 'text-sky-600'} /> : <Circle size={16} className="opacity-50" />}
+                    <span className="text-[10px] font-bold mb-0.5">{t('dayShort')[schedule.day - 1]}</span>
+                    <span className="text-[9px] opacity-80">{getDateForWeekDay(currentWeek, schedule.day)}</span>
+                    {allDone ? <CheckCircle2 size={14} className={isSelected ? 'text-slate-800' : 'text-sky-600'} /> : <Circle size={14} className="opacity-50" />}
                   </button>
                 );
               })}
