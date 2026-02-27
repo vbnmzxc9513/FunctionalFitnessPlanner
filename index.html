@@ -1,14 +1,30 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/FunctionalFitnessPlanner/icon.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Badminton Fitness</title>
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/png" href="/FunctionalFitnessPlanner/icon.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="google-site-verification" content="edEBM3UKnbWkrg-lodBEd6N61otvAvqCnu9m-RorR0M" />
+  <title>羽球專項功能性健身計畫 (Badminton Fitness Planner)</title>
+  <meta name="description" content="專為羽球愛好者打造的功能性健身課表排定工具。結合 AI 智能教練，為您量身打造包含敏捷度、核心抗旋轉、爆發力等專項訓練計畫，全面提升羽球場上表現！" />
+  <meta name="keywords" content="羽球, 健身, 訓練計畫, 功能性訓練, AI 教練, 敏捷度, 爆發力, 核心訓練, Badminton, Fitness, 體能訓練" />
+
+  <!-- Open Graph (Facebook, Line) -->
+  <meta property="og:title" content="羽球專項功能性健身計畫 | 提升場上表現" />
+  <meta property="og:description" content="專為羽球愛好者打造的智能健身課表排定工具。結合 AI 教練，量身打造專項訓練計畫。" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://badminton-functional-fitness-planner.pages.dev/" />
+  <meta property="og:image" content="https://badminton-functional-fitness-planner.pages.dev/icon.png" />
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="羽球專項功能性健身計畫" />
+  <meta name="twitter:description" content="結合 AI 的專屬羽球體能課表工具，提升你的核心、爆發力與敏捷！" />
   <script>
     // === DEBUG: Catch ALL errors before React even loads ===
     window.__errors = [];
-    window.onerror = function(msg, src, line, col, err) {
+    window.onerror = function (msg, src, line, col, err) {
       const info = `ERROR: ${msg}\nFile: ${src}:${line}:${col}\nStack: ${err?.stack}`;
       window.__errors.push(info);
       console.error('[GLOBAL ERROR]', info);
@@ -18,17 +34,19 @@
       document.body.appendChild(div);
       return false;
     };
-    window.addEventListener('unhandledrejection', function(e) {
+    window.addEventListener('unhandledrejection', function (e) {
       const info = `UNHANDLED PROMISE: ${e.reason?.toString()}\nStack: ${e.reason?.stack}`;
       window.__errors.push(info);
       console.error('[UNHANDLED REJECTION]', info);
     });
   </script>
 
-    <script type="module" crossorigin src="/FunctionalFitnessPlanner/assets/index-DJe7CPCH.js"></script>
-    <link rel="stylesheet" crossorigin href="/FunctionalFitnessPlanner/assets/index-CRNvLWzT.css">
-  </head>
-  <body>
-    <div id="root"></div>
-  </body>
+  <script type="module" crossorigin src="/FunctionalFitnessPlanner/assets/index-D3QwXR36.js"></script>
+  <link rel="stylesheet" crossorigin href="/FunctionalFitnessPlanner/assets/index-BVykkrSj.css">
+</head>
+
+<body>
+  <div id="root"></div>
+</body>
+
 </html>
