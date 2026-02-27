@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle2, Circle, Activity, Flame, Shield, Zap, RefreshCw, Info, CalendarDays, Dumbbell, BarChart3, LogIn, LogOut, Brain, Loader2, Settings, Key, ExternalLink, Feather, Ruler, Weight, TrendingUp, Trash2 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import ReactMarkdown from 'react-markdown';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
 import { getFirestore, doc, setDoc, onSnapshot, collection, getDoc, updateDoc, deleteField } from 'firebase/firestore';
@@ -158,7 +159,7 @@ const generateAIPlan = async (lastWeekData, currentLevel, lastWeekFeedback, user
   【可用動作代碼與名稱】
   ${Object.entries(availableExercises).map(([k, v]) => `${k}: ${v.name} (${v.type})`).join('\n')}
   
-   1. 給予一段客製化的教練總結建議。你「必須」在這段建議中包含以下要素，並且【強制使用 Markdown 語法進行排版】。請將長篇內容拆分為數個易於閱讀的段落，並為每個段落自創一個【符合該段落內容核心精神的動態標題】（使用 `###` Markdown 標記，例如：『🔥 體脂驟降！超群的核心成長』、『🏸 本週戰術：強化網前制動力』等），【絕對不要】使用制式的死板標題（例如：忌用「專業診斷」、「推斷原因」、「課表對策」等）。整份評語必須像一封專業且熱情的教練個人信件：
+   1. 給予一段客製化的教練總結建議。你「必須」在這段建議中包含以下要素，並且【強制使用 Markdown 語法進行排版】。請將長篇內容拆分為數個易於閱讀的段落，並為每個段落自創一個【符合該段落內容核心精神的動態標題】（標題前請加上三個井字號，例如：『### 🔥 體脂驟降！超群的核心成長』），【絕對不要】使用制式的死板標題（例如：忌用「專業診斷」、「推斷原因」、「課表對策」等）。整份評語必須像一封專業且熱情的教練個人信件：
       - 綜合診斷與具體讚美：解讀「歷史身體數值趨勢」與「完成度」，明確點出數據的變化，並客觀評估學員「目前狀態的優劣程度」。以專業角度解釋其變化原因。若發現學員有進步（如肌肉量上升、高完成度），在維持專業感的前提下【請不要吝嗇你的讚美】，給予強烈、熱情且有數據佐證的正向鼓勵。
       - 課表對策與目標對焦：針對觀察到的身體狀態與使用者的「近期訓練目標」，具體說明這週課表「為什麼這樣排」、「背後的訓練目的是什麼」，以及這些特定動作將如何幫助他解決當前問題，並在羽球場上達成他的目標。
   2. 安排星期一到星期五的課表，每天請絕對從【可用動作代碼與名稱】挑選剛好 4 到 5 個動作代碼。
@@ -881,26 +882,19 @@ export default function App() {
                     </button>
                   </div>
 
-                  <div className="text-sm text-slate-700 leading-relaxed font-normal space-y-4">
-                    {weeklyPlan.conclusion.split(/\n\s*\n/).map((paragraph, idx) => {
-                      if (!paragraph.trim()) return null;
-                      // Highlight sections dynamically if they look like lists or points (simple markdown handling)
-                      const isList = paragraph.trim().startsWith('-');
-                      const isNumbered = /^\d+\./.test(paragraph.trim());
-
-                      return (
-                        <p key={idx} className={`${isList || isNumbered ? 'pl-4 border-l-2 border-indigo-200/30' : ''}`}>
-                          {paragraph.split('\n').map((line, lIdx) => (
-                            <React.Fragment key={lIdx}>
-                              {line.includes('**') ? (
-                                <span dangerouslySetInnerHTML={{ __html: line.replace(/\*\*(.*?)\*\*/g, '<strong class="text-indigo-700">$1</strong>') }} />
-                              ) : line}
-                              {lIdx < paragraph.split('\n').length - 1 && <br />}
-                            </React.Fragment>
-                          ))}
-                        </p>
-                      )
-                    })}
+                  <div className="w-full text-sm text-slate-700 leading-relaxed font-normal space-y-4">
+                    <ReactMarkdown
+                      components={{
+                        h3: ({ node, ...props }) => <h3 className="text-md font-bold text-indigo-700 mt-6 mb-2 border-b-2 border-indigo-100 pb-1" {...props} />,
+                        p: ({ node, ...props }) => <p className="mb-4" {...props} />,
+                        strong: ({ node, ...props }) => <strong className="font-bold text-indigo-700 bg-indigo-50 px-1 rounded" {...props} />,
+                        ul: ({ node, ...props }) => <ul className="list-disc pl-5 mb-4 space-y-2" {...props} />,
+                        ol: ({ node, ...props }) => <ol className="list-decimal pl-5 mb-4 space-y-2" {...props} />,
+                        li: ({ node, ...props }) => <li className="" {...props} />
+                      }}
+                    >
+                      {weeklyPlan.conclusion}
+                    </ReactMarkdown>
                   </div>
                 </div>
               )}
