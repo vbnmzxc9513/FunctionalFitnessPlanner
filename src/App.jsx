@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle2, Circle, Activity, Flame, Shield, Zap, RefreshCw, Info, CalendarDays, Dumbbell, BarChart3, LogIn, LogOut, Brain, Loader2, Settings, Key, ExternalLink, Feather, Ruler, Weight, TrendingUp } from 'lucide-react';
+import { CheckCircle2, Circle, Activity, Flame, Shield, Zap, RefreshCw, Info, CalendarDays, Dumbbell, BarChart3, LogIn, LogOut, Brain, Loader2, Settings, Key, ExternalLink, Feather, Ruler, Weight, TrendingUp, Trash2 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
-import { getFirestore, doc, setDoc, onSnapshot, collection, getDoc } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, onSnapshot, collection, getDoc, updateDoc, deleteField } from 'firebase/firestore';
 import { TRANSLATIONS, EXERCISES_I18N, DEFAULT_SCHEDULE_I18N } from './locale.js';
 
 // --- Debug Error Boundary ---
@@ -434,7 +434,7 @@ export default function App() {
       const lastWeekData = lastWeekDoc.completed || {};
       const lastWeekFeedback = lastWeekDoc.feedbackValue;
 
-      const activeExercises = Object.fromEntries(Object.entries(exercisesData).filter(([k, v]) => v.active !== false));
+      const activeExercises = Object.fromEntries(Object.entries(exercisesData).filter(([k, v]) => v.active !== false && !v.deleted));
       const aiResponse = await generateAIPlan(lastWeekData, difficultyLevel, lastWeekFeedback, apiKey, allProgress, metricsHistory, aiGoalInput, aiTimeInput, aiMessageInput, activeExercises, lang);
 
       const planDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'plans', currentWeek);
@@ -516,6 +516,20 @@ export default function App() {
       showToast("新增失敗，請確認 API Key。");
     } finally {
       setIsAddingEx(false);
+    }
+  };
+
+  const deleteExercise = async (key) => {
+    if (!user) return;
+    if (window.confirm(lang === 'zh' ? '確定要刪除這個動作嗎？' : 'Are you sure you want to delete this exercise?')) {
+      try {
+        const exercisesDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'exercises', 'custom');
+        await setDoc(exercisesDocRef, { exercises: { [key]: { deleted: true } } }, { merge: true });
+        showToast(lang === 'zh' ? '已刪除動作！' : 'Exercise deleted!');
+      } catch (err) {
+        console.error(err);
+        showToast(lang === 'zh' ? '刪除失敗，請重試。' : 'Failed to delete, please try again.');
+      }
     }
   };
 
@@ -1001,7 +1015,7 @@ export default function App() {
                 </div>
 
                 <div className="space-y-3">
-                  {Object.entries(exercisesData).map(([key, ex]) => {
+                  {Object.entries(exercisesData).filter(([_, ex]) => !ex.deleted).map(([key, ex]) => {
                     const isActive = ex.active !== false;
                     return (
                       <div key={key} className={`p-4 rounded-xl border transition-all flex items-start justify-between ${isActive ? 'bg-slate-50/50 border-sky-200' : 'bg-slate-50/20 border-slate-800 opacity-60'}`}>
@@ -1012,12 +1026,21 @@ export default function App() {
                           </div>
                           <p className={`text-xs mt-1 leading-relaxed ${isActive ? 'text-slate-500' : 'text-slate-600'}`}>{ex.tip}</p>
                         </div>
-                        <button
-                          onClick={() => toggleExerciseActive(key)}
-                          className={`mt-1 flex-shrink-0 w-12 h-6 rounded-full relative transition-colors ${isActive ? 'bg-sky-500' : 'bg-blue-50'}`}
-                        >
-                          <div className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${isActive ? 'translate-x-6' : 'translate-x-0'}`}></div>
-                        </button>
+                        <div className="flex flex-col items-end gap-2 mt-1 flex-shrink-0">
+                          <button
+                            onClick={() => toggleExerciseActive(key)}
+                            className={`w-12 h-6 rounded-full relative transition-colors ${isActive ? 'bg-sky-500' : 'bg-blue-50'}`}
+                          >
+                            <div className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${isActive ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                          </button>
+                          <button
+                            onClick={() => deleteExercise(key)}
+                            className="text-red-400 hover:text-red-600 transition-colors p-1"
+                            title={lang === 'zh' ? '刪除動作' : 'Delete Exercise'}
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
                       </div>
                     );
                   })}
