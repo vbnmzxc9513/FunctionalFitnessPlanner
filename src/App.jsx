@@ -98,63 +98,13 @@ const getDateForWeekDay = (weekStr, dayNum) => {
 };
 
 // --- Gemini AI Configuration ---
-let cachedModelName = null;
-
-const getLatestGeminiModel = async (apiKey) => {
-  if (cachedModelName) return cachedModelName;
-  try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-    if (!response.ok) {
-      // Fallback to a known stable model if the list API fails (e.g., due to permissions)
-      return 'gemini-2.5-flash';
-    }
-    const data = await response.json();
-
-    // Filter for models supporting generateContent and start with models/gemini-
-    const validModels = (data.models || []).filter(m =>
-      m.supportedGenerationMethods?.includes('generateContent') &&
-      m.name.startsWith('models/gemini-')
-    );
-
-    if (validModels.length === 0) return 'gemini-2.5-flash';
-
-    // 優先尋找 flash 或 pro 系列，並盡量避開 exp / vision / preview，以穩定版為主
-    // 也能透過版本號排序，這裡我們簡化處理：找最適合的字串特徵
-    const stableFlashModels = validModels.filter(m => m.name.includes('-flash') && !m.name.includes('-preview') && !m.name.includes('-exp'));
-    const stableProModels = validModels.filter(m => m.name.includes('-pro') && !m.name.includes('-preview') && !m.name.includes('-exp'));
-
-    // 預設順序：穩定 flash -> 穩定 pro -> 任何有 flash 的 -> 其他
-    let selectedModel = validModels[0].name.replace('models/', ''); // Fallback
-
-    if (stableFlashModels.length > 0) {
-      // 如果有多個（例如 1.5-flash, 2.0-flash, 2.5-flash），排序拿最新的（字串比較或版本號較大）
-      stableFlashModels.sort((a, b) => b.name.localeCompare(a.name));
-      selectedModel = stableFlashModels[0].name.replace('models/', '');
-    } else if (stableProModels.length > 0) {
-      stableProModels.sort((a, b) => b.name.localeCompare(a.name));
-      selectedModel = stableProModels[0].name.replace('models/', '');
-    } else {
-      const anyFlash = validModels.filter(m => m.name.includes('flash'));
-      if (anyFlash.length > 0) {
-        anyFlash.sort((a, b) => b.name.localeCompare(a.name));
-        selectedModel = anyFlash[0].name.replace('models/', '');
-      }
-    }
-
-    cachedModelName = selectedModel;
-    return selectedModel;
-  } catch (err) {
-    console.warn("Failed to fetch models list, using fallback.", err);
-    return 'gemini-2.5-flash';
-  }
-};
+// Removed automatic model selection in favor of user manual selection
 
 // --- Gemini AI Function ---
-const generateAIPlan = async (lastWeekData, currentLevel, lastWeekFeedback, userApiKey, allProgress, metricsHistory, userGoal, dailyTime, userMessage, availableExercises, lang = 'zh') => {
+const generateAIPlan = async (lastWeekData, currentLevel, lastWeekFeedback, userApiKey, allProgress, metricsHistory, userGoal, dailyTime, userMessage, availableExercises, lang = 'zh', selectedModel = 'gemini-2.5-flash') => {
   if (!userApiKey) throw new Error("API_KEY_MISSING");
 
-  const modelName = await getLatestGeminiModel(userApiKey);
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${userApiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${userApiKey}`;
   const completedCount = lastWeekData ? Object.values(lastWeekData).filter(Boolean).length : 0;
 
   let feedbackText = "無反饋紀錄";
@@ -261,9 +211,8 @@ const generateAIPlan = async (lastWeekData, currentLevel, lastWeekFeedback, user
   }
 };
 
-const generateExerciseDetails = async (exerciseName, userApiKey) => {
-  const modelName = await getLatestGeminiModel(userApiKey);
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${userApiKey}`;
+const generateExerciseDetails = async (exerciseName, userApiKey, selectedModel = 'gemini-2.5-flash') => {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${userApiKey}`;
   const prompt = `我需要將一個新動作加入健身資料庫，動作名稱為「${exerciseName}」。\n請判斷這個動作的類型 (type)，只能從以下選擇一個：mobility, lower, core, upper_pull, upper_push, full, power。\n並給予一句約 20~30 字以內的教練提示 (tip)，著重於發力感受或該如何避免受傷。\n請務必回傳嚴格的 JSON 格式：{"type": "xxx", "tip": "xxx"}`;
   const payload = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { type: { type: "STRING" }, tip: { type: "STRING" } } } } };
   const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -312,7 +261,7 @@ export default function App() {
   const [backupPlan, setBackupPlan] = useState(null);
 
   // Exercises State
-  const [exercisesData, setExercisesData] = useState(() => EXERCISES_I18N.zh);
+  const [exercisesData, setExercisesData] = useState(() => EXERCISES_I18N[localStorage.getItem('app_lang') || 'zh'] || EXERCISES_I18N.zh);
   const [newExName, setNewExName] = useState('');
   const [isAddingEx, setIsAddingEx] = useState(false);
 
@@ -326,6 +275,7 @@ export default function App() {
   // BYOK State & Toast
   const [apiKey, setApiKey] = useState(localStorage.getItem('gemini_byok_key') || '');
   const [tempKeyInput, setTempKeyInput] = useState(localStorage.getItem('gemini_byok_key') || '');
+  const [selectedAiModel, setSelectedAiModel] = useState(localStorage.getItem('app_ai_model') || 'gemini-2.5-flash');
   const [toastMsg, setToastMsg] = useState('');
 
   const showToast = (msg) => {
@@ -401,7 +351,7 @@ export default function App() {
     });
 
     return () => { unsubProgress(); unsubPlan(); unsubMetrics(); unsubExercises(); };
-  }, [user, currentWeek]);
+  }, [user, currentWeek, lang]);
 
   const handleGoogleLogin = async () => {
     try {
@@ -748,7 +698,7 @@ export default function App() {
               <div className="bg-indigo-50/30 rounded-2xl p-5 mb-6 border border-indigo-200/30 shadow-lg relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none"></div>
                 <h2 className="text-md font-bold text-indigo-700 mb-2 flex items-center">
-                  <Brain size={18} className="mr-2" /> 教練的訓練叮嚀
+                  <Brain size={18} className="mr-2" /> {t('coachAdvice')}
                 </h2>
                 <p className="text-sm text-slate-600 leading-relaxed relative z-10 whitespace-pre-wrap">
                   {activeSchedule.coachAdvice}
@@ -757,10 +707,26 @@ export default function App() {
             )}
 
             <div className="space-y-4">
-              <h3 className="text-md font-semibold text-slate-600 ml-1 mb-2">本日課表</h3>
+              <h3 className="text-md font-semibold text-slate-600 ml-1 mb-2">{t('todaySchedule')}</h3>
               {activeSchedule?.routine.map((exKey, index) => {
-                const exercise = exercisesData[exKey];
-                if (!exercise) return null;
+                let exercise = exercisesData[exKey];
+
+                // Fallback: If AI returned the name instead of the key, try to find it
+                if (!exercise && typeof exKey === 'string') {
+                  const fallbackKey = Object.keys(exercisesData).find(k => exercisesData[k].name === exKey || exKey.includes(k));
+                  if (fallbackKey) {
+                    exercise = exercisesData[fallbackKey];
+                    exKey = fallbackKey; // Override exKey to work with progress object
+                  }
+                }
+
+                if (!exercise) {
+                  return (
+                    <div key={`missing-${index}`} className="p-4 rounded-xl border border-red-200 bg-red-50 text-red-500 text-xs">
+                      [Debug] 未知動作代碼/名稱: {typeof exKey === 'object' ? JSON.stringify(exKey) : String(exKey)}
+                    </div>
+                  );
+                }
                 const isCompleted = !!progress[`day${activeSchedule.day}_${exKey}`];
                 const params = getExerciseParams(exKey);
 
@@ -789,26 +755,26 @@ export default function App() {
             </div>
 
             <div className="mt-10 bg-white rounded-2xl p-5 border border-sky-100">
-              <h3 className="text-md font-bold text-slate-800 mb-2">本週體感反饋</h3>
-              <p className="text-xs text-slate-500 mb-4">這會立即改變你當前的組數要求，並作為 AI 下週為你更換動作的科學依據。</p>
+              <h3 className="text-md font-bold text-slate-800 mb-2">{t('feedbackTitle')}</h3>
+              <p className="text-xs text-slate-500 mb-4">{t('feedbackSubtitle')}</p>
               <div className="grid grid-cols-3 gap-2">
                 <button
                   onClick={() => handleFeedback(-1)}
                   className={`py-2 px-1 text-sm rounded-lg transition-colors border ${currentWeekFeedbackValue === -1 ? 'bg-red-100/20 border-red-300 text-red-600 font-bold' : 'bg-blue-50 border-sky-100 hover:bg-slate-600 text-slate-700'}`}
                 >
-                  太困難<span className="block text-xs opacity-60 mt-1">需降階</span>
+                  {t('feedbackHard')}<span className="block text-xs opacity-60 mt-1">{t('feedbackHardSub')}</span>
                 </button>
                 <button
                   onClick={() => handleFeedback(0)}
                   className={`py-2 px-1 text-sm rounded-lg transition-colors border ${currentWeekFeedbackValue === 0 ? 'bg-blue-100/20 border-blue-300 text-blue-600 font-bold' : 'bg-blue-50 border-sky-100 hover:bg-slate-600 text-slate-700'}`}
                 >
-                  剛好<span className="block text-xs opacity-60 mt-1">維持架構</span>
+                  {t('feedbackOk')}<span className="block text-xs opacity-60 mt-1">{t('feedbackOkSub')}</span>
                 </button>
                 <button
                   onClick={() => handleFeedback(1)}
                   className={`py-2 px-1 text-sm rounded-lg transition-colors border ${currentWeekFeedbackValue === 1 ? 'bg-sky-500/20 border-sky-300 text-sky-600 font-bold' : 'bg-blue-50 border-sky-100 hover:bg-slate-600 text-slate-700'}`}
                 >
-                  太簡單<span className="block text-xs opacity-60 mt-1">需增量</span>
+                  {t('feedbackEasy')}<span className="block text-xs opacity-60 mt-1">{t('feedbackEasySub')}</span>
                 </button>
               </div>
             </div>
@@ -1030,51 +996,51 @@ export default function App() {
                       <input type="number" step="1" name="age" value={metricForm.age} onChange={handleMetricChange} placeholder={t('labelAgePlaceholder')} className="w-full bg-slate-50 border border-sky-200 rounded-lg px-3 py-2 text-slate-700 text-sm" />
                     </div>
                     <div>
-                      <label className="block text-xs text-slate-500 mb-1">身高 (cm)</label>
+                      <label className="block text-xs text-slate-500 mb-1">{t('labelHeight')}</label>
                       <input type="number" step="0.1" name="height" value={metricForm.height} onChange={handleMetricChange} placeholder="cm" className="w-full bg-slate-50 border border-sky-200 rounded-lg px-3 py-2 text-slate-700 text-sm" />
                     </div>
                     <div>
-                      <label className="block text-xs text-slate-500 mb-1">體重 (kg)</label>
+                      <label className="block text-xs text-slate-500 mb-1">{t('labelWeight')}</label>
                       <input type="number" step="0.1" name="weight" value={metricForm.weight} onChange={handleMetricChange} placeholder="kg" className="w-full bg-slate-50 border border-sky-200 rounded-lg px-3 py-2 text-slate-700 text-sm" />
                     </div>
                     <div>
-                      <label className="block text-xs text-slate-500 mb-1">體脂率 (%)</label>
+                      <label className="block text-xs text-slate-500 mb-1">{t('labelBodyFat')}</label>
                       <input type="number" step="0.1" name="bodyFat" value={metricForm.bodyFat} onChange={handleMetricChange} placeholder="%" className="w-full bg-slate-50 border border-sky-200 rounded-lg px-3 py-2 text-slate-700 text-sm" />
                     </div>
                     <div>
-                      <label className="block text-xs text-slate-500 mb-1">基礎代謝 (kcal)</label>
+                      <label className="block text-xs text-slate-500 mb-1">{t('labelBMR')}</label>
                       <input type="number" step="1" name="bmr" value={metricForm.bmr} onChange={handleMetricChange} placeholder="kcal" className="w-full bg-slate-50 border border-sky-200 rounded-lg px-3 py-2 text-slate-700 text-sm" />
                     </div>
                   </div>
 
                   <div className="mt-6">
-                    <h3 className="text-sm font-semibold text-sky-600 mb-3 border-b border-emerald-900 pb-2">肌肉量分佈 (kg)</h3>
+                    <h3 className="text-sm font-semibold text-sky-600 mb-3 border-b border-emerald-900 pb-2">{t('labelMuscle')}</h3>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs text-slate-500 mb-1">左手</label>
+                        <label className="block text-xs text-slate-500 mb-1">{t('labelLArm')}</label>
                         <input type="number" step="0.1" name="muscleLarm" value={metricForm.muscleLarm} onChange={handleMetricChange} placeholder="kg" className="w-full bg-slate-50 border border-sky-200 rounded-lg px-3 py-2 text-slate-700 text-sm" />
                       </div>
                       <div>
-                        <label className="block text-xs text-slate-500 mb-1">右手 (持拍手)</label>
+                        <label className="block text-xs text-slate-500 mb-1">{t('labelRArm')}</label>
                         <input type="number" step="0.1" name="muscleRarm" value={metricForm.muscleRarm} onChange={handleMetricChange} placeholder="kg" className="w-full bg-slate-50 border border-sky-200 rounded-lg px-3 py-2 text-slate-700 text-sm" />
                       </div>
                       <div>
-                        <label className="block text-xs text-slate-500 mb-1">左腳</label>
+                        <label className="block text-xs text-slate-500 mb-1">{t('labelLLeg')}</label>
                         <input type="number" step="0.1" name="muscleLleg" value={metricForm.muscleLleg} onChange={handleMetricChange} placeholder="kg" className="w-full bg-slate-50 border border-sky-200 rounded-lg px-3 py-2 text-slate-700 text-sm" />
                       </div>
                       <div>
-                        <label className="block text-xs text-slate-500 mb-1">右腳</label>
+                        <label className="block text-xs text-slate-500 mb-1">{t('labelRLeg')}</label>
                         <input type="number" step="0.1" name="muscleRleg" value={metricForm.muscleRleg} onChange={handleMetricChange} placeholder="kg" className="w-full bg-slate-50 border border-sky-200 rounded-lg px-3 py-2 text-slate-700 text-sm" />
                       </div>
                       <div className="col-span-2">
-                        <label className="block text-xs text-slate-500 mb-1">軀幹 (核心)</label>
+                        <label className="block text-xs text-slate-500 mb-1">{t('labelTrunk')}</label>
                         <input type="number" step="0.1" name="muscleTrunk" value={metricForm.muscleTrunk} onChange={handleMetricChange} placeholder="kg" className="w-full bg-slate-50 border border-sky-200 rounded-lg px-3 py-2 text-slate-700 text-sm" />
                       </div>
                     </div>
                   </div>
 
                   <button type="submit" className="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-3 mt-4 rounded-xl transition-colors shadow-lg shadow-emerald-600/20">
-                    儲存紀錄
+                    {t('metricsSaveBtn')}
                   </button>
                 </form>
               </div>
@@ -1082,10 +1048,10 @@ export default function App() {
               {metricsHistory.length > 0 && (
                 <div className="bg-white p-6 rounded-2xl border border-sky-100">
                   <h2 className="text-lg font-bold text-slate-800 mb-6 flex items-center">
-                    <TrendingUp className="mr-2 text-sky-600" size={20} /> 身體數據趨勢
+                    <TrendingUp className="mr-2 text-sky-600" size={20} /> {t('metricsTrendTitle')}
                   </h2>
                   <div className="h-64 mb-8">
-                    <h3 className="text-xs text-slate-500 mb-2 text-center">體重與體脂率</h3>
+                    <h3 className="text-xs text-slate-500 mb-2 text-center">{t('metricsChartWeight')}</h3>
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={metricsHistory} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
@@ -1094,14 +1060,14 @@ export default function App() {
                         <YAxis yAxisId="right" orientation="right" stroke="#94a3b8" fontSize={10} domain={['auto', 'auto']} />
                         <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }} />
                         <Legend wrapperStyle={{ fontSize: '12px' }} />
-                        <Line yAxisId="left" type="monotone" dataKey="weight" name="體重 (kg)" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                        <Line yAxisId="right" type="monotone" dataKey="bodyFat" name="體脂率 (%)" stroke="#f59e0b" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                        <Line yAxisId="left" type="monotone" dataKey="weight" name={t('chartWeightName')} stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                        <Line yAxisId="right" type="monotone" dataKey="bodyFat" name={t('chartBodyFatName')} stroke="#f59e0b" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
 
                   <div className="h-64">
-                    <h3 className="text-xs text-slate-500 mb-2 text-center">四肢肌肉量</h3>
+                    <h3 className="text-xs text-slate-500 mb-2 text-center">{t('metricsChartMuscle')}</h3>
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={metricsHistory} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
@@ -1109,10 +1075,10 @@ export default function App() {
                         <YAxis stroke="#94a3b8" fontSize={10} domain={['auto', 'auto']} />
                         <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }} />
                         <Legend wrapperStyle={{ fontSize: '10px' }} />
-                        <Line type="monotone" dataKey="muscleRarm" name="右臂" stroke="#ef4444" strokeWidth={2} />
-                        <Line type="monotone" dataKey="muscleLarm" name="左臂" stroke="#ef4444" strokeDasharray="5 5" strokeWidth={2} />
-                        <Line type="monotone" dataKey="muscleRleg" name="右腿" stroke="#10b981" strokeWidth={2} />
-                        <Line type="monotone" dataKey="muscleLleg" name="左腿" stroke="#10b981" strokeDasharray="5 5" strokeWidth={2} />
+                        <Line type="monotone" dataKey="muscleRarm" name={t('chartRArm')} stroke="#ef4444" strokeWidth={2} />
+                        <Line type="monotone" dataKey="muscleLarm" name={t('chartLArm')} stroke="#ef4444" strokeDasharray="5 5" strokeWidth={2} />
+                        <Line type="monotone" dataKey="muscleRleg" name={t('chartRLeg')} stroke="#10b981" strokeWidth={2} />
+                        <Line type="monotone" dataKey="muscleLleg" name={t('chartLLeg')} stroke="#10b981" strokeDasharray="5 5" strokeWidth={2} />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
@@ -1131,25 +1097,25 @@ export default function App() {
                 <div className="bg-white p-5 rounded-2xl border border-sky-100 flex flex-col items-center justify-center text-center shadow-lg relative overflow-hidden">
                   <div className="absolute -top-4 -right-4 w-16 h-16 bg-blue-100/10 rounded-full blur-xl"></div>
                   <Flame size={24} className="text-orange-500 mb-2 drop-shadow-[0_0_8px_rgba(249,115,22,0.6)]" />
-                  <div className="text-3xl font-black text-slate-800">{stats.totalActiveDays} <span className="text-sm font-medium text-slate-500">天</span></div>
-                  <div className="text-xs text-slate-500 mt-1 font-medium">總訓練天數</div>
+                  <div className="text-3xl font-black text-slate-800">{stats.totalActiveDays} <span className="text-sm font-medium text-slate-500">{t('historyDaysUnit')}</span></div>
+                  <div className="text-xs text-slate-500 mt-1 font-medium">{t('historyActiveDays')}</div>
                 </div>
                 <div className="bg-white p-5 rounded-2xl border border-sky-100 flex flex-col items-center justify-center text-center shadow-lg relative overflow-hidden">
                   <div className="absolute -top-4 -left-4 w-16 h-16 bg-sky-500/10 rounded-full blur-xl"></div>
                   <CheckCircle2 size={24} className="text-sky-600 mb-2 drop-shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
-                  <div className="text-3xl font-black text-slate-800">{stats.totalCompleted} <span className="text-sm font-medium text-slate-500">次</span></div>
-                  <div className="text-xs text-slate-500 mt-1 font-medium">累積完成動作</div>
+                  <div className="text-3xl font-black text-slate-800">{stats.totalCompleted} <span className="text-sm font-medium text-slate-500">{t('historyCompletedUnit')}</span></div>
+                  <div className="text-xs text-slate-500 mt-1 font-medium">{t('historyCompleted')}</div>
                 </div>
               </div>
 
               {/* Heatmap Section */}
               <div className="bg-white p-6 rounded-2xl border border-sky-100 shadow-lg">
                 <h2 className="text-md font-bold text-slate-800 mb-4 flex items-center">
-                  <Zap className="mr-2 text-yellow-400" size={18} /> 訓練活躍網格
+                  <Zap className="mr-2 text-yellow-400" size={18} /> {t('heatmapTitle')}
                 </h2>
 
                 {heatmapWeeks.length === 0 ? (
-                  <p className="text-sm text-slate-500 text-center py-4">尚無足夠的訓練紀錄來產生網格</p>
+                  <p className="text-sm text-slate-500 text-center py-4">{t('heatmapEmpty')}</p>
                 ) : (
                   <div className="overflow-x-auto pb-2">
                     <div className="flex space-x-1.5 min-w-max">
@@ -1167,7 +1133,7 @@ export default function App() {
                               <div
                                 key={`${weekId}-${dayIdx}`}
                                 className={`w-4 h-4 rounded-sm ${bgClass} transition-colors`}
-                                title={`${weekId} 星期${dayIdx}: 完成 ${count} 個動作`}
+                                title={`${weekId} ${t('heatmapTooltip')}${dayIdx}: ${count} ${t('heatmapActions')}`}
                               ></div>
                             );
                           })}
@@ -1175,16 +1141,16 @@ export default function App() {
                       ))}
                     </div>
                     <div className="flex justify-between items-center mt-3 text-[10px] text-slate-500 font-medium">
-                      <span>最早紀錄</span>
+                      <span>{t('heatmapOldest')}</span>
                       <div className="flex items-center space-x-1">
-                        <span className="mr-1">少</span>
+                        <span className="mr-1">{t('heatmapLess')}</span>
                         <div className="w-3 h-3 rounded-sm bg-blue-50/50"></div>
                         <div className="w-3 h-3 rounded-sm bg-sky-100/60"></div>
                         <div className="w-3 h-3 rounded-sm bg-sky-600"></div>
                         <div className="w-3 h-3 rounded-sm bg-sky-400"></div>
-                        <span className="ml-1">多</span>
+                        <span className="ml-1">{t('heatmapMore')}</span>
                       </div>
-                      <span>最新一週</span>
+                      <span>{t('heatmapNewest')}</span>
                     </div>
                   </div>
                 )}
@@ -1193,39 +1159,39 @@ export default function App() {
               {/* Radar/Bar Chart Alternative for Parts */}
               <div className="bg-white p-6 rounded-2xl border border-sky-100 shadow-lg">
                 <h2 className="text-md font-bold text-slate-800 mb-4 flex items-center">
-                  <Shield className="mr-2 text-indigo-600" size={18} /> 肌群鍛鍊雷達防護網
+                  <Shield className="mr-2 text-indigo-600" size={18} /> {t('radarTitle')}
                 </h2>
                 <div className="space-y-3">
                   <div className="flex items-center text-sm">
-                    <span className="w-16 text-slate-500 text-xs">下肢力量</span>
+                    <span className="w-16 text-slate-500 text-xs">{t('radarLower')}</span>
                     <div className="flex-1 h-3 bg-blue-50 rounded-full mx-3 overflow-hidden">
                       <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${Math.min(100, (stats.typeStats.lower / Math.max(1, stats.totalCompleted)) * 250)}%` }}></div>
                     </div>
                     <span className="w-8 text-right text-slate-600 font-medium">{stats.typeStats.lower}</span>
                   </div>
                   <div className="flex items-center text-sm">
-                    <span className="w-16 text-slate-500 text-xs">核心抗暴</span>
+                    <span className="w-16 text-slate-500 text-xs">{t('radarCore')}</span>
                     <div className="flex-1 h-3 bg-blue-50 rounded-full mx-3 overflow-hidden">
                       <div className="h-full bg-blue-100 rounded-full" style={{ width: `${Math.min(100, (stats.typeStats.core / Math.max(1, stats.totalCompleted)) * 250)}%` }}></div>
                     </div>
                     <span className="w-8 text-right text-slate-600 font-medium">{stats.typeStats.core}</span>
                   </div>
                   <div className="flex items-center text-sm">
-                    <span className="w-16 text-slate-500 text-xs">上肢推拉</span>
+                    <span className="w-16 text-slate-500 text-xs">{t('radarUpper')}</span>
                     <div className="flex-1 h-3 bg-blue-50 rounded-full mx-3 overflow-hidden">
                       <div className="h-full bg-sky-500 rounded-full" style={{ width: `${Math.min(100, ((stats.typeStats.upper_push + stats.typeStats.upper_pull) / Math.max(1, stats.totalCompleted)) * 250)}%` }}></div>
                     </div>
                     <span className="w-8 text-right text-slate-600 font-medium">{stats.typeStats.upper_push + stats.typeStats.upper_pull}</span>
                   </div>
                   <div className="flex items-center text-sm">
-                    <span className="w-16 text-slate-500 text-xs">活動度</span>
+                    <span className="w-16 text-slate-500 text-xs">{t('radarMobility')}</span>
                     <div className="flex-1 h-3 bg-blue-50 rounded-full mx-3 overflow-hidden">
                       <div className="h-full bg-teal-400 rounded-full" style={{ width: `${Math.min(100, (stats.typeStats.mobility / Math.max(1, stats.totalCompleted)) * 250)}%` }}></div>
                     </div>
                     <span className="w-8 text-right text-slate-600 font-medium">{stats.typeStats.mobility}</span>
                   </div>
                   <div className="flex items-center text-sm">
-                    <span className="w-16 text-slate-500 text-xs">全身爆發</span>
+                    <span className="w-16 text-slate-500 text-xs">{t('radarPower')}</span>
                     <div className="flex-1 h-3 bg-blue-50 rounded-full mx-3 overflow-hidden">
                       <div className="h-full bg-orange-500 rounded-full" style={{ width: `${Math.min(100, ((stats.typeStats.power + stats.typeStats.full) / Math.max(1, stats.totalCompleted)) * 250)}%` }}></div>
                     </div>
@@ -1235,10 +1201,10 @@ export default function App() {
               </div>
 
               <h2 className="text-lg font-bold text-slate-800 mb-4 mt-8 flex items-center">
-                <CalendarDays className="mr-2 text-blue-600" size={20} /> 各月完成狀況
+                <CalendarDays className="mr-2 text-blue-600" size={20} /> {t('monthlyTitle')}
               </h2>
               {monthlyData.length === 0 ? (
-                <div className="text-center p-8 bg-white rounded-xl border border-sky-100"><p className="text-slate-500">尚無歷史紀錄。</p></div>
+                <div className="text-center p-8 bg-white rounded-xl border border-sky-100"><p className="text-slate-500">{t('historyEmpty')}</p></div>
               ) : (
                 monthlyData.map((data) => {
                   const targetForMonth = data.totalWeeks * TOTAL_WEEKLY_EXERCISES;
@@ -1250,7 +1216,7 @@ export default function App() {
                         <h3 className="font-bold text-lg text-slate-800">{data.monthKey}</h3>
                         <div className="text-2xl font-black text-sky-600">{monthPercent}%</div>
                       </div>
-                      <div className="flex items-center text-sm text-slate-500 mb-1"><CheckCircle2 size={16} className="mr-2 text-sky-600" /> 總計完成: <span className="text-slate-700 ml-2 font-medium">{data.completed} 個動作</span></div>
+                      <div className="flex items-center text-sm text-slate-500 mb-1"><CheckCircle2 size={16} className="mr-2 text-sky-600" /> {t('historyTotal')} <span className="text-slate-700 ml-2 font-medium">{data.completed} {t('historyActionsUnit')}</span></div>
                     </div>
                   );
                 })
@@ -1264,10 +1230,12 @@ export default function App() {
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6">
               <div className="bg-white p-6 rounded-2xl border border-sky-100">
                 <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center">
-                  <Key className="mr-2 text-blue-600" size={20} /> AI 教練金鑰綁定 (BYOK)
+                  <Key className="mr-2 text-blue-600" size={20} /> {t('settingsTitle')}
                 </h2>
                 <p className="text-sm text-slate-500 mb-4 leading-relaxed">
-                  為了保障你的雲端資源安全，本系統採用 Bring Your Own Key 模式。請輸入你個人的 Gemini API Key，該金鑰將<strong className="text-sky-600">僅儲存於你當前的瀏覽器中 (LocalStorage)</strong>，不會上傳至任何雲端資料庫。
+                  {t('settingsDesc')}
+                  <strong className="text-sky-600">{t('settingsDescStrong')}</strong>
+                  {t('settingsDescEnd')}
                 </p>
 
                 <div className="mb-4">
@@ -1276,24 +1244,41 @@ export default function App() {
                     type="password"
                     value={tempKeyInput}
                     onChange={(e) => setTempKeyInput(e.target.value)}
+                    onFocus={(e) => e.target.select()}
                     placeholder="AIzaSy..."
                     className="w-full bg-slate-50 border border-sky-200 rounded-xl px-4 py-3 text-slate-700 focus:outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-500 transition-all font-mono text-sm"
                   />
                 </div>
 
-                <div className="flex space-x-3">
+                <div className="mb-4">
+                  <label className="block text-xs font-medium text-slate-500 mb-2 uppercase tracking-wider">{t('settingsModelTitle')}</label>
+                  <select
+                    value={selectedAiModel}
+                    onChange={(e) => {
+                      setSelectedAiModel(e.target.value);
+                      localStorage.setItem('app_ai_model', e.target.value);
+                    }}
+                    className="w-full bg-slate-50 border border-sky-200 rounded-xl px-4 py-3 text-slate-700 focus:outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-500 transition-all text-sm"
+                  >
+                    <option value="gemini-2.5-flash">{t('settingsModelFlash')}</option>
+                    <option value="gemini-2.5-pro">{t('settingsModelPro')}</option>
+                    <option value="gemini-3.0-pro">{t('settingsModel3Pro')}</option>
+                  </select>
+                </div>
+
+                <div className="flex space-x-3 mt-4">
                   <button
                     onClick={saveKeyToLocal}
-                    className="flex-1 bg-blue-600 hover:bg-blue-100 text-slate-800 py-3 rounded-xl font-medium transition-colors"
+                    className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl font-medium transition-colors"
                   >
-                    儲存金鑰
+                    {t('settingsSaveBtn')}
                   </button>
                   <a
                     href="https://aistudio.google.com/app/apikey"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center justify-center px-4 bg-blue-50 hover:bg-slate-600 text-slate-700 rounded-xl transition-colors"
-                    title="前往 Google AI Studio 申請金鑰"
+                    className="flex items-center justify-center px-4 bg-blue-50 hover:bg-slate-100 text-slate-700 rounded-xl transition-colors"
+                    title={t('settingsGetKey')}
                   >
                     <ExternalLink size={20} />
                   </a>
@@ -1302,7 +1287,7 @@ export default function App() {
                 {apiKey && (
                   <div className="mt-4 p-3 bg-sky-100/20 border border-sky-200/50 rounded-lg flex items-start">
                     <CheckCircle2 size={16} className="text-sky-600 mr-2 flex-shrink-0 mt-0.5" />
-                    <p className="text-xs text-sky-600">本機已成功綁定金鑰，你可以隨時前往「今日課表」啟動 AI 排表功能。</p>
+                    <p className="text-xs text-sky-600">{t('settingsKeyBound')}</p>
                   </div>
                 )}
               </div>
@@ -1311,26 +1296,28 @@ export default function App() {
         }
       </main >
 
-      <nav className="fixed bottom-0 w-full max-w-md left-1/2 -translate-x-1/2 bg-white border-t border-sky-100 px-2 py-3 flex justify-between items-center z-50">
-        <button onClick={() => setActiveTab('train')} className={`flex flex-col items-center p-2 flex-1 transition-colors ${activeTab === 'train' ? 'text-sky-600' : 'text-slate-500 hover:text-slate-600'}`}>
-          <Feather size={20} className="mb-1" /> <span className="text-[10px] font-medium">{t('navTrain')}</span>
-        </button>
-        <button onClick={() => setActiveTab('ai')} className={`flex flex-col items-center p-2 flex-1 transition-colors ${activeTab === 'ai' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-600'}`}>
-          <Brain size={20} className="mb-1" /> <span className="text-[10px] font-medium">{t('navAI')}</span>
-        </button>
-        <button onClick={() => setActiveTab('exercises')} className={`flex flex-col items-center p-2 flex-1 transition-colors ${activeTab === 'exercises' ? 'text-sky-600' : 'text-slate-500 hover:text-slate-600'}`}>
-          <Dumbbell size={20} className="mb-1" /> <span className="text-[10px] font-medium">{t('navExercises')}</span>
-        </button>
-        <button onClick={() => setActiveTab('metrics')} className={`flex flex-col items-center p-2 flex-1 transition-colors ${activeTab === 'metrics' ? 'text-sky-600' : 'text-slate-500 hover:text-slate-600'}`}>
-          <Activity size={20} className="mb-1" /> <span className="text-[10px] font-medium">{t('navMetrics')}</span>
-        </button>
-        <button onClick={() => setActiveTab('history')} className={`flex flex-col items-center p-2 flex-1 transition-colors ${activeTab === 'history' ? 'text-sky-600' : 'text-slate-500 hover:text-slate-600'}`}>
-          <BarChart3 size={20} className="mb-1" /> <span className="text-[10px] font-medium">{t('navHistory')}</span>
-        </button>
-        <button onClick={() => setActiveTab('settings')} className={`flex flex-col items-center p-2 flex-1 transition-colors ${activeTab === 'settings' ? 'text-sky-600' : 'text-slate-500 hover:text-slate-600'}`}>
-          <Settings size={20} className="mb-1" /> <span className="text-[10px] font-medium">{t('navSettings')}</span>
-        </button>
+      <nav className="fixed bottom-0 w-full mb-0 pb-0 left-0 bg-transparent pointer-events-none z-50">
+        <div className="max-w-md mx-auto bg-white border-t border-sky-100 flex justify-between items-center px-2 py-3 pointer-events-auto pb-safe">
+          <button onClick={() => setActiveTab('train')} className={`flex flex-col items-center p-2 flex-1 transition-colors ${activeTab === 'train' ? 'text-sky-600' : 'text-slate-500 hover:text-slate-600'}`}>
+            <Feather size={20} className="mb-1" /> <span className="text-[10px] font-medium">{t('navTrain')}</span>
+          </button>
+          <button onClick={() => setActiveTab('ai')} className={`flex flex-col items-center p-2 flex-1 transition-colors ${activeTab === 'ai' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-600'}`}>
+            <Brain size={20} className="mb-1" /> <span className="text-[10px] font-medium">{t('navAI')}</span>
+          </button>
+          <button onClick={() => setActiveTab('exercises')} className={`flex flex-col items-center p-2 flex-1 transition-colors ${activeTab === 'exercises' ? 'text-sky-600' : 'text-slate-500 hover:text-slate-600'}`}>
+            <Dumbbell size={20} className="mb-1" /> <span className="text-[10px] font-medium">{t('navExercises')}</span>
+          </button>
+          <button onClick={() => setActiveTab('metrics')} className={`flex flex-col items-center p-2 flex-1 transition-colors ${activeTab === 'metrics' ? 'text-sky-600' : 'text-slate-500 hover:text-slate-600'}`}>
+            <Activity size={20} className="mb-1" /> <span className="text-[10px] font-medium">{t('navMetrics')}</span>
+          </button>
+          <button onClick={() => setActiveTab('history')} className={`flex flex-col items-center p-2 flex-1 transition-colors ${activeTab === 'history' ? 'text-sky-600' : 'text-slate-500 hover:text-slate-600'}`}>
+            <BarChart3 size={20} className="mb-1" /> <span className="text-[10px] font-medium">{t('navHistory')}</span>
+          </button>
+          <button onClick={() => setActiveTab('settings')} className={`flex flex-col items-center p-2 flex-1 transition-colors ${activeTab === 'settings' ? 'text-sky-600' : 'text-slate-500 hover:text-slate-600'}`}>
+            <Settings size={20} className="mb-1" /> <span className="text-[10px] font-medium">{t('navSettings')}</span>
+          </button>
+        </div>
       </nav>
-    </div >
+    </div>
   );
 }

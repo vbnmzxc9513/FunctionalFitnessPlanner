@@ -142,6 +142,11 @@ export const TRANSLATIONS = {
         diffHigh: '神經適應期 (高)',
         // Language toggle
         langToggle: 'English',
+        // Model Selection
+        settingsModelTitle: 'AI 模型選擇',
+        settingsModelFlash: 'Gemini 2.5 Flash (快速 / 標準)',
+        settingsModelPro: 'Gemini 2.5 Pro (進階 / 智慧)',
+        settingsModel3Pro: 'Gemini 3.0 Pro (實驗 / 進階)',
     },
     en: {
         // App Title
@@ -283,6 +288,11 @@ export const TRANSLATIONS = {
         diffHigh: 'Neural Adaptation (High)',
         // Language toggle
         langToggle: '中文',
+        // Model Selection
+        settingsModelTitle: 'AI Model Selection',
+        settingsModelFlash: 'Gemini 2.5 Flash (Fast / Standard)',
+        settingsModelPro: 'Gemini 2.5 Pro (Advanced / Smart)',
+        settingsModel3Pro: 'Gemini 3.0 Pro (Experimental / Premium)',
     }
 };
 
