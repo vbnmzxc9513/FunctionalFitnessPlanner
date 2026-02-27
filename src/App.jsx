@@ -294,15 +294,20 @@ export default function App() {
         .filter(m => m.supportedGenerationMethods?.includes('generateContent') && m.name.startsWith('models/gemini-'))
         .map(m => m.name.replace('models/', ''));
 
-      // Remove duplicates and deprecated versions (e.g. keeping latest flash, latest pro)
-      // For general cases, we can organize them into a clean array:
+      // Remove duplicates and deprecated versions, and obscure preview/image models
       const options = validModels
-        .filter(m => !m.includes('vision') && !m.includes('latest'))
+        .filter(m =>
+          !m.includes('vision') &&
+          !m.includes('latest') &&
+          !m.includes('image') &&
+          !m.includes('tts') &&
+          !m.includes('preview')
+        )
         .sort((a, b) => b.localeCompare(a)) // Put newer versions first
         .map(m => {
           let label = m.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
-          // Enhance label if it's an experimental or premium model
-          if (m.includes('exp') || m.includes('3.0') || m.includes('lite')) {
+          // Enhance label if it's an experimental or premium pro model
+          if (m.includes('exp') || (m.includes('pro') && !m.includes('test'))) {
             label = label + ' 💎';
           }
           return { id: m, label: label };
