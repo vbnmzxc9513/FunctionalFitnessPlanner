@@ -276,7 +276,7 @@ export default function App() {
   const [apiKey, setApiKey] = useState(localStorage.getItem('gemini_byok_key') || '');
   const [tempKeyInput, setTempKeyInput] = useState(localStorage.getItem('gemini_byok_key') || '');
   const [selectedAiModel, setSelectedAiModel] = useState(localStorage.getItem('app_ai_model') || 'gemini-2.5-flash');
-  const [availableModels, setAvailableModels] = useState(['gemini-2.5-flash']);
+  const [availableModels, setAvailableModels] = useState([{ id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' }]);
   const [toastMsg, setToastMsg] = useState('');
 
   const showToast = (msg) => {
@@ -285,20 +285,32 @@ export default function App() {
   };
 
   const checkAvailableModels = async (key) => {
+    const defaultModels = [{ id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' }];
     try {
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
-      if (!response.ok) return ['gemini-2.5-flash'];
+      if (!response.ok) return defaultModels;
       const data = await response.json();
       const validModels = (data.models || [])
         .filter(m => m.supportedGenerationMethods?.includes('generateContent') && m.name.startsWith('models/gemini-'))
         .map(m => m.name.replace('models/', ''));
 
-      const options = ['gemini-2.5-flash'];
-      if (validModels.some(m => m.includes('2.5-pro'))) options.push('gemini-2.5-pro');
-      if (validModels.some(m => m.includes('3.0-pro') || m.includes('gemini-exp'))) options.push('gemini-3.0-pro');
-      return options;
+      // Remove duplicates and deprecated versions (e.g. keeping latest flash, latest pro)
+      // For general cases, we can organize them into a clean array:
+      const options = validModels
+        .filter(m => !m.includes('vision') && !m.includes('latest'))
+        .sort((a, b) => b.localeCompare(a)) // Put newer versions first
+        .map(m => {
+          let label = m.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
+          // Enhance label if it's an experimental or premium model
+          if (m.includes('exp') || m.includes('3.0') || m.includes('lite')) {
+            label = label + ' 💎';
+          }
+          return { id: m, label: label };
+        });
+
+      return options.length > 0 ? options : defaultModels;
     } catch (e) {
-      return ['gemini-2.5-flash'];
+      return defaultModels;
     }
   };
 
@@ -306,9 +318,10 @@ export default function App() {
     if (apiKey) {
       checkAvailableModels(apiKey).then(models => {
         setAvailableModels(models);
-        if (!models.includes(selectedAiModel)) {
-          setSelectedAiModel(models[0]);
-          localStorage.setItem('app_ai_model', models[0]);
+        // Ensure selected model is still valid
+        if (!models.some(m => m.id === selectedAiModel)) {
+          setSelectedAiModel(models[0].id);
+          localStorage.setItem('app_ai_model', models[0].id);
         }
       });
     }
@@ -1291,9 +1304,9 @@ export default function App() {
                     }}
                     className="w-full bg-slate-50 border border-sky-200 rounded-xl px-4 py-3 text-slate-700 focus:outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-500 transition-all text-sm"
                   >
-                    {availableModels.includes('gemini-2.5-flash') && <option value="gemini-2.5-flash">{t('settingsModelFlash')}</option>}
-                    {availableModels.includes('gemini-2.5-pro') && <option value="gemini-2.5-pro">{t('settingsModelPro')}</option>}
-                    {availableModels.includes('gemini-3.0-pro') && <option value="gemini-3.0-pro">{t('settingsModel3Pro')} 💎</option>}
+                    {availableModels.map(model => (
+                      <option key={model.id} value={model.id}>{model.label}</option>
+                    ))}
                   </select>
                 </div>
 
