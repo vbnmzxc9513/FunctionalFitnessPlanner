@@ -159,7 +159,7 @@ const generateAIPlan = async (lastWeekData, currentLevel, lastWeekFeedback, user
   【可用動作代碼與名稱】
   ${Object.entries(availableExercises).map(([k, v]) => `${k}: ${v.name} (${v.type})`).join('\n')}
   
-   1. 給予一段客製化的教練總結建議。你「必須」在這段建議中包含以下要素，並且【強制使用 Markdown 語法進行排版】。請將長篇內容拆分為數個易於閱讀的段落，並為每個段落自創一個【符合該段落內容核心精神的動態標題】（標題前請加上三個井字號，例如：『### 🔥 體脂驟降！超群的核心成長』），【絕對不要】使用制式的死板標題（例如：忌用「專業診斷」、「推斷原因」、「課表對策」等）。整份評語必須像一封專業且熱情的教練個人信件：
+   1. 給予一段客製化的教練總結建議。你「必須」在這段建議中包含以下要素，並且【強制使用 Markdown 語法進行排版】。請將長篇內容拆分為數個易於閱讀的段落，並為每個段落自創一個【符合該段落內容核心精神的動態標題】（例如：『### 🔥 體脂驟降！超群的核心成長』）。【⚠️排版警告：每個 ### 標題的前面與後面，都請「務必」加上「兩次換行 (Enter 兩次)」！絕對不要把標題跟普通內文黏在同一行，否則排版會完全損壞！】，【絕對不要】使用制式的死板標題（例如：忌用「專業診斷」、「推斷原因」、「課表對策」等）。整份評語必須像一封專業且熱情的教練信件，段落分層必須非常清晰：
       - 綜合診斷與具體讚美：解讀「歷史身體數值趨勢」與「完成度」，明確點出數據的變化，並客觀評估學員「目前狀態的優劣程度」。以專業角度解釋其變化原因。若發現學員有進步（如肌肉量上升、高完成度），在維持專業感的前提下【請不要吝嗇你的讚美】，給予強烈、熱情且有數據佐證的正向鼓勵。
       - 課表對策與目標對焦：針對觀察到的身體狀態與使用者的「近期訓練目標」，具體說明這週課表「為什麼這樣排」、「背後的訓練目的是什麼」，以及這些特定動作將如何幫助他解決當前問題，並在羽球場上達成他的目標。
   2. 安排星期一到星期五的課表，每天請絕對從【可用動作代碼與名稱】挑選剛好 4 到 5 個動作代碼。
@@ -885,15 +885,15 @@ export default function App() {
                   <div className="w-full text-sm text-slate-700 leading-relaxed font-normal space-y-4">
                     <ReactMarkdown
                       components={{
-                        h3: ({ node, ...props }) => <h3 className="text-md font-bold text-indigo-700 mt-6 mb-2 border-b-2 border-indigo-100 pb-1" {...props} />,
-                        p: ({ node, ...props }) => <p className="mb-4" {...props} />,
-                        strong: ({ node, ...props }) => <strong className="font-bold text-indigo-700 bg-indigo-50 px-1 rounded" {...props} />,
-                        ul: ({ node, ...props }) => <ul className="list-disc pl-5 mb-4 space-y-2" {...props} />,
-                        ol: ({ node, ...props }) => <ol className="list-decimal pl-5 mb-4 space-y-2" {...props} />,
-                        li: ({ node, ...props }) => <li className="" {...props} />
+                        h3: ({ node, ...props }) => <h3 className="text-lg font-bold text-indigo-700 mt-8 mb-3 border-b-2 border-indigo-100 pb-2" {...props} />,
+                        p: ({ node, ...props }) => <p className="mb-5 leading-loose text-slate-700" {...props} />,
+                        strong: ({ node, ...props }) => <strong className="font-bold text-indigo-800 bg-indigo-50/80 px-1.5 py-0.5 rounded shadow-sm" {...props} />,
+                        ul: ({ node, ...props }) => <ul className="list-disc pl-5 mb-5 space-y-2 text-slate-700" {...props} />,
+                        ol: ({ node, ...props }) => <ol className="list-decimal pl-5 mb-5 space-y-2 text-slate-700" {...props} />,
+                        li: ({ node, ...props }) => <li className="pl-1" {...props} />
                       }}
                     >
-                      {weeklyPlan.conclusion}
+                      {weeklyPlan.conclusion.replace(/([^ \n])(### )/g, '$1\n\n$2').replace(/(### [^\n]+)(?![\n])/g, '$1\n\n')}
                     </ReactMarkdown>
                   </div>
                 </div>
