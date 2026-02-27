@@ -5,6 +5,38 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
 import { getFirestore, doc, setDoc, onSnapshot, collection, getDoc } from 'firebase/firestore';
 
+// --- Debug Error Boundary ---
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null, info: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, info) {
+    console.error('=== REACT ERROR BOUNDARY CAUGHT ===');
+    console.error('Error:', error.toString());
+    console.error('Stack:', error.stack);
+    console.error('Component Stack:', info.componentStack);
+    this.setState({ info });
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '20px', color: 'red', background: '#fff', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+          <h2>⚠️ App Crashed - Error Details:</h2>
+          <p><strong>Error:</strong> {this.state.error?.toString()}</p>
+          <p><strong>Stack:</strong> {this.state.error?.stack}</p>
+          <p><strong>Component Stack:</strong> {this.state.info?.componentStack}</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+
 // --- Firebase Initialization ---
 const firebaseConfig = {
   apiKey: "AIzaSyDWuhndkvdi3q41hVe8IqV7n9NxV1CKYiM",
@@ -241,6 +273,8 @@ const generateExerciseDetails = async (exerciseName, userApiKey) => {
   const resultText = data.candidates?.[0]?.content?.parts?.[0]?.text;
   return JSON.parse(resultText);
 };
+
+export { ErrorBoundary };
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -681,7 +715,7 @@ export default function App() {
                 const allDone = schedule.routine.every(exKey => progress[`day${schedule.day}_${exKey}`]);
                 return (
                   <button key={schedule.day} onClick={() => setActiveDay(schedule.day)} className={`flex flex-col items-center justify-center min-w-[3rem] h-14 rounded-lg transition-colors ${isSelected ? 'bg-sky-600 text-white shadow-md' : 'text-slate-500 hover:bg-blue-50'}`}>
-                    <span className="text-xs font-medium mb-1">{schedule.name.replace('星期', '週')}</span>
+                    <span className="text-xs font-medium mb-1">{(schedule.name || `週${schedule.day}`).replace('星期', '週')}</span>
                     {allDone ? <CheckCircle2 size={16} className={isSelected ? 'text-slate-800' : 'text-sky-600'} /> : <Circle size={16} className="opacity-50" />}
                   </button>
                 );

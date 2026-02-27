@@ -1,0 +1,12 @@
+[DEBUG] [vite] connecting...
+[DEBUG] [vite] connected.
+[INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+=== Page loaded ===
+Waiting 8s for any data-driven crashes...
+
+=== PAGE BODY (first 3000 chars) ===
+羽球功能性健身管理
+
+專為羽球愛好者打造。登入並設定你的 API 金鑰，讓專屬 AI 規劃體能訓練。
+
+使用 Google 帳號登入
