@@ -1315,10 +1315,10 @@ export default function App() {
                   </select>
                 </div>
 
-                <div className="flex space-x-3 mt-4">
+                <div className="flex flex-col space-y-3 mt-4">
                   <button
                     onClick={saveKeyToLocal}
-                    className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl font-medium transition-colors"
+                    className="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl font-medium transition-colors"
                   >
                     {t('settingsSaveBtn')}
                   </button>
@@ -1326,10 +1326,10 @@ export default function App() {
                     href="https://aistudio.google.com/app/apikey"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center justify-center px-4 bg-blue-50 hover:bg-slate-100 text-slate-700 rounded-xl transition-colors"
-                    title={t('settingsGetKey')}
+                    className="w-full flex items-center justify-center py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-colors font-medium text-sm"
                   >
-                    <ExternalLink size={20} />
+                    <ExternalLink size={18} className="mr-2" />
+                    {t('settingsGetKey')}
                   </a>
                 </div>
 
