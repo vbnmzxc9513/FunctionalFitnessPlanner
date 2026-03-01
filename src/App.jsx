@@ -786,7 +786,7 @@ export default function App() {
                   <span className="text-lg font-bold text-sky-600">{progressPercent}%</span>
                 </div>
                 <div className="w-full bg-blue-50 rounded-full h-1.5 mt-1.5">
-                  <div className="bg-sky-500 h-1.5 rounded-full transition-all duration-500" style={{ width: `${progressPercent}%` }}></div>
+                  <div className="bg-sky-500 h-1.5 rounded-full transition-all duration-500" style={{ width: `${Math.min(100, progressPercent)}%` }}></div>
                 </div>
               </div>
             )}
@@ -1316,7 +1316,7 @@ export default function App() {
                 </div>
               </div>
               <div className="w-full bg-blue-50 rounded-full h-2 mt-4">
-                <div className="bg-sky-500 h-2 rounded-full transition-all duration-500" style={{ width: `${progressPercent}%` }}></div>
+                <div className="bg-sky-500 h-2 rounded-full transition-all duration-500" style={{ width: `${Math.min(100, progressPercent)}%` }}></div>
               </div>
             </>
           )}
