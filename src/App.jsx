@@ -1,9 +1,9 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CheckCircle2, Circle, Activity, Flame, Shield, Zap, RefreshCw, Info, CalendarDays, Dumbbell, BarChart3, LogIn, LogOut, Brain, Loader2, Settings, Key, ExternalLink, Feather, Ruler, Weight, TrendingUp, Trash2 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import ReactMarkdown from 'react-markdown';
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInWithCustomToken, signInAnonymously } from 'firebase/auth';
 import { getFirestore, doc, setDoc, onSnapshot, collection, getDoc, updateDoc, deleteField } from 'firebase/firestore';
 import { TRANSLATIONS, EXERCISES_I18N, DEFAULT_SCHEDULE_I18N } from './locale.js';
 
@@ -473,6 +473,22 @@ export default function App() {
 
   const handleLogout = () => signOut(auth);
 
+  const handleGuestLogin = async () => {
+    try {
+      const userCredential = await signInAnonymously(auth);
+      const guestUser = userCredential.user;
+      const profileDocRef = doc(db, 'artifacts', appId, 'users', guestUser.uid, 'profile', 'settings');
+      const docSnap = await getDoc(profileDocRef);
+      if (!docSnap.exists()) {
+        await setDoc(profileDocRef, { difficultyLevel: 1, isAnonymous: true });
+      }
+      showToast(lang === 'zh' ? '已進入訪客模式' : 'Entered Guest Mode');
+    } catch (error) {
+      console.error("Guest login failed:", error);
+      showToast(lang === 'zh' ? '訪客登入失敗' : 'Guest login failed');
+    }
+  };
+
   const saveKeyToLocal = () => {
     localStorage.setItem('gemini_byok_key', tempKeyInput.trim());
     setApiKey(tempKeyInput.trim());
@@ -658,12 +674,20 @@ export default function App() {
       </div>
       <h3 className="text-lg font-bold text-slate-800 mb-2">{title || t('promoLoginTitle')}</h3>
       <p className="text-sm text-slate-500 mb-6 max-w-xs leading-relaxed">{desc || t('promoLoginDesc')}</p>
-      <button
-        onClick={handleGoogleLogin}
-        className="flex items-center justify-center py-3 px-6 bg-sky-600 text-white rounded-xl font-bold hover:bg-sky-500 transition-colors shadow-lg shadow-sky-600/20 w-full max-w-xs mx-auto"
-      >
-        <LogIn className="mr-2" size={20} /> {t('promoLoginBtn')}
-      </button>
+      <div className="w-full max-w-xs mx-auto space-y-3">
+        <button
+          onClick={handleGoogleLogin}
+          className="flex items-center justify-center py-3 px-6 bg-sky-600 text-white rounded-xl font-bold hover:bg-sky-500 transition-colors shadow-lg shadow-sky-600/20 w-full"
+        >
+          <LogIn className="mr-2" size={20} /> {t('promoLoginBtn')}
+        </button>
+        <button
+          onClick={handleGuestLogin}
+          className="flex items-center justify-center py-3 px-6 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 transition-colors w-full"
+        >
+          {lang === 'zh' ? '免註冊，進入預覽模式' : 'Preview Mode (Guest)'}
+        </button>
+      </div>
     </div>
   );
 
@@ -822,9 +846,14 @@ export default function App() {
                 <LogOut size={14} className="mr-1" /> {lang === 'zh' ? '登出' : 'Logout'}
               </button>
             ) : (
-              <button onClick={handleGoogleLogin} className="w-full flex items-center justify-center text-xs font-bold text-sky-600 hover:text-sky-500 transition-colors bg-sky-50 px-3 py-2 rounded-lg">
-                <LogIn size={14} className="mr-1" /> {lang === 'zh' ? '登入' : 'Login'}
-              </button>
+              <div className="space-y-2">
+                <button onClick={handleGoogleLogin} className="w-full flex items-center justify-center text-xs font-bold text-sky-600 hover:text-sky-500 transition-colors bg-sky-50 px-3 py-2 rounded-lg">
+                  <LogIn size={14} className="mr-1" /> {lang === 'zh' ? '登入' : 'Login'}
+                </button>
+                <button onClick={handleGuestLogin} className="w-full flex items-center justify-center text-xs font-bold text-slate-600 hover:text-slate-800 transition-colors bg-slate-100 px-3 py-2 rounded-lg">
+                  {lang === 'zh' ? '訪客預覽' : 'Guest'}
+                </button>
+              </div>
             )}
           </div>
         </aside>
@@ -1294,9 +1323,14 @@ export default function App() {
               <LogOut size={16} className="mr-1" /> {lang === 'zh' ? '登出' : 'Logout'}
             </button>
           ) : (
-            <button onClick={handleGoogleLogin} title={t('promoLoginBtn')} className="text-sm font-bold text-sky-600 hover:text-sky-500 transition-colors flex items-center bg-sky-50 px-3 py-1.5 rounded-full">
-              <LogIn size={16} className="mr-1" /> {lang === 'zh' ? '登入' : 'Login'}
-            </button>
+            <div className="flex items-center space-x-2">
+              <button onClick={handleGuestLogin} className="text-xs font-bold text-slate-600 hover:text-slate-800 transition-colors bg-slate-100 px-3 py-1.5 rounded-full">
+                {lang === 'zh' ? '訪客' : 'Guest'}
+              </button>
+              <button onClick={handleGoogleLogin} title={t('promoLoginBtn')} className="text-sm font-bold text-sky-600 hover:text-sky-500 transition-colors flex items-center bg-sky-50 px-3 py-1.5 rounded-full">
+                <LogIn size={16} className="mr-1" /> {lang === 'zh' ? '登入' : 'Login'}
+              </button>
+            </div>
           )}
         </div>
         <div className="max-w-md mx-auto">
