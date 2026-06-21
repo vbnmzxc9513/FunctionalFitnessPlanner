@@ -31,6 +31,10 @@ export const TRANSLATIONS = {
         difficultyLabel: '難度',
         // Train tab
         todaySchedule: '本日課表',
+        editSchedule: '編輯課表',
+        saveEdits: '儲存修改',
+        cancelEdits: '取消',
+        addExercise: '新增動作至今日...',
         coachAdvice: '教練的訓練叮嚀',
         feedbackTitle: '本週體感反饋',
         feedbackSubtitle: '這會立即改變你當前的組數要求，並作為 AI 下週為你更換動作的科學依據。',
@@ -181,6 +185,10 @@ export const TRANSLATIONS = {
         difficultyLabel: 'Level',
         // Train tab
         todaySchedule: "Today's Workout",
+        editSchedule: 'Edit Schedule',
+        saveEdits: 'Save Edits',
+        cancelEdits: 'Cancel',
+        addExercise: 'Add exercise to today...',
         coachAdvice: "Coach's Training Tips",
         feedbackTitle: 'Weekly Difficulty Feedback',
         feedbackSubtitle: 'This immediately adjusts your current sets/reps and will inform next week\'s AI plan.',

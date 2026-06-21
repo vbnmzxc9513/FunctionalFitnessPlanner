@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle2, Circle, Activity, Flame, Shield, Zap, RefreshCw, Info, CalendarDays, Dumbbell, BarChart3, LogIn, LogOut, Brain, Loader2, Settings, Key, ExternalLink, Feather, Ruler, Weight, TrendingUp, Trash2 } from 'lucide-react';
+import { CheckCircle2, Circle, Activity, Flame, Shield, Zap, RefreshCw, Info, CalendarDays, Dumbbell, BarChart3, LogIn, LogOut, Brain, Loader2, Settings, Key, ExternalLink, Feather, Ruler, Weight, TrendingUp, Trash2, Plus, Save, X, Edit2 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import ReactMarkdown from 'react-markdown';
 import { initializeApp } from 'firebase/app';
@@ -127,7 +127,7 @@ const generateAIPlan = async (lastWeekData, currentLevel, lastWeekFeedback, user
       if (data.feedbackValue === -1) fb = "太困難";
       if (data.feedbackValue === 0) fb = "剛好";
       if (data.feedbackValue === 1) fb = "太簡單";
-      return `週次: ${weekId}, 完成數量: ${done}/25, 體感反饋: ${fb}`;
+      return `週次: ${weekId}, 完成數量: ${done}, 體感反饋: ${fb}`;
     }).join('\n  ') || "無歷史紀錄";
 
   const customPromptSection = userGoal && userGoal.trim() !== ''
@@ -144,7 +144,7 @@ const generateAIPlan = async (lastWeekData, currentLevel, lastWeekFeedback, user
   請綜合評估使用者的近期訓練目標、歷史身體數值趨勢與歷史運動紀錄，為本週（星期一到星期五）安排一份全新、最適合他當前狀態的課表，並向使用者說明「為何這樣安排」。
   
   【使用者上週狀態】
-  - 上週完成動作數: ${completedCount} / 25
+  - 上週完成動作數: ${completedCount}
   - 當前難度參數: ${currentLevel} (0=減壓, 1=建構, 2=高強度)
   - 上週體感反饋: ${feedbackText}
   
@@ -162,7 +162,7 @@ const generateAIPlan = async (lastWeekData, currentLevel, lastWeekFeedback, user
    1. 給予一段客製化的教練總結建議。你「必須」在這段建議中包含以下要素，並且【強制使用 Markdown 語法進行排版】。請將長篇內容拆分為數個易於閱讀的段落，並為每個段落自創一個【符合該段落內容核心精神的動態標題】（例如：『### 🔥 體脂驟降！超群的核心成長』）。【⚠️排版警告：每個 ### 標題的前面與後面，都請「務必」加上「兩次換行 (Enter 兩次)」！絕對不要把標題跟普通內文黏在同一行，否則排版會完全損壞！】，【絕對不要】使用制式的死板標題（例如：忌用「專業診斷」、「推斷原因」、「課表對策」等）。整份評語必須像一封專業且熱情的教練信件，段落分層必須非常清晰：
       - 綜合診斷與具體讚美：解讀「歷史身體數值趨勢」與「完成度」，明確點出數據的變化，並客觀評估學員「目前狀態的優劣程度」。以專業角度解釋其變化原因。若發現學員有進步（如肌肉量上升、高完成度），在維持專業感的前提下【請不要吝嗇你的讚美】，給予強烈、熱情且有數據佐證的正向鼓勵。
       - 課表對策與目標對焦：針對觀察到的身體狀態與使用者的「近期訓練目標」，具體說明這週課表「為什麼這樣排」、「背後的訓練目的是什麼」，以及這些特定動作將如何幫助他解決當前問題，並在羽球場上達成他的目標。
-  2. 安排星期一到星期五的課表，每天請絕對從【可用動作代碼與名稱】挑選剛好 4 到 5 個動作代碼。
+  2. 安排星期一到星期五的課表，每天請絕對從【可用動作代碼與名稱】挑選剛好 4 到 5 個動作代碼。【⚠️極度重要警告：嚴格禁止使用任何不在上述清單內的動作代碼！即使是你認識的常見動作也絕對不可排入！】
   3. 每天的主題 (theme) 必須是明確的「羽球專項訓練目標」 (例如：單邊穩定與網前急停)。
   4. 每天的評語 (concept) 必須說明當天的訓練如何連結到「羽球的特定動作 (如躍起殺球、防守接殺、米字步)」，以及「背後的發力與穩定原理」。請分為【羽球連結】與【原理】兩部分撰寫，中間務必使用 \\n 換行。
   5. 每天的教練叮嚀 (coachAdvice) 必須是非常具體的「每日銜接建議」：綜合考量「昨天練了什麼/哪裡會痠痛」、「今天要注意什麼代償/該如何放鬆」，以及「明天預計要練什麼/所以今天該做什麼準備」。例如：『因為昨天做了大量下肢，今天大腿前側可能較痠，所以今天的核心訓練要注意不要用腿部代償；明天預計會練肩推，因此今天的最後請務必確實拉伸胸大肌。』
@@ -310,6 +310,81 @@ export default function App() {
   const [aiMessageInput, setAiMessageInput] = useState('');
   const [isEditingPlan, setIsEditingPlan] = useState(false);
   const [backupPlan, setBackupPlan] = useState(null);
+
+  // Edit Routine State
+  const [isEditingRoutine, setIsEditingRoutine] = useState(false);
+  const [draftSchedule, setDraftSchedule] = useState(null);
+  const [selectedNewExercise, setSelectedNewExercise] = useState('');
+
+  const enterEditRoutineMode = () => {
+    setDraftSchedule(JSON.parse(JSON.stringify(currentSchedule)));
+    setIsEditingRoutine(true);
+    setSelectedNewExercise('');
+  };
+
+  const cancelRoutineEdits = () => {
+    setDraftSchedule(null);
+    setIsEditingRoutine(false);
+    setSelectedNewExercise('');
+  };
+
+  const saveRoutineEdits = async () => {
+    if (!user) return;
+    try {
+      const planDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'plans', currentWeek);
+      const planToSave = weeklyPlan ? { ...weeklyPlan, schedule: draftSchedule } : { conclusion: "使用者自訂課表", schedule: draftSchedule };
+      
+      const progressDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'progress', currentWeek);
+      const updates = {};
+      
+      currentSchedule.forEach(oldDay => {
+        const draftDay = draftSchedule.find(d => d.day === oldDay.day);
+        if (draftDay) {
+          oldDay.routine.forEach(exKey => {
+            if (!draftDay.routine.includes(exKey)) {
+              const key = `day${oldDay.day}_${exKey}`;
+              if (progress[key]) updates[`completed.${key}`] = deleteField();
+            }
+          });
+        }
+      });
+      
+      if (Object.keys(updates).length > 0) {
+        await updateDoc(progressDocRef, updates);
+      }
+      await setDoc(planDocRef, planToSave);
+      
+      setBackupPlan(weeklyPlan);
+      setIsEditingRoutine(false);
+      setDraftSchedule(null);
+      showToast(lang === 'zh' ? "課表儲存成功！進度已同步。" : "Schedule saved! Progress synced.");
+    } catch (err) {
+      console.error(err);
+      showToast(lang === 'zh' ? "儲存失敗，請重試。" : "Failed to save.");
+    }
+  };
+
+  const handleRemoveExerciseFromRoutine = (dayNum, indexToRemove) => {
+    setDraftSchedule(prev => prev.map(d => {
+      if (d.day === dayNum) {
+        const newRoutine = [...d.routine];
+        newRoutine.splice(indexToRemove, 1);
+        return { ...d, routine: newRoutine };
+      }
+      return d;
+    }));
+  };
+
+  const handleAddExerciseToRoutine = (dayNum) => {
+    if (!selectedNewExercise) return;
+    setDraftSchedule(prev => prev.map(d => {
+      if (d.day === dayNum && !d.routine.includes(selectedNewExercise)) {
+        return { ...d, routine: [...d.routine, selectedNewExercise] };
+      }
+      return d;
+    }));
+    setSelectedNewExercise('');
+  };
 
   // Exercises State
   const [exercisesData, setExercisesData] = useState(() => EXERCISES_I18N[localStorage.getItem('app_lang') || 'zh'] || EXERCISES_I18N.zh);
@@ -695,8 +770,19 @@ export default function App() {
 
   const currentSchedule = weeklyPlan?.schedule || DEFAULT_SCHEDULE;
   const activeSchedule = currentSchedule.find(s => s.day === activeDay) || currentSchedule[0];
-  const completedCount = Object.values(progress).filter(Boolean).length;
+  
+  let completedCount = 0;
+  currentSchedule.forEach(day => {
+    day.routine.forEach(exKey => {
+      if (progress[`day${day.day}_${exKey}`]) completedCount++;
+    });
+  });
+  
   const totalThisWeek = currentSchedule.reduce((acc, curr) => acc + curr.routine.length, 0);
+  
+  const displaySchedule = isEditingRoutine ? (draftSchedule || currentSchedule) : currentSchedule;
+  const displayActiveSchedule = displaySchedule.find(s => s.day === activeDay) || displaySchedule[0];
+  const activeExercisesKeys = Object.keys(exercisesData).filter(k => exercisesData[k].active !== false && !exercisesData[k].deleted);
   const progressPercent = Math.round((completedCount / totalThisWeek) * 100) || 0;
   const currentWeekFeedbackValue = allProgress[currentWeek]?.feedbackValue;
 
@@ -884,8 +970,24 @@ export default function App() {
                 <div className="grid grid-cols-5 gap-6">
                   {/* Left: Exercise list (3/5) */}
                   <div className="col-span-3 space-y-4">
-                    <h3 className="text-md font-semibold text-slate-600 ml-1 mb-2">{t('todaySchedule')}</h3>
-                    {activeSchedule?.routine.map((exKey, index) => {
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-md font-semibold text-slate-600 ml-1">{t('todaySchedule')}</h3>
+                      {!isEditingRoutine ? (
+                        <button onClick={enterEditRoutineMode} className="flex items-center text-xs text-sky-600 hover:text-sky-700 bg-sky-50 px-3 py-1 rounded-full transition-colors">
+                          <Edit2 size={12} className="mr-1" /> {t('editSchedule')}
+                        </button>
+                      ) : (
+                        <div className="flex gap-2">
+                          <button onClick={cancelRoutineEdits} className="flex items-center text-xs text-slate-500 hover:text-slate-700 bg-slate-100 px-3 py-1 rounded-full transition-colors">
+                            <X size={12} className="mr-1" /> {t('cancelEdits')}
+                          </button>
+                          <button onClick={saveRoutineEdits} className="flex items-center text-xs text-white bg-sky-600 hover:bg-sky-700 px-3 py-1 rounded-full transition-colors">
+                            <Save size={12} className="mr-1" /> {t('saveEdits')}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    {displayActiveSchedule?.routine.map((exKey, index) => {
                       let exercise = exercisesData[exKey];
                       if (!exercise && typeof exKey === 'string') {
                         const fallbackKey = Object.keys(exercisesData).find(k => exercisesData[k].name === exKey || exKey.includes(k));
@@ -902,10 +1004,14 @@ export default function App() {
                         <div key={exKey} className={`flex flex-col p-4 rounded-xl transition-all border ${isCompleted ? 'bg-sky-100/10 border-sky-200/50' : 'bg-white border-sky-100'}`}>
                           <div className="flex items-center cursor-pointer" onClick={() => toggleExercise(activeSchedule.day, exKey)}>
                             <button className="mr-4 flex-shrink-0">
-                              {isCompleted ? <CheckCircle2 size={24} className="text-sky-600" /> : <Circle size={24} className="text-slate-500" />}
+                              {isEditingRoutine ? (
+                                <Trash2 size={20} className="text-red-400 hover:text-red-600 transition-colors" onClick={(e) => { e.stopPropagation(); handleRemoveExerciseFromRoutine(displayActiveSchedule.day, index); }} />
+                              ) : (
+                                isCompleted ? <CheckCircle2 size={24} className="text-sky-600" /> : <Circle size={24} className="text-slate-500" />
+                              )}
                             </button>
                             <div className="flex-grow">
-                              <h4 className={`font-medium ${isCompleted ? 'line-through decoration-sky-400/50 text-slate-500' : 'text-slate-800'}`}>
+                              <h4 className={`font-medium ${(isCompleted && !isEditingRoutine) ? 'line-through decoration-sky-400/50 text-slate-500' : 'text-slate-800'}`}>
                                 {index + 1}. {exercise.name}
                               </h4>
                               <p className={`text-xs mt-1 ${isCompleted ? 'text-slate-600' : 'text-slate-500'}`}>{params}</p>
@@ -921,6 +1027,30 @@ export default function App() {
                       );
                     })}
 
+                    {isEditingRoutine && (
+                      <div className="p-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 flex flex-col sm:flex-row items-center gap-3">
+                        <select 
+                          className="flex-grow p-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 w-full"
+                          value={selectedNewExercise}
+                          onChange={(e) => setSelectedNewExercise(e.target.value)}
+                        >
+                          <option value="">{t('addExercise')}</option>
+                          {activeExercisesKeys
+                            .filter(k => !displayActiveSchedule.routine.includes(k))
+                            .map(k => (
+                              <option key={k} value={k}>{exercisesData[k].name}</option>
+                            ))}
+                        </select>
+                        <button 
+                          onClick={() => handleAddExerciseToRoutine(displayActiveSchedule.day)}
+                          disabled={!selectedNewExercise}
+                          className="flex items-center justify-center px-4 py-2 bg-sky-100 text-sky-700 hover:bg-sky-200 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-medium transition-colors whitespace-nowrap w-full sm:w-auto text-sm"
+                        >
+                          <Plus size={16} className="mr-1" /> 新增
+                        </button>
+                      </div>
+                    )}
+                    
                     {/* Feedback */}
                     <div className="mt-6 bg-white rounded-2xl p-5 border border-sky-100">
                       <h3 className="text-md font-bold text-slate-800 mb-2">{t('feedbackTitle')}</h3>
@@ -1399,8 +1529,24 @@ export default function App() {
             )}
 
             <div className="space-y-4">
-              <h3 className="text-md font-semibold text-slate-600 ml-1 mb-2">{t('todaySchedule')}</h3>
-              {activeSchedule?.routine.map((exKey, index) => {
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-md font-semibold text-slate-600 ml-1">{t('todaySchedule')}</h3>
+                {!isEditingRoutine ? (
+                  <button onClick={enterEditRoutineMode} className="flex items-center text-xs text-sky-600 hover:text-sky-700 bg-sky-50 px-3 py-1 rounded-full transition-colors">
+                    <Edit2 size={12} className="mr-1" /> {t('editSchedule')}
+                  </button>
+                ) : (
+                  <div className="flex gap-2">
+                    <button onClick={cancelRoutineEdits} className="flex items-center text-xs text-slate-500 hover:text-slate-700 bg-slate-100 px-3 py-1 rounded-full transition-colors">
+                      <X size={12} className="mr-1" /> {t('cancelEdits')}
+                    </button>
+                    <button onClick={saveRoutineEdits} className="flex items-center text-xs text-white bg-sky-600 hover:bg-sky-700 px-3 py-1 rounded-full transition-colors">
+                      <Save size={12} className="mr-1" /> {t('saveEdits')}
+                    </button>
+                  </div>
+                )}
+              </div>
+              {displayActiveSchedule?.routine.map((exKey, index) => {
                 let exercise = exercisesData[exKey];
 
                 // Fallback: If AI returned the name instead of the key, try to find it

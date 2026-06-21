@@ -1,16 +1,71 @@
-# React + Vite
+# 🏸 羽球功能性健身管理系統 (Badminton Functional Fitness)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+這是一款專為**羽球愛好者與運動員**打造的智慧型功能性健身 Web 應用程式。我們不只是讓你流汗，更是針對羽球的發力機制、步伐敏捷度與動力鏈進行科學化的進化。
 
-Currently, two official plugins are available:
+透過整合 Google Gemini AI，系統能化身為您的「專屬專業體能教練」，根據您的身體組成趨勢、訓練目標與疲勞回饋，為您量身打造並解說最佳的每週訓練課表。
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## React Compiler
+## ✨ 核心亮點與使用者體驗 (Highlights)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+使用者在使用本系統時，將會深刻感受到以下與傳統健身 App 截然不同的亮點：
 
-## Expanding the ESLint configuration
+### 1. 🤖 真正「懂你」的 AI 專屬體能教練
+* **精準診斷與排表**：AI 不是隨機抽卡給課表，而是會根據你輸入的「近期訓練目標（例如：想加強反手高遠球發力）」、每天可運動時間，以及歷史身體數值變化，進行全面評估。
+* **知其然，更知其所以然**：AI 會生成一封充滿溫度的「教練總結與診斷信」，不僅鼓勵你，還會詳細解釋**「這週課表為什麼這樣排」**以及**「這些動作將如何幫助你在球場上達成目標」**。
+* **對話式微調**：覺得今天排的腿部動作太多？可以直接在系統內輸入意見，請教練「微調與重抽」課表。
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### 2. 🏸 深度結合「羽球專項」情境
+* **動作原理連結**：每一個訓練主題都會清楚標示與羽球動作的連結。例如：告訴你練「保加利亞蹲」是為了**「強化大腿後側與臀部煞車能力，讓你在網前迅速急停而不失去平衡」**。
+* **專項屬性訓練**：涵蓋核心抗旋轉（殺球力量傳導）、側向轉換（被動防守）、下肢爆發力（起跳殺球）等羽球極度需要的核心能力。
+
+### 3. 🧠 會自動進化的「智慧動作庫」
+* **自訂動作庫**：你可以隨時新增自己喜歡的動作（例如：高腳杯深蹲）。
+* **AI 自動拆解動作**：當你輸入動作名稱後，AI 會**自動判斷該動作屬於哪一種肌群類型**（活動度、下肢、核心、上肢推/拉等），並**自動為你生成專業的教練發力提示**。排表時，AI 教練就會自動從你啟用的動作庫中為你挑選菜單。
+
+### 4. 🔄 聆聽身體聲音的「動態難度反饋」
+* **每週體感反饋**：每週結束時，你可以回報「太困難」、「剛好」或「太簡單」。
+* **自動降階/增量**：系統會自動調整下週的組數與次數標準（分為減壓恢復期、功能性建構期、神經適應期），避免過度訓練或刺激不足。
+
+### 5. 📈 專為持拍運動設計的「數據與成效視覺化」
+* **不平衡監控**：除了體重與體脂，特別加入**四肢與軀幹肌肉量（左手、右手、左腳、右腳）**的追蹤，這對單邊發力的羽球運動員預防受傷極為重要。
+* **GitHub 風格活躍網格 (Heatmap)**：視覺化呈現你每天的訓練活躍度。
+* **肌群鍛鍊雷達防護網**：利用雷達圖分析你的訓練是否偏食（下肢力量、核心抗暴、上肢推拉、活動度、全身爆發），確保發展均衡。
+
+---
+
+## 🛠️ 完整功能清單 (Features)
+
+* **[登入系統]** 支援 Google 帳號一鍵登入與免註冊的「訪客預覽模式」。
+* **[本日課表]** 每日 4-5 個動作清單，包含教練每日銜接叮嚀（昨日痠痛提醒與明日預告）。
+* **[AI 診斷室]** BYOK (Bring Your Own Key) 金鑰管理，支援自訂切換 Gemini 2.5 Flash / Pro 模型，保障隱私與彈性。
+* **[身體數據]** 紀錄並圖表化展示體重、體脂、基礎代謝與各部位肌肉量趨勢。
+* **[歷史成效]** 追蹤總訓練天數、累積動作次數、各月完成狀況與雷達圖。
+* **[動作管理]** 新增、刪除、啟用/停用專屬訓練動作。
+* **[雙語介面]** 支援繁體中文 (zh) 與英文 (en) 即時無縫切換。
+
+---
+
+## 💻 技術棧 (Tech Stack)
+
+* **前端框架**: React 19 + Vite
+* **UI 樣式**: Tailwind CSS (v4) + Lucide React 圖標
+* **資料庫與驗證**: Firebase (Auth, Firestore 實時資料庫)
+* **圖表視覺化**: Recharts
+* **AI 核心驅動**: Google Gemini API (支援 JSON Schema 結構化輸出)
+* **部署**: GitHub Pages (預設配置)
+
+---
+
+## 🚀 如何在本地運行 (How to Run)
+
+1. 複製此專案到本地
+2. 安裝依賴套件：
+   ```bash
+   npm install
+   ```
+3. 啟動開發伺服器：
+   ```bash
+   npm run dev
+   ```
+4. 為了使用 AI 功能，請至 [Google AI Studio](https://aistudio.google.com/) 申請 API Key，並於系統中的「設定」頁面綁定金鑰。金鑰僅儲存於您的瀏覽器 LocalStorage，不會上傳至雲端。
