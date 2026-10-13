@@ -3,14 +3,27 @@ import { spawn } from 'node:child_process';
 import puppeteer from 'puppeteer';
 
 const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', '5174', '--strictPort'], { env: process.env, stdio: ['ignore', 'pipe', 'pipe'] });
+const siteUrl = 'http://127.0.0.1:5174/FunctionalFitnessPlanner/';
+let serverExit = null;
+let serverOutput = '';
+server.once('exit', code => { serverExit = code ?? 1; });
+server.stdout.on('data', chunk => { serverOutput = (serverOutput + chunk).slice(-4000); });
+server.stderr.on('data', chunk => { serverOutput = (serverOutput + chunk).slice(-4000); });
 let browser;
 try {
-  await new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('Vite startup timed out')), 20000);
-    server.once('exit', code => { clearTimeout(timer); reject(new Error(`Vite exited: ${code}`)); });
-    server.stderr.on('data', chunk => process.stderr.write(chunk));
-    server.stdout.on('data', chunk => { if (chunk.toString().includes('Local:')) { clearTimeout(timer); resolve(); } });
-  });
+  // Terminal formatting and stdout chunk boundaries vary in CI. Check the real
+  // endpoint instead of interpreting the development server's banner.
+  const deadline = Date.now() + 20000;
+  let ready = false;
+  while (Date.now() < deadline) {
+    if (serverExit !== null) throw new Error(`Vite exited: ${serverExit}\n${serverOutput}`);
+    try {
+      const response = await fetch(siteUrl, { signal: AbortSignal.timeout(1000) });
+      if (response.ok) { ready = true; break; }
+    } catch { /* The listener may not have started yet. */ }
+    await new Promise(resolve => setTimeout(resolve, 200));
+  }
+  if (!ready) throw new Error(`Vite startup timed out\n${serverOutput}`);
   browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
   for (const [layout, width, height] of [['desktop', 1280, 900], ['mobile', 390, 844]]) {
     const context = await browser.createBrowserContext();
@@ -32,7 +45,7 @@ try {
       button.click();
     }, text);
     const waitText = text => page.waitForFunction(label => document.body.innerText.includes(label), {}, text);
-    await page.goto('http://127.0.0.1:5174/FunctionalFitnessPlanner/', { waitUntil: 'networkidle2' });
+    await page.goto(siteUrl, { waitUntil: 'networkidle2' });
     await waitText('本日課表');
     await click('訪客');
     await waitText('綁定 Google 並保留紀錄');
@@ -57,11 +70,14 @@ try {
     await page.click(`button[aria-label=${JSON.stringify(`移除動作 ${name}`)}]`);
     await click('儲存修改');
     await waitText('課表已儲存');
+    // The transaction acknowledgement and realtime query update are separate events.
+    await page.waitForSelector(`button[aria-label=${JSON.stringify(name)}][aria-pressed]`, { hidden: true });
     assert.equal(await page.$(`button[aria-label=${JSON.stringify(name)}][aria-pressed]`), null);
     await page.reload({ waitUntil: 'networkidle2' });
     await waitText('↩ 復原上一次的課表');
     await click('↩ 復原上一次的課表');
     await page.waitForSelector(`button[aria-label=${JSON.stringify(name)}][aria-pressed="true"]`);
+    await page.waitForFunction(() => !document.querySelector('button[aria-label][aria-pressed]').disabled);
     await click('太簡單\n需增量');
     await waitText('神經適應期 (高)');
     await page.waitForFunction(() => !document.querySelector('button[aria-label][aria-pressed]').disabled);
