@@ -367,3 +367,39 @@ export const DEFAULT_SCHEDULE_I18N = {
         { day: 5, name: 'Friday', theme: 'Lower-Body Explosion & Power Chain', concept: '[Badminton Link: Jump Smash & Agile Reaction]\nPrinciple: Converting stability into force transmission. Plyometric jumps and fluid power trains fast-twitch muscles to improve your first-step acceleration on court.', routine: ['bear_crawl', 'squat_jump', 'lunge_press', 'farmer_walk', 'stretch_10m'], coachAdvice: "You made it through the week — today is harvest time for power! Your forearms and obliques were stimulated yesterday, so lock your core even tighter on lunge press. Rest well this weekend and recharge for next week!" }
     ]
 };
+
+// Shared controls and data-operation messages used by both responsive layouts.
+Object.assign(TRANSLATIONS.zh, {
+    login: '登入', logout: '登出', guest: '訪客', guestPreview: '免註冊，進入訪客模式', upgradeGuest: '綁定 Google 並保留紀錄', navigation: '主選單',
+    removeExercise: '移除動作', restDay: '今天沒有安排動作，可休息或新增動作。', manualPlan: '使用者自訂課表',
+    toastRequireLogin: '請先登入或使用訪客模式。', toastSaveFail: '操作失敗，請重試。', toastPlanSaved: '課表已儲存，完成紀錄已保留。',
+    planChanged: '課表已在其他裝置更新，請取消編輯後重新開啟。', invalidMetrics: '請填寫有效日期及至少一個範圍內的測量值。',
+    confirmDeleteExercise: '確定刪除此動作？既有課表及訓練歷史仍會保留。', toastExerciseDeleted: '動作已刪除。',
+    noActiveExercises: '請先在動作庫啟用至少一個動作。', finishEditing: '請先儲存或取消目前的課表編輯。', dataLoadFailed: '無法載入雲端資料，請確認網路後重新載入。',
+    metricsUpdateHint: '選擇日期可載入既有紀錄。儲存時空白欄位會保留原值。', loadMore: '載入更早紀錄',
+    historyScope: '統計目前已載入的紀錄；有更早資料時可繼續載入。新紀錄的活躍網格使用實際完成日期，舊紀錄使用課表日期。月完成率依課表日期及當週實際動作數計算。',
+    allDayNames: ['星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日'],
+    setsUnit: '組', minutes: '分鐘', seconds: '秒', reps: '下',
+    type_mobility: '活動度', type_lower: '下肢肌力', type_core: '核心穩定', type_upper_pull: '上肢拉', type_upper_push: '上肢推', type_full: '全身複合', type_power: '爆發力',
+    clearKey: '清除本機金鑰', keyCleared: '本機金鑰已清除。', storageUnavailable: '瀏覽器無法儲存設定，請確認儲存權限。',
+    dataSharingNotice: '金鑰屬於此瀏覽器，登出後仍會保留，可在此清除。排課時會把已載入的身體數據、訓練歷史及輸入訊息傳給 Google Gemini。',
+    migrationPending: '訪客紀錄尚未全部匯入 Google 帳號，請重試；現有帳號資料會優先保留。', migrationFailed: '已登入，但訪客紀錄匯入中斷，可點選重試繼續。', retry: '重試匯入',
+    radarTitle: '肌群訓練分佈', settingsKeyBound: '本機已綁定金鑰，可前往「教練」排課。', toastKeySaved: '金鑰已儲存於本機瀏覽器。',
+});
+Object.assign(TRANSLATIONS.en, {
+    login: 'Login', logout: 'Logout', guest: 'Guest', guestPreview: 'Continue as guest', upgradeGuest: 'Link Google and keep records', navigation: 'Main navigation',
+    removeExercise: 'Remove exercise', restDay: 'No exercises scheduled. Rest or add an exercise.', manualPlan: 'Custom training plan',
+    toastRequireLogin: 'Please sign in or continue as a guest.', toastSaveFail: 'Operation failed. Please try again.', toastPlanSaved: 'Schedule saved. Training records were preserved.',
+    planChanged: 'The plan changed on another device. Cancel editing and reopen it.', invalidMetrics: 'Enter a valid date and at least one measurement within the allowed range.',
+    confirmDeleteExercise: 'Delete this exercise? Existing plans and training history will be preserved.', toastExerciseDeleted: 'Exercise deleted.',
+    noActiveExercises: 'Enable at least one exercise in the library first.', finishEditing: 'Save or cancel the current schedule edit first.', dataLoadFailed: 'Cloud data could not be loaded. Check your connection and reload.',
+    metricsUpdateHint: 'Select a date to load an existing record. Blank fields preserve previous values when saving.', loadMore: 'Load older records',
+    historyScope: 'Statistics cover loaded records; load more when older data is available. New activity uses actual completion dates; legacy records use scheduled dates. Monthly completion uses scheduled dates and actual weekly exercise counts.',
+    allDayNames: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+    setsUnit: 'sets', minutes: 'min', seconds: 'sec', reps: 'reps',
+    type_mobility: 'Mobility', type_lower: 'Lower body', type_core: 'Core', type_upper_pull: 'Upper pull', type_upper_push: 'Upper push', type_full: 'Full body', type_power: 'Power',
+    clearKey: 'Clear local key', keyCleared: 'Local key cleared.', storageUnavailable: 'Browser storage is unavailable. Check your storage permissions.',
+    dataSharingNotice: 'The key belongs to this browser and remains after logout; you can clear it here. Planning sends loaded body metrics, training history and your messages to Google Gemini.',
+    migrationPending: 'Some guest records still need importing. Retry to continue; existing account records take precedence.', migrationFailed: 'Signed in, but guest import was interrupted. Retry to continue.', retry: 'Retry import',
+    radarTitle: 'Muscle group distribution', settingsKeyBound: 'Key saved locally. Open Coach to generate a plan.', toastKeySaved: 'Key saved in this browser.',
+});

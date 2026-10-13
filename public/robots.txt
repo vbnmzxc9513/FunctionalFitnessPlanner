@@ -1,3 +1,0 @@
-User-agent: *
-Allow: /
-Sitemap: https://badminton-functional-fitness-planner.pages.dev/sitemap.xml

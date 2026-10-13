@@ -1,0 +1,15 @@
+import { spawn } from 'node:child_process';
+
+const env = {
+  ...process.env, NODE_ENV: 'test', VITE_USE_FIREBASE_EMULATORS: 'true',
+  VITE_FIREBASE_PROJECT_ID: 'demo-fitness-planner', VITE_FIREBASE_API_KEY: 'demo-key',
+  VITE_FIREBASE_AUTH_DOMAIN: 'demo-fitness-planner.firebaseapp.com',
+  VITE_FIREBASE_APP_ID: '1:123:web:demo', VITE_APP_ID: 'my-fitness-app-yp',
+};
+async function run(args) {
+  const child = spawn(process.execPath, args, { env, stdio: 'inherit' });
+  const code = await new Promise(resolve => child.on('exit', resolve));
+  if (code !== 0) process.exit(code || 1);
+}
+await run(['--test', 'tests/integration/firestore.test.js']);
+await run(['scripts/browser-smoke.mjs']);

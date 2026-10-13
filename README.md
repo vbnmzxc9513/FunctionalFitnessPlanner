@@ -30,17 +30,17 @@
 ### 5. 📈 專為持拍運動設計的「數據與成效視覺化」
 * **不平衡監控**：除了體重與體脂，特別加入**四肢與軀幹肌肉量（左手、右手、左腳、右腳）**的追蹤，這對單邊發力的羽球運動員預防受傷極為重要。
 * **GitHub 風格活躍網格 (Heatmap)**：視覺化呈現你每天的訓練活躍度。
-* **肌群鍛鍊雷達防護網**：利用雷達圖分析你的訓練是否偏食（下肢力量、核心抗暴、上肢推拉、活動度、全身爆發），確保發展均衡。
+* **肌群訓練分佈**：利用橫條圖展示下肢、核心、上肢推拉、活動度與全身爆發的完成紀錄。
 
 ---
 
 ## 🛠️ 完整功能清單 (Features)
 
-* **[登入系統]** 支援 Google 帳號一鍵登入與免註冊的「訪客預覽模式」。
+* **[登入系統]** 支援 Google 帳號一鍵登入與 Firebase 匿名訪客模式。訪客紀錄也會寫入自己的雲端空間，可綁定 Google 保留紀錄。
 * **[本日課表]** 每日 4-5 個動作清單，包含教練每日銜接叮嚀（昨日痠痛提醒與明日預告）。
 * **[AI 診斷室]** BYOK (Bring Your Own Key) 金鑰管理，支援自訂切換 Gemini 2.5 Flash / Pro 模型，保障隱私與彈性。
 * **[身體數據]** 紀錄並圖表化展示體重、體脂、基礎代謝與各部位肌肉量趨勢。
-* **[歷史成效]** 追蹤總訓練天數、累積動作次數、各月完成狀況與雷達圖。
+* **[歷史成效]** 追蹤已載入範圍的訓練天數、累積動作次數、各月完成狀況與肌群分佈；支援載入更早紀錄。
 * **[動作管理]** 新增、刪除、啟用/停用專屬訓練動作。
 * **[雙語介面]** 支援繁體中文 (zh) 與英文 (en) 即時無縫切換。
 
@@ -60,12 +60,60 @@
 ## 🚀 如何在本地運行 (How to Run)
 
 1. 複製此專案到本地
-2. 安裝依賴套件：
+2. 使用 Node.js 22.12 以上版本，安裝 lockfile 中的依賴套件：
    ```bash
-   npm install
+   npm ci
    ```
 3. 啟動開發伺服器：
    ```bash
    npm run dev
    ```
-4. 為了使用 AI 功能，請至 [Google AI Studio](https://aistudio.google.com/) 申請 API Key，並於系統中的「設定」頁面綁定金鑰。金鑰僅儲存於您的瀏覽器 LocalStorage，不會上傳至雲端。
+4. 為了使用 AI 功能，請至 [Google AI Studio](https://aistudio.google.com/) 申請 API Key，並於系統中的「設定」頁面綁定金鑰。金鑰僅儲存於瀏覽器 LocalStorage，不會寫入 Firestore；呼叫 Gemini 時會直接提供給 Google 進行 API 驗證。
+
+預設開發路徑為 `http://localhost:5173/FunctionalFitnessPlanner/`。Firebase Web 設定可透過 `.env.local` 覆寫，參考 [.env.example](.env.example)。未覆寫時會連到原本的 Firebase 專案；測試使用 demo 專案與本機模擬器。
+
+## 資料與操作行為
+
+- 登出或換帳號會清空畫面狀態、表單與草稿。跨週時會切換到新的週課表。
+- 每週反饋依固定基準難度重新計算，重複選相同反饋不會累加。難度會即時同步到其他裝置。
+- 桌機與手機共用課表編輯控制。編輯、取消與儲存一致；若其他裝置先更新課表，舊草稿會被拒絕，請重新開啟編輯。
+- 課表與當週統計快照使用 Firestore transaction 保存。移除動作不會刪除曾完成的訓練紀錄；本週完成率只計算當前課表中的動作。
+- 上一份課表儲存在雲端，可於重新整理後復原。預設課表也能作為第一份備份。
+- 測量紀錄以日期識別。選擇日期可載入原值；儲存時空白欄位保留既有值，數值會在前端與 Firestore rules 驗證。
+- 月完成率按各動作的課表日期歸入月份，使用當週實際課表數量。舊資料優先使用已儲存的課表，無課表時使用 23 個動作的預設課表。
+- 新完成紀錄保留實際完成日期與當時的肌群類別。舊紀錄沒有實際日期時使用課表日期；既有歷史無法還原成未曾記錄的實際訓練時間。
+- 預設載入最近 104 週範圍的紀錄與 365 份測量，歷史／數據頁可載入更多。
+- 訪客綁定新的 Google 帳號時保留 UID。Google 帳號已存在時會匯入訪客紀錄，保留既有帳號的同日期測量／同週課表、合併已完成紀錄及動作庫。中斷時可在同一瀏覽器工作階段重試。
+- Gemini 金鑰是瀏覽器範圍設定，登出後仍保留；可在設定頁清除。排課時會把已載入的身體數據、訓練歷史及輸入訊息傳給 Google Gemini。
+
+## 架構
+
+```text
+src/App.jsx             畫面組合與事件流程
+src/components/         共用課表、動作庫、設定；延遲載入教練／圖表／歷史頁
+src/hooks/              Firebase 登入、資料訂閱、本地日期與跨週切換
+src/domain/             日期、反饋、處方顯示、統計與測量驗證純函式
+src/services/           Firebase 設定、交易式資料存取、既有 Gemini client
+src/locale.js           繁中／英文文案、預設動作與課表
+tests/                  單元與 Firebase rules／交易整合測試
+scripts/                模擬器測試與桌機／手機瀏覽器驗證
+```
+
+## 檢查與模擬器
+
+```bash
+npm run check
+npm run test:integration
+```
+
+整合測試需要 Java 21，會自動啟動 Auth／Firestore 模擬器，使用 `demo-fitness-planner` 專案。測試涵蓋資料隔離、驗證規則、並行完成寫入、反饋、原子保存與復原、測量更新、訪客匯入，以及桌機／手機操作。瀏覽器測試會阻擋外部服務請求，不會寫入正式 Firebase 或呼叫 Gemini。
+
+手動開發模擬器時先執行 `npx firebase emulators:start --project demo-fitness-planner --only auth,firestore`，再於 `.env.local` 設定 demo Firebase Web config 及 `VITE_USE_FIREBASE_EMULATORS=true`，啟動開發伺服器。請勿在測試中登入正式 Google 帳號。
+
+## 部署
+
+main push 的 GitHub Actions 會先執行 lint、單元測試、模擬器／瀏覽器測試及 build，再發布 gh-pages；PR 也會執行同樣的檢查。Cloudflare 建置使用 `CF_PAGES=1`，亦可透過 `VITE_BASE_PATH`、`VITE_SITE_URL` 指定路徑與 canonical URL；robots.txt 和 sitemap.xml 會隨建置生成。
+
+GitHub Pages 部署**不會更新 Firebase rules**。本次新增的資料驗證規則需由 Firebase 專案管理者另行執行 `npx firebase deploy --only firestore:rules` 才會套用到正式資料庫；規則已在模擬器驗證。
+
+此修正保留既有 Gemini endpoint、prompt、JSON responseSchema、模型選擇呼叫與重試行為。Gemini 模型設定未接入實際生成呼叫、AI 微調上下文與 API 錯誤處理仍屬另一次 API 修正範圍。
