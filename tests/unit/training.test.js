@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import { applyFeedback, availableSchedule, calculateStats, countCompleted, monthlyStats, normalizeSchedule, prescription } from '../../src/domain/training.js';
 import { getWeekString, dateForWeekDay, isCalendarDate, localDate } from '../../src/domain/dates.js';
 import { emptyMetrics, parseMetrics } from '../../src/domain/metrics.js';
-import { DEFAULT_SCHEDULE_I18N, EXERCISES_I18N, TRANSLATIONS } from '../../src/locale.js';
+import { LEGACY_DEFAULT_SCHEDULE_I18N, EXERCISES_I18N, TRANSLATIONS } from '../../src/locale.js';
 
-const schedule = DEFAULT_SCHEDULE_I18N.zh;
+const schedule = LEGACY_DEFAULT_SCHEDULE_I18N.zh;
 const exercises = EXERCISES_I18N.zh;
 test('ISO weeks cross year boundaries and month dates correctly', () => {
   assert.equal(getWeekString(new Date(2025, 11, 29)), '2026-W01');
@@ -29,7 +29,7 @@ test('weekly counts use active slots, preserving removed exercise history withou
   assert.deepEqual(countCompleted(schedule, completed), { completed: 1, total: 23 });
   assert.deepEqual(countCompleted([{ day: 1, routine: ['thoracic', 'thoracic'] }], completed), { completed: 1, total: 1 });
 });
-test('23 of 23 default exercises means 100%, with slots split across calendar months', () => {
+test('23 of 23 legacy default exercises means 100%, with slots split across calendar months', () => {
   const completed = Object.fromEntries(schedule.flatMap(day => day.routine.map(id => [`day${day.day}_${id}`, true])));
   const months = monthlyStats({ '2026-W40': { completed, scheduleSnapshot: schedule } }, {}, []);
   assert.equal(months.length, 2);

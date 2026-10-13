@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import puppeteer from 'puppeteer';
+import { TRANSLATIONS } from '../src/locale.js';
 
 const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', '5174', '--strictPort'], { env: process.env, stdio: ['ignore', 'pipe', 'pipe'] });
 const siteUrl = 'http://127.0.0.1:5174/FunctionalFitnessPlanner/';
@@ -31,12 +32,21 @@ try {
     await page.setViewport({ width, height });
     await page.evaluateOnNewDocument(() => localStorage.setItem('app_lang', 'zh'));
     const errors = [];
+    let planningPayload;
     page.on('pageerror', error => errors.push(error.message));
     page.on('console', message => { if (message.type() === 'error') console.error(`[${layout}] ${message.text()}`); });
     await page.setRequestInterception(true);
     page.on('request', request => {
       const url = new URL(request.url());
-      if (['127.0.0.1', 'localhost'].includes(url.hostname) || ['data:', 'blob:'].includes(url.protocol)) request.continue();
+      if (url.hostname === 'generativelanguage.googleapis.com') {
+        const headers = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET, POST, OPTIONS', 'access-control-allow-headers': 'content-type' };
+        if (request.method() === 'OPTIONS') request.respond({ status: 204, headers });
+        else if (url.pathname.endsWith(':generateContent')) {
+          planningPayload = JSON.parse(request.postData());
+          const plan = { conclusion: 'Mock recovery plan', schedule: [1, 2, 3, 4, 5].map(day => ({ day, name: 'Day', theme: 'Recovery', concept: 'Keep control', coachAdvice: 'Check next-day response', routine: day === 1 ? ['bf_B01'] : [], prescriptions: day === 1 ? [{ id: 'bf_B01', sets: 1, value: '6', unit: 'reps', restSeconds: 90, perSide: true }] : [] })) };
+          request.respond({ status: 200, headers, contentType: 'application/json', body: JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(plan) }] } }] }) });
+        } else request.respond({ status: 200, headers, contentType: 'application/json', body: JSON.stringify({ models: [{ name: 'models/gemini-2.5-flash', supportedGenerationMethods: ['generateContent'] }] }) });
+      } else if (['127.0.0.1', 'localhost'].includes(url.hostname) || ['data:', 'blob:'].includes(url.protocol)) request.continue();
       else request.abort(); // Integration tests must never contact production services.
     });
     const click = text => page.evaluate(label => {
@@ -45,6 +55,11 @@ try {
       button.click();
     }, text);
     const waitText = text => page.waitForFunction(label => document.body.innerText.includes(label), {}, text);
+    const selectMonday = () => page.evaluate(label => {
+      const button = [...document.querySelectorAll('main button')].find(item => item.innerText.startsWith(label));
+      if (!button) throw new Error('Monday tab missing');
+      button.click();
+    }, TRANSLATIONS.zh.dayShort[0]);
     await page.goto(siteUrl, { waitUntil: 'networkidle2' });
     await waitText('本日課表');
     await click('訪客');
@@ -85,6 +100,36 @@ try {
     await page.waitForFunction(() => !document.querySelector('button[aria-label][aria-pressed]').disabled);
     await click('剛好\n維持架構');
     await waitText('功能性建構期 (中)');
+    await click('動作庫'); await waitText('羽球訓練動作庫');
+    await page.select('select[aria-label="依訓練分類篩選"]', 'core');
+    await page.type('input[aria-label="搜尋動作或編號"]', '90/90');
+    assert.equal(await page.$$eval('button[role="switch"]', items => items.length), 1);
+    await waitText('次呼吸');
+    await click('設定'); await page.waitForSelector('input[type="password"]');
+    await page.type('input[type="password"]', 'mock-test-only');
+    await click(TRANSLATIONS.zh.settingsSaveBtn);
+    await click('教練'); await waitText('羽球體能教練');
+    await click(TRANSLATIONS.zh.aiTweakBtn);
+    await page.select('select', 'mixed'); // First select is court intensity.
+    await page.evaluate(() => {
+      const labels = [...document.querySelectorAll('label')];
+      for (const [text, value] of [['肩部狀態與活動限制', 'restricted']]) {
+        const select = labels.find(label => label.textContent.startsWith(text)).querySelector('select');
+        select.value = value; select.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      const days = [...document.querySelectorAll('fieldset label')].filter(label => label.textContent.startsWith('星期'));
+      for (const day of [2, 5, 6]) days[day - 1].querySelector('input').click();
+    });
+    await click(TRANSLATIONS.zh.aiRegenerateBtn); await waitText('Mock recovery plan');
+    assert.ok(planningPayload.contents[0].parts[0].text.includes('肩部／健康限制'));
+    const candidateSection = planningPayload.contents[0].parts[0].text.split('【可用候選動作；ID 必須完全相同】')[1].split('【輸出要求】')[0].trim();
+    assert.ok(!JSON.parse(candidateSection).some(item => item.shoulderLoaded));
+    await click('每天'); await selectMonday(); await page.waitForSelector('button[aria-label="分腿蹲"][aria-pressed]');
+    // Generated per-day dose survives a reload rather than reverting to global level.
+    await page.reload({ waitUntil: 'networkidle2' });
+    await click('每天'); await selectMonday();
+    await waitText('每側');
+    assert.ok(await page.evaluate(() => document.body.innerText.includes('1 組 × 6 下')));
     await click('數據');
     await page.waitForSelector('input[name="weight"]');
     await page.type('input[name="weight"]', '70');
@@ -125,7 +170,7 @@ try {
     await click('🌐 English'); await waitText("Today's Workout");
     assert.equal(await page.evaluate(() => document.documentElement.lang), 'en');
     assert.deepEqual(errors, [], `${layout} has no runtime errors`);
-    console.log(`${layout}: guest login, completion, add/remove/save/restore, feedback, metrics, week rollover, logout, English passed`);
+    console.log(`${layout}: guest login, completion, editing/restore, catalog search, planning inputs, mock AI doses, feedback, metrics, rollover, logout, English passed`);
     await context.close();
   }
 } finally {

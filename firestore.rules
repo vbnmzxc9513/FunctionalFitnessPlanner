@@ -22,9 +22,29 @@ service cloud.firestore {
         && data.get('difficultyLevel', 1) is int && data.get('difficultyLevel', 1) >= 0 && data.get('difficultyLevel', 1) <= 2
         && data.get('isAnonymous', false) is bool;
     }
+    function validDose(dose, routine) {
+      return dose is map && dose.keys().hasOnly(['id', 'sets', 'value', 'unit', 'restSeconds', 'perSide'])
+        && dose.id is string && dose.id in routine
+        && dose.sets is int && dose.sets >= 1 && dose.sets <= 5
+        && dose.value is string && dose.value.matches('^[0-9]+([–-][0-9]+)?$') && dose.value.size() <= 9
+        && dose.unit in ['reps', 'seconds', 'minutes', 'breaths']
+        && dose.restSeconds is int && dose.restSeconds >= 0 && dose.restSeconds <= 300
+        && dose.perSide is bool;
+    }
+    function validPrescriptions(day) {
+      let doses = day.get('prescriptions', []);
+      return doses is list && doses.size() <= 6
+        && (doses.size() < 1 || validDose(doses[0], day.routine))
+        && (doses.size() < 2 || validDose(doses[1], day.routine))
+        && (doses.size() < 3 || validDose(doses[2], day.routine))
+        && (doses.size() < 4 || validDose(doses[3], day.routine))
+        && (doses.size() < 5 || validDose(doses[4], day.routine))
+        && (doses.size() < 6 || validDose(doses[5], day.routine));
+    }
     function validDay(day, expected) {
       return day is map && day.day == expected && day.routine is list && day.routine.size() <= 100
-        && day.keys().hasOnly(['day', 'name', 'theme', 'concept', 'coachAdvice', 'routine'])
+        && day.keys().hasOnly(['day', 'name', 'theme', 'concept', 'coachAdvice', 'routine', 'prescriptions'])
+        && validPrescriptions(day)
         && day.get('name', '') is string && day.get('theme', '') is string
         && day.get('concept', '') is string && day.get('coachAdvice', '') is string;
     }

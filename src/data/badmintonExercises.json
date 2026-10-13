@@ -1,0 +1,2848 @@
+[
+  {
+    "id": "bf_A01",
+    "category": "warmup",
+    "name": "快走／慢跑與側移",
+    "purpose": "提高體溫、準備移動",
+    "equipment": "徒手、平坦空間",
+    "dose": "2–3 分鐘",
+    "rest": "依呼吸調整",
+    "cue": "先直線，再小步側移；逐步加快。",
+    "easier": "快走與原地踏步",
+    "harder": "加入短距離加速",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "A01",
+    "nameEn": "Brisk walk, easy jog and side steps",
+    "type": "mobility",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": false,
+    "advanced": false,
+    "prescription": {
+      "sets": 1,
+      "value": "2",
+      "unit": "minutes",
+      "restSeconds": 20,
+      "perSide": false
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_A02",
+    "category": "warmup",
+    "name": "踝背屈前移",
+    "purpose": "準備蹲、弓步與落地",
+    "equipment": "牆壁或支撐物",
+    "dose": "1–2 組 × 每側 8 次",
+    "rest": "15–20 秒",
+    "cue": "腳跟貼地，膝蓋順腳尖方向前移。",
+    "easier": "縮短前移距離",
+    "harder": "逐步增加無痛距離",
+    "level": "基礎",
+    "priority": true,
+    "catalogCode": "A02",
+    "nameEn": "Ankle dorsiflexion rock",
+    "type": "mobility",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": false,
+    "advanced": false,
+    "prescription": {
+      "sets": 1,
+      "value": "6",
+      "unit": "reps",
+      "restSeconds": 20,
+      "perSide": true
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_A03",
+    "category": "warmup",
+    "name": "髖鉸鏈暖身",
+    "purpose": "學會用髖發力",
+    "equipment": "徒手",
+    "dose": "1–2 組 × 8 次",
+    "rest": "15–20 秒",
+    "cue": "臀部往後，背部自然穩定，感受腿後側張力。",
+    "easier": "臀部向牆輕碰",
+    "harder": "接 B03 彈力繩髖鉸鏈",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "A03",
+    "nameEn": "Bodyweight hip hinge",
+    "type": "mobility",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": false,
+    "advanced": false,
+    "prescription": {
+      "sets": 1,
+      "value": "6",
+      "unit": "reps",
+      "restSeconds": 20,
+      "perSide": false
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_A04",
+    "category": "warmup",
+    "name": "交替後撤弓步＋上伸",
+    "purpose": "準備髖伸展與單腳支撐",
+    "equipment": "徒手、支撐物選配",
+    "dose": "1 組 × 每側 6 次",
+    "rest": "15–20 秒",
+    "cue": "步幅適中，骨盆穩定；上伸不拱腰。",
+    "easier": "扶物、縮小弓步",
+    "harder": "加入小幅胸椎轉向",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "A04",
+    "nameEn": "Reverse lunge with reach",
+    "type": "mobility",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "advanced": false,
+    "prescription": {
+      "sets": 1,
+      "value": "6",
+      "unit": "reps",
+      "restSeconds": 20,
+      "perSide": true
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_A05",
+    "category": "warmup",
+    "name": "側向重心轉移",
+    "purpose": "準備側移與內收肌承重",
+    "equipment": "徒手",
+    "dose": "1 組 × 每側 8 次",
+    "rest": "15–20 秒",
+    "cue": "往一側屈髖屈膝，另一腿較直，腳底穩定。",
+    "easier": "小幅移動",
+    "harder": "接 B02 側弓步",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "A05",
+    "nameEn": "Lateral weight shift",
+    "type": "mobility",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": false,
+    "advanced": false,
+    "prescription": {
+      "sets": 1,
+      "value": "6",
+      "unit": "reps",
+      "restSeconds": 20,
+      "perSide": true
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_A06",
+    "category": "warmup",
+    "name": "側躺胸椎開書",
+    "purpose": "準備軀幹轉向",
+    "equipment": "地墊",
+    "dose": "1 組 × 每側 6 次",
+    "rest": "15–20 秒",
+    "cue": "雙膝疊放，胸口緩慢轉開，不硬扳腰。",
+    "easier": "減少轉動角度",
+    "harder": "停留 2 秒配合吐氣",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "A06",
+    "nameEn": "Side-lying open book",
+    "type": "mobility",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "advanced": false,
+    "prescription": {
+      "sets": 1,
+      "value": "6",
+      "unit": "reps",
+      "restSeconds": 20,
+      "perSide": true
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_A07",
+    "category": "warmup",
+    "name": "肩胛伏地挺身／牆推",
+    "purpose": "肩胛控制與推的準備",
+    "equipment": "牆壁或地墊",
+    "dose": "1–2 組 × 8 次",
+    "rest": "20–30 秒",
+    "cue": "手肘保持近直，讓肩胛滑動；腰不塌。",
+    "easier": "站姿牆推",
+    "harder": "斜板或地面版本",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "A07",
+    "nameEn": "Scapular push-up or wall push",
+    "type": "mobility",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "advanced": false,
+    "prescription": {
+      "sets": 1,
+      "value": "6",
+      "unit": "reps",
+      "restSeconds": 20,
+      "perSide": false
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_A08",
+    "category": "warmup",
+    "name": "輕阻力外旋＋揮拍預備",
+    "purpose": "準備肩部與擊球動作",
+    "equipment": "彈力繩；球拍選配",
+    "dose": "外旋每側 8 次＋輕鬆揮拍 30 秒",
+    "rest": "20–30 秒",
+    "cue": "外旋小幅、輕阻力；揮拍從慢到中速。",
+    "easier": "徒手、縮小幅度",
+    "harder": "逐步接近當天練習速度",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "A08",
+    "nameEn": "Light band external rotation and swing preparation",
+    "type": "mobility",
+    "equipmentOptions": [
+      [
+        "band"
+      ]
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "advanced": false,
+    "prescription": {
+      "sets": 1,
+      "value": "6",
+      "unit": "reps",
+      "restSeconds": 20,
+      "perSide": true
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_A09",
+    "category": "warmup",
+    "name": "靠牆天使",
+    "purpose": "肩胛、肩部活動與胸廓控制",
+    "equipment": "牆壁",
+    "dose": "1–2 組 × 6–8 次",
+    "rest": "20–30 秒",
+    "cue": "背靠牆、肋骨不外翻，雙臂在舒適範圍上下滑；手腕不必強貼牆，不用拱腰換角度。",
+    "easier": "縮小上舉範圍",
+    "harder": "增加無痛範圍，不急著負重",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "A09",
+    "nameEn": "Wall angel",
+    "type": "mobility",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "advanced": false,
+    "prescription": {
+      "sets": 1,
+      "value": "6",
+      "unit": "reps",
+      "restSeconds": 20,
+      "perSide": false
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_A10",
+    "category": "warmup",
+    "name": "貓牛式",
+    "purpose": "脊柱活動與呼吸協調",
+    "equipment": "地墊",
+    "dose": "1 組 × 6–8 次",
+    "rest": "依呼吸重置",
+    "cue": "四足跪姿緩慢拱背、回到小幅伸展；不猛壓腰或甩頭，這是動態活動而非只拉胸椎。",
+    "easier": "小幅活動",
+    "harder": "放慢並觀察不同區段的活動",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "A10",
+    "nameEn": "Cat-cow",
+    "type": "mobility",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "advanced": false,
+    "prescription": {
+      "sets": 1,
+      "value": "6",
+      "unit": "reps",
+      "restSeconds": 20,
+      "perSide": false
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_A11",
+    "category": "warmup",
+    "name": "四足跪姿胸椎旋轉",
+    "purpose": "胸椎轉向與軀幹協調",
+    "equipment": "地墊",
+    "dose": "1–2 組 × 每側 6 次",
+    "rest": "20–30 秒",
+    "cue": "一手輕放耳旁，胸口轉向側上方；骨盆穩定、頸部跟隨，不拉扯頭頸。",
+    "easier": "縮小角度；或 A06 開書",
+    "harder": "頂端停 2 秒，維持骨盆控制",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "A11",
+    "nameEn": "Quadruped thoracic rotation",
+    "type": "mobility",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "advanced": false,
+    "prescription": {
+      "sets": 1,
+      "value": "6",
+      "unit": "reps",
+      "restSeconds": 20,
+      "perSide": true
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_B01",
+    "category": "lower",
+    "name": "分腿蹲",
+    "purpose": "弓步支撐與單腳腿力",
+    "equipment": "徒手、啞鈴或彈力繩",
+    "dose": "2–3 組 × 每側 6–10 次",
+    "rest": "90–120 秒",
+    "cue": "垂直下沉，前腳穩定，膝蓋沿腳尖方向；扶物也可以。",
+    "easier": "扶物、減少深度",
+    "harder": "雙手提啞鈴逐步加重",
+    "level": "基礎",
+    "priority": true,
+    "catalogCode": "B01",
+    "nameEn": "Split squat",
+    "type": "lower",
+    "equipmentOptions": [
+      [],
+      [
+        "dumbbell"
+      ]
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": false,
+    "advanced": false,
+    "prescription": {
+      "sets": 2,
+      "value": "8",
+      "unit": "reps",
+      "restSeconds": 90,
+      "perSide": true
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_B02",
+    "category": "lower",
+    "name": "側弓步",
+    "purpose": "側向煞車、髖與內收肌力量",
+    "equipment": "徒手；啞鈴或滑輪選配",
+    "dose": "2–3 組 × 每側 6–8 次",
+    "rest": "90 秒",
+    "cue": "往跨出腿坐髖，穩定踩地後推回；先徒手熟悉。",
+    "easier": "側向重心轉移 A05",
+    "harder": "熟練後加輕啞鈴或滑輪阻力",
+    "level": "基礎",
+    "priority": true,
+    "catalogCode": "B02",
+    "nameEn": "Lateral lunge",
+    "type": "lower",
+    "equipmentOptions": [
+      [],
+      [
+        "dumbbell"
+      ],
+      [
+        "cable"
+      ]
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": false,
+    "advanced": false,
+    "prescription": {
+      "sets": 2,
+      "value": "8",
+      "unit": "reps",
+      "restSeconds": 90,
+      "perSide": true
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_B03",
+    "category": "lower",
+    "name": "彈力繩髖鉸鏈",
+    "purpose": "臀腿後側發力與減速支撐",
+    "equipment": "完好的彈力繩",
+    "dose": "2–3 組 × 8–12 次",
+    "rest": "90–120 秒",
+    "cue": "繩踩穩並握住兩側，髖往後；站起用臀腿，不拱腰。",
+    "easier": "徒手髖鉸鏈 A03",
+    "harder": "較強彈力繩",
+    "level": "基礎",
+    "priority": true,
+    "catalogCode": "B03",
+    "nameEn": "Band hip hinge",
+    "type": "lower",
+    "equipmentOptions": [
+      [
+        "band"
+      ]
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "advanced": false,
+    "prescription": {
+      "sets": 2,
+      "value": "8",
+      "unit": "reps",
+      "restSeconds": 90,
+      "perSide": false
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_B04",
+    "category": "lower",
+    "name": "滑輪拉穿／髖鉸鏈",
+    "purpose": "臀部與腿後側肌力",
+    "equipment": "低滑輪、繩索把手",
+    "dose": "2–3 組 × 8–12 次",
+    "rest": "90–120 秒",
+    "cue": "背對滑輪，繩索由兩腿間通過；手跟著髖移動，不用手甩。",
+    "easier": "徒手髖鉸鏈",
+    "harder": "小幅增加重量",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "B04",
+    "nameEn": "Cable pull-through",
+    "type": "lower",
+    "equipmentOptions": [
+      [
+        "cable"
+      ]
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "advanced": false,
+    "prescription": {
+      "sets": 2,
+      "value": "8",
+      "unit": "reps",
+      "restSeconds": 90,
+      "perSide": false
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_B05",
+    "category": "lower",
+    "name": "扶物單腳髖鉸鏈",
+    "purpose": "單腳髖控制與平衡",
+    "equipment": "穩固支撐物；彈力繩選配",
+    "dose": "2 組 × 每側 6–8 次",
+    "rest": "60–90 秒",
+    "cue": "站立膝微彎，骨盆朝地，後腿延伸；平衡不是扭腰。",
+    "easier": "雙腳版本 B03",
+    "harder": "減少扶物，再加輕阻力",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "B05",
+    "nameEn": "Supported single-leg hip hinge",
+    "type": "lower",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": false,
+    "advanced": false,
+    "prescription": {
+      "sets": 2,
+      "value": "8",
+      "unit": "reps",
+      "restSeconds": 90,
+      "perSide": true
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_B06",
+    "category": "lower",
+    "name": "臀橋",
+    "purpose": "髖伸展與骨盆控制",
+    "equipment": "地墊；彈力繩選配",
+    "dose": "2–3 組 × 10–15 次",
+    "rest": "60–90 秒",
+    "cue": "吐氣、臀部抬起，頂端不以拱腰代償。",
+    "easier": "縮短抬起幅度",
+    "harder": "單腳臀橋或加繩阻力",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "B06",
+    "nameEn": "Glute bridge",
+    "type": "lower",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": false,
+    "advanced": false,
+    "prescription": {
+      "sets": 2,
+      "value": "12",
+      "unit": "reps",
+      "restSeconds": 90,
+      "perSide": false
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_B07",
+    "category": "lower",
+    "name": "站姿直膝提踵",
+    "purpose": "小腿力量與蹬地耐受",
+    "equipment": "支撐物；啞鈴選配",
+    "dose": "2–3 組 × 10–15 次",
+    "rest": "60–90 秒",
+    "cue": "上下可控，不彈跳；足底平均承重。",
+    "easier": "雙腳、扶物",
+    "harder": "單腳或一手扶物、一手持啞鈴",
+    "level": "基礎",
+    "priority": true,
+    "catalogCode": "B07",
+    "nameEn": "Straight-knee calf raise",
+    "type": "lower",
+    "equipmentOptions": [
+      [],
+      [
+        "dumbbell"
+      ]
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": false,
+    "advanced": false,
+    "prescription": {
+      "sets": 2,
+      "value": "12",
+      "unit": "reps",
+      "restSeconds": 90,
+      "perSide": false
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_B08",
+    "category": "lower",
+    "name": "屈膝提踵",
+    "purpose": "屈膝姿勢的小腿力量",
+    "equipment": "支撐物",
+    "dose": "2–3 組 × 12–15 次",
+    "rest": "60–90 秒",
+    "cue": "膝微彎並維持，腳跟上下移動，膝不要反覆伸直。",
+    "easier": "雙腳扶物、小幅",
+    "harder": "單腳扶物或繩阻力",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "B08",
+    "nameEn": "Bent-knee calf raise",
+    "type": "lower",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": false,
+    "advanced": false,
+    "prescription": {
+      "sets": 2,
+      "value": "12",
+      "unit": "reps",
+      "restSeconds": 90,
+      "perSide": false
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_B09",
+    "category": "lower",
+    "name": "彈力繩側向走",
+    "purpose": "髖側向控制",
+    "equipment": "環形彈力帶或適合固定的彈力繩",
+    "dose": "2 組 × 每方向 6–10 步",
+    "rest": "45–60 秒",
+    "cue": "阻力先放膝上；小步走，骨盆平穩，不把膝內夾。",
+    "easier": "徒手側向走",
+    "harder": "阻力增強或放到踝部",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "B09",
+    "nameEn": "Band lateral walk",
+    "type": "lower",
+    "equipmentOptions": [
+      [
+        "band"
+      ]
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": false,
+    "advanced": false,
+    "prescription": {
+      "sets": 2,
+      "value": "12",
+      "unit": "reps",
+      "restSeconds": 90,
+      "perSide": false
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_B10",
+    "category": "lower",
+    "name": "啞鈴高腳杯深蹲",
+    "purpose": "全腿力量與蹲起支撐",
+    "equipment": "單顆啞鈴",
+    "dose": "2–3 組 × 8–10 次",
+    "rest": "90–120 秒",
+    "cue": "啞鈴靠近胸前，足底穩定；蹲到能維持姿勢的深度，膝可自然前移。",
+    "easier": "徒手深蹲或坐椅站起",
+    "harder": "逐步增加啞鈴重量",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "B10",
+    "nameEn": "Dumbbell goblet squat",
+    "type": "lower",
+    "equipmentOptions": [
+      [
+        "dumbbell"
+      ]
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "advanced": false,
+    "prescription": {
+      "sets": 2,
+      "value": "8",
+      "unit": "reps",
+      "restSeconds": 90,
+      "perSide": false
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_B11",
+    "category": "lower",
+    "name": "啞鈴羅馬尼亞硬舉",
+    "purpose": "臀腿後側肌力",
+    "equipment": "一對啞鈴",
+    "dose": "2–3 組 × 8–10 次",
+    "rest": "90–120 秒",
+    "cue": "啞鈴貼近腿，膝微彎，髖往後；到腿後側有張力且背仍穩定的位置就回來。",
+    "easier": "徒手或彈力繩 B03",
+    "harder": "逐步加重，不強求放到地板",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "B11",
+    "nameEn": "Dumbbell Romanian deadlift",
+    "type": "lower",
+    "equipmentOptions": [
+      [
+        "dumbbell"
+      ]
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "advanced": false,
+    "prescription": {
+      "sets": 2,
+      "value": "8",
+      "unit": "reps",
+      "restSeconds": 90,
+      "perSide": false
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bulgarian",
+    "category": "lower",
+    "name": "保加利亞分腿蹲",
+    "purpose": "單腳腿力與前腿承重",
+    "equipment": "低而穩固的平台；啞鈴選配",
+    "dose": "2 組 × 每側 6–8 次",
+    "rest": "90–120 秒",
+    "cue": "後腳放低平台、以前腿承重；必要時扶物，髖膝同步屈曲，不用拱腰換深度。",
+    "easier": "地面分腿蹲 B01",
+    "harder": "先增加次數，再提輕啞鈴",
+    "level": "進階",
+    "priority": false,
+    "catalogCode": "B12",
+    "nameEn": "Bulgarian split squat",
+    "type": "lower",
+    "equipmentOptions": [
+      [
+        "platform"
+      ],
+      [
+        "platform",
+        "dumbbell"
+      ]
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": false,
+    "advanced": true,
+    "prescription": {
+      "sets": 2,
+      "value": "8",
+      "unit": "reps",
+      "restSeconds": 90,
+      "perSide": true
+    },
+    "active": false,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_C01",
+    "category": "upper",
+    "name": "站姿單手滑輪划船",
+    "purpose": "拉力與軀幹支撐",
+    "equipment": "胸高滑輪、單把手",
+    "dose": "2–3 組 × 每側 8–12 次",
+    "rest": "60–90 秒",
+    "cue": "穩定站姿，手肘往後；不用身體旋轉拉重量。",
+    "easier": "雙手划船或較輕重量",
+    "harder": "增加阻力、分腿站姿",
+    "level": "基礎",
+    "priority": true,
+    "catalogCode": "C01",
+    "nameEn": "Standing single-arm cable row",
+    "type": "upper_pull",
+    "equipmentOptions": [
+      [
+        "cable"
+      ],
+      [
+        "band"
+      ]
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "advanced": false,
+    "prescription": {
+      "sets": 2,
+      "value": "10",
+      "unit": "reps",
+      "restSeconds": 60,
+      "perSide": true
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_C02",
+    "category": "upper",
+    "name": "分腿站姿單手推胸",
+    "purpose": "推力與上下肢力量連結",
+    "equipment": "胸高滑輪或固定彈力繩",
+    "dose": "2–3 組 × 每側 8–12 次",
+    "rest": "60–90 秒",
+    "cue": "肋骨穩定，向前推，不聳肩；握住把手慢慢收回。",
+    "easier": "雙手推、較輕阻力",
+    "harder": "增加阻力",
+    "level": "基礎",
+    "priority": true,
+    "catalogCode": "C02",
+    "nameEn": "Split-stance cable chest press",
+    "type": "upper_push",
+    "equipmentOptions": [
+      [
+        "cable"
+      ],
+      [
+        "band"
+      ]
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "advanced": false,
+    "prescription": {
+      "sets": 2,
+      "value": "10",
+      "unit": "reps",
+      "restSeconds": 60,
+      "perSide": true
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_C03",
+    "category": "upper",
+    "name": "伏地挺身",
+    "purpose": "推力與肩胛、核心控制",
+    "equipment": "牆壁、穩固平台或地面",
+    "dose": "2–3 組 × 6–12 次",
+    "rest": "60–90 秒",
+    "cue": "身體一線，手肘自然斜向後，不塌腰。",
+    "easier": "牆壁或較高平台",
+    "harder": "降低平台高度至地面",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "C03",
+    "nameEn": "Push-up",
+    "type": "upper_push",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "advanced": false,
+    "prescription": {
+      "sets": 2,
+      "value": "10",
+      "unit": "reps",
+      "restSeconds": 60,
+      "perSide": false
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_C04",
+    "category": "upper",
+    "name": "滑輪下拉",
+    "purpose": "背部拉力與肩部控制",
+    "equipment": "高滑輪、適合的下拉把手",
+    "dose": "2–3 組 × 8–12 次",
+    "rest": "60–90 秒",
+    "cue": "拉向胸前，肩肘可控，不做頸後下拉。",
+    "easier": "輕重量、縮小無痛範圍",
+    "harder": "逐步增加重量",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "C04",
+    "nameEn": "Cable pulldown",
+    "type": "upper_pull",
+    "equipmentOptions": [
+      [
+        "cable"
+      ]
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "advanced": false,
+    "prescription": {
+      "sets": 2,
+      "value": "10",
+      "unit": "reps",
+      "restSeconds": 60,
+      "perSide": false
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_C05",
+    "category": "upper",
+    "name": "彈力繩肩外旋",
+    "purpose": "肩部旋轉控制與耐受",
+    "equipment": "低阻力彈力繩、穩固固定點",
+    "dose": "2 組 × 每側 10–15 次",
+    "rest": "45–60 秒",
+    "cue": "手肘貼身可墊毛巾；只轉前臂，不扭身體。",
+    "easier": "徒手外旋",
+    "harder": "小幅加阻力，不急著提高肩位",
+    "level": "基礎",
+    "priority": true,
+    "catalogCode": "C05",
+    "nameEn": "Band shoulder external rotation",
+    "type": "upper_pull",
+    "equipmentOptions": [
+      [
+        "band"
+      ]
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "advanced": false,
+    "prescription": {
+      "sets": 2,
+      "value": "12",
+      "unit": "reps",
+      "restSeconds": 60,
+      "perSide": true
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_C06",
+    "category": "upper",
+    "name": "滑輪面拉",
+    "purpose": "後肩與肩胛控制",
+    "equipment": "臉高滑輪、繩索把手",
+    "dose": "2 組 × 10–15 次",
+    "rest": "45–60 秒",
+    "cue": "輕阻力拉向臉旁，不聳肩、不為後拉而拱腰。",
+    "easier": "較輕重量、較低角度",
+    "harder": "小幅增加阻力",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "C06",
+    "nameEn": "Cable face pull",
+    "type": "upper_pull",
+    "equipmentOptions": [
+      [
+        "cable"
+      ]
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "advanced": false,
+    "prescription": {
+      "sets": 2,
+      "value": "10",
+      "unit": "reps",
+      "restSeconds": 60,
+      "perSide": false
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_C07",
+    "category": "upper",
+    "name": "彈力繩／滑輪前鋸肌前伸",
+    "purpose": "肩胛前伸控制",
+    "equipment": "胸高滑輪或彈力繩",
+    "dose": "2 組 × 每側 10–12 次",
+    "rest": "45–60 秒",
+    "cue": "手臂向前延伸少許，肩胛沿胸廓前滑；不轉腰。",
+    "easier": "牆面肩胛前伸 A07",
+    "harder": "增加少量阻力",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "C07",
+    "nameEn": "Cable or band serratus reach",
+    "type": "upper_push",
+    "equipmentOptions": [
+      [
+        "cable"
+      ],
+      [
+        "band"
+      ]
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "advanced": false,
+    "prescription": {
+      "sets": 2,
+      "value": "10",
+      "unit": "reps",
+      "restSeconds": 60,
+      "perSide": true
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_C08",
+    "category": "upper",
+    "name": "輕彈力繩手腕伸屈",
+    "purpose": "前臂耐受與握拍支撐",
+    "equipment": "輕彈力繩、前臂支撐面",
+    "dose": "各 2 組 × 每側 12–15 次",
+    "rest": "30–45 秒",
+    "cue": "前臂放穩，手腕小幅慢動；握力不需要捏到僵硬。",
+    "easier": "徒手、縮小範圍",
+    "harder": "少量提高繩阻力",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "C08",
+    "nameEn": "Light band wrist flexion and extension",
+    "type": "upper_pull",
+    "equipmentOptions": [
+      [
+        "band"
+      ]
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "advanced": false,
+    "prescription": {
+      "sets": 2,
+      "value": "12",
+      "unit": "reps",
+      "restSeconds": 60,
+      "perSide": true
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_C09",
+    "category": "upper",
+    "name": "前臂旋前／旋後控制",
+    "purpose": "前臂轉動與拍面控制",
+    "equipment": "徒手；球拍選配",
+    "dose": "2 組 × 每側 10 次",
+    "rest": "30–45 秒",
+    "cue": "手肘靠身體，慢慢轉前臂；不是用肩大幅旋轉。",
+    "easier": "徒手轉動",
+    "harder": "短握球拍，再逐步握長一些",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "C09",
+    "nameEn": "Forearm pronation and supination",
+    "type": "upper_pull",
+    "equipmentOptions": [
+      [],
+      [
+        "racket"
+      ]
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "advanced": false,
+    "prescription": {
+      "sets": 2,
+      "value": "10",
+      "unit": "reps",
+      "restSeconds": 60,
+      "perSide": true
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_C10",
+    "category": "upper",
+    "name": "扶物單手啞鈴划船",
+    "purpose": "背部拉力與肩臂支撐",
+    "equipment": "啞鈴、穩固平台",
+    "dose": "2–3 組 × 每側 8–12 次",
+    "rest": "60–90 秒",
+    "cue": "另一手扶穩，身體保持穩定；手肘拉向髖旁，不扭腰甩重量。",
+    "easier": "較輕啞鈴",
+    "harder": "逐步增加重量",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "C10",
+    "nameEn": "Supported single-arm dumbbell row",
+    "type": "upper_pull",
+    "equipmentOptions": [
+      [
+        "dumbbell",
+        "platform"
+      ]
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "advanced": false,
+    "prescription": {
+      "sets": 2,
+      "value": "10",
+      "unit": "reps",
+      "restSeconds": 60,
+      "perSide": true
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_C11",
+    "category": "upper",
+    "name": "啞鈴地板推胸",
+    "purpose": "上肢推力",
+    "equipment": "一對啞鈴、地墊",
+    "dose": "2–3 組 × 8–12 次",
+    "rest": "60–90 秒",
+    "cue": "仰躺、屈膝，手肘斜向後，下降至上臂輕觸地；先安全就位再推。",
+    "easier": "較輕啞鈴或牆面伏地挺身",
+    "harder": "逐步加重；就位困難時不用重啞鈴",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "C11",
+    "nameEn": "Dumbbell floor press",
+    "type": "upper_push",
+    "equipmentOptions": [
+      [
+        "dumbbell"
+      ]
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "advanced": false,
+    "prescription": {
+      "sets": 2,
+      "value": "10",
+      "unit": "reps",
+      "restSeconds": 60,
+      "perSide": false
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "dead_bug",
+    "category": "core",
+    "name": "死蟲式",
+    "purpose": "抵抗腰椎過度伸展",
+    "equipment": "地墊",
+    "dose": "2 組 × 每側 6–8 次",
+    "rest": "45–60 秒",
+    "cue": "吐氣，保持軀幹穩定；手腳延伸到腰不拱的位置。",
+    "easier": "只移動腳跟",
+    "harder": "延長手腳槓桿",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "D01",
+    "nameEn": "Dead bug",
+    "type": "core",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "advanced": false,
+    "prescription": {
+      "sets": 2,
+      "value": "6",
+      "unit": "reps",
+      "restSeconds": 45,
+      "perSide": true
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_D02",
+    "category": "core",
+    "name": "Pallof 抗旋轉推",
+    "purpose": "單側發力時穩住軀幹",
+    "equipment": "胸高滑輪或側向固定彈力繩",
+    "dose": "2–3 組 × 每側 8–10 次，伸出停 2 秒",
+    "rest": "45–60 秒",
+    "cue": "側對固定點，雙手推前，胸口不被拉轉。",
+    "easier": "縮短手臂伸出距離",
+    "harder": "加少量阻力或分腿站姿",
+    "level": "基礎",
+    "priority": true,
+    "catalogCode": "D02",
+    "nameEn": "Pallof press",
+    "type": "core",
+    "equipmentOptions": [
+      [
+        "cable"
+      ],
+      [
+        "band"
+      ]
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "advanced": false,
+    "prescription": {
+      "sets": 2,
+      "value": "8",
+      "unit": "reps",
+      "restSeconds": 45,
+      "perSide": true
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_D03",
+    "category": "core",
+    "name": "側棒式",
+    "purpose": "側向軀幹支撐",
+    "equipment": "地墊",
+    "dose": "2 組 × 每側 15–25 秒",
+    "rest": "45–60 秒",
+    "cue": "肩位在肘上，臀部不垮，正常呼吸。",
+    "easier": "屈膝側棒式",
+    "harder": "直腿，再逐步增加時間",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "D03",
+    "nameEn": "Side plank",
+    "type": "core",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "advanced": false,
+    "prescription": {
+      "sets": 2,
+      "value": "15",
+      "unit": "seconds",
+      "restSeconds": 45,
+      "perSide": true
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_D04",
+    "category": "core",
+    "name": "鳥狗式",
+    "purpose": "四肢移動時維持軀幹",
+    "equipment": "地墊",
+    "dose": "2 組 × 每側 6 次，停 3 秒",
+    "rest": "45–60 秒",
+    "cue": "伸向遠處，不抬得過高；骨盆不扭。",
+    "easier": "只伸單手或單腿",
+    "harder": "對側手腳同時伸出",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "D04",
+    "nameEn": "Bird dog",
+    "type": "core",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "advanced": false,
+    "prescription": {
+      "sets": 2,
+      "value": "6",
+      "unit": "reps",
+      "restSeconds": 45,
+      "perSide": true
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_D05",
+    "category": "core",
+    "name": "分腿站姿滑輪轉體推",
+    "purpose": "投擲鏈的可控推力練習",
+    "equipment": "胸高滑輪、單把手",
+    "dose": "2 組 × 每側 6–8 次",
+    "rest": "60–90 秒",
+    "cue": "腳、髖、胸協同轉向；把手全程握住，腰不硬扭。",
+    "easier": "不轉體推胸 C02",
+    "harder": "熟練後稍快推、慢回；不可甩動",
+    "level": "進階",
+    "priority": false,
+    "catalogCode": "D05",
+    "nameEn": "Split-stance cable rotation press",
+    "type": "core",
+    "equipmentOptions": [
+      [
+        "cable"
+      ]
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "advanced": true,
+    "prescription": {
+      "sets": 2,
+      "value": "6",
+      "unit": "reps",
+      "restSeconds": 45,
+      "perSide": true
+    },
+    "active": false,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_D06",
+    "category": "core",
+    "name": "滑輪斜向下拉（chop）",
+    "purpose": "斜向力量傳遞",
+    "equipment": "高滑輪、雙手把手",
+    "dose": "2 組 × 每側 8 次",
+    "rest": "60–90 秒",
+    "cue": "由上外側拉向對側髖，髖腳可轉；手臂不甩、腰不折。",
+    "easier": "輕阻力、小幅度",
+    "harder": "增加少量阻力或分腿站姿",
+    "level": "進階",
+    "priority": false,
+    "catalogCode": "D06",
+    "nameEn": "High-to-low cable chop",
+    "type": "core",
+    "equipmentOptions": [
+      [
+        "cable"
+      ]
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "advanced": true,
+    "prescription": {
+      "sets": 2,
+      "value": "6",
+      "unit": "reps",
+      "restSeconds": 45,
+      "perSide": true
+    },
+    "active": false,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_D07",
+    "category": "core",
+    "name": "滑輪低向高拉（lift）",
+    "purpose": "髖到軀幹的斜向協調",
+    "equipment": "低滑輪、雙手把手",
+    "dose": "2 組 × 每側 8 次",
+    "rest": "60–90 秒",
+    "cue": "由髖旁拉至對側胸高即可；不為抬高而聳肩拱腰。",
+    "easier": "輕阻力、小幅度",
+    "harder": "提高阻力，仍維持控制",
+    "level": "進階",
+    "priority": false,
+    "catalogCode": "D07",
+    "nameEn": "Low-to-high cable lift",
+    "type": "core",
+    "equipmentOptions": [
+      [
+        "cable"
+      ]
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "advanced": true,
+    "prescription": {
+      "sets": 2,
+      "value": "6",
+      "unit": "reps",
+      "restSeconds": 45,
+      "perSide": true
+    },
+    "active": false,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_D08",
+    "category": "core",
+    "name": "單側啞鈴提行（suitcase carry）",
+    "purpose": "抗側彎與行走中的軀幹控制",
+    "equipment": "單顆啞鈴、暢通路線",
+    "dose": "2 組 × 每側 15–25 秒",
+    "rest": "45–60 秒",
+    "cue": "一側提重、身體不歪，慢步走、正常呼吸；轉彎放慢。",
+    "easier": "原地站立持重 15 秒",
+    "harder": "先增加行走時間，再小幅加重",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "D08",
+    "nameEn": "Suitcase carry",
+    "type": "core",
+    "equipmentOptions": [
+      [
+        "dumbbell"
+      ]
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "advanced": false,
+    "prescription": {
+      "sets": 2,
+      "value": "15",
+      "unit": "seconds",
+      "restSeconds": 45,
+      "perSide": true
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_D09",
+    "category": "core",
+    "name": "90/90 靠牆呼吸",
+    "purpose": "呼吸、胸廓與骨盆位置覺察",
+    "equipment": "牆壁、地墊",
+    "dose": "1–2 組 × 4–5 次自然呼吸",
+    "rest": "30 秒",
+    "cue": "仰躺、腳踩牆，髖膝約 90 度；輕吐氣再吸氣，肩頸放鬆，不用力捲骨盆或憋氣。",
+    "easier": "小腿放椅子、臀部留地",
+    "harder": "接 A03 髖鉸鏈或 D01 死蟲，維持呼吸",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "D09",
+    "nameEn": "90/90 wall breathing",
+    "type": "core",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": false,
+    "advanced": false,
+    "prescription": {
+      "sets": 1,
+      "value": "4",
+      "unit": "breaths",
+      "restSeconds": 45,
+      "perSide": false
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_E01",
+    "category": "power",
+    "name": "站姿快速下沉＋定住",
+    "purpose": "學習煞車與落地姿勢",
+    "equipment": "徒手",
+    "dose": "2 組 × 4 次",
+    "rest": "組間 60 秒；每次重置",
+    "cue": "由站直快速降到小蹲，不必起跳；髖膝屈曲，踩穩。",
+    "easier": "慢速小蹲",
+    "harder": "接低幅雙腳跳 E02",
+    "level": "基礎",
+    "priority": true,
+    "catalogCode": "E01",
+    "nameEn": "Snap-down and hold",
+    "type": "power",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": false,
+    "advanced": false,
+    "prescription": {
+      "sets": 2,
+      "value": "4",
+      "unit": "reps",
+      "restSeconds": 90,
+      "perSide": false
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_E02",
+    "category": "power",
+    "name": "低幅雙腳跳＋定住",
+    "purpose": "起跳與雙腳落地控制",
+    "equipment": "徒手、平坦防滑地面",
+    "dose": "2 組 × 3–4 次",
+    "rest": "60–90 秒；每次重置",
+    "cue": "每次低跳後停 2 秒；落地安靜、膝沿腳尖方向。",
+    "easier": "下沉定住 E01",
+    "harder": "逐步提高跳高，不加外部重量",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "E02",
+    "nameEn": "Low two-foot jump and stick",
+    "type": "power",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": false,
+    "advanced": false,
+    "prescription": {
+      "sets": 2,
+      "value": "3",
+      "unit": "reps",
+      "restSeconds": 90,
+      "perSide": false
+    },
+    "active": true,
+    "jumpContacts": 1,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_E03",
+    "category": "power",
+    "name": "側向跨跳＋定住",
+    "purpose": "側向單腳煞車與再發力",
+    "equipment": "徒手",
+    "dose": "2 組 × 每側 3 次",
+    "rest": "60–90 秒；每次重置",
+    "cue": "由短距離開始，落地腿穩住 2 秒，不急著連跳。",
+    "easier": "側跨步後單腳站穩",
+    "harder": "增加少量距離",
+    "level": "進階",
+    "priority": false,
+    "catalogCode": "E03",
+    "nameEn": "Lateral bound and stick",
+    "type": "power",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": false,
+    "advanced": true,
+    "prescription": {
+      "sets": 2,
+      "value": "3",
+      "unit": "reps",
+      "restSeconds": 90,
+      "perSide": true
+    },
+    "active": false,
+    "jumpContacts": 1,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_E04",
+    "category": "power",
+    "name": "低幅踝跳（pogo）",
+    "purpose": "短接觸彈跳與踝部剛性",
+    "equipment": "徒手",
+    "dose": "2 組 × 6 次",
+    "rest": "60–90 秒",
+    "cue": "小幅雙腳連跳；若踝膝不適或落地很重，退回提踵。",
+    "easier": "提踵 B07",
+    "harder": "逐步到每組 8 次，不同時加高度",
+    "level": "進階",
+    "priority": false,
+    "catalogCode": "E04",
+    "nameEn": "Low pogo jumps",
+    "type": "power",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": false,
+    "advanced": true,
+    "prescription": {
+      "sets": 2,
+      "value": "6",
+      "unit": "reps",
+      "restSeconds": 90,
+      "perSide": false
+    },
+    "active": false,
+    "jumpContacts": 1,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_E05",
+    "category": "power",
+    "name": "後場轉身小跳＋回位",
+    "purpose": "銜接起跳擊球與回位",
+    "equipment": "徒手；球拍選配、足夠空間",
+    "dose": "2 組 × 每側 3 次",
+    "rest": "60–90 秒；每次重置",
+    "cue": "先轉髖腳、低幅起跳，落地穩再回位；先不追球。",
+    "easier": "無跳躍的轉身回位",
+    "harder": "加入輕揮拍；再練實際餵球",
+    "level": "進階",
+    "priority": false,
+    "catalogCode": "E05",
+    "nameEn": "Rear-court turn, low jump and return",
+    "type": "power",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": false,
+    "advanced": true,
+    "prescription": {
+      "sets": 2,
+      "value": "3",
+      "unit": "reps",
+      "restSeconds": 90,
+      "perSide": true
+    },
+    "active": false,
+    "jumpContacts": 1,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_E06",
+    "category": "power",
+    "name": "抬膝保持＋單腳左右小跳",
+    "purpose": "單腳短接觸與側向踝髖控制",
+    "equipment": "徒手、平坦防滑地面",
+    "dose": "1–2 組 × 每側 4 次落地",
+    "rest": "60–90 秒",
+    "cue": "非支撐腿抬到舒服高度，支撐腿小幅左右跳；不能保持腳膝對齊就停，這不只練小腿。",
+    "easier": "E03 小幅側跳後定住",
+    "harder": "先加少量速度，不同時加距離",
+    "level": "進階",
+    "priority": false,
+    "catalogCode": "E06",
+    "nameEn": "Raised-knee single-leg lateral hops",
+    "type": "power",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": false,
+    "advanced": true,
+    "prescription": {
+      "sets": 2,
+      "value": "4",
+      "unit": "reps",
+      "restSeconds": 90,
+      "perSide": true
+    },
+    "active": false,
+    "jumpContacts": 1,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_E07",
+    "category": "power",
+    "name": "抬膝保持＋單腳向上跳定住",
+    "purpose": "單腳向上發力與落地",
+    "equipment": "徒手、平坦防滑地面",
+    "dose": "1–2 組 × 每側 3 次",
+    "rest": "60–90 秒；次間重置 5–10 秒",
+    "cue": "由低跳開始，另一腿自然抬起，支撐腿落地停穩；不一開始追求最大高度。",
+    "easier": "E02 雙腳低跳",
+    "harder": "站穩後才逐步增加發力",
+    "level": "進階",
+    "priority": false,
+    "catalogCode": "E07",
+    "nameEn": "Raised-knee single-leg vertical jump and stick",
+    "type": "power",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": false,
+    "advanced": true,
+    "prescription": {
+      "sets": 2,
+      "value": "3",
+      "unit": "reps",
+      "restSeconds": 90,
+      "perSide": true
+    },
+    "active": false,
+    "jumpContacts": 1,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_E08",
+    "category": "power",
+    "name": "抬膝保持＋單腳前後小跳",
+    "purpose": "單腳前後向控制",
+    "equipment": "徒手、地面標線選配",
+    "dose": "1–2 組 × 每側 4 次落地",
+    "rest": "60–90 秒",
+    "cue": "先只做前後一個平面、低幅短距離；左右斜跳在基礎穩定後另加，不一次混三方向。",
+    "easier": "前跳定住 E09",
+    "harder": "小幅增加速度，再換斜方向",
+    "level": "進階",
+    "priority": false,
+    "catalogCode": "E08",
+    "nameEn": "Raised-knee single-leg forward-back hops",
+    "type": "power",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": false,
+    "advanced": true,
+    "prescription": {
+      "sets": 2,
+      "value": "4",
+      "unit": "reps",
+      "restSeconds": 90,
+      "perSide": true
+    },
+    "active": false,
+    "jumpContacts": 1,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_E09",
+    "category": "power",
+    "name": "單腳前跳＋定住",
+    "purpose": "前向單腳煞車與支撐",
+    "equipment": "徒手、平坦防滑地面",
+    "dose": "1–2 組 × 每側 3 次",
+    "rest": "60–90 秒；次間重置 5–10 秒",
+    "cue": "同一腳起跳落地，落地停 2 秒；先短距離，髖膝屈曲、不內夾。",
+    "easier": "跨步後單腳站穩",
+    "harder": "定住穩定後才接 E10 連跳",
+    "level": "進階",
+    "priority": false,
+    "catalogCode": "E09",
+    "nameEn": "Single-leg forward hop and stick",
+    "type": "power",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": false,
+    "advanced": true,
+    "prescription": {
+      "sets": 2,
+      "value": "3",
+      "unit": "reps",
+      "restSeconds": 90,
+      "perSide": true
+    },
+    "active": false,
+    "jumpContacts": 1,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_E10",
+    "category": "power",
+    "name": "單腳短距離連續跳：前向或側向",
+    "purpose": "重複單腳彈跳與變向耐受",
+    "equipment": "徒手、平坦防滑地面",
+    "dose": "1–2 組 × 每側 3 次落地，前／側選一",
+    "rest": "90 秒",
+    "cue": "先能完成 E03、E09 的跳停；連跳幅度小，若落地重或軀幹晃動就回跳停。",
+    "easier": "E03 側跳停或 E09 前跳停",
+    "harder": "一次只加一項：速度或距離",
+    "level": "進階",
+    "priority": false,
+    "catalogCode": "E10",
+    "nameEn": "Short repeated single-leg hops",
+    "type": "power",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": false,
+    "advanced": true,
+    "prescription": {
+      "sets": 2,
+      "value": "3",
+      "unit": "reps",
+      "restSeconds": 90,
+      "perSide": true
+    },
+    "active": false,
+    "jumpContacts": 1,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_F01",
+    "category": "footwork",
+    "name": "分腿墊步＋第一步",
+    "purpose": "起動時機與方向選擇",
+    "equipment": "徒手；搭檔選配",
+    "dose": "2 組 × 6 次，每次約 3 秒",
+    "rest": "次間 15–20 秒；組間 60 秒",
+    "cue": "在對手擊球附近輕落地再推走，不持續原地蹲跳。",
+    "easier": "自己指定左右方向",
+    "harder": "搭檔擊球線索二選一",
+    "level": "基礎",
+    "priority": true,
+    "catalogCode": "F01",
+    "nameEn": "Split-step and first step",
+    "type": "full",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": false,
+    "advanced": false,
+    "prescription": {
+      "sets": 1,
+      "value": "4",
+      "unit": "reps",
+      "restSeconds": 60,
+      "perSide": false
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 15
+  },
+  {
+    "id": "bf_F02",
+    "category": "footwork",
+    "name": "前場弓步＋推回",
+    "purpose": "前場接球的煞車與回位",
+    "equipment": "徒手；球拍選配",
+    "dose": "2 組 × 每側 4 次",
+    "rest": "次間 15 秒；組間 60 秒",
+    "cue": "最後一步穩定承重，髖膝協同屈曲後推回；膝可自然前移。",
+    "easier": "小步幅、無揮拍",
+    "harder": "加羽球手拋餵球",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "F02",
+    "nameEn": "Front-court lunge and recover",
+    "type": "full",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": false,
+    "advanced": false,
+    "prescription": {
+      "sets": 1,
+      "value": "4",
+      "unit": "reps",
+      "restSeconds": 60,
+      "perSide": true
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 15
+  },
+  {
+    "id": "bf_F03",
+    "category": "footwork",
+    "name": "側移急停＋回中",
+    "purpose": "側向減速與重心切換",
+    "equipment": "徒手、2–3 公尺空間",
+    "dose": "2 組 × 每方向 4 次",
+    "rest": "次間 15–20 秒；組間 60 秒",
+    "cue": "用最後幾步減速，不靠一腳硬踩；穩住後回中。",
+    "easier": "慢速短距離",
+    "harder": "逐步增加速度，再接方向訊號",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "F03",
+    "nameEn": "Side shuffle, stop and return",
+    "type": "full",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": false,
+    "advanced": false,
+    "prescription": {
+      "sets": 1,
+      "value": "4",
+      "unit": "reps",
+      "restSeconds": 60,
+      "perSide": false
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 15
+  },
+  {
+    "id": "bf_F04",
+    "category": "footwork",
+    "name": "後場轉髖交叉步／併步",
+    "purpose": "安全後退與後場回位",
+    "equipment": "徒手、足夠空間",
+    "dose": "2 組 × 每側 4 次",
+    "rest": "次間 15–20 秒；組間 60 秒",
+    "cue": "轉身看清路線，以轉髖步伐退到後場，避免盲目倒退衝刺。",
+    "easier": "慢走熟悉步序",
+    "harder": "加入輕揮拍與回中",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "F04",
+    "nameEn": "Rear-court hip turn and footwork",
+    "type": "full",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": false,
+    "advanced": false,
+    "prescription": {
+      "sets": 1,
+      "value": "4",
+      "unit": "reps",
+      "restSeconds": 60,
+      "perSide": true
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 15
+  },
+  {
+    "id": "bf_F05",
+    "category": "footwork",
+    "name": "四角影子步伐：品質版",
+    "purpose": "整合前後場步伐",
+    "equipment": "場地或 4 個標記",
+    "dose": "2 組 × 4 趟，每趟 1 個角落約 3–5 秒",
+    "rest": "趟間 20–30 秒；組間 60–90 秒",
+    "cue": "一次去一角再回中，保持墊步、到位、回位順序。",
+    "easier": "兩角、縮短距離",
+    "harder": "搭檔隨機指定角落",
+    "level": "進階",
+    "priority": false,
+    "catalogCode": "F05",
+    "nameEn": "Four-corner shadow footwork: quality",
+    "type": "full",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": false,
+    "advanced": true,
+    "prescription": {
+      "sets": 1,
+      "value": "4",
+      "unit": "reps",
+      "restSeconds": 60,
+      "perSide": false
+    },
+    "active": false,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 15
+  },
+  {
+    "id": "bf_F06",
+    "category": "footwork",
+    "name": "短距離加速－減速－轉向",
+    "purpose": "重複起動與煞車",
+    "equipment": "平坦空間、2 個標記",
+    "dose": "2 組 × 每側 3 趟，單趟 3–5 秒",
+    "rest": "趟間 20–30 秒；組間 90 秒",
+    "cue": "接近標記先減速，轉向後再加速；不要鎖膝硬轉。",
+    "easier": "步行轉向、低速",
+    "harder": "提高速度，再加入未知方向",
+    "level": "進階",
+    "priority": false,
+    "catalogCode": "F06",
+    "nameEn": "Short acceleration, braking and turn",
+    "type": "full",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": false,
+    "advanced": true,
+    "prescription": {
+      "sets": 1,
+      "value": "4",
+      "unit": "reps",
+      "restSeconds": 60,
+      "perSide": true
+    },
+    "active": false,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 15
+  },
+  {
+    "id": "bf_G01",
+    "category": "reaction",
+    "name": "搭檔鏡像側移",
+    "purpose": "視覺追蹤與即時變向",
+    "equipment": "搭檔、平坦空間",
+    "dose": "4–6 趟 × 10 秒",
+    "rest": "45–60 秒",
+    "cue": "領導者用可控側移，跟隨者保持距離；交換角色。",
+    "easier": "只左右兩方向、慢速",
+    "harder": "加入前後方向",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "G01",
+    "nameEn": "Partner mirror shuffle",
+    "type": "full",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": true,
+    "shoulderLoaded": false,
+    "advanced": false,
+    "prescription": {
+      "sets": 2,
+      "value": "10",
+      "unit": "seconds",
+      "restSeconds": 60,
+      "perSide": false
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_G02",
+    "category": "reaction",
+    "name": "雙方向訊號起動",
+    "purpose": "從看到／聽到訊號到第一步",
+    "equipment": "搭檔；左右標記",
+    "dose": "6–8 次 × 約 3–5 秒",
+    "rest": "20–30 秒",
+    "cue": "先二選一；先判斷再移動，不猜訊號搶跑。",
+    "easier": "固定交替左右",
+    "harder": "四方向或持拍準備",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "G02",
+    "nameEn": "Two-direction cue start",
+    "type": "full",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": true,
+    "shoulderLoaded": false,
+    "advanced": false,
+    "prescription": {
+      "sets": 1,
+      "value": "6",
+      "unit": "reps",
+      "restSeconds": 60,
+      "perSide": false
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 15
+  },
+  {
+    "id": "bf_G03",
+    "category": "reaction",
+    "name": "小球落下接球",
+    "purpose": "視覺起動與手眼協調",
+    "equipment": "搭檔、小網球／軟球選配",
+    "dose": "2 組 × 6 次",
+    "rest": "次間 15–20 秒；組間 45 秒",
+    "cue": "搭檔在近距離放球，允許一次落地再接；不飛撲、不彎腰猛撞。",
+    "easier": "允許兩次落地或縮短距離",
+    "harder": "只允許一次落地、稍換位置",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "G03",
+    "nameEn": "Drop-ball catch",
+    "type": "full",
+    "equipmentOptions": [
+      [
+        "ball"
+      ]
+    ],
+    "requiresPartner": true,
+    "shoulderLoaded": true,
+    "advanced": false,
+    "prescription": {
+      "sets": 1,
+      "value": "6",
+      "unit": "reps",
+      "restSeconds": 60,
+      "perSide": false
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 15
+  },
+  {
+    "id": "bf_G04",
+    "category": "reaction",
+    "name": "單腳站姿丟接球／羽球",
+    "purpose": "支撐平衡與上肢協調",
+    "equipment": "搭檔、羽球或軟球選配",
+    "dose": "2 組 × 每側 20 秒",
+    "rest": "45 秒",
+    "cue": "在穩定地面輕拋接，站立膝微彎；挑戰平衡但不急撲。",
+    "easier": "雙腳或一腳輕點地",
+    "harder": "小幅換丟接方向",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "G04",
+    "nameEn": "Single-leg toss and catch",
+    "type": "full",
+    "equipmentOptions": [
+      [
+        "ball"
+      ],
+      [
+        "shuttlecock"
+      ]
+    ],
+    "requiresPartner": true,
+    "shoulderLoaded": true,
+    "advanced": false,
+    "prescription": {
+      "sets": 2,
+      "value": "20",
+      "unit": "seconds",
+      "restSeconds": 60,
+      "perSide": true
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_G05",
+    "category": "reaction",
+    "name": "跨步接球＋回位",
+    "purpose": "丟接球銜接弓步與回中",
+    "equipment": "搭檔、軟球或羽球選配",
+    "dose": "2 組 × 每側 4 次",
+    "rest": "次間 15–20 秒；組間 60 秒",
+    "cue": "搭檔低手拋到可達位置，先跨步穩住再接；不追超遠球。",
+    "easier": "固定方向與近距離",
+    "harder": "前方左右二選一",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "G05",
+    "nameEn": "Step, catch and recover",
+    "type": "full",
+    "equipmentOptions": [
+      [
+        "ball"
+      ],
+      [
+        "shuttlecock"
+      ]
+    ],
+    "requiresPartner": true,
+    "shoulderLoaded": true,
+    "advanced": false,
+    "prescription": {
+      "sets": 1,
+      "value": "6",
+      "unit": "reps",
+      "restSeconds": 60,
+      "perSide": true
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 15
+  },
+  {
+    "id": "bf_G06",
+    "category": "reaction",
+    "name": "前場手拋羽球二選一",
+    "purpose": "羽球方向判讀、拍面與回位",
+    "equipment": "搭檔、羽球、球拍、場地",
+    "dose": "2 組 × 6 球，每球重新準備",
+    "rest": "球間 15–20 秒；組間 60 秒",
+    "cue": "低手拋向左右前場；看拋球線索，到位輕回球再回中。",
+    "easier": "先固定單方向",
+    "harder": "二選一，再加入少量後場球",
+    "level": "基礎",
+    "priority": true,
+    "catalogCode": "G06",
+    "nameEn": "Two-choice front-court shuttle feed",
+    "type": "full",
+    "equipmentOptions": [
+      [
+        "shuttlecock",
+        "racket"
+      ]
+    ],
+    "requiresPartner": true,
+    "shoulderLoaded": true,
+    "advanced": false,
+    "prescription": {
+      "sets": 1,
+      "value": "6",
+      "unit": "reps",
+      "restSeconds": 60,
+      "perSide": false
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 15
+  },
+  {
+    "id": "bf_G07",
+    "category": "reaction",
+    "name": "看對手動作預測落點",
+    "purpose": "讀取擊球前線索與決策",
+    "equipment": "手機／平板、羽球比賽影片",
+    "dose": "2 組 × 8 個片段",
+    "rest": "組間 60 秒",
+    "cue": "在擊球前或擊球瞬間暫停，說方向，再播放核對；記正確數。",
+    "easier": "二選一、慢速片段",
+    "harder": "四區與假動作，再配場上練習",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "G07",
+    "nameEn": "Opponent cue and shot prediction",
+    "type": "full",
+    "equipmentOptions": [
+      [
+        "screen"
+      ]
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": false,
+    "advanced": false,
+    "prescription": {
+      "sets": 1,
+      "value": "8",
+      "unit": "reps",
+      "restSeconds": 60,
+      "perSide": false
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_G08",
+    "category": "reaction",
+    "name": "分腿墊步＋隨機餵球",
+    "purpose": "對手擊球時機、球路與移動",
+    "equipment": "搭檔、球拍、羽球、場地",
+    "dose": "2 組 × 6 球，每球重新準備",
+    "rest": "球間 15–20 秒；組間 60–90 秒",
+    "cue": "從兩區餵球開始，配合對方擊球時機墊步；餵球品質優先。",
+    "easier": "可預期的兩區交替",
+    "harder": "隨機兩區，再增至四區",
+    "level": "進階",
+    "priority": false,
+    "catalogCode": "G08",
+    "nameEn": "Split-step and random shuttle feed",
+    "type": "full",
+    "equipmentOptions": [
+      [
+        "shuttlecock",
+        "racket"
+      ]
+    ],
+    "requiresPartner": true,
+    "shoulderLoaded": true,
+    "advanced": true,
+    "prescription": {
+      "sets": 1,
+      "value": "6",
+      "unit": "reps",
+      "restSeconds": 60,
+      "perSide": false
+    },
+    "active": false,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 15
+  },
+  {
+    "id": "bf_H01",
+    "category": "recovery",
+    "name": "直膝小腿拉伸",
+    "purpose": "小腿後側活動度",
+    "equipment": "牆壁",
+    "dose": "每側 20–30 秒 × 2",
+    "rest": "換邊或休息 10–15 秒",
+    "cue": "後腿膝近直，腳跟貼地，腳尖朝前。",
+    "easier": "縮短前後腳距離",
+    "harder": "增加少量前移，不壓痛",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "H01",
+    "nameEn": "Straight-knee calf stretch",
+    "type": "mobility",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": false,
+    "advanced": false,
+    "prescription": {
+      "sets": 2,
+      "value": "20",
+      "unit": "seconds",
+      "restSeconds": 15,
+      "perSide": true
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_H02",
+    "category": "recovery",
+    "name": "屈膝小腿拉伸",
+    "purpose": "屈膝時踝背屈活動度",
+    "equipment": "牆壁",
+    "dose": "每側 20–30 秒 × 2",
+    "rest": "換邊或休息 10–15 秒",
+    "cue": "後腿膝微彎，腳跟貼地，軀幹緩慢前移。",
+    "easier": "縮小角度",
+    "harder": "增加少量前移",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "H02",
+    "nameEn": "Bent-knee calf stretch",
+    "type": "mobility",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": false,
+    "advanced": false,
+    "prescription": {
+      "sets": 2,
+      "value": "20",
+      "unit": "seconds",
+      "restSeconds": 15,
+      "perSide": true
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_H03",
+    "category": "recovery",
+    "name": "半跪髖屈肌拉伸",
+    "purpose": "髖前側活動度",
+    "equipment": "地墊",
+    "dose": "每側 20–30 秒 × 2",
+    "rest": "換邊或休息 10–15 秒",
+    "cue": "收臀、骨盆穩定，稍向前移；不把腰拱成伸展。",
+    "easier": "跪下墊厚、縮小前移",
+    "harder": "同側手臂輕上伸",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "H03",
+    "nameEn": "Half-kneeling hip flexor stretch",
+    "type": "mobility",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": false,
+    "advanced": false,
+    "prescription": {
+      "sets": 2,
+      "value": "20",
+      "unit": "seconds",
+      "restSeconds": 15,
+      "perSide": true
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_H04",
+    "category": "recovery",
+    "name": "坐姿／仰躺臀部拉伸",
+    "purpose": "臀部與髖外旋活動度",
+    "equipment": "地墊或椅子",
+    "dose": "每側 20–30 秒 × 2",
+    "rest": "換邊或休息 10–15 秒",
+    "cue": "踝放對側大腿，從髖靠近；不扳膝，不出現膝痛。",
+    "easier": "坐姿小幅度",
+    "harder": "仰躺輕抱腿",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "H04",
+    "nameEn": "Seated or supine glute stretch",
+    "type": "mobility",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": false,
+    "advanced": false,
+    "prescription": {
+      "sets": 2,
+      "value": "20",
+      "unit": "seconds",
+      "restSeconds": 15,
+      "perSide": true
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_H05",
+    "category": "recovery",
+    "name": "腿後側拉伸",
+    "purpose": "腿後側活動度",
+    "equipment": "椅子或地墊",
+    "dose": "每側 20–30 秒 × 2",
+    "rest": "換邊或休息 10–15 秒",
+    "cue": "膝可微彎，從髖前傾；不要駝背硬碰腳尖。",
+    "easier": "降低腿的高度",
+    "harder": "逐步增加髖前傾",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "H05",
+    "nameEn": "Hamstring stretch",
+    "type": "mobility",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": false,
+    "advanced": false,
+    "prescription": {
+      "sets": 2,
+      "value": "20",
+      "unit": "seconds",
+      "restSeconds": 15,
+      "perSide": true
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_H06",
+    "category": "recovery",
+    "name": "側弓步內收肌拉伸",
+    "purpose": "大腿內側活動度",
+    "equipment": "徒手、支撐物選配",
+    "dose": "每側 20–30 秒 × 2",
+    "rest": "換邊或休息 10–15 秒",
+    "cue": "一腿彎、一腿較直，小幅坐髖；足底穩定。",
+    "easier": "扶物、減少深度",
+    "harder": "逐步加深無痛範圍",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "H06",
+    "nameEn": "Lateral lunge adductor stretch",
+    "type": "mobility",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": false,
+    "advanced": false,
+    "prescription": {
+      "sets": 2,
+      "value": "20",
+      "unit": "seconds",
+      "restSeconds": 15,
+      "perSide": true
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_H07",
+    "category": "recovery",
+    "name": "門框胸前側拉伸",
+    "purpose": "胸前與肩前側活動度",
+    "equipment": "穩固門框",
+    "dose": "每側 20–30 秒 × 2",
+    "rest": "換邊或休息 10–15 秒",
+    "cue": "手臂放在舒適低至中角度，身體輕前移；不壓肩前方。",
+    "easier": "降低手臂位置",
+    "harder": "少量前移，不追大角度",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "H07",
+    "nameEn": "Doorway chest stretch",
+    "type": "mobility",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "advanced": false,
+    "prescription": {
+      "sets": 2,
+      "value": "20",
+      "unit": "seconds",
+      "restSeconds": 15,
+      "perSide": true
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_H08",
+    "category": "recovery",
+    "name": "前臂伸肌／屈肌拉伸",
+    "purpose": "前臂活動度",
+    "equipment": "徒手",
+    "dose": "每方向每側 20 秒 × 2",
+    "rest": "換邊或休息 10–15 秒",
+    "cue": "手肘自然伸直，用另一手輕帶手掌；不用力扳手指。",
+    "easier": "手肘微彎",
+    "harder": "只逐步增加輕拉感",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "H08",
+    "nameEn": "Forearm flexor and extensor stretch",
+    "type": "mobility",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "advanced": false,
+    "prescription": {
+      "sets": 2,
+      "value": "20",
+      "unit": "seconds",
+      "restSeconds": 15,
+      "perSide": true
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_H09",
+    "category": "recovery",
+    "name": "滾筒：大腿前側",
+    "purpose": "短暫改善活動度與舒適感",
+    "equipment": "滾筒、地墊",
+    "dose": "每側 30–45 秒 × 1",
+    "rest": "換邊或休 15 秒",
+    "cue": "用手臂與另一腿分擔體重，緩慢滾大腿肌肉；不壓膝蓋、髖骨或尖銳痛點。",
+    "easier": "減少壓力、縮小範圍",
+    "harder": "延長至 60 秒即可，不追求更痛",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "H09",
+    "nameEn": "Foam roll: quadriceps",
+    "type": "mobility",
+    "equipmentOptions": [
+      [
+        "foam_roller"
+      ]
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "advanced": false,
+    "prescription": {
+      "sets": 1,
+      "value": "30",
+      "unit": "seconds",
+      "restSeconds": 15,
+      "perSide": true
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_H10",
+    "category": "recovery",
+    "name": "滾筒：小腿肌肉",
+    "purpose": "小腿舒適感與活動準備",
+    "equipment": "滾筒、地墊",
+    "dose": "每側 30–45 秒 × 1",
+    "rest": "換邊或休 15 秒",
+    "cue": "慢滾小腿肌肉，避開膝窩與阿基里斯腱；可一腿分擔重量。",
+    "easier": "雙腳分攤、減少壓力",
+    "harder": "到 60 秒，保持可正常呼吸",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "H10",
+    "nameEn": "Foam roll: calf muscles",
+    "type": "mobility",
+    "equipmentOptions": [
+      [
+        "foam_roller"
+      ]
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "advanced": false,
+    "prescription": {
+      "sets": 1,
+      "value": "30",
+      "unit": "seconds",
+      "restSeconds": 15,
+      "perSide": true
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_H11",
+    "category": "recovery",
+    "name": "滾筒：臀部肌肉",
+    "purpose": "臀部舒適感與活動準備",
+    "equipment": "滾筒、地墊",
+    "dose": "每側 30–45 秒 × 1",
+    "rest": "換邊或休 15 秒",
+    "cue": "手腳支撐、略偏向一側臀部；避開腰椎與骨突，不強壓麻痛點。",
+    "easier": "雙腳踩地、減少壓力",
+    "harder": "到 60 秒；不必用單腳加壓",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "H11",
+    "nameEn": "Foam roll: glute muscles",
+    "type": "mobility",
+    "equipmentOptions": [
+      [
+        "foam_roller"
+      ]
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "advanced": false,
+    "prescription": {
+      "sets": 1,
+      "value": "30",
+      "unit": "seconds",
+      "restSeconds": 15,
+      "perSide": true
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_H12",
+    "category": "recovery",
+    "name": "滾筒胸椎小幅伸展",
+    "purpose": "上背活動度；躺滾筒的一種標準版本",
+    "equipment": "滾筒、地墊",
+    "dose": "1 組 × 4–6 次小幅伸展",
+    "rest": "每次重置、自然呼吸",
+    "cue": "滾筒橫放上背，雙手承托頭；小幅向後伸，不壓腰椎或頸部，不大幅反折。",
+    "easier": "坐姿靠椅背小幅上背伸展；不適則 A06",
+    "harder": "先維持舒服活動，不增加強壓",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "H12",
+    "nameEn": "Small thoracic extension over a foam roller",
+    "type": "mobility",
+    "equipmentOptions": [
+      [
+        "foam_roller"
+      ]
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "advanced": false,
+    "prescription": {
+      "sets": 1,
+      "value": "4",
+      "unit": "reps",
+      "restSeconds": 15,
+      "perSide": false
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_I01",
+    "category": "conditioning",
+    "name": "低強度連續有氧",
+    "purpose": "建立回合間恢復的心肺基礎",
+    "equipment": "步行空間；腳踏車選配",
+    "dose": "20–30 分鐘 × 每週 1–2 次",
+    "rest": "連續；可分兩段",
+    "cue": "能說完整句子的強度；疲勞週選快走，不必加跑量。",
+    "easier": "10–15 分鐘快走",
+    "harder": "先增加至 30 分鐘，再調強度",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "I01",
+    "nameEn": "Easy continuous aerobic activity",
+    "type": "full",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": false,
+    "advanced": false,
+    "prescription": {
+      "sets": 1,
+      "value": "20",
+      "unit": "minutes",
+      "restSeconds": 0,
+      "perSide": false
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_I02",
+    "category": "conditioning",
+    "name": "影子步伐：體能版",
+    "purpose": "練習疲勞下的重複移動",
+    "equipment": "場地或標記",
+    "dose": "4–6 趟 × 20 秒",
+    "rest": "40–60 秒",
+    "cue": "中等速度重複到位回位；步伐變形就停止，不當極速測試。",
+    "easier": "4 趟、縮短距離",
+    "harder": "先至 6 趟，再小幅縮短休息",
+    "level": "進階",
+    "priority": false,
+    "catalogCode": "I02",
+    "nameEn": "Shadow footwork: conditioning",
+    "type": "full",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": false,
+    "advanced": true,
+    "prescription": {
+      "sets": 4,
+      "value": "15",
+      "unit": "seconds",
+      "restSeconds": 60,
+      "perSide": false
+    },
+    "active": false,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_I03",
+    "category": "conditioning",
+    "name": "短回合餵球間歇",
+    "purpose": "重複羽球回合與恢復",
+    "equipment": "搭檔、羽球、球拍、場地",
+    "dose": "4–6 趟 × 10–15 秒",
+    "rest": "45–60 秒",
+    "cue": "餵球頻率以動作穩定為準；不要同時追最快、最遠與最多球。",
+    "easier": "固定兩區、較慢球速",
+    "harder": "再增球路，控制總趟數",
+    "level": "進階",
+    "priority": false,
+    "catalogCode": "I03",
+    "nameEn": "Short shuttle-feed intervals",
+    "type": "full",
+    "equipmentOptions": [
+      [
+        "shuttlecock",
+        "racket"
+      ]
+    ],
+    "requiresPartner": true,
+    "shoulderLoaded": true,
+    "advanced": true,
+    "prescription": {
+      "sets": 4,
+      "value": "15",
+      "unit": "seconds",
+      "restSeconds": 60,
+      "perSide": false
+    },
+    "active": false,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_I04",
+    "category": "conditioning",
+    "name": "短間歇跳繩",
+    "purpose": "節奏、踝部耐受與心肺",
+    "equipment": "跳繩、平坦防滑地面",
+    "dose": "4–6 趟 × 20 秒，每週先 1 次",
+    "rest": "40–60 秒",
+    "cue": "低幅雙腳跳、輕落地；初期與 E 類跳躍分日，踝或阿基里斯腱不適就停。",
+    "easier": "無繩踏步或 I01 快走",
+    "harder": "先至 6 趟，再小幅延長到 30 秒",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "I04",
+    "nameEn": "Short jump-rope intervals",
+    "type": "full",
+    "equipmentOptions": [
+      [
+        "jump_rope"
+      ]
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "advanced": false,
+    "prescription": {
+      "sets": 4,
+      "value": "20",
+      "unit": "seconds",
+      "restSeconds": 60,
+      "perSide": false
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  }
+]

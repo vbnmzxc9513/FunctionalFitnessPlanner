@@ -6,10 +6,10 @@ import { doc, getDoc, getDocs, query, orderBy, documentId, limit, setDoc } from 
 import { GoogleAuthProvider, linkWithCredential, signInAnonymously, signInWithCredential, signOut } from 'firebase/auth';
 import { auth } from '../../src/services/firebase.js';
 import { userDoc, userCollection, weekHistoryQuery, captureGuestData, setCompletion, saveFeedback, savePlan, saveMeasurement, importGuestData } from '../../src/services/repository.js';
-import { DEFAULT_SCHEDULE_I18N, EXERCISES_I18N } from '../../src/locale.js';
+import { LEGACY_DEFAULT_SCHEDULE_I18N, EXERCISES_I18N } from '../../src/locale.js';
 
 const week = '2026-W40';
-const plan = { conclusion: 'test', schedule: DEFAULT_SCHEDULE_I18N.zh, source: 'manual' };
+const plan = { conclusion: 'test', schedule: LEGACY_DEFAULT_SCHEDULE_I18N.zh, source: 'manual' };
 let environment;
 let uid;
 before(async () => {
@@ -78,6 +78,19 @@ test('a rejected plan write rolls back the progress snapshot and stale revisions
   assert.deepEqual((await getDoc(userDoc(uid, 'progress', week))).data(), before);
   await assert.rejects(savePlan(uid, week, plan, plan, false, 0), /PLAN_CHANGED/);
   assert.equal((await getDoc(userDoc(uid, 'plans', week))).data().revision, 1);
+});
+test('AI doses and empty recovery days persist, restore, and reject invalid prescriptions', async () => {
+  const prescribed = { ...plan, schedule: plan.schedule.map(day => ({ ...day, routine: [], prescriptions: [] })) };
+  prescribed.schedule[0].routine = ['thoracic'];
+  prescribed.schedule[0].prescriptions = [{ id: 'thoracic', sets: 1, value: '5', unit: 'minutes', restSeconds: 0, perSide: false }];
+  await savePlan(uid, week, prescribed, plan, false, 0);
+  assert.deepEqual((await getDoc(userDoc(uid, 'plans', week))).data().schedule, prescribed.schedule);
+  const wrong = structuredClone(prescribed); wrong.schedule[0].prescriptions[0].sets = -1;
+  await assert.rejects(savePlan(uid, week, wrong, plan, false, 1));
+  assert.equal((await getDoc(userDoc(uid, 'plans', week))).data().revision, 1);
+  await savePlan(uid, week, plan, plan, false, 1);
+  await savePlan(uid, week, null, plan, true, 2);
+  assert.deepEqual((await getDoc(userDoc(uid, 'plans', week))).data().schedule, prescribed.schedule);
 });
 test('partial measurement updates preserve previously recorded fields', async () => {
   await saveMeasurement(uid, { date: '2026-10-13', weight: 70, bodyFat: 18 });

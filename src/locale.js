@@ -1,3 +1,5 @@
+import { catalogExercises } from './domain/exerciseCatalog.js';
+
 // --- i18n Locale File ---
 // All static UI strings for ZH (Traditional Chinese) and EN (English)
 
@@ -350,8 +352,37 @@ export const EXERCISES_I18N = {
     }
 };
 
+const legacyEquipment = {
+  stretch_10m: [[]], thoracic: [[]], bear_crawl: [[]], plank_row: [['dumbbell']],
+  pull_up: [['pullup_bar']], single_dl: [['dumbbell']], shoulder_press: [['dumbbell']],
+  one_arm_plank: [[]], farmer_walk: [['dumbbell']], lunge_press: [['dumbbell']],
+  weighted_lunge: [['dumbbell']], finger_pushup: [[]], squat_jump: [['dumbbell']],
+};
+const legacyDoses = {
+  stretch_10m: [1, '5', 'minutes', 0, false], thoracic: [1, '5', 'minutes', 0, false],
+  bear_crawl: [2, '15', 'seconds', 60, false], plank_row: [2, '8', 'reps', 90, true],
+  pull_up: [2, '6', 'reps', 90, false], single_dl: [2, '8', 'reps', 90, true],
+  shoulder_press: [2, '8', 'reps', 90, false], one_arm_plank: [1, '15', 'seconds', 60, true],
+  farmer_walk: [2, '20', 'seconds', 60, false], lunge_press: [2, '5', 'reps', 90, true],
+  weighted_lunge: [2, '6', 'reps', 90, true], finger_pushup: [2, '5', 'reps', 90, false],
+  squat_jump: [2, '3', 'reps', 90, false],
+};
+for (const lang of ['zh', 'en']) {
+  for (const [id, exercise] of Object.entries(EXERCISES_I18N[lang])) Object.assign(exercise, {
+    active: false, equipmentOptions: legacyEquipment[id] || [[]],
+    ...(legacyDoses[id] ? { prescription: Object.fromEntries(['sets', 'value', 'unit', 'restSeconds', 'perSide'].map((key, index) => [key, legacyDoses[id][index]])) } : {}),
+    jumpContacts: id === 'squat_jump' ? 1 : 0,
+    shoulderLoaded: id !== 'stretch_10m', advanced: ['finger_pushup', 'squat_jump', 'lunge_press', 'one_arm_plank'].includes(id),
+  });
+}
+
+// Keep legacy IDs readable for saved plans; add the curated catalog to both languages.
+for (const lang of ['zh', 'en']) {
+  Object.assign(EXERCISES_I18N[lang], catalogExercises(lang));
+}
+
 // Bilingual default weekly schedule
-export const DEFAULT_SCHEDULE_I18N = {
+export const LEGACY_DEFAULT_SCHEDULE_I18N = {
     zh: [
         { day: 1, name: '星期一', theme: '單邊穩定與網前急停', concept: '【羽球連結：上網撲球與防守步伐】\n原理：透過單腳支撐與髖關節鉸鏈的訓練，強化大腿後側與臀部煞車能力，讓你在網前迅速急停而不失去平衡。', routine: ['thoracic', 'single_dl', 'bulgarian', 'weighted_lunge', 'stretch_10m'], coachAdvice: '今天是本週的開始，針對下肢的急停煞車會讓你的大腿前側與臀部較有感。明天會進行上半身的抗旋轉訓練，因此今天最後的伸展請務必確實放鬆下半身，避免明天的發力受到代償影響。' },
         { day: 2, name: '星期二', theme: '核心抗旋轉與殺球力量傳導', concept: '【羽球連結：躍起殺球與平抽擋】\n原理：殺球的力量來自於軀幹抗旋轉後的反作用力。此模組強化背部與胸肩力量，讓你在擊球瞬間維持強大的空中核心剛性。', routine: ['dead_bug', 'pull_up', 'plank_row', 'shoulder_press', 'finger_pushup'], coachAdvice: '昨天的大量下肢訓練可能會讓你今天覺得腿部痠痛，因此今天的重點會轉移到上半身與核心。請注意在做平板划船等抗旋轉動作時，不要利用腿部的搖晃來代償。明天是動態恢復日，今天可以盡情發揮上半身的力量！' },
@@ -402,4 +433,60 @@ Object.assign(TRANSLATIONS.en, {
     dataSharingNotice: 'The key belongs to this browser and remains after logout; you can clear it here. Planning sends loaded body metrics, training history and your messages to Google Gemini.',
     migrationPending: 'Some guest records still need importing. Retry to continue; existing account records take precedence.', migrationFailed: 'Signed in, but guest import was interrupted. Retry to continue.', retry: 'Retry import',
     radarTitle: 'Muscle group distribution', settingsKeyBound: 'Key saved locally. Open Coach to generate a plan.', toastKeySaved: 'Key saved in this browser.',
+});
+
+// General bodyweight example; clinical and court-day planning uses Coach inputs.
+export const DEFAULT_SCHEDULE_I18N = Object.fromEntries(['zh', 'en'].map(lang => [lang, [
+  { day: 1, name: TRANSLATIONS[lang].dayNames[0], theme: lang === 'zh' ? '基本腿力與單腳支撐' : 'Leg strength and single-leg support', concept: lang === 'zh' ? '分腿支撐與髖伸展提供弓步到位、煞車及回位的基礎。先用徒手，維持動作品質。' : 'Build lunge support and hip extension for controlled braking and recovery. Start with bodyweight.', routine: ['bf_A01', 'bf_B01', 'bf_B06', 'bf_B07', 'bf_D09'], coachAdvice: lang === 'zh' ? '健康成人的徒手範例。若明天有激烈球局、今天有症狀或仍在醫囑休息期，縮短或改恢復；到教練頁輸入球日與限制再排個人課表。' : 'A bodyweight example for healthy adults. Reduce or rest before hard court sessions, with symptoms or under treatment restrictions; use Coach for a personal plan.' },
+  { day: 2, name: TRANSLATIONS[lang].dayNames[1], theme: lang === 'zh' ? '輕活動與恢復' : 'Light movement and recovery', concept: lang === 'zh' ? '踝髖活動與自然呼吸保留活動習慣；不以疲勞作為效果指標。' : 'Gentle ankle and hip movement with breathing maintains an easy routine.', routine: ['bf_A02', 'bf_H03', 'bf_D09'], coachAdvice: lang === 'zh' ? '可縮成 5–10 分鐘。觀察睡眠、腿部清爽與昨日反應，狀態差時休息也符合計畫。' : 'Keep this to 5–10 minutes if needed. Check sleep, leg freshness and yesterday’s response; rest when appropriate.' },
+  { day: 3, name: TRANSLATIONS[lang].dayNames[2], theme: lang === 'zh' ? '到位、急停與回中' : 'Positioning, braking and return', concept: lang === 'zh' ? '短步伐練習重點是順序、煞車與回中；預設方向練步序，有對手線索才涉及判讀。' : 'Short trials develop step order, braking and return. Predetermined directions train movement; opponent cues add decision-making.', routine: ['bf_F01', 'bf_F02', 'bf_F03'], coachAdvice: lang === 'zh' ? '低至中速、每次重置，不加揮拍。若腿重就減次數；不把短協調做成疲勞間歇。' : 'Use controlled speed, reset each trial and omit racket swings. Reduce trials when tired.' },
+  { day: 4, name: TRANSLATIONS[lang].dayNames[3], theme: lang === 'zh' ? '側向支撐與髖控制' : 'Lateral support and hip control', concept: lang === 'zh' ? '側弓步、扶物髖鉸鏈與屈膝提踵，建立側移和單腳支撐能力。' : 'Lateral lunges, supported hinges and bent-knee calf raises develop lateral and single-leg control.', routine: ['bf_A02', 'bf_B02', 'bf_B05', 'bf_B08', 'bf_D09'], coachAdvice: lang === 'zh' ? '與週一保留間隔；若今天或明天有高強度球局，少做一組或改恢復。不要為完成次數犧牲平衡。' : 'Keep spacing from Monday. Reduce a set or recover around hard court days; preserve balance.' },
+  { day: 5, name: TRANSLATIONS[lang].dayNames[4], theme: lang === 'zh' ? '恢復與週末準備' : 'Recovery and weekend preparation', concept: lang === 'zh' ? '以輕活動與舒適拉伸為主，依週末球量調整，保留恢復空間。' : 'Use gentle mobility and comfortable stretching, adjusted to weekend court load.', routine: ['bf_H01', 'bf_H06', 'bf_D09'], coachAdvice: lang === 'zh' ? '可短做或休息。回顧本週球量、完成品質和隔天症狀，再決定下週加、維持或減量。' : 'Keep it short or rest. Review court load, movement quality and next-day symptoms before next week.' },
+]]));
+
+Object.assign(TRANSLATIONS.zh, {
+  planningInputsTitle: '球日、器材與恢復狀況', planningLocalNotice: '排課時會傳給 Gemini；這些輸入依帳號儲存在此瀏覽器，不會自動同步其他裝置。',
+  badmintonDaysLabel: '這週打球日（含週末）', badmintonMinutesLabel: '每場約幾分鐘（可留空）', badmintonIntensityLabel: '球局強度',
+  intensity_unknown: '尚未確認', intensity_light: '輕技術練習', intensity_mixed: '技術與對打混合', intensity_hard: '高強度對打',
+  experienceLabel: '體能訓練經驗', experience_beginner: '初學／重新開始', experience_intermediate: '規律訓練中', experience_advanced: '有進階訓練經驗',
+  competitionDateLabel: '目標比賽日期（選填）', equipmentLabel: '可用器材', bodyweightAlwaysAvailable: '不選器材時使用徒手；牆壁、地墊與平坦空間仍需自行確認。',
+  equipment_bodyweight: '徒手', equipment_dumbbell: '啞鈴', equipment_band: '彈力繩', equipment_cable: '纜繩／滑輪', equipment_jump_rope: '跳繩', equipment_foam_roller: '滾筒',
+  equipment_platform: '穩固椅凳／平台', equipment_racket: '球拍', equipment_shuttlecock: '羽球', equipment_ball: '小球／軟球', equipment_screen: '手機／影片', equipment_pullup_bar: '單槓',
+  partnerAvailableLabel: '體能練習時有搭檔', partnerRequired: '需搭檔', shoulderStatusLabel: '肩部狀態與活動限制',
+  health_unrestricted: '無已知肩部限制', health_restricted: '肩部疼痛／治療中', health_unknown: '肩部限制待確認',
+  healthNotesLabel: '治療、其他部位症狀與醫囑', healthNotesPlaceholder: '例如：震波日期、治療部位、抬手反應、醫師允許／禁止的活動；沒有可留空。',
+  recoveryNotesLabel: '本週恢復與實際球量', recoveryNotesPlaceholder: '例如：睡眠、腿重程度、每場時長與 RPE、訓練當晚／隔天症狀。',
+  noEligibleExercises: '沒有符合條件的啟用動作，本次僅能安排休息；可檢查輸入與動作庫。',
+  planPermissionDenied: '無法儲存新課表，請確認登入與資料庫權限是否支援動作處方。',
+  searchExercises: '搜尋動作或編號', filterCategory: '依訓練分類篩選', allCategories: '全部分類', noMatchingExercises: '沒有符合條件的動作。', advancedExercise: '進階',
+  category_warmup: '動態暖身／活動度', category_lower: '下肢肌力／單腳支撐', category_upper: '上肢肌力／肩臂控制', category_core: '核心／呼吸／力量傳遞',
+  category_power: '爆發力／彈跳落地', category_footwork: '步伐／急停變向', category_reaction: '反應／丟接球／判讀', category_recovery: '拉伸／滾筒', category_conditioning: '心肺／重複回合',
+  starterDoseLabel: '起始參考：', eachSide: '每側', restLabel: '休息', breaths: '次呼吸',
+  catalogEligibilityNotice: '83 項分類動作；進階項目預設停用。啟用後仍會依器材、搭檔、經驗與肩部限制篩選。舊動作 ID 保留供歷史使用。',
+  exercisesTitle: '羽球訓練動作庫', exercisesSubtitle: '查看分類、提示、器材和起始劑量；可啟用或新增動作。AI 會依你的球量與恢復挑選，不必全做。',
+  aiCoachTitle: '羽球體能教練', aiConclusionTitle: '本週安排與調整策略', aiTip: '球日也算訓練負荷；可排短課、恢復或休息。填寫比賽與治療限制，讓課表配合實際狀況。',
+  feedbackSubtitle: '反饋會作為下次排課依據。本週 AI 劑量依已儲存的處方顯示；需要調整時到教練頁重新排課。',
+});
+Object.assign(TRANSLATIONS.en, {
+  planningInputsTitle: 'Court days, equipment and recovery', planningLocalNotice: 'Sent to Gemini when planning. Inputs are saved per account in this browser, without automatic cross-device sync.',
+  badmintonDaysLabel: 'Court days this week (including weekends)', badmintonMinutesLabel: 'Minutes per session (optional)', badmintonIntensityLabel: 'Court intensity',
+  intensity_unknown: 'Not specified', intensity_light: 'Light technical practice', intensity_mixed: 'Mixed practice and games', intensity_hard: 'Hard match play',
+  experienceLabel: 'Fitness training experience', experience_beginner: 'Beginner / restarting', experience_intermediate: 'Regular training', experience_advanced: 'Advanced experience',
+  competitionDateLabel: 'Target competition date (optional)', equipmentLabel: 'Available equipment', bodyweightAlwaysAvailable: 'No equipment selected means bodyweight; check access to a wall, mat and safe floor.',
+  equipment_bodyweight: 'Bodyweight', equipment_dumbbell: 'Dumbbells', equipment_band: 'Resistance band', equipment_cable: 'Cable / pulley', equipment_jump_rope: 'Jump rope', equipment_foam_roller: 'Foam roller',
+  equipment_platform: 'Stable bench / platform', equipment_racket: 'Racket', equipment_shuttlecock: 'Shuttlecock', equipment_ball: 'Small / soft ball', equipment_screen: 'Phone / video', equipment_pullup_bar: 'Pull-up bar',
+  partnerAvailableLabel: 'A partner is available for fitness drills', partnerRequired: 'Partner required', shoulderStatusLabel: 'Shoulder status and restrictions',
+  health_unrestricted: 'No known shoulder restrictions', health_restricted: 'Shoulder symptoms / treatment', health_unknown: 'Restrictions not confirmed',
+  healthNotesLabel: 'Treatment, other symptoms and clinician instructions', healthNotesPlaceholder: 'Treatment date and area, movement response, and activities your clinician permits or restricts.',
+  recoveryNotesLabel: 'Recovery and actual court load', recoveryNotesPlaceholder: 'Sleep, leg fatigue, session minutes and RPE, symptoms that evening or next morning.',
+  noEligibleExercises: 'No eligible exercises are enabled; this plan can only schedule rest. Check your inputs and library.',
+  planPermissionDenied: 'Cannot save the new plan. Check your login and database permission for exercise prescriptions.',
+  searchExercises: 'Search exercise or code', filterCategory: 'Filter training category', allCategories: 'All categories', noMatchingExercises: 'No matching exercises.', advancedExercise: 'Advanced',
+  category_warmup: 'Dynamic warm-up / mobility', category_lower: 'Leg strength / single-leg support', category_upper: 'Upper strength / shoulder control', category_core: 'Core / breathing / force transfer',
+  category_power: 'Power / jumping / landing', category_footwork: 'Footwork / braking / turning', category_reaction: 'Reaction / catching / anticipation', category_recovery: 'Stretching / foam rolling', category_conditioning: 'Aerobic / repeated rallies',
+  starterDoseLabel: 'Starting reference:', eachSide: 'per side', restLabel: 'rest', breaths: 'breaths',
+  catalogEligibilityNotice: '83 categorized exercises. Advanced entries start disabled. Planning also filters equipment, partner, experience and shoulder restrictions. Legacy IDs remain readable.',
+  exercisesTitle: 'Badminton exercise library', exercisesSubtitle: 'Browse categories, cues, equipment and starting doses; enable or add exercises. Planning selects for your court load and recovery.',
+  aiCoachTitle: 'Badminton fitness coach', aiConclusionTitle: 'Weekly plan and adjustment strategy', aiTip: 'Court sessions count as training load. Short sessions, recovery and rest are valid. Add competition and treatment details.',
+  feedbackSubtitle: 'Feedback informs the next plan. Saved AI prescriptions stay fixed this week; open Coach to generate an adjusted plan.',
 });

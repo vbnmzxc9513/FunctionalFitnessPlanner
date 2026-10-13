@@ -11,16 +11,19 @@ export function applyFeedback(profile, progress, adjustment) {
 
 export function resolveExerciseId(id, exercises) {
   if (typeof id !== 'string') return null;
-  if (exercises[id]) return id;
+  if (Object.hasOwn(exercises, id)) return id;
   // Exact legacy names only; substring matching can select a different exercise.
-  return Object.keys(exercises).find(key => exercises[key].name === id) || null;
+  return Object.keys(exercises).find(key => exercises[key].name === id || exercises[key].aliases?.includes(id)) || null;
 }
 
 export function normalizeSchedule(schedule, exercises, fallback = []) {
   if (!Array.isArray(schedule)) return fallback;
   const days = schedule.filter(day => day && Number.isInteger(day.day) && day.day >= 1 && day.day <= 5 && Array.isArray(day.routine));
   if (days.length !== 5 || new Set(days.map(day => day.day)).size !== 5) return fallback;
-  return days.map(day => ({ ...day, routine: [...new Set(day.routine.map(id => resolveExerciseId(id, exercises)).filter(Boolean))] }))
+  return days.map(day => {
+    const routine = [...new Set(day.routine.map(id => resolveExerciseId(id, exercises)).filter(Boolean))];
+    return { ...day, routine, ...(Array.isArray(day.prescriptions) ? { prescriptions: day.prescriptions.filter(dose => routine.includes(dose.id)) } : {}) };
+  })
     .sort((a, b) => a.day - b.day);
 }
 
@@ -33,7 +36,10 @@ export function countCompleted(schedule, completed = {}) {
   return { completed: [...keys].filter(key => completed[key] === true).length, total: keys.size };
 }
 
-export function prescription(id, type, level) {
+export function prescription(id, type, level, exercise, day) {
+  const planned = day?.prescriptions?.find(dose => dose.id === id);
+  if (planned) return planned;
+  if (exercise?.prescription) return exercise.prescription;
   level = clampLevel(level);
   if (['stretch_10m', 'thoracic'].includes(id)) return { sets: 1, value: [5, 10, 12][level], unit: 'minutes' };
   if (['farmer_walk', 'one_arm_plank', 'bear_crawl'].includes(id)) return { sets: [3, 4, 5][level], value: [30, 45, 60][level], unit: 'seconds' };

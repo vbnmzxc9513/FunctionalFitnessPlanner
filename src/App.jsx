@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Activity, BarChart3, Brain, Dumbbell, Feather, Info, Loader2, LogIn, LogOut, Settings as SettingsIcon } from 'lucide-react';
 import { getDoc, setDoc } from 'firebase/firestore';
-import { TRANSLATIONS, EXERCISES_I18N, DEFAULT_SCHEDULE_I18N } from './locale.js';
+import { TRANSLATIONS, EXERCISES_I18N, DEFAULT_SCHEDULE_I18N, LEGACY_DEFAULT_SCHEDULE_I18N } from './locale.js';
 import { auth } from './services/firebase.js';
 import { savePlan, saveFeedback, setCompletion, saveMeasurement, userDoc } from './services/repository.js';
 import { checkAvailableModels, generateAIPlan, generateExerciseDetails } from './services/gemini.js';
@@ -12,6 +12,7 @@ import { availableSchedule, calculateStats, clampLevel, countCompleted, normaliz
 import { monthlyStats } from './domain/training.js';
 import { emptyMetrics, metricsForm, parseMetrics } from './domain/metrics.js';
 import { readLanguage, readStorage, writeStorage } from './domain/storage.js';
+import { DEFAULT_PLANNING_CONTEXT, normalizePlanningContext, planningExercises } from './domain/planning.js';
 import LoginPrompt from './components/LoginPrompt.jsx';
 import Training from './components/Training.jsx';
 import ExerciseLibrary from './components/ExerciseLibrary.jsx';
@@ -50,7 +51,7 @@ function FitnessApp({ account, calendar }) {
   const weeklyPlan = data.plans[currentWeek] || null;
   // Default/manual themes can switch language without translating stored AI text.
   const localizedSchedule = weeklyPlan?.source === 'manual' && weeklyPlan.baseDefault
-    ? weeklyPlan.schedule.map(day => ({ ...defaultSchedule.find(item => item.day === day.day), routine: day.routine }))
+    ? weeklyPlan.schedule.map(day => ({ ...day, ...defaultSchedule.find(item => item.day === day.day), routine: day.routine }))
     : weeklyPlan?.schedule;
   const currentSchedule = normalizeSchedule(localizedSchedule, exercises, defaultSchedule);
   const schedule = weeklyPlan ? currentSchedule : availableSchedule(currentSchedule, exercises);
@@ -71,8 +72,13 @@ function FitnessApp({ account, calendar }) {
   const [newName, setNewName] = useState('');
   const [adding, setAdding] = useState(false);
   const [metricForm, setMetricForm] = useState(() => emptyMetrics(today));
-  const [goal, setGoal] = useState('');
-  const [time, setTime] = useState('30');
+  const preferencesKey = `planning_preferences_${user?.uid || 'signed-out'}`;
+  const [preferences] = useState(() => {
+    try { return JSON.parse(readStorage(preferencesKey, '{}')) || {}; } catch { return {}; }
+  });
+  const [goal, setGoal] = useState(preferences.goal || '');
+  const [time, setTime] = useState(preferences.time || '30');
+  const [planningContext, setPlanningContext] = useState(() => normalizePlanningContext({ ...DEFAULT_PLANNING_CONTEXT, ...preferences.context }));
   const [message, setMessage] = useState('');
   const [editingAI, setEditingAI] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -112,7 +118,7 @@ function FitnessApp({ account, calendar }) {
   const saveEdits = () => operation(async () => {
     setSavingPlan(true);
     try {
-      const plan = { ...(weeklyPlan || fallbackPlan), schedule: draft, source: 'manual' };
+      const plan = { ...(weeklyPlan || fallbackPlan), schedule: normalizeSchedule(draft, exercises), source: 'manual' };
       await savePlan(user.uid, currentWeek, plan, fallbackPlan, false, draftRevision);
       cancelEditing();
     } finally { setSavingPlan(false); }
@@ -134,18 +140,20 @@ function FitnessApp({ account, calendar }) {
     if (!requireUser() || generating || savingPlan || busy) return;
     if (editing) { showToast(t('finishEditing')); setActiveTab('train'); return; }
     if (!apiKey) { showToast(t('toastNoKey')); setActiveTab('settings'); return; }
-    const available = Object.fromEntries(Object.entries(exercises).filter(([, exercise]) => exercise.active !== false && !exercise.deleted));
-    if (!Object.keys(available).length) { showToast(t('noActiveExercises')); return; }
+    const context = normalizePlanningContext(planningContext);
+    const available = planningExercises(exercises, context);
+    if (!Object.keys(available).length) showToast(t('noEligibleExercises'));
     const revision = weeklyPlan?.revision || 0;
     setGenerating(true);
     try {
       const previous = allProgress[lastWeek] || {};
-      // Preserve existing Gemini arguments and default model behavior.
-      const result = await generateAIPlan(previous.completed || {}, difficultyLevel, previous.feedbackValue, apiKey, allProgress, data.metrics, goal, time, message, available, lang);
+      writeStorage(preferencesKey, JSON.stringify({ goal, time, context }));
+      const result = await generateAIPlan(previous.completed || {}, difficultyLevel, previous.feedbackValue, apiKey, allProgress, data.metrics, goal, time, message, available, lang, undefined,
+        { context, currentDate: today, currentWeek, previousPlan: weeklyPlan || data.plans[lastWeek] || null });
       if (auth.currentUser?.uid !== user.uid) return;
       await savePlan(user.uid, currentWeek, { ...result, language: lang, source: 'ai' }, fallbackPlan, false, revision);
-      setEditingAI(false); setGoal(''); setTime('30'); setMessage(''); showToast(t('toastAISuccess'));
-    } catch (err) { console.error('Plan generation failed', err); showToast(t(err.message === 'PLAN_CHANGED' ? 'planChanged' : 'toastAIError')); }
+      setEditingAI(false); setMessage(''); showToast(t('toastAISuccess'));
+    } catch (err) { console.error('Plan generation failed', err); showToast(t(err.message === 'PLAN_CHANGED' ? 'planChanged' : err.code === 'permission-denied' ? 'planPermissionDenied' : 'toastAIError')); }
     finally { setGenerating(false); }
   };
   const addExercise = async () => {
@@ -183,7 +191,7 @@ function FitnessApp({ account, calendar }) {
   const clearKey = () => { if (!writeStorage('gemini_byok_key', null)) { showToast(t('storageUnavailable')); return; } setApiKey(''); setKeyInput(''); setModels(defaultModels); showToast(t('keyCleared')); };
   const selectModel = value => { setModel(value); writeStorage('app_ai_model', value); };
   const stats = activeTab === 'history' ? calculateStats(allProgress, exercises) : null;
-  const months = activeTab === 'history' ? monthlyStats(allProgress, data.plans, defaultSchedule, exercises) : [];
+  const months = activeTab === 'history' ? monthlyStats(allProgress, data.plans, LEGACY_DEFAULT_SCHEDULE_I18N[lang], exercises) : [];
   const heatmapWeeks = stats ? [...new Set(Object.keys(stats.dailyMap).map(key => key.slice(0, 8)))].sort().slice(-12) : [];
   const login = <LoginPrompt t={t} googleLogin={account.googleLogin} guestLogin={account.guestLogin} busy={account.busy} />;
 
@@ -216,7 +224,7 @@ function FitnessApp({ account, calendar }) {
       </>}
       <div className={activeTab === 'train' ? '' : 'max-w-3xl mx-auto'}>
         {activeTab !== 'train' && activeTab !== 'settings' && !user ? login : <Suspense fallback={<div className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>}>
-          {activeTab === 'ai' && <Coach t={t} plan={weeklyPlan} editing={editingAI} setEditing={setEditingAI} generating={generating} apiKey={apiKey} goal={goal} setGoal={setGoal} time={time} setTime={setTime} message={message} setMessage={setMessage} onGenerate={requestPlan} onRestore={restore} />}
+          {activeTab === 'ai' && <Coach t={t} plan={weeklyPlan} editing={editingAI} setEditing={setEditingAI} generating={generating} apiKey={apiKey} goal={goal} setGoal={setGoal} time={time} setTime={setTime} message={message} setMessage={setMessage} context={planningContext} setContext={setPlanningContext} onGenerate={requestPlan} onRestore={restore} />}
           {activeTab === 'metrics' && <Metrics t={t} form={metricForm} onChange={changeMetric} onSave={saveMetrics} history={data.metrics} saving={busy} hasMore={data.metrics.length >= metricLimit} onLoadMore={() => setMetricLimit(previous => previous + 365)} />}
           {activeTab === 'history' && stats && <History t={t} lang={lang} stats={stats} months={months} weeks={heatmapWeeks} hasMore={data.hasMoreProgress} onLoadMore={() => setWeekLimit(previous => previous + 104)} />}
           {activeTab === 'exercises' && <ExerciseLibrary t={t} exercises={exercises} name={newName} setName={setNewName} adding={adding} onAdd={addExercise} onToggle={toggleActive} onDelete={deleteExercise} busy={busy} />}

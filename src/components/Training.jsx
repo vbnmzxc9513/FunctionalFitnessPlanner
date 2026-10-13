@@ -32,7 +32,7 @@ export default function Training({ t, schedule, draft, activeDay, setActiveDay, 
           const exercise = exercises[id];
           if (!exercise) return null;
           const done = !!progress[exerciseKey(active.day, id)];
-          const params = prescription(id, exercise.type, level);
+          const params = prescription(id, exercise.type, level, exercise, active);
           return <div key={id} className={`p-4 rounded-xl border ${done && !editing ? 'bg-sky-50 border-sky-200' : 'bg-white border-sky-100'}`}>
             <div className="flex items-center gap-3">
               {editing ? <button aria-label={`${t('removeExercise')} ${exercise.name}`} onClick={() => onRemove(active.day, index)} className="p-2 text-red-500"><Trash2 size={20} /></button> :
@@ -42,7 +42,7 @@ export default function Training({ t, schedule, draft, activeDay, setActiveDay, 
                 </button>}
               {editing && <span>{index + 1}. {exercise.name}</span>}
             </div>
-            <p className="text-xs text-slate-500 mt-2 ml-11">{params.sets} {t('setsUnit')} × {params.value} {t(params.unit)}</p>
+            <p className="text-xs text-slate-500 mt-2 ml-11">{params.sets} {t('setsUnit')} × {params.value} {t(params.unit)}{params.perSide && ` · ${t('eachSide')}`}{params.restSeconds > 0 && ` · ${t('restLabel')} ${params.restSeconds} ${t('seconds')}`}</p>
             {(!done || editing) && <div className="mt-3 ml-11 flex items-start text-xs text-slate-500 gap-2"><Info size={14} className="shrink-0 text-sky-500" /><span>{exercise.tip}</span></div>}
           </div>;
         })}
