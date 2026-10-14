@@ -11,5 +11,6 @@ async function run(args) {
   const code = await new Promise(resolve => child.on('exit', resolve));
   if (code !== 0) process.exit(code || 1);
 }
-await run(['--test', 'tests/integration/firestore.test.js']);
+await run(['--test', '--test-concurrency=1', 'tests/integration/firestore.test.js', 'tests/integration/training.test.js']);
 await run(['scripts/browser-smoke.mjs']);
+await run(['scripts/coaching-smoke.mjs']);

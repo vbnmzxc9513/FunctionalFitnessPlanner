@@ -1,10 +1,11 @@
-import { collection, doc, documentId, endAt, getDocs, limit, orderBy, query, runTransaction, serverTimestamp, setDoc, startAt } from 'firebase/firestore';
-import { auth, db, appId } from './firebase.js';
+import { documentId, endAt, getDocs, limit, orderBy, query, runTransaction, serverTimestamp, setDoc, startAt } from 'firebase/firestore';
+import { auth, db } from './firebase.js';
 import { applyFeedback, exerciseKey } from '../domain/training.js';
 import { dateForWeekDay, getWeekString, localDate } from '../domain/dates.js';
+import { prepareTrainingPreview, writeTrainingPreview } from './trainingRepository.js';
+import { userDoc, userCollection } from './userPaths.js';
+export { userDoc, userCollection } from './userPaths.js';
 
-export const userDoc = (uid, group, id) => doc(db, 'artifacts', appId, 'users', uid, group, id);
-export const userCollection = (uid, group) => collection(db, 'artifacts', appId, 'users', uid, group);
 export function weekHistoryStart(week, weeks) {
   return getWeekString(new Date(`${dateForWeekDay(week)}T12:00:00`), 1 - weeks);
 }
@@ -30,7 +31,7 @@ function writePlanDays(transaction, uid, week, schedule) {
   }
 }
 
-export async function savePlan(uid, week, plan, fallback, restore = false, expectedRevision, previewCompleted = {}) {
+export async function savePlan(uid, week, plan, fallback, restore = false, expectedRevision, previewCompleted = {}, previewTraining = {}, expectedCompleted) {
   assertUser(uid);
   return runTransaction(db, async transaction => {
     const planRef = userDoc(uid, 'plans', week);
@@ -40,14 +41,21 @@ export async function savePlan(uid, week, plan, fallback, restore = false, expec
     assertUser(uid);
     const current = existing.exists() ? existing.data() : fallback;
     if (expectedRevision !== undefined && (current.revision || 0) !== expectedRevision) throw new Error('PLAN_CHANGED');
+    if (expectedCompleted !== undefined) {
+      const trueKeys = value => Object.entries(value || {}).filter(([, done]) => done === true).map(([key]) => key).sort();
+      if (JSON.stringify(trueKeys(progress.data()?.completed)) !== JSON.stringify(trueKeys(expectedCompleted))) throw new Error('PROGRESS_CHANGED');
+    }
     const next = restore ? current.previous : plan;
     if (!next || !Array.isArray(next.schedule)) throw new Error('INVALID_PLAN');
+    const trainingEntries = await prepareTrainingPreview(transaction, uid, week, next, previewTraining);
+    assertUser(uid);
     const totalExercises = next.schedule.reduce((sum, day) => sum + day.routine.length, 0);
     const allowedKeys = new Set(next.schedule.flatMap(day => day.routine.map(id => exerciseKey(day.day, id))));
     const completed = Object.fromEntries(Object.entries(previewCompleted).filter(([key, done]) => done === true && allowedKeys.has(key)));
     const previousProgress = progress.data() || {};
     const completedAt = Object.fromEntries(Object.keys(completed).map(key => [key,
       previousProgress.completed?.[key] && previousProgress.completedAt?.[key] || localDate()]));
+    writeTrainingPreview(transaction, trainingEntries);
     writePlanDays(transaction, uid, week, next.schedule);
     // Preserve completions as training history. The active plan alone determines its percentage.
     transaction.set(planRef, { ...withoutPrevious(next), previous: withoutPrevious(current), validationVersion: 1, revision: (current.revision || 0) + 1, savedAt: serverTimestamp() });
@@ -100,7 +108,7 @@ export async function saveMeasurement(uid, values) {
 
 export async function captureGuestData(uid) {
   assertUser(uid);
-  const groups = ['profile', 'progress', 'plans', 'metrics', 'exercises'];
+  const groups = ['profile', 'progress', 'plans', 'metrics', 'exercises', 'trainingLogs', 'readiness'];
   const snapshots = await Promise.all(groups.map(group => getDocs(userCollection(uid, group))));
   return snapshots.flatMap((snapshot, index) => snapshot.docs.map(item => ({ group: groups[index], id: item.id, data: item.data() })));
 }
@@ -108,6 +116,8 @@ export async function captureGuestData(uid) {
 export async function importGuestData(uid, records) {
   assertUser(uid);
   // Transactions allow retry and preserve existing account data on collisions.
+  const allowedGroups = new Set(['profile', 'progress', 'plans', 'metrics', 'exercises', 'trainingLogs', 'readiness']);
+  if (!Array.isArray(records) || records.some(record => !allowedGroups.has(record?.group) || typeof record.id !== 'string' || record.id.includes('/'))) throw new Error('INVALID_IMPORT');
   for (const record of records) {
     await runTransaction(db, async transaction => {
       const ref = userDoc(uid, record.group, record.id);

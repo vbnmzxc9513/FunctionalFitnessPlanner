@@ -134,11 +134,91 @@ service cloud.firestore {
         && data.get('difficultyBase', 1) in [0, 1, 2] && data.get('feedbackValue', 0) in [-1, 0, 1]
         && data.get('feedbackProvided', false) is bool && data.get('schemaVersion', 2) == 2;
     }
+    function calendarDate(value) {
+      return value is string && value.matches('^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$');
+    }
+    function dateTimestamp(value) {
+      let parts = value.split('-');
+      return timestamp.date(int(parts[0]), int(parts[1]), int(parts[2]));
+    }
+    function currentDate(value) {
+      // Calendar dates use the user's local timezone. UTC+14 is the latest
+      // supported calendar day; client validation uses the actual local day.
+      return calendarDate(value) && dateTimestamp(value) <= request.time + duration.value(14, 'h');
+    }
+    function requiredNullableNumber(data, field, min, max, integer) {
+      return data[field] == null || ((integer ? data[field] is int : data[field] is number) && data[field] >= min && data[field] <= max);
+    }
+    function trainingUnitLimit(unit) { return unit == 'seconds' ? 3600 : (unit == 'minutes' ? 120 : 500); }
+    function validActualSet(index, bound, whole) {
+      let item = request.resource.data.sets[index];
+      return item.keys().hasOnly(['value', 'otherSide'])
+        && (whole ? item.value is int : item.value is number) && item.value >= 0 && item.value <= bound
+        && (request.resource.data.perSide ? ((whole ? item.otherSide is int : item.otherSide is number) && item.otherSide >= 0 && item.otherSide <= bound) : item.otherSide == null);
+    }
+    function validActualSets(bound, whole) {
+      let sets = request.resource.data.sets;
+      let count = sets.size();
+      return sets is list && count >= 1 && count <= 5
+        && validActualSet(0, bound, whole) && (count < 2 || validActualSet(1, bound, whole))
+        && (count < 3 || validActualSet(2, bound, whole)) && (count < 4 || validActualSet(3, bound, whole)) && (count < 5 || validActualSet(4, bound, whole));
+    }
+    function validActualSetsForUnit() {
+      let unit = request.resource.data.unit;
+      return unit == 'seconds' ? validActualSets(3600, false) : (unit == 'minutes' ? validActualSets(120, false) : validActualSets(500, true));
+    }
+    function validTargetRange(value, unit) {
+      let parts = value.split('[–-]');
+      let low = float(parts[0]);
+      let high = parts.size() == 2 ? float(parts[1]) : low;
+      return low >= 0.01 && high >= low && high <= trainingUnitLimit(unit)
+        && (!(unit in ['reps', 'breaths']) || (low == int(low) && high == int(high)));
+    }
+    function validPlannedSnapshot() {
+      let data = request.resource.data.planned;
+      return data is map && data.keys().hasOnly(['sets', 'value', 'unit', 'perSide', 'phase', 'restSeconds'])
+        && data.sets in [1, 2, 3, 4, 5] && data.value.matches('^[0-9]{1,4}([.][0-9]{1,3})?([–-][0-9]{1,4}([.][0-9]{1,3})?)?$')
+        && data.unit in ['reps', 'seconds', 'minutes', 'breaths'] && validTargetRange(data.value, data.unit) && data.perSide is bool
+        && data.phase in ['legacy', 'warmup', 'skill', 'strength', 'accessory', 'recovery', 'cooldown']
+        && data.restSeconds is int && data.restSeconds >= 0 && data.restSeconds <= 300;
+    }
+    function validTrainingLog(id) {
+      let data = request.resource.data;
+      return data.keys().hasOnly(['week', 'day', 'exerciseId', 'date', 'variant', 'loadKg', 'loadBasis', 'resistanceLabel', 'unit', 'perSide', 'sets', 'rir', 'quality', 'symptoms', 'nextDay', 'planned', 'schemaVersion'])
+        && weekId(data.week) && data.day in [1, 2, 3, 4, 5] && data.exerciseId.matches('^[A-Za-z0-9_-]{1,80}$')
+        && id == data.week + '-D' + string(data.day) + '-' + data.exerciseId && currentDate(data.date)
+        && data.schemaVersion == 1 && data.variant in ['bodyweight', 'dumbbell', 'cable', 'band', 'other']
+        && requiredNullableNumber(data, 'loadKg', 0, 500, false) && data.loadBasis in ['none', 'per_dumbbell', 'total', 'stack', 'description']
+        && data.resistanceLabel is string && data.resistanceLabel.size() <= 120
+        && (data.loadBasis != 'none' || data.loadKg == null || data.loadKg == 0)
+        && (data.variant != 'bodyweight' || data.loadBasis == 'none')
+        && (data.loadBasis != 'description' || data.resistanceLabel.matches('.*[^ ].*'))
+        && validActualSetsForUnit() && requiredNullableNumber(data, 'rir', 0, 10, true)
+        && data.quality in ['good', 'unstable', 'unknown'] && data.symptoms in ['none', 'worse', 'unknown']
+        && data.nextDay in ['pending', 'good', 'worse'] && (data.nextDay == 'pending' || dateTimestamp(data.date) + duration.value(1, 'd') <= request.time + duration.value(14, 'h')) && validPlannedSnapshot()
+        && data.unit == data.planned.unit && data.perSide == data.planned.perSide;
+    }
+    function validReadiness(data, id) {
+      return data.keys().hasOnly(['date', 'sleepHours', 'fatigue', 'soreness', 'symptoms', 'yesterdayCourtMinutes', 'yesterdayCourtRpe', 'todayCourtIntensity', 'schemaVersion'])
+        && data.date == id && currentDate(id) && data.schemaVersion == 1
+        && requiredNullableNumber(data, 'sleepHours', 0, 24, false)
+        && requiredNullableNumber(data, 'fatigue', 0, 4, true) && requiredNullableNumber(data, 'soreness', 0, 4, true)
+        && requiredNullableNumber(data, 'yesterdayCourtMinutes', 0, 360, true) && requiredNullableNumber(data, 'yesterdayCourtRpe', 0, 10, true)
+        && data.symptoms in ['none', 'stable', 'worse', 'red_flags', 'unknown']
+        && data.todayCourtIntensity in ['unknown', 'none', 'light', 'hard'];
+    }
     match /artifacts/{appId}/users/{userId}/{group}/{id} {
-      allow read, delete: if owner(userId) && group in ['profile', 'progress', 'plans', 'metrics', 'exercises', 'planDays'];
+      allow read, delete: if owner(userId) && group in ['profile', 'progress', 'plans', 'metrics', 'exercises', 'planDays', 'trainingLogs', 'readiness'];
     }
     // Scope each validator to its collection, keeping unrelated validation out
     // of the expression budget for a complete five-day plan.
+    match /artifacts/{appId}/users/{userId}/trainingLogs/{id} {
+      allow create, update: if owner(userId) && validTrainingLog(id)
+        && (resource == null || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['variant', 'loadKg', 'loadBasis', 'resistanceLabel', 'sets', 'rir', 'quality', 'symptoms', 'nextDay']));
+    }
+    match /artifacts/{appId}/users/{userId}/readiness/{id} {
+      allow create, update: if owner(userId) && validReadiness(request.resource.data, id);
+    }
     match /artifacts/{appId}/users/{userId}/metrics/{id} {
       allow create, update: if owner(userId) && validMetrics(request.resource.data, id);
     }

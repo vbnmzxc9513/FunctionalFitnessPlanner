@@ -1,17 +1,22 @@
 import { ArrowDown, ArrowUp, Clock3, Brain, CheckCircle2, Circle, Edit2, Feather, Info, Loader2, Plus, Save, Trash2, X } from 'lucide-react';
-import { getDateForWeekDay } from '../domain/dates.js';
+import { dateForWeekDay, getDateForWeekDay, localDate } from '../domain/dates.js';
 import { exerciseKey } from '../domain/training.js';
+import { plannedSnapshot } from '../domain/coaching.js';
 import { SESSION_PHASES } from '../domain/phases.js';
 import { estimateSessionMinutes, sessionSections } from '../domain/sessions.js';
 import WorkoutShare from './WorkoutShare.jsx';
+import ExerciseLog from './ExerciseLog.jsx';
+import DailyReadiness from './DailyReadiness.jsx';
 
 export default function Training({ t, lang = 'zh', schedule, draft, activeDay, setActiveDay, currentWeek, exercises, progress, level,
-  editing, selected, setSelected, onEdit, onCancel, onSave, onAdd, onRemove, onMove, onPhase, onToggle, onFeedback, feedback, busy, saving, canEdit, canRestore, onRestore }) {
+  editing, selected, setSelected, onEdit, onCancel, onSave, onAdd, onRemove, onMove, onPhase, onToggle, onFeedback, feedback, busy, saving, canEdit, canRestore, onRestore, exerciseLogs = [], readiness = null, readinessPreview = null, onSaveExerciseLog, onUpdateNextDay: _onUpdateNextDay, onSaveReadiness, onPreviewReadiness, onApplyReadiness, loggingBusy = false, readinessBusy = false, coachingContext = {}, readinessDisabled = false, loggingDisabled = false }) {
   const display = editing ? draft : schedule;
   const active = display.find(day => day.day === activeDay) || display[0];
   const ids = Object.keys(exercises).filter(id => exercises[id].active !== false && !exercises[id].deleted && !active.routine.includes(id));
   const sections = sessionSections(active, exercises, level);
   const rest = active.routine.length === 0;
+  const date = dateForWeekDay(currentWeek, active.day);
+  const today = coachingContext.today || localDate();
   const minutes = estimateSessionMinutes(active, exercises, level);
   let sequence = 0;
   const exerciseCard = (entry, phase, section) => {
@@ -36,6 +41,7 @@ export default function Training({ t, lang = 'zh', schedule, draft, activeDay, s
       </div>}
       <p className="text-xs text-slate-500 mt-2 ml-11">{['strength', 'accessory'].includes(phase) && `${t('workingSetsLabel')} · `}{params.sets} {t('setsUnit')} × {params.value} {t(params.unit)}{params.perSide && ` · ${t('eachSide')}`}{params.restSeconds > 0 && ` · ${t('restLabel')} ${params.restSeconds} ${t('seconds')}`}</p>
       {(!done || editing) && <div className="mt-3 ml-11 flex items-start text-xs text-slate-500 gap-2"><Info size={14} className="shrink-0 text-sky-500" /><span>{exercise.tip}</span></div>}
+      {!editing && onSaveExerciseLog && ['strength', 'accessory', 'skill'].includes(phase) && <ExerciseLog key={`${currentWeek}-${active.day}-${id}-${JSON.stringify(plannedSnapshot(params))}`} lang={lang} exercise={exercise} id={id} dose={params} phase={phase} date={date} week={currentWeek} day={active.day} logs={exerciseLogs} onSave={onSaveExerciseLog} busy={loggingBusy} disabled={loggingDisabled} context={{ ...coachingContext, readiness: Object.hasOwn(coachingContext, 'readiness') ? coachingContext.readiness : readiness, today }} />}
     </div>;
   };
   return <div>
@@ -63,6 +69,7 @@ export default function Training({ t, lang = 'zh', schedule, draft, activeDay, s
           <p className="text-xs text-slate-500 mt-2">{rest ? t('restSessionNote') : t('sessionTimingHint')}</p>
           {!rest && !active.routine.every(id => active.prescriptions?.some(dose => dose.id === id && dose.phase)) && <p className="text-xs text-amber-700 mt-2">{t('legacyPhaseNotice')}</p>}
         </div>
+        {!editing && onSaveReadiness && <DailyReadiness key={date} lang={lang} value={readiness} date={date} onSave={onSaveReadiness} preview={readinessPreview} onPreview={onPreviewReadiness} onApply={onApplyReadiness} busy={readinessBusy} disabled={readinessDisabled} today={today} exercises={exercises} context={coachingContext} />}
         {!rest && sections.filter(section => section.items.length || section.preparation.length || ['warmup', 'cooldown'].includes(section.phase)).map(section => <section key={section.phase} aria-label={t(`phase_${section.phase}`)} data-phase={section.phase} className="space-y-3">
           <div className="flex items-center justify-between gap-3 pt-2"><h3 className="font-bold text-sky-800">{t(`phase_${section.phase}`)}</h3>{section.seconds > 0 && <span className="text-xs text-slate-500">{t('aboutTime')} {Math.ceil(section.seconds / 60)} {t('minutes')}</span>}</div>
           {section.phase === 'warmup' && <p className="text-sm text-slate-600">{active.warmupNote || t(active.sessionType === 'recovery' ? 'recoveryWarmupNote' : section.items.length || section.preparation.length ? 'warmupSequenceNote' : 'warmupNotPlanned')}</p>}

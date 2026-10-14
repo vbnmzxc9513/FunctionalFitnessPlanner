@@ -91,8 +91,10 @@ try {
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${layout} free preview fits viewport`);
     await click('以訪客身分儲存課表');
     await waitText('綁定 Google 並保留紀錄');
+    await page.waitForFunction(() => !JSON.parse(sessionStorage.getItem('fitness_public_preview_v1') || '{}').pendingDraft);
     await selectMonday();
-    await page.waitForSelector(`button[aria-label=${JSON.stringify(previewName)}][aria-pressed="true"]`);
+    try { await page.waitForSelector(`button[aria-label=${JSON.stringify(previewName)}][aria-pressed="true"]`); }
+    catch (error) { console.error(await page.evaluate(() => document.body.innerText)); throw error; }
     try {
       await page.waitForFunction(() => [...document.querySelectorAll('button')].some(item => item.innerText.trim() === '編輯課表' && !item.disabled), { timeout: 15000 });
     } catch (error) {
