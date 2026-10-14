@@ -1,3 +1,4 @@
+import { exercisePhase } from './domain/phases.js';
 import { catalogExercises } from './domain/exerciseCatalog.js';
 
 // --- i18n Locale File ---
@@ -439,8 +440,8 @@ Object.assign(TRANSLATIONS.en, {
 export const DEFAULT_SCHEDULE_I18N = Object.fromEntries(['zh', 'en'].map(lang => [lang, [
   { day: 1, name: TRANSLATIONS[lang].dayNames[0], theme: lang === 'zh' ? '基本腿力與單腳支撐' : 'Leg strength and single-leg support', concept: lang === 'zh' ? '分腿支撐與髖伸展提供弓步到位、煞車及回位的基礎。先用徒手，維持動作品質。' : 'Build lunge support and hip extension for controlled braking and recovery. Start with bodyweight.', routine: ['bf_A01', 'bf_B01', 'bf_B06', 'bf_B07', 'bf_D09'], coachAdvice: lang === 'zh' ? '健康成人的徒手範例。若明天有激烈球局、今天有症狀或仍在醫囑休息期，縮短或改恢復；到教練頁輸入球日與限制再排個人課表。' : 'A bodyweight example for healthy adults. Reduce or rest before hard court sessions, with symptoms or under treatment restrictions; use Coach for a personal plan.' },
   { day: 2, name: TRANSLATIONS[lang].dayNames[1], theme: lang === 'zh' ? '輕活動與恢復' : 'Light movement and recovery', concept: lang === 'zh' ? '踝髖活動與自然呼吸保留活動習慣；不以疲勞作為效果指標。' : 'Gentle ankle and hip movement with breathing maintains an easy routine.', routine: ['bf_A02', 'bf_H03', 'bf_D09'], coachAdvice: lang === 'zh' ? '可縮成 5–10 分鐘。觀察睡眠、腿部清爽與昨日反應，狀態差時休息也符合計畫。' : 'Keep this to 5–10 minutes if needed. Check sleep, leg freshness and yesterday’s response; rest when appropriate.' },
-  { day: 3, name: TRANSLATIONS[lang].dayNames[2], theme: lang === 'zh' ? '到位、急停與回中' : 'Positioning, braking and return', concept: lang === 'zh' ? '短步伐練習重點是順序、煞車與回中；預設方向練步序，有對手線索才涉及判讀。' : 'Short trials develop step order, braking and return. Predetermined directions train movement; opponent cues add decision-making.', routine: ['bf_F01', 'bf_F02', 'bf_F03'], coachAdvice: lang === 'zh' ? '低至中速、每次重置，不加揮拍。若腿重就減次數；不把短協調做成疲勞間歇。' : 'Use controlled speed, reset each trial and omit racket swings. Reduce trials when tired.' },
-  { day: 4, name: TRANSLATIONS[lang].dayNames[3], theme: lang === 'zh' ? '側向支撐與髖控制' : 'Lateral support and hip control', concept: lang === 'zh' ? '側弓步、扶物髖鉸鏈與屈膝提踵，建立側移和單腳支撐能力。' : 'Lateral lunges, supported hinges and bent-knee calf raises develop lateral and single-leg control.', routine: ['bf_A02', 'bf_B02', 'bf_B05', 'bf_B08', 'bf_D09'], coachAdvice: lang === 'zh' ? '與週一保留間隔；若今天或明天有高強度球局，少做一組或改恢復。不要為完成次數犧牲平衡。' : 'Keep spacing from Monday. Reduce a set or recover around hard court days; preserve balance.' },
+  { day: 3, name: TRANSLATIONS[lang].dayNames[2], theme: lang === 'zh' ? '到位、急停與回中' : 'Positioning, braking and return', concept: lang === 'zh' ? '短步伐練習重點是順序、煞車與回中；預設方向練步序，有對手線索才涉及判讀。' : 'Short trials develop step order, braking and return. Predetermined directions train movement; opponent cues add decision-making.', routine: ['bf_A01', 'bf_A02', 'bf_F01', 'bf_F02', 'bf_F03', 'bf_D09'], coachAdvice: lang === 'zh' ? '低至中速、每次重置，不加揮拍。若腿重就減次數；不把短協調做成疲勞間歇。' : 'Use controlled speed, reset each trial and omit racket swings. Reduce trials when tired.' },
+  { day: 4, name: TRANSLATIONS[lang].dayNames[3], theme: lang === 'zh' ? '側向支撐與髖控制' : 'Lateral support and hip control', concept: lang === 'zh' ? '側弓步、扶物髖鉸鏈與屈膝提踵，建立側移和單腳支撐能力。' : 'Lateral lunges, supported hinges and bent-knee calf raises develop lateral and single-leg control.', routine: ['bf_A01', 'bf_A02', 'bf_B02', 'bf_B05', 'bf_B08', 'bf_D09'], coachAdvice: lang === 'zh' ? '與週一保留間隔；若今天或明天有高強度球局，少做一組或改恢復。不要為完成次數犧牲平衡。' : 'Keep spacing from Monday. Reduce a set or recover around hard court days; preserve balance.' },
   { day: 5, name: TRANSLATIONS[lang].dayNames[4], theme: lang === 'zh' ? '恢復與週末準備' : 'Recovery and weekend preparation', concept: lang === 'zh' ? '以輕活動與舒適拉伸為主，依週末球量調整，保留恢復空間。' : 'Use gentle mobility and comfortable stretching, adjusted to weekend court load.', routine: ['bf_H01', 'bf_H06', 'bf_D09'], coachAdvice: lang === 'zh' ? '可短做或休息。回顧本週球量、完成品質和隔天症狀，再決定下週加、維持或減量。' : 'Keep it short or rest. Review court load, movement quality and next-day symptoms before next week.' },
 ]]));
 
@@ -490,3 +491,43 @@ Object.assign(TRANSLATIONS.en, {
   aiCoachTitle: 'Badminton fitness coach', aiConclusionTitle: 'Weekly plan and adjustment strategy', aiTip: 'Court sessions count as training load. Short sessions, recovery and rest are valid. Add competition and treatment details.',
   feedbackSubtitle: 'Feedback informs the next plan. Saved AI prescriptions stay fixed this week; open Coach to generate an adjusted plan.',
 });
+
+Object.assign(TRANSLATIONS.zh, {
+  sessionExerciseLimit: '每堂最多 8 個不同動作，包含暖身與收尾；可先移除或拆分到其他日。',
+  phase_warmup: '暖身與主項準備', phase_skill: '協調、步伐與爆發力', phase_strength: '主要肌力訓練', phase_accessory: '輔助控制與體能', phase_recovery: '輕量恢復活動', phase_cooldown: '收尾與收操',
+  estimatedSessionTime: '本次預估', aboutTime: '約', sessionTimingHint: '依區塊順序做，時間包含左右側、準備組、休息與轉換；可依恢復狀況縮短。',
+  preparationSetsLabel: '主項準備組', workingSetsLabel: '正式組', preparationTrackingHint: '輕鬆、可控，不做到疲勞；完成主項時一起記錄，不額外增加完成次數。',
+  exercisePhaseLabel: '訓練階段', moveUp: '往前移', moveDown: '往後移',
+  restSessionTitle: '今天安排休息', restSessionNote: '沒有正式訓練，不必為完成課表額外暖身或收操；依醫囑與恢復狀況休息。',
+  legacyPhaseNotice: '舊課表的階段依動作分類顯示；重新排課可取得明確的暖身、準備組與收尾計畫。',
+  warmupSequenceNote: '先做下列暖身，再做主項準備組，最後進入正式訓練。', warmupNotPlanned: '目前未列出暖身動作或準備組；可重新排課，或編輯加入當天需要的暖身。',
+  recoveryWarmupNote: '今天以輕活動恢復為主，從舒適的小幅度、慢速開始即可。',
+  cooldownSequenceNote: '做完主訓練後進入下列收尾，拉伸保持輕拉感，呼吸自然。', cooldownNotPlanned: '目前沒有另列收操動作；短恢復可省略額外拉伸，主要訓練日請確認是否需安排收尾。',
+  defaultPreparationAdvice: '先用徒手、小幅度做幾次，確認動作與支撐舒服，再進入正式組。',
+});
+Object.assign(TRANSLATIONS.en, {
+  sessionExerciseLimit: 'Use at most 8 different exercises including warm-up and finish. Remove an item or split sessions.',
+  phase_warmup: 'Warm-up and preparation', phase_skill: 'Coordination, footwork and power', phase_strength: 'Main strength work', phase_accessory: 'Accessory control and conditioning', phase_recovery: 'Easy recovery activity', phase_cooldown: 'Finish and cool-down',
+  estimatedSessionTime: 'Estimated session', aboutTime: 'About', sessionTimingHint: 'Follow section order. Time includes both sides, preparation, rest and transitions; shorten when recovery requires it.',
+  preparationSetsLabel: 'Preparation set', workingSetsLabel: 'Working sets', preparationTrackingHint: 'Keep it light and controlled. Record completion with the main exercise; no extra completion count.',
+  exercisePhaseLabel: 'Training phase', moveUp: 'Move earlier', moveDown: 'Move later',
+  restSessionTitle: 'Rest is planned today', restSessionNote: 'No formal session is scheduled. No extra warm-up or cool-down is needed to complete the plan; follow recovery and clinician instructions.',
+  legacyPhaseNotice: 'Legacy sections are inferred from exercise categories. Generate a new plan for explicit warm-up, preparation and finishing instructions.',
+  warmupSequenceNote: 'Complete the warm-up and light preparation sets before working sets.', warmupNotPlanned: 'No warm-up or preparation is listed. Generate a new plan or add appropriate warm-up work in the editor.',
+  recoveryWarmupNote: 'This is an easy recovery session. Start with comfortable range and slow movement.',
+  cooldownSequenceNote: 'Finish with the listed easy movements, mild stretches and natural breathing.', cooldownNotPlanned: 'No separate cool-down is listed. Short recovery may need no extra stretching; check the finish for a main training day.',
+  defaultPreparationAdvice: 'Use bodyweight and a small comfortable range first, then move to working sets.',
+});
+
+for (const lang of ['zh', 'en']) {
+  for (const day of DEFAULT_SCHEDULE_I18N[lang]) {
+    day.sessionType = [2, 5].includes(day.day) ? 'recovery' : 'training';
+    day.warmupNote = TRANSLATIONS[lang][day.sessionType === 'recovery' ? 'recoveryWarmupNote' : 'warmupSequenceNote'];
+    day.cooldownNote = day.sessionType === 'recovery'
+      ? lang === 'zh' ? '呼吸與輕拉伸已包含在恢復活動中，不必再加一輪收操。' : 'Breathing and gentle stretches are already part of recovery; no extra finishing circuit is needed.'
+      : TRANSLATIONS[lang].cooldownSequenceNote;
+    day.prescriptions = day.routine.map(id => ({ id, ...EXERCISES_I18N[lang][id].prescription, phase: exercisePhase(day, id, EXERCISES_I18N[lang][id]) }));
+    const first = day.prescriptions.find(dose => dose.phase === 'strength');
+    if (first) first.preparation = { sets: 1, value: '4', unit: 'reps', restSeconds: 30, perSide: first.perSide, instruction: TRANSLATIONS[lang].defaultPreparationAdvice };
+  }
+}

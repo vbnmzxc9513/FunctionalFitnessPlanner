@@ -1,3 +1,6 @@
+import { estimateSessionMinutes } from './sessions.js';
+export { estimateSessionMinutes } from './sessions.js';
+import { SESSION_PHASES, SESSION_TYPES } from './phases.js';
 import { isCalendarDate } from './dates.js';
 import { eligibleExercises } from './exerciseCatalog.js';
 
@@ -31,23 +34,6 @@ export function planningExercises(exercises, context) {
   return eligibleExercises(exercises, normalizePlanningContext(context));
 }
 
-export function estimateSessionMinutes(day, exercises) {
-  if (!day.routine.length) return 0;
-  let seconds = 0;
-  for (const dose of day.prescriptions) {
-    const maximum = Math.max(...dose.value.split(/[–-]/).map(Number));
-    const rounds = dose.sets * (dose.perSide ? 2 : 1);
-    const work = dose.unit === 'minutes' ? maximum * 60 : dose.unit === 'seconds' ? maximum
-      : maximum * (dose.unit === 'breaths' ? 8 : 3);
-    seconds += rounds * work + Math.max(0, rounds - 1) * dose.restSeconds + 20;
-    if (dose.unit === 'reps') seconds += rounds * Math.max(0, maximum - 1) * (exercises[dose.id].betweenRepsSeconds || 0);
-  }
-  // A rough planning budget includes preparation rather than only work reps.
-  // It does not measure a user's actual pace or recovery needs.
-  seconds += day.routine.some(id => exercises[id].category === 'warmup') ? 120 : 240;
-  return Math.ceil(seconds / 60);
-}
-
 export function validateGeneratedPlan(plan, exercises, dailyTime) {
   if (!Number.isFinite(Number(dailyTime)) || Number(dailyTime) < 5 || Number(dailyTime) > 240) throw new Error('INVALID_PLANNING_TIME');
   if (!plan || typeof plan.conclusion !== 'string' || !Array.isArray(plan.schedule) || plan.schedule.length !== 5) throw new Error('INVALID_AI_PLAN');
@@ -55,14 +41,16 @@ export function validateGeneratedPlan(plan, exercises, dailyTime) {
   const schedule = plan.schedule.map(day => {
     if (!day || !Number.isInteger(day.day) || day.day < 1 || day.day > 5 || seen.has(day.day)
       || !['name', 'theme', 'concept', 'coachAdvice'].every(key => typeof day[key] === 'string')
-      || !Array.isArray(day.routine) || day.routine.length > 6 || new Set(day.routine).size !== day.routine.length
+      || !Array.isArray(day.routine) || day.routine.length > 8 || new Set(day.routine).size !== day.routine.length
       || day.routine.some(id => typeof id !== 'string' || !Object.hasOwn(exercises, id))) throw new Error('INVALID_AI_PLAN');
     seen.add(day.day);
+    if (!SESSION_TYPES.includes(day.sessionType) || !['warmupNote', 'cooldownNote'].every(key => typeof day[key] === 'string' && day[key].trim())) throw new Error('INVALID_AI_SESSION');
     if (!Array.isArray(day.prescriptions) || day.prescriptions.length !== day.routine.length) throw new Error('INVALID_AI_PRESCRIPTION');
     const doses = new Set();
     let contacts = 0;
     for (const dose of day.prescriptions) {
       if (!dose || !day.routine.includes(dose.id) || doses.has(dose.id) || !Number.isInteger(dose.sets) || dose.sets < 1 || dose.sets > 5
+        || !SESSION_PHASES.includes(dose.phase)
         || typeof dose.value !== 'string' || !/^\d+(?:[–-]\d+)?$/.test(dose.value)
         || !['reps', 'seconds', 'minutes', 'breaths'].includes(dose.unit)
         || !Number.isInteger(dose.restSeconds) || dose.restSeconds < 0 || dose.restSeconds > 300
@@ -73,13 +61,36 @@ export function validateGeneratedPlan(plan, exercises, dailyTime) {
       if (maximum < 1 || maximum > (dose.unit === 'minutes' ? Number(dailyTime) : 120)) throw new Error('INVALID_AI_PRESCRIPTION');
       if (exercises[dose.id].jumpContacts && dose.unit === 'reps') contacts += exercises[dose.id].jumpContacts * dose.sets * maximum * (dose.perSide ? 2 : 1);
       doses.add(dose.id);
+      if (['power', 'footwork', 'reaction'].includes(exercises[dose.id].category) && dose.phase !== 'skill') throw new Error('INVALID_AI_EXERCISE_PHASE');
+      if (dose.preparation !== undefined) {
+        const prep = dose.preparation;
+        if (!prep || !['strength', 'accessory'].includes(dose.phase) || !Number.isInteger(prep.sets) || prep.sets < 1 || prep.sets > 2
+          || typeof prep.value !== 'string' || !/^\d+(?:[–-]\d+)?$/.test(prep.value)
+          || !['reps', 'seconds', 'breaths'].includes(prep.unit) || typeof prep.perSide !== 'boolean'
+          || !Number.isInteger(prep.restSeconds) || prep.restSeconds < 0 || prep.restSeconds > 120
+          || typeof prep.instruction !== 'string' || !prep.instruction.trim()) throw new Error('INVALID_AI_PREPARATION');
+        const values = prep.value.split(/[–-]/).map(Number);
+        if (values.some(value => value < 1 || value > (prep.unit === 'seconds' ? 30 : 8)) || (values.length === 2 && values[0] > values[1])) throw new Error('INVALID_AI_PREPARATION');
+      }
     }
     // The curated entry-level plan uses deliberately low added jump volume.
     // This is a programming limit, not a medical safety threshold.
     if (contacts > 24 || (contacts > 0 && day.routine.some(id => exercises[id].catalogCode === 'I04'))) throw new Error('EXCESSIVE_AI_JUMP_VOLUME');
+    const phases = day.routine.map(id => day.prescriptions.find(dose => dose.id === id).phase);
+    if (phases.some((phase, index) => index > 0 && SESSION_PHASES.indexOf(phase) < SESSION_PHASES.indexOf(phases[index - 1]))) throw new Error('INVALID_AI_PHASE_ORDER');
+    if ((day.sessionType === 'rest') !== (day.routine.length === 0)) throw new Error('INVALID_AI_SESSION');
+    if (day.sessionType === 'training' && !phases.includes('warmup')) throw new Error('AI_WARMUP_MISSING');
+    if (day.sessionType === 'recovery' && phases.some(phase => !['warmup', 'recovery', 'cooldown'].includes(phase))) throw new Error('INVALID_AI_RECOVERY');
+    if (day.sessionType === 'recovery' && day.routine.some(id => ['lower', 'upper', 'power', 'footwork', 'reaction'].includes(exercises[id].category)
+      || (exercises[id].category === 'conditioning' && exercises[id].catalogCode !== 'I01'))) throw new Error('INVALID_AI_RECOVERY');
+    const firstStrengthId = day.routine.find(id => day.prescriptions.find(dose => dose.id === id).phase === 'strength');
+    const firstStrength = day.prescriptions.find(dose => dose.id === firstStrengthId);
+    if (firstStrength && !firstStrength.preparation) throw new Error('AI_PREPARATION_MISSING');
     if (estimateSessionMinutes(day, exercises) > Number(dailyTime)) throw new Error('AI_SESSION_TOO_LONG');
     return { day: day.day, name: day.name, theme: day.theme, concept: day.concept, coachAdvice: day.coachAdvice,
-      routine: day.routine, prescriptions: day.prescriptions.map(({ id, sets, value, unit, restSeconds, perSide }) => ({ id, sets, value, unit, restSeconds, perSide })) };
+      sessionType: day.sessionType, warmupNote: day.warmupNote, cooldownNote: day.cooldownNote,
+      routine: day.routine, prescriptions: day.routine.map(id => day.prescriptions.find(dose => dose.id === id)).map(({ id, sets, value, unit, restSeconds, perSide, phase, preparation }) => ({ id, sets, value, unit, restSeconds, perSide, phase,
+        ...(preparation ? { preparation: { sets: preparation.sets, value: preparation.value, unit: preparation.unit, restSeconds: preparation.restSeconds, perSide: preparation.perSide, instruction: preparation.instruction } } : {}) })) };
   }).sort((a, b) => a.day - b.day);
   return { conclusion: plan.conclusion, schedule };
 }

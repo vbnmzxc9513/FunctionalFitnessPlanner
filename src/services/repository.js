@@ -21,6 +21,15 @@ function withoutPrevious(plan) {
   return copy;
 }
 
+function writePlanDays(transaction, uid, week, schedule) {
+  // Two identical daily mirrors validate four doses each to stay within the
+  // rule expression budget, even when every lift has a preparation set. Rules
+  // confirm both same-commit mirrors against the weekly snapshot atomically.
+  for (const day of schedule) for (const part of [1, 2]) {
+    transaction.set(userDoc(uid, 'planDays', `${week}-D${day.day}-P${part}`), { ...day, savedAt: serverTimestamp() });
+  }
+}
+
 export async function savePlan(uid, week, plan, fallback, restore = false, expectedRevision) {
   assertUser(uid);
   return runTransaction(db, async transaction => {
@@ -34,8 +43,9 @@ export async function savePlan(uid, week, plan, fallback, restore = false, expec
     const next = restore ? current.previous : plan;
     if (!next || !Array.isArray(next.schedule)) throw new Error('INVALID_PLAN');
     const totalExercises = next.schedule.reduce((sum, day) => sum + day.routine.length, 0);
+    writePlanDays(transaction, uid, week, next.schedule);
     // Preserve completions as training history. The active plan alone determines its percentage.
-    transaction.set(planRef, { ...withoutPrevious(next), previous: withoutPrevious(current), revision: (current.revision || 0) + 1, savedAt: serverTimestamp() });
+    transaction.set(planRef, { ...withoutPrevious(next), previous: withoutPrevious(current), validationVersion: 1, revision: (current.revision || 0) + 1, savedAt: serverTimestamp() });
     transaction.set(progressRef, { scheduleSnapshot: next.schedule, totalExercises, schemaVersion: 2 }, { merge: true });
   });
 }
@@ -98,8 +108,9 @@ export async function importGuestData(uid, records) {
       const existing = await transaction.get(ref);
       assertUser(uid);
       if (!existing.exists()) {
+        if (record.group === 'plans') writePlanDays(transaction, uid, record.id, record.data.schedule);
         transaction.set(ref, record.group === 'profile' ? { ...record.data, isAnonymous: false }
-          : record.group === 'plans' ? { ...record.data, savedAt: serverTimestamp() } : record.data);
+          : record.group === 'plans' ? { ...record.data, validationVersion: 1, savedAt: serverTimestamp() } : record.data);
       } else if (record.group === 'progress') {
         const target = existing.data();
         const completed = { ...record.data.completed, ...target.completed };

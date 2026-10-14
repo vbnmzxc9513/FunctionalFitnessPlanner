@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import puppeteer from 'puppeteer';
-import { TRANSLATIONS } from '../src/locale.js';
+import { EXERCISES_I18N, TRANSLATIONS } from '../src/locale.js';
 
 const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', '5174', '--strictPort'], { env: process.env, stdio: ['ignore', 'pipe', 'pipe'] });
 const siteUrl = 'http://127.0.0.1:5174/FunctionalFitnessPlanner/';
@@ -43,7 +43,11 @@ try {
         if (request.method() === 'OPTIONS') request.respond({ status: 204, headers });
         else if (url.pathname.endsWith(':generateContent')) {
           planningPayload = JSON.parse(request.postData());
-          const plan = { conclusion: 'Mock recovery plan', schedule: [1, 2, 3, 4, 5].map(day => ({ day, name: 'Day', theme: 'Recovery', concept: 'Keep control', coachAdvice: 'Check next-day response', routine: day === 1 ? ['bf_B01'] : [], prescriptions: day === 1 ? [{ id: 'bf_B01', sets: 1, value: '6', unit: 'reps', restSeconds: 90, perSide: true }] : [] })) };
+          const plan = { conclusion: 'Mock recovery plan', schedule: [1, 2, 3, 4, 5].map(day => ({ day, name: 'Day', theme: 'Recovery', concept: 'Keep control', coachAdvice: 'Check next-day response', sessionType: day === 1 ? 'training' : 'rest', warmupNote: day === 1 ? 'Walk, then prepare the split squat.' : 'Rest today.', cooldownNote: day === 1 ? 'Finish with gentle breathing.' : 'No extra cool-down needed.', routine: day === 1 ? ['bf_A01', 'bf_B01', 'bf_D09'] : [], prescriptions: day === 1 ? [
+            { id: 'bf_A01', sets: 1, value: '2', unit: 'minutes', restSeconds: 0, perSide: false, phase: 'warmup' },
+            { id: 'bf_B01', sets: 1, value: '6', unit: 'reps', restSeconds: 90, perSide: true, phase: 'strength', preparation: { sets: 1, value: '4', unit: 'reps', restSeconds: 30, perSide: true, instruction: 'Use bodyweight first.' } },
+            { id: 'bf_D09', sets: 1, value: '4', unit: 'breaths', restSeconds: 0, perSide: false, phase: 'cooldown' },
+          ] : [] })) };
           request.respond({ status: 200, headers, contentType: 'application/json', body: JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(plan) }] } }] }) });
         } else request.respond({ status: 200, headers, contentType: 'application/json', body: JSON.stringify({ models: [{ name: 'models/gemini-2.5-flash', supportedGenerationMethods: ['generateContent'] }] }) });
       } else if (['127.0.0.1', 'localhost'].includes(url.hostname) || ['data:', 'blob:'].includes(url.protocol)) request.continue();
@@ -55,6 +59,7 @@ try {
       button.click();
     }, text);
     const waitText = text => page.waitForFunction(label => document.body.innerText.includes(label), {}, text);
+    const addSelect = `select[aria-label=${JSON.stringify(TRANSLATIONS.zh.addExercise)}]`;
     const selectMonday = () => page.evaluate(label => {
       const button = [...document.querySelectorAll('main button')].find(item => item.innerText.startsWith(label));
       if (!button) throw new Error('Monday tab missing');
@@ -76,13 +81,17 @@ try {
     await page.waitForFunction(() => !document.querySelector('button[aria-label][aria-pressed]').disabled);
     await click('編輯課表');
     await page.click(`button[aria-label=${JSON.stringify(`移除動作 ${name}`)}]`);
-    assert.equal(await page.$$eval('select', items => items.length), 1, `${layout} has an add control`);
-    const removedId = await page.$eval('select', (select, exerciseName) => [...select.options].find(option => option.textContent === exerciseName)?.value, name);
+    assert.equal(await page.$$eval(addSelect, items => items.length), 1, `${layout} has an add control`);
+    const removedId = await page.$eval(addSelect, (select, exerciseName) => [...select.options].find(option => option.textContent === exerciseName)?.value, name);
     assert.ok(removedId, `${layout} removed exercise can be added again`);
-    await page.select('select', removedId);
+    await page.select(addSelect, removedId);
     await click('新增');
     await page.waitForSelector(`button[aria-label=${JSON.stringify(`移除動作 ${name}`)}]`);
     await page.click(`button[aria-label=${JSON.stringify(`移除動作 ${name}`)}]`);
+    // A manual phase survives localization of a default-based saved plan.
+    const changedPhaseLabel = await page.$eval('select[aria-label^="訓練階段 "]', select => select.getAttribute('aria-label'));
+    const changedPhaseName = changedPhaseLabel.slice('訓練階段 '.length);
+    await page.select(`select[aria-label=${JSON.stringify(changedPhaseLabel)}]`, 'cooldown');
     await click('儲存修改');
     await waitText('課表已儲存');
     // The transaction acknowledgement and realtime query update are separate events.
@@ -90,6 +99,7 @@ try {
     assert.equal(await page.$(`button[aria-label=${JSON.stringify(name)}][aria-pressed]`), null);
     await page.reload({ waitUntil: 'networkidle2' });
     await waitText('↩ 復原上一次的課表');
+    assert.ok(await page.$eval('section[data-phase="cooldown"]', (section, label) => section.innerText.includes(label), changedPhaseName), `${layout} preserves a manual phase on a default-based plan`);
     await click('↩ 復原上一次的課表');
     await page.waitForSelector(`button[aria-label=${JSON.stringify(name)}][aria-pressed="true"]`);
     await page.waitForFunction(() => !document.querySelector('button[aria-label][aria-pressed]').disabled);
@@ -129,7 +139,26 @@ try {
     await page.reload({ waitUntil: 'networkidle2' });
     await click('每天'); await selectMonday();
     await waitText('每側');
-    assert.ok(await page.evaluate(() => document.body.innerText.includes('1 組 × 6 下')));
+    assert.ok(await page.$eval('section[data-phase="strength"]', element => element.innerText.includes('1 組 × 6 下')));
+    assert.ok(await page.$eval('section[data-phase="warmup"]', element => element.innerText.includes('主項準備組') && element.innerText.includes('1 組 × 4 下')));
+    assert.equal(await page.$$eval('button[aria-label][aria-pressed]', buttons => buttons.filter(button => button.getAttribute('aria-label') === '分腿蹲').length), 1);
+    await waitText('Finish with gentle breathing.');
+    await click('編輯課表');
+    const breathing = EXERCISES_I18N.zh.bf_D09.name;
+    const core = EXERCISES_I18N.zh.dead_bug.name;
+    await page.select(`select[aria-label=${JSON.stringify(`訓練階段 ${breathing}`)}]`, 'accessory');
+    await page.select(addSelect, 'dead_bug');
+    await click('新增');
+    await page.click(`button[aria-label=${JSON.stringify(`往後移 ${breathing}`)}]`);
+    await click('儲存修改'); await waitText('課表已儲存');
+    await page.reload({ waitUntil: 'networkidle2' });
+    await click('每天'); await selectMonday();
+    const accessoryOrder = await page.$$eval('section[data-phase="accessory"] button[aria-pressed]', buttons => buttons.map(button => button.getAttribute('aria-label')));
+    assert.deepEqual(accessoryOrder, [core, breathing], `${layout} persists the changed phase and within-phase order`);
+    assert.ok(await page.$eval('section[data-phase="warmup"]', element => element.innerText.includes('1 組 × 4 下')));
+    await click('↩ 復原上一次的課表');
+    await waitText('Finish with gentle breathing.');
+    assert.equal(await page.$('section[data-phase="accessory"]'), null);
     await click('數據');
     await page.waitForSelector('input[name="weight"]');
     await page.type('input[name="weight"]', '70');

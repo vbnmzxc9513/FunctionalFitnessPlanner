@@ -2,11 +2,11 @@ import { after, before, beforeEach, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
-import { doc, getDoc, getDocs, query, orderBy, documentId, limit, setDoc } from 'firebase/firestore';
+import { doc, getDoc, getDocs, query, orderBy, documentId, limit, setDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { GoogleAuthProvider, linkWithCredential, signInAnonymously, signInWithCredential, signOut } from 'firebase/auth';
 import { auth } from '../../src/services/firebase.js';
 import { userDoc, userCollection, weekHistoryQuery, captureGuestData, setCompletion, saveFeedback, savePlan, saveMeasurement, importGuestData } from '../../src/services/repository.js';
-import { LEGACY_DEFAULT_SCHEDULE_I18N, EXERCISES_I18N } from '../../src/locale.js';
+import { LEGACY_DEFAULT_SCHEDULE_I18N, DEFAULT_SCHEDULE_I18N, EXERCISES_I18N } from '../../src/locale.js';
 
 const week = '2026-W40';
 const plan = { conclusion: 'test', schedule: LEGACY_DEFAULT_SCHEDULE_I18N.zh, source: 'manual' };
@@ -91,6 +91,56 @@ test('AI doses and empty recovery days persist, restore, and reject invalid pres
   await savePlan(uid, week, plan, plan, false, 1);
   await savePlan(uid, week, null, plan, true, 2);
   assert.deepEqual((await getDoc(userDoc(uid, 'plans', week))).data().schedule, prescribed.schedule);
+});
+test('phases, preparation and recovery instructions persist at the full eight-exercise limit', async () => {
+  const base = structuredClone(DEFAULT_SCHEDULE_I18N.zh[3]);
+  base.routine.splice(2, 0, 'bf_A03'); base.routine.push('bf_H03');
+  base.prescriptions.push({ id: 'bf_A03', ...EXERCISES_I18N.zh.bf_A03.prescription, phase: 'warmup' }, { id: 'bf_H03', ...EXERCISES_I18N.zh.bf_H03.prescription, phase: 'cooldown' });
+  const full = { conclusion: 'Complete phased plan', schedule: [1, 2, 3, 4, 5].map(day => ({ ...structuredClone(base), day })) };
+  assert.equal(base.routine.length, 8);
+  await assertSucceeds(savePlan(uid, week, full, plan, false, 0));
+  assert.deepEqual((await getDoc(userDoc(uid, 'plans', week))).data().schedule, full.schedule);
+  const bad = structuredClone(full); bad.schedule[0].prescriptions[0].phase = 'invented';
+  await assert.rejects(savePlan(uid, week, bad, plan, false, 1));
+  const badPrep = structuredClone(full); badPrep.schedule[0].prescriptions.find(dose => dose.preparation).preparation.sets = 5;
+  await assert.rejects(savePlan(uid, week, badPrep, plan, false, 1));
+  assert.equal((await getDoc(userDoc(uid, 'plans', week))).data().revision, 1);
+  const everyPrep = structuredClone(full);
+  const preparation = base.prescriptions.find(dose => dose.preparation).preparation;
+  for (const day of everyPrep.schedule) for (const dose of day.prescriptions) dose.preparation = preparation;
+  await assertSucceeds(savePlan(uid, week, everyPrep, plan, false, 1));
+  assert.equal((await getDoc(userDoc(uid, 'plans', week))).data().revision, 2);
+  const legacyDoses = structuredClone(full);
+  for (const day of legacyDoses.schedule) {
+    delete day.sessionType; delete day.warmupNote; delete day.cooldownNote;
+    day.routine = day.routine.slice(0, 6);
+    day.prescriptions = day.prescriptions.filter(dose => day.routine.includes(dose.id));
+    for (const dose of day.prescriptions) { delete dose.phase; delete dose.preparation; }
+  }
+  await assertSucceeds(savePlan(uid, week, legacyDoses, plan, false, 2));
+  assert.deepEqual((await getDoc(userDoc(uid, 'plans', week))).data().schedule, legacyDoses.schedule);
+});
+test('phased plans need matching fresh daily proofs; legacy writes remain compatible and proofs are private', async () => {
+  const phased = { conclusion: 'Phased', schedule: DEFAULT_SCHEDULE_I18N.zh, validationVersion: 1 };
+  await assertFails(setDoc(userDoc(uid, 'plans', week), phased));
+  await assertSucceeds(setDoc(userDoc(uid, 'plans', week), plan));
+  await savePlan(uid, week, phased, plan, false, 0);
+  await assertFails(setDoc(userDoc(uid, 'plans', week), phased));
+  const first = userDoc(uid, 'planDays', `${week}-D1-P1`);
+  const original = (await getDoc(first)).data();
+  const path = first.path;
+  await assertFails(getDoc(doc(environment.authenticatedContext('stranger').firestore(), path)));
+  await assertFails(setDoc(doc(environment.authenticatedContext('stranger').firestore(), path), { ...original, savedAt: serverTimestamp() }));
+  await assertFails(getDoc(doc(environment.unauthenticatedContext().firestore(), path)));
+  const batch = writeBatch(first.firestore);
+  for (const day of phased.schedule) for (const part of [1, 2]) {
+    batch.set(userDoc(uid, 'planDays', `${week}-D${day.day}-P${part}`), { ...day, savedAt: serverTimestamp() });
+  }
+  const mismatch = structuredClone(phased); mismatch.schedule[0].warmupNote = 'Changed only in the weekly document';
+  batch.set(userDoc(uid, 'plans', week), mismatch);
+  await assertFails(batch.commit());
+  assert.deepEqual((await getDoc(first)).data(), original, 'a mismatched weekly snapshot rolls back every daily proof');
+  assert.equal((await getDoc(userDoc(uid, 'plans', week))).data().revision, 1);
 });
 test('partial measurement updates preserve previously recorded fields', async () => {
   await saveMeasurement(uid, { date: '2026-10-13', weight: 70, bodyFat: 18 });

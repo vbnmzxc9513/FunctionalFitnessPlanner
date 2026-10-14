@@ -1,4 +1,5 @@
 import { dateForWeekDay, getWeekString, isCalendarDate } from './dates.js';
+import { orderedRoutine, syncSessionType } from './phases.js';
 
 export const clampLevel = (level) => Math.max(0, Math.min(2, Number.isFinite(level) ? level : 1));
 export const exerciseKey = (day, id) => `day${day}_${id}`;
@@ -21,14 +22,18 @@ export function normalizeSchedule(schedule, exercises, fallback = []) {
   const days = schedule.filter(day => day && Number.isInteger(day.day) && day.day >= 1 && day.day <= 5 && Array.isArray(day.routine));
   if (days.length !== 5 || new Set(days.map(day => day.day)).size !== 5) return fallback;
   return days.map(day => {
-    const routine = [...new Set(day.routine.map(id => resolveExerciseId(id, exercises)).filter(Boolean))];
-    return { ...day, routine, ...(Array.isArray(day.prescriptions) ? { prescriptions: day.prescriptions.filter(dose => routine.includes(dose.id)) } : {}) };
+    let routine = [...new Set(day.routine.map(id => resolveExerciseId(id, exercises)).filter(Boolean))];
+    if (day.prescriptions?.some(dose => dose.phase)) routine = orderedRoutine({ ...day, routine }, exercises);
+    return syncSessionType({ ...day, routine, ...(Array.isArray(day.prescriptions) ? { prescriptions: day.prescriptions.filter(dose => routine.includes(dose.id)) } : {}) }, exercises);
   })
     .sort((a, b) => a.day - b.day);
 }
 
 export function availableSchedule(schedule, exercises) {
-  return schedule.map(day => ({ ...day, routine: day.routine.filter(id => exercises[id] && !exercises[id].deleted && exercises[id].active !== false) }));
+  return schedule.map(day => {
+    const routine = day.routine.filter(id => exercises[id] && !exercises[id].deleted && exercises[id].active !== false);
+    return { ...day, routine, ...(Array.isArray(day.prescriptions) ? { prescriptions: day.prescriptions.filter(dose => routine.includes(dose.id)) } : {}) };
+  });
 }
 
 export function countCompleted(schedule, completed = {}) {

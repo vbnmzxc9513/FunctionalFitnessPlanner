@@ -4,12 +4,21 @@ import { catalogExercises, EXERCISE_CATEGORIES } from '../../src/domain/exercise
 import { DEFAULT_PLANNING_CONTEXT, competitionDaysAway, estimateSessionMinutes, normalizePlanningContext, planningExercises, validateGeneratedPlan } from '../../src/domain/planning.js';
 import { buildPlanningPrompt } from '../../src/domain/coachingPrompt.js';
 import { DEFAULT_SCHEDULE_I18N, EXERCISES_I18N } from '../../src/locale.js';
+import { exercisePhase, orderedRoutine } from '../../src/domain/phases.js';
 import { prescription, normalizeSchedule } from '../../src/domain/training.js';
 
 const catalog = catalogExercises();
 const context = { ...DEFAULT_PLANNING_CONTEXT, equipment: ['dumbbell', 'band', 'cable', 'jump_rope', 'foam_roller', 'platform'] };
-const emptyPlan = () => ({ conclusion: 'Recovery and weekly strategy', schedule: [1, 2, 3, 4, 5].map(day => ({ day, name: 'Day', theme: 'Rest', concept: 'Recovery', coachAdvice: 'Check readiness', routine: [], prescriptions: [] })) });
-const include = (plan, id, dose = catalog[id].prescription) => { plan.schedule[0].routine.push(id); plan.schedule[0].prescriptions.push({ id, ...dose }); return plan; };
+const emptyPlan = () => ({ conclusion: 'Recovery and weekly strategy', schedule: [1, 2, 3, 4, 5].map(day => ({ day, name: 'Day', theme: 'Rest', concept: 'Recovery', coachAdvice: 'Check readiness', sessionType: 'rest', warmupNote: 'Rest today', cooldownNote: 'No extra finish needed', routine: [], prescriptions: [] })) });
+const include = (plan, id, dose = catalog[id].prescription) => {
+  const day = plan.schedule[0]; day.sessionType = 'training';
+  if (!day.routine.length) { day.routine.push('bf_A01'); day.prescriptions.push({ id: 'bf_A01', ...catalog.bf_A01.prescription, phase: 'warmup' }); }
+  const phase = exercisePhase(day, id, catalog[id]);
+  const preparation = phase === 'strength' ? { sets: 1, value: '4', unit: 'reps', restSeconds: 30, perSide: dose.perSide, instruction: 'Use bodyweight first' } : undefined;
+  day.routine.push(id); day.prescriptions.push({ id, ...dose, phase, ...(preparation ? { preparation } : {}) });
+  day.routine = orderedRoutine(day, catalog);
+  return plan;
+};
 
 test('curated catalog has 83 bilingual entries, nine categories and controlled jump doses', () => {
   assert.equal(Object.keys(catalog).length, 83);
@@ -77,7 +86,7 @@ test('saved AI doses override global difficulty, and manual removal drops orphan
 test('default weekly example has recovery slots and a practical rough time budget', () => {
   assert.equal(DEFAULT_SCHEDULE_I18N.zh.length, 5);
   for (const day of DEFAULT_SCHEDULE_I18N.zh) {
-    const timed = { ...day, prescriptions: day.routine.map(id => ({ id, ...EXERCISES_I18N.zh[id].prescription })) };
+    const timed = day;
     assert.ok(estimateSessionMinutes(timed, EXERCISES_I18N.zh) <= 40);
     assert.ok(day.routine.every(id => EXERCISES_I18N.zh[id]));
   }

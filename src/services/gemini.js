@@ -1,5 +1,6 @@
 import { buildPlanningPrompt } from '../domain/coachingPrompt.js';
 import { validateGeneratedPlan } from '../domain/planning.js';
+import { SESSION_PHASES, SESSION_TYPES } from '../domain/phases.js';
 
 export const generateAIPlan = async (lastWeekData, currentLevel, lastWeekFeedback, userApiKey, allProgress, metricsHistory, userGoal, dailyTime, userMessage, availableExercises, lang = 'zh', selectedModel = 'gemini-2.5-flash', options = {}) => {
   if (!userApiKey) throw new Error('API_KEY_MISSING');
@@ -10,8 +11,11 @@ export const generateAIPlan = async (lastWeekData, currentLevel, lastWeekFeedbac
     type: 'OBJECT',
     properties: { id: { type: 'STRING' }, sets: { type: 'INTEGER' }, value: { type: 'STRING' },
       unit: { type: 'STRING', enum: ['reps', 'seconds', 'minutes', 'breaths'] },
-      restSeconds: { type: 'INTEGER' }, perSide: { type: 'BOOLEAN' } },
-    required: ['id', 'sets', 'value', 'unit', 'restSeconds', 'perSide'],
+      restSeconds: { type: 'INTEGER' }, perSide: { type: 'BOOLEAN' }, phase: { type: 'STRING', enum: SESSION_PHASES },
+      preparation: { type: 'OBJECT', properties: { sets: { type: 'INTEGER' }, value: { type: 'STRING' },
+        unit: { type: 'STRING', enum: ['reps', 'seconds', 'breaths'] }, restSeconds: { type: 'INTEGER' }, perSide: { type: 'BOOLEAN' }, instruction: { type: 'STRING' } },
+      required: ['sets', 'value', 'unit', 'restSeconds', 'perSide', 'instruction'] } },
+    required: ['id', 'sets', 'value', 'unit', 'restSeconds', 'perSide', 'phase'],
   };
   const payload = {
     contents: [{ parts: [{ text: prompt }] }],
@@ -23,9 +27,10 @@ export const generateAIPlan = async (lastWeekData, currentLevel, lastWeekFeedbac
           schedule: { type: 'ARRAY', items: { type: 'OBJECT', properties: {
             day: { type: 'INTEGER' }, name: { type: 'STRING' }, theme: { type: 'STRING' },
             concept: { type: 'STRING' }, coachAdvice: { type: 'STRING' },
+            sessionType: { type: 'STRING', enum: SESSION_TYPES }, warmupNote: { type: 'STRING' }, cooldownNote: { type: 'STRING' },
             routine: { type: 'ARRAY', items: { type: 'STRING' } },
             prescriptions: { type: 'ARRAY', items: doseSchema },
-          }, required: ['day', 'name', 'theme', 'concept', 'coachAdvice', 'routine', 'prescriptions'] } },
+          }, required: ['day', 'name', 'theme', 'concept', 'coachAdvice', 'sessionType', 'warmupNote', 'cooldownNote', 'routine', 'prescriptions'] } },
         }, required: ['conclusion', 'schedule'],
       },
     },

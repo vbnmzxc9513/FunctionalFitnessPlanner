@@ -5,7 +5,7 @@ import { generateAIPlan } from '../../src/services/gemini.js';
 test('Gemini request carries context and dose schema and validates the response without a real API call', async () => {
   const original = globalThis.fetch;
   let payload;
-  const response = { conclusion: 'Use light recovery', schedule: [1, 2, 3, 4, 5].map(day => ({ day, name: 'Day', theme: 'Rest', concept: 'Recover', coachAdvice: 'Keep it light', routine: [], prescriptions: [] })) };
+  const response = { conclusion: 'Use light recovery', schedule: [1, 2, 3, 4, 5].map(day => ({ day, name: 'Day', theme: 'Rest', concept: 'Recover', coachAdvice: 'Keep it light', sessionType: 'rest', warmupNote: 'Rest today', cooldownNote: 'No extra cool-down needed', routine: [], prescriptions: [] })) };
   globalThis.fetch = async (_url, request) => {
     payload = JSON.parse(request.body);
     return { json: async () => ({ candidates: [{ content: { parts: [{ text: JSON.stringify(response) }] } }] }) };

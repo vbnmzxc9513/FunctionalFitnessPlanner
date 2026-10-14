@@ -22,7 +22,50 @@ service cloud.firestore {
         && data.get('difficultyLevel', 1) is int && data.get('difficultyLevel', 1) >= 0 && data.get('difficultyLevel', 1) <= 2
         && data.get('isAnonymous', false) is bool;
     }
-    function validDose(dose, routine) {
+    function validDose(index) {
+      let dose = request.resource.data.prescriptions[index];
+      let id = dose.id;
+      let rest = dose.restSeconds;
+      let prep = dose.get('preparation', null);
+      return dose.keys().hasOnly(['id', 'sets', 'value', 'unit', 'restSeconds', 'perSide', 'phase', 'preparation'])
+        && id is string && id in request.resource.data.routine
+        && dose.sets in [1, 2, 3, 4, 5]
+        && dose.value.matches('^[0-9]{1,3}([–-][0-9]{1,3})?$')
+        && dose.unit in ['reps', 'seconds', 'minutes', 'breaths']
+        && rest is int && rest >= 0 && rest <= 300
+        && dose.perSide is bool
+        && dose.get('phase', 'legacy') in ['legacy', 'warmup', 'skill', 'strength', 'accessory', 'recovery', 'cooldown']
+        && (prep == null || (prep.keys().hasOnly(['sets', 'value', 'unit', 'restSeconds', 'perSide', 'instruction'])
+          && prep.sets in [1, 2] && prep.value.matches('^[0-9]{1,3}([–-][0-9]{1,3})?$')
+          && prep.unit in ['reps', 'seconds', 'breaths']
+          && prep.restSeconds is int && prep.restSeconds >= 0 && prep.restSeconds <= 120
+          && prep.perSide is bool && prep.instruction is string && prep.instruction.size() <= 1000));
+    }
+    function validPrescriptions(day, part) {
+      let doses = day.get('prescriptions', []);
+      let count = doses.size();
+      return doses is list && count <= 8 && (part == 1
+        ? ((count < 1 || validDose(0)) && (count < 2 || validDose(1))
+          && (count < 3 || validDose(2)) && (count < 4 || validDose(3)))
+        : ((count < 5 || validDose(4)) && (count < 6 || validDose(5))
+          && (count < 7 || validDose(6)) && (count < 8 || validDose(7))));
+    }
+    function validDay(day, expected, part) {
+      return day is map && day.day == expected && day.routine is list && day.routine.size() <= 100
+        && day.keys().hasOnly(['day', 'name', 'theme', 'concept', 'coachAdvice', 'routine', 'prescriptions', 'sessionType', 'warmupNote', 'cooldownNote', 'savedAt'])
+        && validPrescriptions(day, part)
+        && day.get('name', '') is string && day.get('theme', '') is string
+        && day.get('concept', '') is string && day.get('coachAdvice', '') is string
+        && day.get('sessionType', 'legacy') in ['legacy', 'training', 'recovery', 'rest']
+        && day.get('warmupNote', '') is string && day.get('cooldownNote', '') is string;
+    }
+    function validPlanDay(data, id) {
+      return data.savedAt == request.time
+        && data.day is int && id.matches('^[0-9]{4}-W(0[1-9]|[1-4][0-9]|5[0-3])-D[1-5]-P[12]$')
+        && id.matches('.*-D' + string(data.day) + '-P[12]$')
+        && validDay(data, data.day, id.matches('.*-P1$') ? 1 : 2);
+    }
+    function validLegacyDose(dose, routine) {
       return dose is map && dose.keys().hasOnly(['id', 'sets', 'value', 'unit', 'restSeconds', 'perSide'])
         && dose.id is string && dose.id in routine
         && dose.sets is int && dose.sets >= 1 && dose.sets <= 5
@@ -31,30 +74,47 @@ service cloud.firestore {
         && dose.restSeconds is int && dose.restSeconds >= 0 && dose.restSeconds <= 300
         && dose.perSide is bool;
     }
-    function validPrescriptions(day) {
+    function validLegacyPrescriptions(day) {
       let doses = day.get('prescriptions', []);
       return doses is list && doses.size() <= 6
-        && (doses.size() < 1 || validDose(doses[0], day.routine))
-        && (doses.size() < 2 || validDose(doses[1], day.routine))
-        && (doses.size() < 3 || validDose(doses[2], day.routine))
-        && (doses.size() < 4 || validDose(doses[3], day.routine))
-        && (doses.size() < 5 || validDose(doses[4], day.routine))
-        && (doses.size() < 6 || validDose(doses[5], day.routine));
+        && (doses.size() < 1 || validLegacyDose(doses[0], day.routine))
+        && (doses.size() < 2 || validLegacyDose(doses[1], day.routine))
+        && (doses.size() < 3 || validLegacyDose(doses[2], day.routine))
+        && (doses.size() < 4 || validLegacyDose(doses[3], day.routine))
+        && (doses.size() < 5 || validLegacyDose(doses[4], day.routine))
+        && (doses.size() < 6 || validLegacyDose(doses[5], day.routine));
     }
-    function validDay(day, expected) {
+    function validLegacyDay(day, expected) {
       return day is map && day.day == expected && day.routine is list && day.routine.size() <= 100
         && day.keys().hasOnly(['day', 'name', 'theme', 'concept', 'coachAdvice', 'routine', 'prescriptions'])
-        && validPrescriptions(day)
+        && validLegacyPrescriptions(day)
         && day.get('name', '') is string && day.get('theme', '') is string
         && day.get('concept', '') is string && day.get('coachAdvice', '') is string;
     }
-    function validPlan(data) {
-      return data.keys().hasOnly(['conclusion', 'schedule', 'previous', 'source', 'baseDefault', 'language', 'revision', 'savedAt'])
+    function confirmedPart(day, expected, userId, appId, week, part) {
+      let confirmed = getAfter(/databases/$(database)/documents/artifacts/$(appId)/users/$(userId)/planDays/$(week + '-D' + string(expected) + '-P' + string(part))).data;
+      return confirmed.savedAt == request.time && !('savedAt' in day)
+        && confirmed.diff(day).affectedKeys().hasOnly(['savedAt']);
+    }
+    function confirmedDay(day, expected, userId, appId, week) {
+      return day.day == expected && confirmedPart(day, expected, userId, appId, week, 1)
+        && confirmedPart(day, expected, userId, appId, week, 2);
+    }
+    function validPlan(data, userId, appId, week) {
+      return data.keys().hasOnly(['conclusion', 'schedule', 'previous', 'source', 'baseDefault', 'language', 'revision', 'savedAt', 'validationVersion'])
         && data.conclusion is string && data.schedule is list && data.schedule.size() == 5
-        && validDay(data.schedule[0], 1) && validDay(data.schedule[1], 2) && validDay(data.schedule[2], 3)
-        && validDay(data.schedule[3], 4) && validDay(data.schedule[4], 5)
         && data.get('previous', {}) is map
-        && data.get('revision', 0) is int && data.get('revision', 0) >= 0;
+        && data.get('revision', 0) is int && data.get('revision', 0) >= 0
+        && data.get('validationVersion', 0) in [0, 1]
+        && (data.get('validationVersion', 0) == 1
+          ? (confirmedDay(data.schedule[0], 1, userId, appId, week)
+          && confirmedDay(data.schedule[1], 2, userId, appId, week)
+          && confirmedDay(data.schedule[2], 3, userId, appId, week)
+          && confirmedDay(data.schedule[3], 4, userId, appId, week)
+          && confirmedDay(data.schedule[4], 5, userId, appId, week))
+          : (validLegacyDay(data.schedule[0], 1) && validLegacyDay(data.schedule[1], 2)
+          && validLegacyDay(data.schedule[2], 3) && validLegacyDay(data.schedule[3], 4)
+          && validLegacyDay(data.schedule[4], 5)));
     }
     function validProgress(data) {
       return data.keys().hasOnly(['completed', 'completedAt', 'exerciseTypes', 'scheduleSnapshot', 'totalExercises', 'difficultyBase', 'feedbackProvided', 'feedbackValue', 'schemaVersion'])
@@ -68,15 +128,30 @@ service cloud.firestore {
         && data.get('feedbackProvided', false) is bool && data.get('schemaVersion', 2) == 2;
     }
     match /artifacts/{appId}/users/{userId}/{group}/{id} {
-      allow read, delete: if owner(userId) && group in ['profile', 'progress', 'plans', 'metrics', 'exercises'];
-      allow create, update: if owner(userId) && (
-        (group == 'metrics' && validMetrics(request.resource.data, id))
-        || (group == 'profile' && id == 'settings' && validProfile(request.resource.data))
-        || (group == 'plans' && weekId(id) && validPlan(request.resource.data))
-        || (group == 'progress' && weekId(id) && validProgress(request.resource.data))
-        || (group == 'exercises' && id == 'custom' && request.resource.data.keys().hasOnly(['exercises'])
-          && request.resource.data.exercises is map && request.resource.data.exercises.size() <= 500)
-      );
+      allow read, delete: if owner(userId) && group in ['profile', 'progress', 'plans', 'metrics', 'exercises', 'planDays'];
+    }
+    // Scope each validator to its collection, keeping unrelated validation out
+    // of the expression budget for a complete five-day plan.
+    match /artifacts/{appId}/users/{userId}/metrics/{id} {
+      allow create, update: if owner(userId) && validMetrics(request.resource.data, id);
+    }
+    match /artifacts/{appId}/users/{userId}/profile/{id} {
+      allow create, update: if owner(userId) && id == 'settings' && validProfile(request.resource.data);
+    }
+    match /artifacts/{appId}/users/{userId}/plans/{id} {
+      allow create, update: if owner(userId) && weekId(id) && validPlan(request.resource.data, userId, appId, id);
+    }
+    // Strict daily validation stays within the expression budget. The weekly
+    // write verifies both same-commit validation parts before publishing the full plan.
+    match /artifacts/{appId}/users/{userId}/planDays/{id} {
+      allow create, update: if owner(userId) && validPlanDay(request.resource.data, id);
+    }
+    match /artifacts/{appId}/users/{userId}/progress/{id} {
+      allow create, update: if owner(userId) && weekId(id) && validProgress(request.resource.data);
+    }
+    match /artifacts/{appId}/users/{userId}/exercises/{id} {
+      allow create, update: if owner(userId) && id == 'custom' && request.resource.data.keys().hasOnly(['exercises'])
+        && request.resource.data.exercises is map && request.resource.data.exercises.size() <= 500;
     }
   }
 }

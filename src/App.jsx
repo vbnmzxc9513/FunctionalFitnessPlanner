@@ -8,7 +8,8 @@ import { checkAvailableModels, generateAIPlan, generateExerciseDetails } from '.
 import { useAuth } from './hooks/useAuth.js';
 import { useCalendar } from './hooks/useCalendar.js';
 import { useUserData } from './hooks/useUserData.js';
-import { availableSchedule, calculateStats, clampLevel, countCompleted, normalizeSchedule } from './domain/training.js';
+import { availableSchedule, calculateStats, clampLevel, countCompleted, normalizeSchedule, prescription } from './domain/training.js';
+import { exercisePhase, moveWithinPhase, syncSessionType } from './domain/phases.js';
 import { monthlyStats } from './domain/training.js';
 import { emptyMetrics, metricsForm, parseMetrics } from './domain/metrics.js';
 import { readLanguage, readStorage, writeStorage } from './domain/storage.js';
@@ -51,7 +52,7 @@ function FitnessApp({ account, calendar }) {
   const weeklyPlan = data.plans[currentWeek] || null;
   // Default/manual themes can switch language without translating stored AI text.
   const localizedSchedule = weeklyPlan?.source === 'manual' && weeklyPlan.baseDefault
-    ? weeklyPlan.schedule.map(day => ({ ...day, ...defaultSchedule.find(item => item.day === day.day), routine: day.routine }))
+    ? weeklyPlan.schedule.map(day => { const base = defaultSchedule.find(item => item.day === day.day); return { ...day, name: base.name, theme: base.theme, concept: base.concept, coachAdvice: day.coachAdvice || base.coachAdvice }; })
     : weeklyPlan?.schedule;
   const currentSchedule = normalizeSchedule(localizedSchedule, exercises, defaultSchedule);
   const schedule = weeklyPlan ? currentSchedule : availableSchedule(currentSchedule, exercises);
@@ -128,10 +129,30 @@ function FitnessApp({ account, calendar }) {
     try { await savePlan(user.uid, currentWeek, null, fallbackPlan, true, weeklyPlan?.revision || 0); cancelEditing(); setEditingAI(false); }
     finally { setSavingPlan(false); }
   }, 'toastRestored');
-  const remove = (day, index) => setDraft(previous => previous.map(item => item.day === day ? { ...item, routine: item.routine.filter((_, i) => i !== index) } : item));
+  const remove = (day, index) => setDraft(previous => previous.map(item => item.day === day ? syncSessionType({ ...item, routine: item.routine.filter((_, i) => i !== index),
+    ...(item.prescriptions ? { prescriptions: item.prescriptions.filter(dose => dose.id !== item.routine[index]) } : {}), warmupNote: '', cooldownNote: '' }, exercises) : item));
+  const move = (day, id, direction) => setDraft(previous => previous.map(item => item.day === day ? moveWithinPhase(item, id, direction, exercises) : item));
+  const changePhase = (day, id, phase) => {
+    const target = draft.find(item => item.day === day);
+    if ((target.prescriptions?.length || 0) >= 8 && !target.prescriptions.some(dose => dose.id === id)) { showToast(t('sessionExerciseLimit')); return; }
+    setDraft(previous => previous.map(item => {
+      if (item.day !== day) return item;
+      const current = prescription(id, exercises[id].type, difficultyLevel, exercises[id], item);
+      const dose = { restSeconds: 60, perSide: false, ...current, value: String(current.value), id, phase };
+      if (!['strength', 'accessory'].includes(phase)) delete dose.preparation;
+      return syncSessionType({ ...item, prescriptions: [...(item.prescriptions || []).filter(value => value.id !== id), dose], warmupNote: '', cooldownNote: '' }, exercises);
+    }));
+  };
   const add = day => {
+    if (draft.find(item => item.day === day).routine.length >= 8) { showToast(t('sessionExerciseLimit')); return; }
     if (!exercises[selected] || exercises[selected].deleted || exercises[selected].active === false) return;
-    setDraft(previous => previous.map(item => item.day === day && !item.routine.includes(selected) ? { ...item, routine: [...item.routine, selected] } : item)); setSelected('');
+    setDraft(previous => previous.map(item => {
+      if (item.day !== day || item.routine.includes(selected)) return item;
+      const exercise = exercises[selected];
+      const current = prescription(selected, exercise.type, difficultyLevel, exercise);
+      const dose = { restSeconds: 60, perSide: false, ...current, value: String(current.value), id: selected, phase: exercisePhase({ ...item, sessionType: 'training' }, selected, exercise) };
+      return syncSessionType({ ...item, routine: [...item.routine, selected], prescriptions: [...(item.prescriptions || []), dose], warmupNote: '', cooldownNote: '' }, exercises);
+    })); setSelected('');
   };
   const toggle = (day, id) => operation(() => setCompletion(user.uid, currentWeek, day, id, !progress[`day${day}_${id}`], exercises[id], schedule));
   const feedback = value => operation(() => saveFeedback(user.uid, currentWeek, value), 'toastFeedback');
@@ -220,7 +241,7 @@ function FitnessApp({ account, calendar }) {
       {account.migrationPending && <div role="alert" className="mb-4 bg-amber-50 p-4 rounded-xl text-sm">{t('migrationPending')}<button disabled={account.busy} onClick={account.retryMigration} className="ml-3 text-sky-600">{t('retry')}</button></div>}
       {activeTab === 'train' && <>
         <div className="mb-6"><div className="flex items-center justify-between text-sm"><span>{t('weekLabel')}: {currentWeek} · {t('difficultyLabel')}: {t(['diffLow', 'diffMid', 'diffHigh'][difficultyLevel])}</span><strong className="text-2xl text-sky-600">{progressPercent}%</strong></div><div className="h-2 bg-sky-100 rounded-full mt-3 overflow-hidden"><div className="h-full bg-sky-500" style={{ width: `${progressPercent}%` }} /></div></div>
-        <Training t={t} schedule={schedule} draft={draft} activeDay={activeDay} setActiveDay={setActiveDay} currentWeek={currentWeek} exercises={exercises} progress={progress} level={difficultyLevel} editing={editing} selected={selected} setSelected={setSelected} onEdit={enterEditing} onCancel={cancelEditing} onSave={saveEdits} onAdd={add} onRemove={remove} onToggle={toggle} onFeedback={feedback} feedback={allProgress[currentWeek]?.feedbackValue} busy={busy || generating} saving={savingPlan} canEdit={!!user && !!data.loaded.plans && !!data.loaded.exercises && !generating} canRestore={!!weeklyPlan?.previous} onRestore={restore} />
+        <Training t={t} schedule={schedule} draft={draft} activeDay={activeDay} setActiveDay={setActiveDay} currentWeek={currentWeek} exercises={exercises} progress={progress} level={difficultyLevel} editing={editing} selected={selected} setSelected={setSelected} onEdit={enterEditing} onCancel={cancelEditing} onSave={saveEdits} onAdd={add} onRemove={remove} onMove={move} onPhase={changePhase} onToggle={toggle} onFeedback={feedback} feedback={allProgress[currentWeek]?.feedbackValue} busy={busy || generating} saving={savingPlan} canEdit={!!user && !!data.loaded.plans && !!data.loaded.exercises && !generating} canRestore={!!weeklyPlan?.previous} onRestore={restore} />
       </>}
       <div className={activeTab === 'train' ? '' : 'max-w-3xl mx-auto'}>
         {activeTab !== 'train' && activeTab !== 'settings' && !user ? login : <Suspense fallback={<div className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>}>
