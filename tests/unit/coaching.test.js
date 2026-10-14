@@ -104,6 +104,15 @@ test('both sides, all prescribed sets, quality, reserve and next-day response ar
   assert.equal(advice([log(), log('2026-10-09', { symptoms: 'worse' })]).code, 'reduce');
 });
 
+test('cable stack numbers require a matching machine and setup description before progression', () => {
+  const records = history().map(item => ({ ...item, variant: 'cable', loadBasis: 'stack' }));
+  assert.equal(advice(records).code, 'hold');
+  assert.ok(advice(records).reasonCodes.includes('incomparable_resistance'));
+  const described = records.map(item => ({ ...item, resistanceLabel: 'Gym pulley A, low anchor, same handle' }));
+  assert.equal(advice(described).code, 'progress_reps');
+  assert.equal(advice([described[0], { ...described[1], resistanceLabel: 'Gym pulley B' }]).code, 'hold');
+});
+
 test('current fatigue, restrictions, taper, jumping and missing readiness block increases', () => {
   for (const overrides of [{ readiness: null }, { healthStatus: 'restricted' }, { healthStatus: 'unknown' }, { healthNotes: 'recent shockwave' }, { readiness: ready({ fatigue: 2 }) }, { competitionDate: '2026-10-20' }]) {
     assert.equal(advice(history(), overrides).code, 'hold');

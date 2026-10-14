@@ -120,6 +120,7 @@ function sameResistance(first, second) {
 function hasKnownResistance(log) {
   if (log.variant === 'bodyweight') return log.loadBasis === 'none' && Boolean(log.resistanceLabel.trim());
   if (['band', 'other'].includes(log.variant)) return log.loadBasis === 'description' && Boolean(log.resistanceLabel.trim());
+  if (log.variant === 'cable' && !log.resistanceLabel.trim()) return false;
   return log.loadKg !== null && log.loadKg > 0 && (log.variant === 'dumbbell' ? ['per_dumbbell', 'total'].includes(log.loadBasis) : log.loadBasis === 'stack');
 }
 function achieved(log, target) {
