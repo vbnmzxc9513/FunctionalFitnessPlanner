@@ -23,6 +23,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install optional AI backend dependencies
+        run: npm ci --prefix functions
+
+      - name: Validate optional AI backend bundle
+        env:
+          GCLOUD_PROJECT: demo-fitness-planner
+        run: |
+          npm run build --prefix functions
+          node --input-type=module -e "await import('./functions/index.js')"
+
       - name: Lint
         run: npm run lint
 

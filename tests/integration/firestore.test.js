@@ -41,6 +41,14 @@ test('owner collection queries and missing settings documents can be read', asyn
   await assertSucceeds(getDoc(userDoc(uid, 'profile', 'settings')));
   await assertSucceeds(getDoc(userDoc(uid, 'exercises', 'custom')));
 });
+test('hosted trial controls and quota records are unavailable to clients', async () => {
+  const ownerDb = userDoc(uid, 'profile', 'settings').firestore;
+  for (const path of ['aiTrialConfig/runtime', 'aiTrialQuota/user-weeks', `aiTrialQuota/${uid}/weeks/2026-W40`, 'aiTrialQuota/daily/limits/2026-10-14']) {
+    await assertFails(getDoc(doc(ownerDb, path)));
+    await assertFails(setDoc(doc(ownerDb, path), { enabled: true, attempts: 0 }));
+    await assertFails(getDoc(doc(environment.unauthenticatedContext().firestore(), path)));
+  }
+});
 test('concurrent completion writes retain both fields', async () => {
   await Promise.all([
     setCompletion(uid, week, 1, 'thoracic', true, EXERCISES_I18N.zh.thoracic, plan.schedule),
@@ -70,6 +78,22 @@ test('plan saving preserves completed history; persisted restore keeps it after 
   current = (await getDoc(userDoc(uid, 'plans', week))).data();
   assert.deepEqual(current.schedule, plan.schedule);
   assert.deepEqual((await getDoc(userDoc(uid, 'progress', week))).data().scheduleSnapshot, plan.schedule);
+});
+test('preview adoption saves matching completion marks atomically and ignores foreign slots', async () => {
+  const free = { conclusion: 'Preview', schedule: DEFAULT_SCHEDULE_I18N.zh, source: 'template' };
+  await setCompletion(uid, week, 1, 'thoracic', true, EXERCISES_I18N.zh.thoracic, plan.schedule);
+  await savePlan(uid, week, free, plan, false, 0, { day1_bf_A01: true, day3_bf_F01: true,
+    day1_private_invented: true, day5_bf_F01: true, day2_bf_A02: false });
+  const current = (await getDoc(userDoc(uid, 'progress', week))).data();
+  assert.equal(current.completed.day1_bf_A01, true);
+  assert.equal(current.completed.day3_bf_F01, true);
+  assert.equal(current.completed.day1_thoracic, true);
+  assert.equal(current.completed.day1_private_invented, undefined);
+  assert.equal(current.completed.day5_bf_F01, undefined);
+  assert.equal(current.completed.day2_bf_A02, undefined);
+  assert.match(current.completedAt.day1_bf_A01, /^\d{4}-\d{2}-\d{2}$/);
+  await assert.rejects(savePlan(uid, week, { ...free, forbidden: true }, plan, false, 1, { day1_bf_B01: true }));
+  assert.deepEqual((await getDoc(userDoc(uid, 'progress', week))).data(), current);
 });
 test('a rejected plan write rolls back the progress snapshot and stale revisions cannot overwrite', async () => {
   await savePlan(uid, week, plan, plan, false, 0);

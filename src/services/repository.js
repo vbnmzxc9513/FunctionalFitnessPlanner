@@ -30,23 +30,29 @@ function writePlanDays(transaction, uid, week, schedule) {
   }
 }
 
-export async function savePlan(uid, week, plan, fallback, restore = false, expectedRevision) {
+export async function savePlan(uid, week, plan, fallback, restore = false, expectedRevision, previewCompleted = {}) {
   assertUser(uid);
   return runTransaction(db, async transaction => {
     const planRef = userDoc(uid, 'plans', week);
     const progressRef = userDoc(uid, 'progress', week);
     const existing = await transaction.get(planRef);
-    await transaction.get(progressRef);
+    const progress = await transaction.get(progressRef);
     assertUser(uid);
     const current = existing.exists() ? existing.data() : fallback;
     if (expectedRevision !== undefined && (current.revision || 0) !== expectedRevision) throw new Error('PLAN_CHANGED');
     const next = restore ? current.previous : plan;
     if (!next || !Array.isArray(next.schedule)) throw new Error('INVALID_PLAN');
     const totalExercises = next.schedule.reduce((sum, day) => sum + day.routine.length, 0);
+    const allowedKeys = new Set(next.schedule.flatMap(day => day.routine.map(id => exerciseKey(day.day, id))));
+    const completed = Object.fromEntries(Object.entries(previewCompleted).filter(([key, done]) => done === true && allowedKeys.has(key)));
+    const previousProgress = progress.data() || {};
+    const completedAt = Object.fromEntries(Object.keys(completed).map(key => [key,
+      previousProgress.completed?.[key] && previousProgress.completedAt?.[key] || localDate()]));
     writePlanDays(transaction, uid, week, next.schedule);
     // Preserve completions as training history. The active plan alone determines its percentage.
     transaction.set(planRef, { ...withoutPrevious(next), previous: withoutPrevious(current), validationVersion: 1, revision: (current.revision || 0) + 1, savedAt: serverTimestamp() });
-    transaction.set(progressRef, { scheduleSnapshot: next.schedule, totalExercises, schemaVersion: 2 }, { merge: true });
+    transaction.set(progressRef, { scheduleSnapshot: next.schedule, totalExercises, schemaVersion: 2,
+      ...(Object.keys(completed).length ? { completed, completedAt } : {}) }, { merge: true });
   });
 }
 

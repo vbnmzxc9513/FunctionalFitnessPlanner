@@ -3,8 +3,9 @@ import { getDateForWeekDay } from '../domain/dates.js';
 import { exerciseKey } from '../domain/training.js';
 import { SESSION_PHASES } from '../domain/phases.js';
 import { estimateSessionMinutes, sessionSections } from '../domain/sessions.js';
+import WorkoutShare from './WorkoutShare.jsx';
 
-export default function Training({ t, schedule, draft, activeDay, setActiveDay, currentWeek, exercises, progress, level,
+export default function Training({ t, lang = 'zh', schedule, draft, activeDay, setActiveDay, currentWeek, exercises, progress, level,
   editing, selected, setSelected, onEdit, onCancel, onSave, onAdd, onRemove, onMove, onPhase, onToggle, onFeedback, feedback, busy, saving, canEdit, canRestore, onRestore }) {
   const display = editing ? draft : schedule;
   const active = display.find(day => day.day === activeDay) || display[0];
@@ -73,6 +74,7 @@ export default function Training({ t, schedule, draft, activeDay, setActiveDay, 
           </div>)}
           {section.phase === 'cooldown' && <p className="text-sm text-slate-600">{active.cooldownNote || t(section.items.length ? 'cooldownSequenceNote' : 'cooldownNotPlanned')}</p>}
         </section>)}
+        {!editing && <WorkoutShare day={active} exercises={exercises} level={level} lang={lang} week={currentWeek} />}
         {editing && <div className="p-4 rounded-xl border border-dashed border-slate-300 flex flex-wrap gap-3">
           <select aria-label={t('addExercise')} disabled={saving} value={selected} onChange={event => setSelected(event.target.value)} className="flex-1 min-w-0 p-2 rounded-lg border border-slate-200 text-sm">
             <option value="">{t('addExercise')}</option>

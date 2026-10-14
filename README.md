@@ -150,3 +150,21 @@ AI 為每一天提供 `sessionType`、`warmupNote`、`cooldownNote`，每項處�
 手動編輯可調整階段和同階段內的先後順序；既有完成記錄按原 ID 保留。舊課表以動作分類顯示階段，不自動補不存在的動作或準備組，重新排課才會取得完整的個人安排。
 
 Firestore 使用同一筆 transaction 保存週課表、每日兩份 `planDays/{week}-D{day}-P{part}` 驗證資料和進度快照。每份每日文件驗證四項處方，兩份涵蓋最多八項。新版保存加上 `validationVersion: 1`，週文件用 `getAfter` 核對同次提交內容，避免整週詳細驗證超過運算上限。保存、還原和訪客匯入皆寫入這些驗證資料；舊版無階段課表仍可保存，不需要搬移歷史。需部署此次新版規則後使用新前端。
+
+## 免費排課與分享
+
+首頁可直接填球日、時間、器材與優先目標，使用免費模板產生五個工作日的課表，不需登入或 Gemini 金鑰。模板採固定規則；文字目標只保留作偏好，不當作已理解的限制。比賽減量、器材與身體限制仍優先；無法解讀的健康限制會採休息。規則及限制見 [模板排課](docs/template-planner.md)。
+
+未登入的預覽與勾選保存在這個分頁的 sessionStorage，重整可保留。選擇登入保存後，預覽綁定所選 UID；空白週可自動採用，已有課表須明確選擇是否取代。完成紀錄與課表原子儲存，登出成功後清除尚未採用的預覽。
+
+每日課表可下載 PNG 或複製公開唯讀連結。分享採動作庫 ID 與劑量白名單，不帶個人資料、自由文字、健康資訊、日期、帳號、完成紀錄或金鑰；自訂／非動作庫動作不能分享。圖片由瀏覽器本機產生，連結內容放 URL fragment，詳見 [分享規則](docs/sharing.md)。
+
+教練頁預設免費模板，BYOK 是進階選項。免費排課不呼叫 Gemini；只有選擇 BYOK 時才查詢可用模型／生成課表。本機使用成效計數不上傳，並非全站分析資料。
+
+## 選配 App AI 體驗
+
+`functions/` 提供受控 callable：Google 登入、App Check、Secret Manager、每帳號每 UTC 週一次嘗試、全站每日上限、固定模型與結果驗證。**預設關閉，Pages 發布不會部署或啟用付費 AI 後端。** 啟用需要專案專用金鑰、計費設定、App Check 及額度，步驟見 [AI 體驗](docs/ai-trial.md)。
+
+本機驗證可執行 `npm ci --prefix functions`、`npm run build --prefix functions`，再以 `GCLOUD_PROJECT=demo-fitness-planner` 載入入口。單元測試使用假交易與假 Gemini，不接觸正式 AI。CI 驗證後端建置，但只自動發布前端；不會開啟計費資源。
+
+分階段的驗收標準見 [推廣功能計畫](docs/promotion-plan.md)。

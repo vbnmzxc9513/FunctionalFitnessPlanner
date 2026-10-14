@@ -67,8 +67,32 @@ try {
     }, TRANSLATIONS.zh.dayShort[0]);
     await page.goto(siteUrl, { waitUntil: 'networkidle2' });
     await waitText('本日課表');
-    await click('訪客');
+    await click('產生免費課表'); await waitText('這是你的免費課表預覽');
+    assert.equal(planningPayload, undefined, `${layout} creates a free plan without Gemini`);
+    await selectMonday();
+    const previewName = await page.$eval('button[aria-label][aria-pressed]', button => button.getAttribute('aria-label'));
+    await page.click(`button[aria-label=${JSON.stringify(previewName)}][aria-pressed]`);
+    await page.waitForSelector(`button[aria-label=${JSON.stringify(previewName)}][aria-pressed="true"]`);
+    await page.reload({ waitUntil: 'networkidle2' });
+    await waitText('這是你的免費課表預覽'); await selectMonday();
+    await page.waitForSelector(`button[aria-label=${JSON.stringify(previewName)}][aria-pressed="true"]`);
+    await page.evaluate(() => {
+      window.__workoutLink = null;
+      Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async text => { window.__workoutLink = text; } } });
+    });
+    await click('複製連結'); await waitText('課表連結已複製。');
+    const publicLink = await page.evaluate(() => window.__workoutLink);
+    assert.ok(publicLink.includes('#workout='));
+    await page.goto(publicLink, { waitUntil: 'networkidle2' }); await waitText('分享的羽球體能課表');
+    assert.equal(await page.$('button[aria-pressed]'), null, `${layout} share is read-only`);
+    await waitText('準備組');
+    await click('建立我的課表'); await waitText('這是你的免費課表預覽');
+    await selectMonday();
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${layout} free preview fits viewport`);
+    await click('以訪客身分儲存課表');
     await waitText('綁定 Google 並保留紀錄');
+    await selectMonday();
+    await page.waitForSelector(`button[aria-label=${JSON.stringify(previewName)}][aria-pressed="true"]`);
     try {
       await page.waitForFunction(() => [...document.querySelectorAll('button')].some(item => item.innerText.trim() === '編輯課表' && !item.disabled), { timeout: 15000 });
     } catch (error) {
@@ -76,7 +100,9 @@ try {
       throw error;
     }
     const name = await page.$eval('button[aria-label][aria-pressed]', button => button.getAttribute('aria-label'));
-    await page.click(`button[aria-label=${JSON.stringify(name)}][aria-pressed]`);
+    if (await page.$eval(`button[aria-label=${JSON.stringify(name)}][aria-pressed]`, button => button.getAttribute('aria-pressed')) !== 'true') {
+      await page.click(`button[aria-label=${JSON.stringify(name)}][aria-pressed]`);
+    }
     await page.waitForSelector(`button[aria-label=${JSON.stringify(name)}][aria-pressed="true"]`);
     await page.waitForFunction(() => !document.querySelector('button[aria-label][aria-pressed]').disabled);
     await click('編輯課表');
@@ -99,6 +125,7 @@ try {
     assert.equal(await page.$(`button[aria-label=${JSON.stringify(name)}][aria-pressed]`), null);
     await page.reload({ waitUntil: 'networkidle2' });
     await waitText('↩ 復原上一次的課表');
+    await selectMonday();
     assert.ok(await page.$eval('section[data-phase="cooldown"]', (section, label) => section.innerText.includes(label), changedPhaseName), `${layout} preserves a manual phase on a default-based plan`);
     await click('↩ 復原上一次的課表');
     await page.waitForSelector(`button[aria-label=${JSON.stringify(name)}][aria-pressed="true"]`);
@@ -115,22 +142,27 @@ try {
     await page.type('input[aria-label="搜尋動作或編號"]', '90/90');
     assert.equal(await page.$$eval('button[role="switch"]', items => items.length), 1);
     await waitText('次呼吸');
-    await click('設定'); await page.waitForSelector('input[type="password"]');
+    await click('設定');
+    await page.evaluate(() => document.querySelector('details summary').click());
+    await page.waitForSelector('input[type="password"]', { visible: true });
     await page.type('input[type="password"]', 'mock-test-only');
     await click(TRANSLATIONS.zh.settingsSaveBtn);
-    await click('教練'); await waitText('羽球體能教練');
+    await click('教練'); await waitText('配合球日的羽球體能課表');
+    assert.ok(await page.evaluate(() => [...document.querySelectorAll('button')].find(button => button.innerText === 'App AI 體驗').disabled));
+    await click('AI 自備金鑰');
     await click(TRANSLATIONS.zh.aiTweakBtn);
-    await page.select('select', 'mixed'); // First select is court intensity.
+    await page.evaluate(() => [...document.querySelectorAll('summary')].find(element => element.innerText.includes('更多設定')).click());
     await page.evaluate(() => {
       const labels = [...document.querySelectorAll('label')];
-      for (const [text, value] of [['肩部狀態與活動限制', 'restricted']]) {
+      for (const [text, value] of [['肩部狀態與活動限制', 'restricted'], ['球局強度', 'mixed']]) {
         const select = labels.find(label => label.textContent.startsWith(text)).querySelector('select');
         select.value = value; select.dispatchEvent(new Event('change', { bubbles: true }));
       }
       const days = [...document.querySelectorAll('fieldset label')].filter(label => label.textContent.startsWith('星期'));
       for (const day of [2, 5, 6]) days[day - 1].querySelector('input').click();
     });
-    await click(TRANSLATIONS.zh.aiRegenerateBtn); await waitText('Mock recovery plan');
+    await click(TRANSLATIONS.zh.aiGenerateBtn); await waitText(TRANSLATIONS.zh.toastAISuccess);
+    await click('教練'); await waitText('Mock recovery plan');
     assert.ok(planningPayload.contents[0].parts[0].text.includes('肩部／健康限制'));
     const candidateSection = planningPayload.contents[0].parts[0].text.split('【可用候選動作；ID 必須完全相同】')[1].split('【輸出要求】')[0].trim();
     assert.ok(!JSON.parse(candidateSection).some(item => item.shoulderLoaded));
@@ -196,10 +228,11 @@ try {
     await click('登出');
     await waitText('登入');
     assert.equal(await page.$('button[aria-pressed="true"]'), null, `${layout} logout clears progress`);
+    assert.equal(await page.evaluate(() => sessionStorage.getItem('fitness_public_preview_v1')), null, `${layout} logout clears preview cache`);
     await click('🌐 English'); await waitText("Today's Workout");
     assert.equal(await page.evaluate(() => document.documentElement.lang), 'en');
     assert.deepEqual(errors, [], `${layout} has no runtime errors`);
-    console.log(`${layout}: guest login, completion, editing/restore, catalog search, planning inputs, mock AI doses, feedback, metrics, rollover, logout, English passed`);
+    console.log(`${layout}: free preview/reload/share/adoption, guest login, completion, editing/restore, catalog search, BYOK mock, feedback, metrics, rollover, logout, English passed`);
     await context.close();
   }
 } finally {

@@ -18,6 +18,13 @@ import LoginPrompt from './components/LoginPrompt.jsx';
 import Training from './components/Training.jsx';
 import ExerciseLibrary from './components/ExerciseLibrary.jsx';
 import Settings from './components/Settings.jsx';
+import Onboarding from './components/Onboarding.jsx';
+import SharedWorkout from './components/SharedWorkout.jsx';
+import { readShareFromLocation } from './domain/sharing.js';
+import { generateTemplatePlan } from './domain/templatePlanner.js';
+import { trialEnabled, requestTrialPlan } from './services/aiTrial.js';
+import { PROMOTION_TRANSLATIONS } from './promotionLocale.js';
+import { recordPromotionEvent, readPromotionDrafts, writePromotionDrafts } from './domain/promotion.js';
 
 const Coach = lazy(() => import('./components/Coach.jsx'));
 const Metrics = lazy(() => import('./components/Metrics.jsx'));
@@ -28,17 +35,44 @@ const tabs = [['train', Feather, 'navTrain'], ['ai', Brain, 'navAI'], ['exercise
 export default function App() {
   const account = useAuth();
   const calendar = useCalendar();
+  const [publicDraft, setPublicDraft] = useState(() => readPromotionDrafts(calendar.currentWeek).publicDraft);
+  const [pendingDraft, setPendingDraft] = useState(() => readPromotionDrafts(calendar.currentWeek).pendingDraft);
+  useEffect(() => { writePromotionDrafts(publicDraft, pendingDraft); }, [publicDraft, pendingDraft]);
+  const [shared, setShared] = useState(() => readShareFromLocation());
+  useEffect(() => {
+    const update = () => setShared(readShareFromLocation());
+    window.addEventListener('hashchange', update); window.addEventListener('popstate', update);
+    return () => { window.removeEventListener('hashchange', update); window.removeEventListener('popstate', update); };
+  }, []);
+  const loginWithPreview = async method => {
+    const preview = !account.user ? publicDraft : null;
+    await account[method]();
+    const uid = auth.currentUser?.uid;
+    if (preview && uid) {
+      const bound = { ...preview, targetUid: uid };
+      writePromotionDrafts(null, bound); setPendingDraft(bound); setPublicDraft(null);
+    }
+  };
+  const logout = async () => {
+    await account.logout();
+    if (!auth.currentUser) { writePromotionDrafts(null, null); setPendingDraft(null); setPublicDraft(null); }
+  };
+  const exitShare = () => { window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`); setShared(null); };
+  if (shared) return <SharedWorkout payload={shared} exercises={EXERCISES_I18N[readLanguage()]} lang={readLanguage()} onExit={exitShare} />;
   if (account.loading) return <div className="min-h-screen flex items-center justify-center gap-2"><Loader2 className="animate-spin" />{readLanguage() === 'zh' ? '載入中…' : 'Loading…'}</div>;
-  // A new session starts with fresh data, drafts, forms and in-flight UI state.
-  return <FitnessApp key={`${account.user?.uid || 'signed-out'}:${calendar.currentWeek}`} account={account} calendar={calendar} />;
+  const sessionAccount = { ...account, logout, googleLogin: () => loginWithPreview('googleLogin'), guestLogin: () => loginWithPreview('guestLogin') };
+  // A new UID starts with fresh data. Public previews are bound to the chosen UID only after sign-in.
+  return <FitnessApp key={`${account.user?.uid || 'signed-out'}:${calendar.currentWeek}`} account={sessionAccount} calendar={calendar}
+    publicDraft={publicDraft?.week === calendar.currentWeek ? publicDraft : null} onPublicDraft={setPublicDraft}
+    pendingDraft={pendingDraft?.targetUid === account.user?.uid && pendingDraft?.week === calendar.currentWeek ? pendingDraft : null} onConsumeDraft={() => { writePromotionDrafts(null, null); setPendingDraft(null); }} />;
 }
 
-function FitnessApp({ account, calendar }) {
+function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraft, onConsumeDraft }) {
   const { user } = account;
   const { currentWeek, lastWeek, today } = calendar;
   const [lang, setLang] = useState(readLanguage);
   useEffect(() => { document.documentElement.lang = lang === 'zh' ? 'zh-Hant' : 'en'; }, [lang]);
-  const t = key => TRANSLATIONS[lang][key] ?? TRANSLATIONS.zh[key] ?? key;
+  const t = key => PROMOTION_TRANSLATIONS[lang][key] ?? TRANSLATIONS[lang][key] ?? TRANSLATIONS.zh[key] ?? key;
   const [activeTab, setActiveTab] = useState('train');
   const [activeDay, setActiveDay] = useState(() => { const day = new Date().getDay(); return day >= 1 && day <= 5 ? day : 1; });
   const [weekLimit, setWeekLimit] = useState(104);
@@ -48,8 +82,10 @@ function FitnessApp({ account, calendar }) {
   const exercises = { ...EXERCISES_I18N[lang] };
   for (const [id, custom] of Object.entries(data.exercises)) exercises[id] = { ...exercises[id], ...custom };
   const allProgress = data.progress;
-  const progress = allProgress[currentWeek]?.completed || {};
-  const weeklyPlan = data.plans[currentWeek] || null;
+  const [publicProgress, setPublicProgress] = useState(() => publicDraft?.completed || {});
+  const progress = user ? allProgress[currentWeek]?.completed || {} : publicProgress;
+  const savedPlan = data.plans[currentWeek] || null;
+  const weeklyPlan = savedPlan || (!user ? publicDraft?.plan : null) || null;
   // Default/manual themes can switch language without translating stored AI text.
   const localizedSchedule = weeklyPlan?.source === 'manual' && weeklyPlan.baseDefault
     ? weeklyPlan.schedule.map(day => { const base = defaultSchedule.find(item => item.day === day.day); return { ...day, name: base.name, theme: base.theme, concept: base.concept, coachAdvice: day.coachAdvice || base.coachAdvice }; })
@@ -77,9 +113,14 @@ function FitnessApp({ account, calendar }) {
   const [preferences] = useState(() => {
     try { return JSON.parse(readStorage(preferencesKey, '{}')) || {}; } catch { return {}; }
   });
-  const [goal, setGoal] = useState(preferences.goal || '');
-  const [time, setTime] = useState(preferences.time || '30');
-  const [planningContext, setPlanningContext] = useState(() => normalizePlanningContext({ ...DEFAULT_PLANNING_CONTEXT, ...preferences.context }));
+  const initialProfile = pendingDraft?.profile || (!user ? publicDraft?.profile : null) || preferences;
+  const [goal, setGoal] = useState(initialProfile.goal || '');
+  const [focus, setFocus] = useState(initialProfile.focus || 'balanced');
+  const [planningMode, setPlanningMode] = useState('template');
+  const [adoptionError, setAdoptionError] = useState(false);
+  const adoptionAttempt = useRef(false);
+  const [time, setTime] = useState(initialProfile.time || '30');
+  const [planningContext, setPlanningContext] = useState(() => normalizePlanningContext({ ...DEFAULT_PLANNING_CONTEXT, ...initialProfile.context }));
   const [message, setMessage] = useState('');
   const [editingAI, setEditingAI] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -87,8 +128,17 @@ function FitnessApp({ account, calendar }) {
   const [keyInput, setKeyInput] = useState(() => readStorage('gemini_byok_key'));
   const [model, setModel] = useState(() => readStorage('app_ai_model', 'gemini-2.5-flash'));
   const [models, setModels] = useState(defaultModels);
+  const profileApplied = useRef(null);
   useEffect(() => {
-    if (!apiKey) return;
+    if (!pendingDraft || profileApplied.current === pendingDraft) return;
+    profileApplied.current = pendingDraft;
+    Promise.resolve().then(() => {
+      setGoal(pendingDraft.profile.goal || ''); setFocus(pendingDraft.profile.focus || 'balanced');
+      setTime(pendingDraft.profile.time || '30'); setPlanningContext(normalizePlanningContext(pendingDraft.profile.context));
+    });
+  }, [pendingDraft]);
+  useEffect(() => {
+    if (!apiKey || planningMode !== 'byok') return;
     let active = true;
     checkAvailableModels(apiKey).then(options => {
       if (!active) return;
@@ -100,7 +150,7 @@ function FitnessApp({ account, calendar }) {
       });
     });
     return () => { active = false; };
-  }, [apiKey]);
+  }, [apiKey, planningMode]);
 
   const requireUser = () => { if (user) return true; showToast(t('toastRequireLogin')); setActiveTab('settings'); return false; };
   const operation = async (action, success) => {
@@ -154,28 +204,84 @@ function FitnessApp({ account, calendar }) {
       return syncSessionType({ ...item, routine: [...item.routine, selected], prescriptions: [...(item.prescriptions || []), dose], warmupNote: '', cooldownNote: '' }, exercises);
     })); setSelected('');
   };
-  const toggle = (day, id) => operation(() => setCompletion(user.uid, currentWeek, day, id, !progress[`day${day}_${id}`], exercises[id], schedule));
+  const toggle = (day, id) => {
+    const done = !progress[`day${day}_${id}`];
+    if (!user && publicDraft) {
+      const completed = { ...publicProgress, [`day${day}_${id}`]: done };
+      setPublicProgress(completed); onPublicDraft({ ...publicDraft, completed });
+      if (done) recordPromotionEvent('first_completion', currentWeek);
+      return;
+    }
+    operation(async () => { await setCompletion(user.uid, currentWeek, day, id, done, exercises[id], schedule); if (done) recordPromotionEvent('first_completion', currentWeek); });
+  };
   const feedback = value => operation(() => saveFeedback(user.uid, currentWeek, value), 'toastFeedback');
 
+  const adoptPreview = async () => {
+    if (!pendingDraft || !user || savingPlan || !data.loaded.plans || !data.loaded.exercises) return;
+    setSavingPlan(true); setAdoptionError(false);
+    try {
+      await savePlan(user.uid, currentWeek, pendingDraft.plan, fallbackPlan, false, savedPlan?.revision || 0, pendingDraft.completed);
+      if (auth.currentUser?.uid !== user.uid) return;
+      writeStorage(preferencesKey, JSON.stringify(pendingDraft.profile));
+      onConsumeDraft(); showToast(t('templateSuccess'));
+    } catch { setAdoptionError(true); }
+    finally { setSavingPlan(false); }
+  };
+  useEffect(() => {
+    recordPromotionEvent('next_week_visit', currentWeek);
+  }, [currentWeek]);
+  useEffect(() => {
+    if (!pendingDraft || !user || savedPlan || !data.loaded.plans || !data.loaded.exercises || adoptionAttempt.current) return;
+    adoptionAttempt.current = true;
+    // Wait for subscription state before adopting. An existing week always needs an explicit choice.
+    Promise.resolve().then(async () => {
+      setSavingPlan(true);
+      try {
+        await savePlan(user.uid, currentWeek, pendingDraft.plan, { conclusion: '', schedule: DEFAULT_SCHEDULE_I18N[lang], source: 'manual', baseDefault: true, language: lang }, false, 0, pendingDraft.completed);
+        if (auth.currentUser?.uid !== user.uid) return;
+        writeStorage(preferencesKey, JSON.stringify(pendingDraft.profile));
+        onConsumeDraft();
+      } catch { setAdoptionError(true); }
+      finally { setSavingPlan(false); }
+    });
+  }, [pendingDraft, user, savedPlan, data.loaded.plans, data.loaded.exercises, currentWeek, lang, preferencesKey, onConsumeDraft]);
   const requestPlan = async () => {
-    if (!requireUser() || generating || savingPlan || busy) return;
+    if (generating || savingPlan || busy) return;
     if (editing) { showToast(t('finishEditing')); setActiveTab('train'); return; }
-    if (!apiKey) { showToast(t('toastNoKey')); setActiveTab('settings'); return; }
+    if (user && (!data.loaded.plans || !data.loaded.exercises)) { showToast(t('dataLoadFailed')); return; }
+    if (planningMode !== 'template' && !requireUser()) return;
+    if (planningMode === 'byok' && !apiKey) { showToast(t('toastNoKey')); setActiveTab('settings'); return; }
     const context = normalizePlanningContext(planningContext);
     const available = planningExercises(exercises, context);
-    if (!Object.keys(available).length) showToast(t('noEligibleExercises'));
-    const revision = weeklyPlan?.revision || 0;
+    const revision = savedPlan?.revision || 0;
     setGenerating(true);
     try {
+      const profile = { goal, focus, time, context };
       const previous = allProgress[lastWeek] || {};
-      writeStorage(preferencesKey, JSON.stringify({ goal, time, context }));
-      const result = await generateAIPlan(previous.completed || {}, difficultyLevel, previous.feedbackValue, apiKey, allProgress, data.metrics, goal, time, message, available, lang, undefined,
-        { context, currentDate: today, currentWeek, previousPlan: weeklyPlan || data.plans[lastWeek] || null });
-      if (auth.currentUser?.uid !== user.uid) return;
-      await savePlan(user.uid, currentWeek, { ...result, language: lang, source: 'ai' }, fallbackPlan, false, revision);
-      setEditingAI(false); setMessage(''); showToast(t('toastAISuccess'));
-    } catch (err) { console.error('Plan generation failed', err); showToast(t(err.message === 'PLAN_CHANGED' ? 'planChanged' : err.code === 'permission-denied' ? 'planPermissionDenied' : 'toastAIError')); }
-    finally { setGenerating(false); }
+      const aiGoal = [t(`focus_${focus}`), goal].filter(Boolean).join(': ');
+      let result;
+      if (planningMode === 'template') result = generateTemplatePlan(exercises, context, time, lang,
+        { currentDate: today, currentWeek, lastWeekFeedback: previous.feedbackValue, userGoal: goal, goalFocus: focus, previousPlan: savedPlan || data.plans[lastWeek] || null });
+      else if (planningMode === 'trial') result = await requestTrialPlan({ context, dailyTime: time, lang, currentWeek, userGoal: aiGoal.slice(0, 300), userMessage: message });
+      else result = await generateAIPlan(previous.completed || {}, difficultyLevel, previous.feedbackValue, apiKey, allProgress, data.metrics, aiGoal, time, message, available, lang, undefined,
+        { context, currentDate: today, currentWeek, previousPlan: savedPlan || data.plans[lastWeek] || null });
+      const plan = { ...result, language: lang, source: planningMode === 'template' ? 'template' : 'ai' };
+      if (!user) {
+        onPublicDraft({ plan, profile, week: currentWeek, completed: {} }); setPublicProgress({}); setActiveTab('train');
+      } else {
+        if (auth.currentUser?.uid !== user.uid) return;
+        await savePlan(user.uid, currentWeek, plan, fallbackPlan, false, revision);
+        writeStorage(preferencesKey, JSON.stringify(profile));
+        showToast(t(planningMode === 'template' ? 'templateSuccess' : 'toastAISuccess'));
+        setActiveTab('train');
+      }
+      recordPromotionEvent('first_plan', currentWeek);
+      setEditingAI(false); setMessage('');
+    } catch (err) {
+      console.error('Plan generation failed', err.code || err.message);
+      showToast(t(err.message === 'PLAN_CHANGED' ? 'planChanged' : err.code === 'permission-denied' ? 'planPermissionDenied'
+        : planningMode === 'template' ? 'templateError' : planningMode === 'trial' ? err.message === 'AI_TRIAL_WEEK_EXHAUSTED' ? 'trialQuota' : err.message === 'AI_TRIAL_SIGN_IN_REQUIRED' ? 'trialGoogle' : err.message === 'AI_TRIAL_WEEK_MISMATCH' ? 'trialWeekMismatch' : 'trialError' : 'toastAIError'));
+    } finally { setGenerating(false); }
   };
   const addExercise = async () => {
     if (!requireUser() || adding || !newName.trim()) return;
@@ -223,7 +329,7 @@ function FitnessApp({ account, calendar }) {
         <div className="flex flex-wrap items-center gap-3 mt-3 text-xs">
           <button onClick={toggleLanguage} className="text-sky-700 bg-sky-50 px-3 py-2 rounded-lg">🌐 {t('langToggle')}</button>
           {user ? <>
-            {user.isAnonymous && <button disabled={account.busy} onClick={account.googleLogin} className="text-sky-600">{t('upgradeGuest')}</button>}
+            {user.isAnonymous && <button disabled={account.busy || !!pendingDraft} onClick={account.googleLogin} className="text-sky-600 disabled:opacity-50">{t('upgradeGuest')}</button>}
             <button disabled={account.busy} onClick={account.logout} className="flex gap-1 items-center"><LogOut size={14} />{t('logout')}</button>
           </> : <>
             <button disabled={account.busy} onClick={account.googleLogin} className="flex gap-1 items-center text-sky-600"><LogIn size={14} />{t('login')}</button>
@@ -239,13 +345,20 @@ function FitnessApp({ account, calendar }) {
       {account.error && <p role="alert" className="mb-4 rounded-xl bg-red-50 text-red-700 p-4 text-sm">{t(account.error)}</p>}
       {data.error && <p role="alert" className="mb-4 rounded-xl bg-red-50 text-red-700 p-4 text-sm">{t('dataLoadFailed')}</p>}
       {account.migrationPending && <div role="alert" className="mb-4 bg-amber-50 p-4 rounded-xl text-sm">{t('migrationPending')}<button disabled={account.busy} onClick={account.retryMigration} className="ml-3 text-sky-600">{t('retry')}</button></div>}
+      {pendingDraft && <div role="status" className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm space-y-3">
+        <p>{t(adoptionError ? 'adoptionFailed' : savedPlan ? 'adoptExisting' : 'previewSaving')}</p>
+        {(savedPlan || adoptionError) && <button disabled={savingPlan} onClick={adoptPreview} className="bg-indigo-600 text-white rounded-lg px-3 py-2">{t(savedPlan ? 'adoptPreview' : 'retryPreview')}</button>}
+        <button disabled={savingPlan} onClick={onConsumeDraft} className="ml-3 underline">{t('discardPreview')}</button>
+      </div>}
       {activeTab === 'train' && <>
+        {!user && !publicDraft && <section className="bg-white p-5 rounded-2xl border border-sky-100 mb-6 space-y-4"><h2 className="font-bold text-lg text-indigo-700">{t('plannerTitle')}</h2><p className="text-sm">{t('plannerIntro')}</p><Onboarding t={t} context={planningContext} setContext={setPlanningContext} time={time} setTime={setTime} focus={focus} setFocus={setFocus} goal={goal} setGoal={setGoal} message={message} setMessage={setMessage} generating={generating} onGenerate={requestPlan} /></section>}
+        {!user && publicDraft && <section className="bg-sky-50 border border-sky-200 p-4 rounded-xl mb-5 space-y-3"><h2 className="font-bold">{t('previewReady')}</h2><p className="text-sm">{t('previewHint')}</p><div className="flex flex-wrap gap-3"><button disabled={account.busy} onClick={account.guestLogin} className="bg-indigo-600 text-white rounded-lg px-3 py-2 text-sm">{t('savePreviewGuest')}</button><button disabled={account.busy} onClick={account.googleLogin} className="bg-white rounded-lg px-3 py-2 text-sm">{t('savePreviewGoogle')}</button><button onClick={() => setActiveTab('ai')} className="text-sm underline">{t('newFreePlan')}</button></div></section>}
         <div className="mb-6"><div className="flex items-center justify-between text-sm"><span>{t('weekLabel')}: {currentWeek} · {t('difficultyLabel')}: {t(['diffLow', 'diffMid', 'diffHigh'][difficultyLevel])}</span><strong className="text-2xl text-sky-600">{progressPercent}%</strong></div><div className="h-2 bg-sky-100 rounded-full mt-3 overflow-hidden"><div className="h-full bg-sky-500" style={{ width: `${progressPercent}%` }} /></div></div>
-        <Training t={t} schedule={schedule} draft={draft} activeDay={activeDay} setActiveDay={setActiveDay} currentWeek={currentWeek} exercises={exercises} progress={progress} level={difficultyLevel} editing={editing} selected={selected} setSelected={setSelected} onEdit={enterEditing} onCancel={cancelEditing} onSave={saveEdits} onAdd={add} onRemove={remove} onMove={move} onPhase={changePhase} onToggle={toggle} onFeedback={feedback} feedback={allProgress[currentWeek]?.feedbackValue} busy={busy || generating} saving={savingPlan} canEdit={!!user && !!data.loaded.plans && !!data.loaded.exercises && !generating} canRestore={!!weeklyPlan?.previous} onRestore={restore} />
+        <Training t={t} lang={lang} schedule={schedule} draft={draft} activeDay={activeDay} setActiveDay={setActiveDay} currentWeek={currentWeek} exercises={exercises} progress={progress} level={difficultyLevel} editing={editing} selected={selected} setSelected={setSelected} onEdit={enterEditing} onCancel={cancelEditing} onSave={saveEdits} onAdd={add} onRemove={remove} onMove={move} onPhase={changePhase} onToggle={toggle} onFeedback={feedback} feedback={allProgress[currentWeek]?.feedbackValue} busy={busy || generating} saving={savingPlan} canEdit={!!user && !!data.loaded.plans && !!data.loaded.exercises && !generating} canRestore={!!weeklyPlan?.previous} onRestore={restore} />
       </>}
       <div className={activeTab === 'train' ? '' : 'max-w-3xl mx-auto'}>
-        {activeTab !== 'train' && activeTab !== 'settings' && !user ? login : <Suspense fallback={<div className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>}>
-          {activeTab === 'ai' && <Coach t={t} plan={weeklyPlan} editing={editingAI} setEditing={setEditingAI} generating={generating} apiKey={apiKey} goal={goal} setGoal={setGoal} time={time} setTime={setTime} message={message} setMessage={setMessage} context={planningContext} setContext={setPlanningContext} onGenerate={requestPlan} onRestore={restore} />}
+        {['metrics', 'history'].includes(activeTab) && !user ? login : <Suspense fallback={<div className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>}>
+          {activeTab === 'ai' && <Coach t={t} mode={planningMode} setMode={setPlanningMode} trialAvailable={trialEnabled()} focus={focus} setFocus={setFocus} plan={weeklyPlan} editing={editingAI} setEditing={setEditingAI} generating={generating} apiKey={apiKey} goal={goal} setGoal={setGoal} time={time} setTime={setTime} message={message} setMessage={setMessage} context={planningContext} setContext={setPlanningContext} onGenerate={requestPlan} onRestore={restore} />}
           {activeTab === 'metrics' && <Metrics t={t} form={metricForm} onChange={changeMetric} onSave={saveMetrics} history={data.metrics} saving={busy} hasMore={data.metrics.length >= metricLimit} onLoadMore={() => setMetricLimit(previous => previous + 365)} />}
           {activeTab === 'history' && stats && <History t={t} lang={lang} stats={stats} months={months} weeks={heatmapWeeks} hasMore={data.hasMoreProgress} onLoadMore={() => setWeekLimit(previous => previous + 104)} />}
           {activeTab === 'exercises' && <ExerciseLibrary t={t} exercises={exercises} name={newName} setName={setNewName} adding={adding} onAdd={addExercise} onToggle={toggleActive} onDelete={deleteExercise} busy={busy} />}
