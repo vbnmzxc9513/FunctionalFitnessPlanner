@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
-import { BarChart3, CalendarDays, Feather, Info, Loader2, LogOut, Settings as SettingsIcon } from 'lucide-react';
+import { ArrowLeft, BarChart3, CalendarDays, Feather, Info, Loader2, LogOut, Settings as SettingsIcon } from 'lucide-react';
 import { getDoc, setDoc } from 'firebase/firestore';
 import { TRANSLATIONS, EXERCISES_I18N, DEFAULT_SCHEDULE_I18N, LEGACY_DEFAULT_SCHEDULE_I18N } from './locale.js';
 import { auth } from './services/firebase.js';
@@ -12,7 +12,7 @@ import { useTrainingData } from './hooks/useTrainingData.js';
 import { plannedSnapshot, saveTrainingLog, saveNextDayResponse, saveReadiness } from './services/trainingRepository.js';
 import { validateTrainingLog, validateReadiness, trainingLogId, evaluateReadiness, adaptDayForReadiness } from './domain/coaching.js';
 import { dateForWeekDay } from './domain/dates.js';
-import { availableSchedule, calculateStats, clampLevel, countCompleted, normalizeSchedule, prescription } from './domain/training.js';
+import { availableSchedule, calculateStats, clampLevel, normalizeSchedule, prescription } from './domain/training.js';
 import { exercisePhase, moveWithinPhase, syncSessionType } from './domain/phases.js';
 import { monthlyStats } from './domain/training.js';
 import { emptyMetrics, metricsForm, parseMetrics } from './domain/metrics.js';
@@ -84,6 +84,8 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
   const t = key => UX_TRANSLATIONS[lang][key] ?? PROMOTION_TRANSLATIONS[lang][key] ?? TRANSLATIONS[lang][key] ?? TRANSLATIONS.zh[key] ?? key;
   const [activeTab, setActiveTab] = useState('train');
   const [planView, setPlanView] = useState('week');
+  const [planScreen, setPlanScreen] = useState('overview');
+  const [coachVisited, setCoachVisited] = useState(false);
   const [recordsView, setRecordsView] = useState('training');
   const [trainingMode, setTrainingMode] = useState('today');
   const [activeDay, setActiveDay] = useState(() => { const day = new Date().getDay(); return day >= 1 && day <= 5 ? day : 1; });
@@ -113,8 +115,6 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
   const currentSchedule = normalizeSchedule(localizedSchedule, exercises, defaultSchedule);
   const schedule = weeklyPlan ? currentSchedule : availableSchedule(currentSchedule, exercises);
   const difficultyLevel = clampLevel(data.difficultyLevel);
-  const counts = countCompleted(schedule, progress);
-  const progressPercent = counts.total ? Math.round(counts.completed / counts.total * 100) : 0;
   const [toast, setToast] = useState('');
   const toastTimer = useRef();
   useEffect(() => () => clearTimeout(toastTimer.current), []);
@@ -450,33 +450,41 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
   const calendarDay = new Date(`${today}T12:00:00`).getDay();
   const weekend = calendarDay === 0 || calendarDay === 6;
   const navigate = tab => {
-    if (editing && tab !== 'plan') { showToast(t('finishEditing')); return; }
+    if (editing) { showToast(t('finishEditing')); return; }
     if (tab === 'train') {
       setTrainingMode('today');
       if (!weekend) setActiveDay(calendarDay);
     }
-    if (tab === 'plan') setTrainingMode('plan');
-    setActiveTab(tab);
+    if (tab === 'plan') { setTrainingMode('plan'); setPlanScreen('overview'); setPlanView('week'); }
+    setActiveTab(tab); window.scrollTo({ top: 0 });
   };
   const viewRecords = () => { setRecordsView('training'); navigate('records'); };
   const showPlanArea = activeTab === 'train' || (activeTab === 'plan' && planView === 'week');
-  const firstPlan = <section data-testid="first-plan" className="bg-white p-5 sm:p-6 rounded-2xl border border-sky-100 space-y-4 max-w-2xl">
-    <div><p className="text-sm text-sky-700 mb-2">{t('firstPlanHint')}</p><h2 className="font-bold text-xl text-slate-800">{t('firstPlanTitle')}</h2><p className="text-sm text-slate-500 mt-2">{t('firstPlanIntro')}</p></div>
-    <Onboarding t={t} context={planningContext} setContext={setPlanningContext} time={time} setTime={setTime} focus={focus} setFocus={setFocus} goal={goal} setGoal={setGoal} message={message} setMessage={setMessage} generating={generating} onGenerate={requestPlan} />
+  const firstPlan = <section data-testid="first-plan" className="setup-card">
+    <div className="setup-heading"><p className="eyebrow">{t('firstPlanHint')}</p><h2>{t('firstPlanTitle')}</h2><p className="text-sm text-slate-500 mt-2">{t('firstPlanIntro')}</p></div>
+    <Onboarding guided t={t} context={planningContext} setContext={setPlanningContext} time={time} setTime={setTime} focus={focus} setFocus={setFocus} goal={goal} setGoal={setGoal} message={message} setMessage={setMessage} generating={generating} onGenerate={requestPlan} />
   </section>;
-  const subnav = (items, value, change, label) => <div aria-label={label} role="group" className="flex rounded-xl bg-white border border-sky-100 p-1 gap-1 mb-5">{items.map(([id, key]) => <button key={id} type="button" aria-pressed={value === id} onClick={() => change(id)} className={`flex-1 rounded-lg px-3 py-3 text-sm ${value === id ? 'bg-sky-50 text-sky-800 font-semibold' : 'text-slate-500'}`}>{t(key)}</button>)}</div>;
+  const openPlanScreen = screen => {
+    if (editing && screen !== 'day') { showToast(t('finishEditing')); return; }
+    setPlanScreen(screen);
+    if (screen === 'settings') { setCoachVisited(true); setEditingAI(true); setPlanningMode('template'); }
+    window.scrollTo({ top: 0 });
+  };
+  const selectPlanDay = day => { setActiveDay(day); setTrainingMode('plan'); openPlanScreen('day'); };
+  const changePlanView = value => {
+    if (editing && value !== 'week') { showToast(t('finishEditing')); return; }
+    setPlanView(value); setPlanScreen('overview');
+  };
+  const subnav = (items, value, change, label) => <div aria-label={label} role="group" className="segmented-control">{items.map(([id, key]) => <button key={id} type="button" aria-pressed={value === id} onClick={() => change(id)}>{t(key)}</button>)}</div>;
 
-  return <div className="min-h-screen bg-slate-50 text-slate-700 pb-24 lg:pb-8">
+
+  return <div className="app-shell">
     {toast && <div role="status" className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-white border border-sky-200 shadow-xl rounded-xl px-5 py-3 flex gap-2 text-sm max-w-[90vw]"><Info size={18} className="shrink-0 text-sky-600" />{toast}</div>}
-    <aside className="lg:fixed lg:inset-y-0 lg:left-0 lg:w-56 bg-white border-b lg:border-r border-sky-100 lg:flex lg:flex-col">
-      <header className="p-4 lg:p-5 flex lg:flex-col items-center lg:items-start justify-between gap-3"><h1 className="font-bold text-base flex items-center gap-2"><Feather className="text-sky-600 shrink-0" size={22} />{t('appTitle')}</h1>
-        <button type="button" aria-current={activeTab === 'settings' ? 'page' : undefined} onClick={() => navigate('settings')} className="flex items-center gap-1 text-xs text-slate-600 rounded-lg bg-slate-50 px-3 py-2"><SettingsIcon size={16} />{t('accountSettings')}</button>
-      </header>
-      <nav aria-label={t('navigation')} className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-sky-100 flex lg:static lg:border-t-0 lg:flex-col lg:px-3 lg:gap-1">
-        {tabs.map(([id, Icon, label]) => <button key={id} type="button" aria-current={activeTab === id ? 'page' : undefined} onClick={() => navigate(id)} className={`flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-1 lg:gap-3 flex-1 lg:flex-none py-3 lg:px-3 lg:rounded-xl text-xs lg:text-sm ${activeTab === id ? 'text-sky-700 bg-sky-50 font-semibold' : 'text-slate-500'}`}><Icon size={20} />{t(label)}</button>)}
-      </nav>
+    <aside className="app-sidebar">
+      <header className="app-brand"><h1 className="brand-lockup"><span className="brand-mark"><Feather size={20} /></span>{t('appTitle')}</h1><button type="button" aria-current={activeTab === 'settings' ? 'page' : undefined} onClick={() => navigate('settings')} className="settings-button"><SettingsIcon size={16} />{t('accountSettings')}</button></header>
+      <nav aria-label={t('navigation')} className="app-nav">{tabs.map(([id, Icon, label]) => <button key={id} type="button" aria-current={activeTab === id ? 'page' : undefined} onClick={() => navigate(id)}><Icon size={21} />{t(label)}</button>)}</nav>
     </aside>
-    <main className="lg:ml-56 p-4 lg:p-8 max-w-7xl">
+    <main className="app-main">
       {account.error && <p role="alert" className="mb-4 rounded-xl bg-red-50 text-red-700 p-4 text-sm">{t(account.error)}</p>}
       {trainingData.error && <p role="alert" className="mb-4 rounded-xl bg-red-50 text-red-700 p-4 text-sm">{t('dataLoadFailed')}</p>}
       {data.error && <p role="alert" className="mb-4 rounded-xl bg-red-50 text-red-700 p-4 text-sm">{t('dataLoadFailed')}</p>}
@@ -486,28 +494,28 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
         {(savedPlan || adoptionError) && <button disabled={savingPlan} onClick={adoptPreview} className="bg-indigo-600 text-white rounded-lg px-3 py-2">{t(savedPlan ? 'adoptPreview' : 'retryPreview')}</button>}
         <button disabled={savingPlan} onClick={onConsumeDraft} className="ml-3 underline">{t('discardPreview')}</button>
       </div>}
-      {activeTab === 'plan' && <><h2 className="text-xl font-bold text-slate-800 mb-4">{t('navPlan')}</h2>{subnav([['week', 'planningTab'], ['library', 'libraryTab']], planView, setPlanView, t('navPlan'))}</>}
+      {activeTab === 'plan' && (planView === 'library' || planScreen === 'overview') && <>{planView === 'library' && <div className="screen-header"><p className="eyebrow">{t('planEyebrow')}</p><h2 className="screen-title">{t('libraryTab')}</h2><p className="screen-description">{t('libraryDescription')}</p></div>}{subnav([['week', 'planningTab'], ['library', 'libraryTab']], planView, changePlanView, t('navPlan'))}</>}
       {showPlanArea && !planLoaded && <p role="status" className="p-6 text-sm">{t('loadingPlan')}</p>}
       {showPlanArea && planLoaded && !hasCurrentPlan && !pendingDraft && firstPlan}
-      {activeTab === 'plan' && planView === 'week' && hasCurrentPlan && <Suspense fallback={null}><WeekOverview schedule={schedule} exercises={exercises} week={currentWeek} plan={weeklyPlan} context={planningContext} focus={focus} time={time} level={difficultyLevel} lang={lang} t={t} onEdit={() => { setEditingAI(true); document.querySelector('[data-testid="planner-conditions"]')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }} onSelectDay={day => { setActiveDay(day); document.getElementById('weekly-session-detail')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }} /></Suspense>}
-      {activeTab === 'plan' && planView === 'week' && hasCurrentPlan && <Suspense fallback={null}><div className="mb-5"><WeeklyBalance schedule={schedule} exercises={exercises} context={planningContext} week={currentWeek} currentDate={today} lang={lang} /></div></Suspense>}
+      {activeTab === 'plan' && planView === 'week' && hasCurrentPlan && planScreen !== 'overview' && <button type="button" data-testid="back-to-week" disabled={editing} onClick={() => openPlanScreen('overview')} className="screen-back"><ArrowLeft size={16} />{t('backToWeek')}</button>}
+      {activeTab === 'plan' && planView === 'week' && hasCurrentPlan && planScreen === 'overview' && <Suspense fallback={<p role="status" className="py-8 text-sm text-slate-500">{t('loadingPlan')}</p>}><WeekOverview schedule={schedule} exercises={exercises} week={currentWeek} plan={weeklyPlan} context={planningContext} focus={focus} time={time} level={difficultyLevel} lang={lang} t={t} currentDate={today} onEdit={() => openPlanScreen('settings')} onSelectDay={selectPlanDay}><WeeklyBalance schedule={schedule} exercises={exercises} context={planningContext} week={currentWeek} currentDate={today} lang={lang} /></WeekOverview></Suspense>}
       {showPlanArea && hasCurrentPlan && <>
-        <div className="mb-4 flex items-center justify-between gap-3 text-sm"><span className="text-slate-500">{t('weekLabel')}: {currentWeek}</span><span className="text-sky-700 font-semibold">{progressPercent}%</span></div>
-        {!user && publicDraft && <details className="rounded-xl border border-sky-100 bg-sky-50 p-3 mb-5 text-xs"><summary className="cursor-pointer text-sky-800">{t('localPreview')} · {t('saveAccount')}</summary><p className="mt-2 text-slate-600">{t('localPreviewHint')}</p><div className="flex flex-wrap gap-2 mt-3"><button disabled={account.busy} onClick={account.guestLogin} className="bg-indigo-600 text-white px-3 py-2 rounded-lg">{t('savePreviewGuest')}</button><button disabled={account.busy} onClick={account.googleLogin} className="bg-white text-sky-800 px-3 py-2 rounded-lg">{t('savePreviewGoogle')}</button></div></details>}
+
         {activeTab === 'train' && weekend && <section className="rounded-2xl border border-sky-100 bg-white p-6 space-y-3"><h2 className="font-bold">{t('noCourtWeekend')}</h2><p className="text-sm text-slate-500">{t('noCourtWeekendHint')}</p><button onClick={() => navigate('plan')} className="rounded-xl bg-sky-600 text-white px-4 py-3 text-sm">{t('planningTab')}</button><button onClick={viewRecords} className="block text-sm text-sky-700">{t('viewRecords')}</button></section>}
       </>}
-      {hasCurrentPlan && <div id="weekly-session-detail" hidden={!showPlanArea || (activeTab === 'train' && weekend)}>
+      {hasCurrentPlan && <div id="weekly-session-detail" hidden={!showPlanArea || (activeTab === 'train' && weekend) || (activeTab === 'plan' && planScreen !== 'day')}>
         <Training eligibleExercises={manualPlanningExercises(exercises, planningContext)} t={t} lang={lang} mode={trainingMode} onViewRecords={viewRecords} schedule={schedule} draft={draft} activeDay={activeDay} setActiveDay={setActiveDay} currentWeek={currentWeek} exercises={exercises} progress={progress} level={difficultyLevel} editing={editing} selected={selected} setSelected={setSelected} onEdit={enterEditing} onCancel={cancelEditing} onSave={saveEdits} onAdd={add} onRemove={remove} onMove={move} onPhase={changePhase} onToggle={toggle} onFeedback={feedback} feedback={allProgress[currentWeek]?.feedbackValue} busy={busy || generating || coachingBusy || savingPlan || !!pendingDraft} saving={savingPlan} canEdit={!!user && !!data.loaded.plans && !!data.loaded.exercises && !generating && !pendingDraft} canRestore={!!weeklyPlan?.previous} onRestore={restore} exerciseLogs={exerciseLogs} readiness={readiness} readinessPreview={readinessPreview?.date === activeDate ? readinessPreview : null} onSaveExerciseLog={user && !trainingData.loaded ? undefined : recordExercise} onUpdateNextDay={recordNextDay} onSaveReadiness={recordReadiness} onPreviewReadiness={previewReadiness} onApplyReadiness={applyReadiness} loggingBusy={coachingBusy || busy || savingPlan || generating || (!!user && !trainingData.loaded)} readinessBusy={coachingBusy || busy || savingPlan || generating || (!!user && !trainingData.loaded)} loggingDisabled={!!pendingDraft || editing || (!!user && !trainingData.loaded)} readinessDisabled={activeDate !== today || !!pendingDraft || editing || (!!user && !trainingData.loaded)} coachingContext={{ ...planningContext, today, readiness: readinessRecords.find(record => record.date === today) || null }} />
       </div>}
+      {showPlanArea && hasCurrentPlan && (activeTab === 'train' || planScreen !== 'settings') && !user && publicDraft && <details className="save-panel"><summary className="cursor-pointer text-sky-800">{t('localPreview')} · {t('saveAccount')}</summary><p className="mt-2 text-slate-600">{t('localPreviewHint')}</p><div className="flex flex-wrap gap-2 mt-3"><button disabled={account.busy} onClick={account.guestLogin} className="bg-indigo-600 text-white px-3 py-2 rounded-lg">{t('savePreviewGuest')}</button><button disabled={account.busy} onClick={account.googleLogin} className="bg-white text-sky-800 px-3 py-2 rounded-lg">{t('savePreviewGoogle')}</button></div></details>}
       <Suspense fallback={<div role="status" className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>}>
-        {activeTab === 'plan' && planView === 'week' && hasCurrentPlan && <div className="mt-6"><Coach t={t} mode={planningMode} setMode={setPlanningMode} trialAvailable={trialEnabled()} focus={focus} setFocus={setFocus} plan={weeklyPlan} editing={editingAI} setEditing={setEditingAI} generating={generating} apiKey={apiKey} goal={goal} setGoal={setGoal} time={time} setTime={setTime} message={message} setMessage={setMessage} context={planningContext} setContext={setPlanningContext} onGenerate={requestPlan} onRestore={restore} /></div>}
+        {hasCurrentPlan && coachVisited && <div hidden={activeTab !== 'plan' || planView !== 'week' || planScreen !== 'settings'} className="max-w-3xl"><Coach standalone onClose={() => openPlanScreen('overview')} t={t} mode={planningMode} setMode={setPlanningMode} trialAvailable={trialEnabled()} focus={focus} setFocus={setFocus} plan={weeklyPlan} editing={editingAI} setEditing={setEditingAI} generating={generating} apiKey={apiKey} goal={goal} setGoal={setGoal} time={time} setTime={setTime} message={message} setMessage={setMessage} context={planningContext} setContext={setPlanningContext} onGenerate={requestPlan} onRestore={restore} /></div>}
         {activeTab === 'plan' && planView === 'library' && <ExerciseLibrary t={t} lang={lang} canManage={!!user} onOrganize={organizeExercise} onSignIn={() => navigate('settings')} exercises={exercises} name={newName} setName={setNewName} adding={adding} onAdd={addExercise} onToggle={toggleActive} onDelete={deleteExercise} busy={busy} />}
-        {activeTab === 'records' && <div className="max-w-3xl"><h2 className="text-xl font-bold text-slate-800 mb-4">{t('navRecords')}</h2>{subnav([['training', 'trainingRecordsTab'], ['body', 'bodyRecordsTab']], recordsView, setRecordsView, t('navRecords'))}
+        {activeTab === 'records' && <div className="max-w-3xl"><div className="screen-header"><p className="eyebrow">{t('recordsEyebrow')}</p><h2 className="screen-title">{t('navRecords')}</h2><p className="screen-description">{t('recordsDescription')}</p></div>{subnav([['training', 'trainingRecordsTab'], ['body', 'bodyRecordsTab']], recordsView, setRecordsView, t('navRecords'))}
           {recordsView === 'body' ? (!user ? login : <Metrics t={t} form={metricForm} onChange={changeMetric} onSave={saveMetrics} history={data.metrics} saving={busy} hasMore={data.metrics.length >= metricLimit} onLoadMore={() => setMetricLimit(previous => previous + 365)} />)
             : !user && !publicDraft ? login : stats && <History t={t} lang={lang} previewOnly={!user} exercises={exercises} stats={stats} months={months} weeks={heatmapWeeks} logs={exerciseLogs} onUpdateNextDay={recordNextDay} loggingBusy={coachingBusy || busy || savingPlan || generating || editing || !!pendingDraft || (!!user && !trainingData.loaded)} today={today} hasMore={data.hasMoreProgress} onLoadMore={() => setWeekLimit(previous => previous + 104)} />}
         </div>}
       </Suspense>
-      {activeTab === 'settings' && <div className="space-y-5 max-w-2xl"><h2 className="text-xl font-bold text-slate-800">{t('accountSettings')}</h2><section className="bg-white p-5 rounded-2xl border border-sky-100 space-y-4">
+      {activeTab === 'settings' && <div className="space-y-5 max-w-2xl"><h2 className="screen-title">{t('accountSettings')}</h2><section className="bg-white p-5 rounded-2xl border border-sky-100 space-y-4">
         <p className="text-sm text-slate-600">{t(!user ? 'accountStoragePublic' : user.isAnonymous ? 'accountStorageAnonymous' : 'accountStorageGoogle')}</p>
         <button onClick={toggleLanguage} className="text-sky-700 bg-sky-50 px-3 py-2 rounded-lg text-sm">🌐 {t('langToggle')}</button>
         {user ? <div className="flex flex-wrap gap-3">{user.isAnonymous && <button disabled={account.busy || !!pendingDraft} onClick={account.googleLogin} className="rounded-lg bg-sky-600 text-white px-3 py-2 text-sm disabled:opacity-50">{t('upgradeGuest')}</button>}<button disabled={account.busy} onClick={account.logout} className="flex gap-1 items-center text-sm rounded-lg bg-slate-100 px-3 py-2"><LogOut size={14} />{t('logout')}</button></div> : login}

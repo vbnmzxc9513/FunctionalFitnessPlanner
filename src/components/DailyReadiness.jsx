@@ -5,7 +5,7 @@ import { evaluateReadiness, validateReadiness } from '../domain/coaching.js';
 import { estimateSessionMinutes } from '../domain/sessions.js';
 import { localDate } from '../domain/dates.js';
 
-export default function DailyReadiness({ lang = 'zh', value = null, date, onSave, preview = null, onPreview, onApply, busy = false, disabled = false, today = localDate(), exercises = {}, context = {} }) {
+export default function DailyReadiness({ lang = 'zh', value = null, date, onSave, preview = null, onPreview, onApply, busy = false, disabled = false, today = localDate(), exercises = {}, context = {}, compact = false }) {
   const c = (key, parameters) => coachText(lang, key, parameters);
   const [form, setForm] = useState(() => readinessForm(value));
   const [dirty, setDirty] = useState(false);
@@ -39,9 +39,10 @@ export default function DailyReadiness({ lang = 'zh', value = null, date, onSave
   };
   const numeric = (key, max, step = '1') => <label className="block text-xs text-slate-600">{c(key)}<input type="number" inputMode="decimal" min="0" max={max} step={step} value={form[key]} onChange={event => change(key, event.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 p-2 text-sm" /></label>;
   const score = key => <label className="block text-xs text-slate-600">{c(key)} · {c('scoreHint')}<select value={form[key]} onChange={event => change(key, event.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 p-2 text-sm"><option value="">{c('unknown')}</option>{[0, 1, 2, 3, 4].map(value => <option key={value} value={value}>{value}</option>)}</select></label>;
-  return <section className="bg-white rounded-2xl p-4 border border-sky-100 space-y-3" data-testid="daily-readiness" aria-label={c('readinessTitle')}>
-    <h3 className="font-semibold">{c('readinessTitle')} · {date}</h3><p className="text-xs text-slate-500">{c('readinessHint')}</p>{date !== today && <p className="text-xs text-amber-700">{c('onlyToday')}</p>}
+  return <section className={compact ? "readiness-compact space-y-2" : "bg-white rounded-2xl p-4 border border-sky-100 space-y-3"} data-testid="daily-readiness" aria-label={c('readinessTitle')}>
+    <h3 className="font-semibold">{c('readinessTitle')}{!compact && ` · ${date}`}</h3>{!compact && <p className="text-xs text-slate-500">{c('readinessHint')}</p>}{date !== today && <p className="text-xs text-amber-700">{c('onlyToday')}</p>}
     <details><summary className="cursor-pointer text-sm text-sky-700">{value ? c('saved') : c('optional')} · {c(`readiness_${decision.action}`)}</summary>
+      {compact && <p className="text-sm text-slate-500 mt-3">{c('readinessHint')}</p>}
       <fieldset disabled={blocked} className="mt-3 space-y-3 disabled:opacity-60">
         <div className="grid sm:grid-cols-2 gap-3">{numeric('sleepHours', '24', '0.5')}{score('fatigue')}{score('soreness')}
           <label className="block text-xs text-slate-800 font-semibold">{c('currentSymptoms')}<select value={form.symptoms} onChange={event => change('symptoms', event.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 p-2 text-sm">{[['unknown', 'unknown'], ['none', 'noSymptoms'], ['stable', 'stableSymptoms'], ['worse', 'worse'], ['red_flags', 'redFlags']].map(([value, label]) => <option key={value} value={value}>{c(label)}</option>)}</select></label>

@@ -1,4 +1,4 @@
-import { Dumbbell, Loader2, Star, Trash2 } from 'lucide-react';
+import { Loader2, Star, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { EXERCISE_CATEGORIES } from '../domain/exerciseCatalog.js';
 import { LIBRARY_PURPOSES, libraryGroups, matchesLibraryPurpose, suggestedUses } from '../domain/library.js';
@@ -30,9 +30,9 @@ export default function ExerciseLibrary({ t, exercises, name = '', setName, addi
     } catch { setOrganizeError(text.savedFailure); }
     finally { setPendingId(null); }
   }
-  return <section className="bg-white p-5 rounded-2xl border border-sky-100">
+  return <section className="exercise-library" aria-label={t('exercisesTitle')}>
     <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-      <h2 className="text-lg font-bold flex items-center gap-2"><Dumbbell size={20} className="text-indigo-600" />{t('exercisesTitle')}</h2>
+      <span />
       {canManage && <button type="button" aria-expanded={showManagement} aria-controls="exercise-management" onClick={() => setManaging(value => !value)} className="text-sm rounded-lg border border-sky-200 px-3 py-2 text-slate-600">{showManagement ? text.done : text.manage}</button>}
     </div>
     <p className="text-sm text-slate-500 mb-4">{text.favoriteHint}</p>
@@ -51,11 +51,11 @@ export default function ExerciseLibrary({ t, exercises, name = '', setName, addi
     <details className="mt-3 text-sm text-slate-600"><summary className="cursor-pointer">{text.moreFilters}{category && ` · ${t(`category_${category}`)}`}</summary><select aria-label={t('filterCategory')} value={category} onChange={event => { setCategory(event.target.value); setVisibleCount(12); }} className="mt-2 max-w-full rounded-lg border border-sky-200 p-2 text-sm"><option value="">{t('allCategories')}</option>{EXERCISE_CATEGORIES.map(item => <option key={item} value={item}>{t(`category_${item}`)}</option>)}</select></details>
     <p className="text-xs text-slate-500 my-3" aria-live="polite">{text.count(entries.length)}</p>
     {organizeError && <p role="alert" className="text-sm text-red-600 my-3">{organizeError}</p>}
-    <div className="space-y-3">{entries.slice(0, visibleCount).map(([id, exercise]) => {
+    <div className="library-grid">{entries.slice(0, visibleCount).map(([id, exercise]) => {
       const groups = libraryGroups(exercise);
-      return <article key={id} data-testid={`library-exercise-${id}`} className={`p-4 rounded-xl border border-sky-100 ${exercise.active === false ? 'bg-slate-50' : ''}`}>
+      return <article key={id} data-testid={`library-exercise-${id}`} className={`library-card ${exercise.active === false ? 'bg-slate-50' : ''}`}>
         <div className="flex items-start gap-3">
-          <div className="flex-1 min-w-0"><h3 className="font-semibold text-sm">{exercise.name}</h3><p className="text-xs text-sky-700 mt-1">{exercise.catalogCode && `${exercise.catalogCode} · `}{exercise.category ? t(`category_${exercise.category}`) : t(`type_${exercise.type}`)}{exercise.advanced && ` · ${t('advancedExercise')}`}{exercise.active === false && ` · ${text.disabled}`}</p><p className="text-xs mt-2 text-slate-500">{exercise.tip}</p></div>
+          <div className="flex-1 min-w-0"><h3 className="font-semibold text-sm">{exercise.name}</h3><p className="text-xs text-sky-700 mt-1">{exercise.category ? t(`category_${exercise.category}`) : t(`type_${exercise.type}`)}{exercise.advanced && ` · ${t('advancedExercise')}`}{exercise.active === false && ` · ${text.disabled}`}</p><p className="text-xs mt-2 text-slate-500">{exercise.tip}</p></div>
           {showManagement && <div className="flex flex-col gap-4 items-end shrink-0">
             <button type="button" disabled={busy} role="switch" aria-checked={exercise.active !== false} aria-label={exercise.name} onClick={() => onToggle(id)} className={`w-12 h-6 rounded-full relative ${exercise.active === false ? 'bg-slate-200' : 'bg-sky-500'}`}><span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white ${exercise.active === false ? '' : 'translate-x-6'}`} /></button>
             <button type="button" disabled={busy} aria-label={`${t('removeExercise')} ${exercise.name}`} onClick={() => onDelete(id)} className="text-red-500 p-1"><Trash2 size={18} /></button>
@@ -65,7 +65,7 @@ export default function ExerciseLibrary({ t, exercises, name = '', setName, addi
           <button type="button" data-testid={`favorite-${id}`} disabled={!!organizing || (canManage && !onOrganize)} aria-label={`${!canManage ? text.favoriteLogin : groups.length ? text.removeFavorite : text.favorite} ${exercise.name}`} onClick={() => organize(id, groups.length ? [] : purpose === 'all' ? suggestedUses(id, exercise) : [purpose])} className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs disabled:opacity-50 ${groups.length ? 'border-amber-200 text-amber-800 bg-amber-50' : 'border-slate-200 text-slate-600'}`}>
             {pendingId === id ? <Loader2 size={14} className="animate-spin" /> : <Star size={14} fill={groups.length ? 'currentColor' : 'none'} />}{!canManage ? text.favoriteLogin : groups.length ? text.removeFavorite : text.favorite}
           </button>
-          <p className="text-xs text-slate-500">{groups.length ? `${text.currentGroups}：${groups.map(group => text[group]).join(' · ')}` : text.noGroups}</p>
+          {groups.length > 0 && <p className="text-xs text-slate-500">{`${text.currentGroups}：${groups.map(group => text[group]).join(' · ')}`}</p>}
         </div>
         {canManage && <details className="mt-2 text-xs text-slate-600"><summary className="cursor-pointer">{text.organize}</summary><p className="my-2">{text.groupHint}</p><div className="flex flex-wrap gap-3">{LIBRARY_PURPOSES.map(group => <label key={group} className="inline-flex items-center gap-1.5"><input type="checkbox" checked={groups.includes(group)} disabled={!!organizing || !onOrganize} onChange={event => organize(id, event.target.checked ? [...groups, group] : groups.filter(item => item !== group))} />{text[group]}</label>)}</div></details>}
         <ExerciseGuide id={id} exercise={exercise} lang={lang} />

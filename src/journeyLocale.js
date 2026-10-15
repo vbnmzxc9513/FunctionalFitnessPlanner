@@ -1,5 +1,7 @@
 const messages = {
   zh: {
+    short_warmup: '暖身', short_skill: '協調', short_strength: '肌力', short_accessory: '輔助', short_recovery: '恢復', short_cooldown: '收操',
+    movementCount: '個動作', markDone: '完成這個動作', sequence: '今天的訓練順序',
     today: '今天的訓練', week: '本週課表', start: '開始今天訓練', resume: '繼續訓練',
     progress: '已完成 {done}／{total} 個動作', current: '目前動作 · 做完請點圓圈標記完成', next: '查看下一個動作', back: '回到第一個未完成動作',
     nextHint: '查看下一個不會標記完成；尚未完成的暖身與動作仍會保留。',
@@ -15,6 +17,8 @@ const messages = {
     rest: '今天以恢復與休息為主，無需完成訓練動作。',
   },
   en: {
+    short_warmup: 'Warm-up', short_skill: 'Skill', short_strength: 'Strength', short_accessory: 'Support', short_recovery: 'Recovery', short_cooldown: 'Finish',
+    movementCount: 'movements', markDone: 'Complete this exercise', sequence: 'Today’s training sequence',
     today: 'Today’s training', week: 'Weekly plan', start: 'Start today’s session', resume: 'Continue session',
     progress: '{done} of {total} exercises completed', current: 'Current exercise · Tap the circle when done', next: 'View next exercise', back: 'Return to the first unfinished exercise',
     nextHint: 'Viewing the next exercise does not mark anything complete. Unfinished warm-up and exercises remain in the plan.',

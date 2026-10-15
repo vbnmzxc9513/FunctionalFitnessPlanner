@@ -5,7 +5,7 @@ import { validateTrainingLog, recommendExercise, plannedSnapshot, VALUE_LIMITS }
 import { localDate } from '../domain/dates.js';
 import { LogSummary } from './TrainingHistory.jsx';
 
-export default function ExerciseLog({ lang = 'zh', exercise, id, dose, phase: _phase, date: _plannedDate, week, day, logs = [], onSave, busy = false, disabled = false, completed = false, context = {} }) {
+export default function ExerciseLog({ lang = 'zh', exercise, id, dose, phase: _phase, date: _plannedDate, week, day, logs = [], onSave, busy = false, disabled = false, completed = false, autoOpen = false, context = {} }) {
   const c = (key, parameters) => coachText(lang, key, parameters);
   const saved = logs.find(log => log.exerciseId === id && log.week === week && log.day === day);
   const today = context.today || localDate();
@@ -56,7 +56,7 @@ export default function ExerciseLog({ lang = 'zh', exercise, id, dose, phase: _p
   };
   const number = (key, label, max, step = '1') => <label className="block text-xs text-slate-600">{label}<input type="number" inputMode="decimal" min="0" max={max} step={step} value={form[key]} onChange={event => change(key, event.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 p-2 text-sm bg-white" /></label>;
   return <div className="mt-3 border-t border-slate-100 pt-3" data-testid={`exercise-log-${id}`}>
-    <details><summary className="cursor-pointer text-sm text-sky-700">{c('logTitle')}{saved && ` · ${c('saved')}`}</summary>
+    <details open={autoOpen || undefined}><summary className="cursor-pointer text-sm text-sky-700">{c('logTitle')}{saved && ` · ${c('saved')}`}</summary>
       <div className="mt-3 space-y-3">
         <p className="text-xs text-slate-500">{c('logHint')}</p>
         {targetChanged && dirty && <div role="alert" className="rounded-lg bg-amber-50 p-3 text-xs space-y-2"><p>{c('targetChanged')}</p><button type="button" disabled={blocked} onClick={() => { setFormTarget(currentSnapshot); setForm(trainingLogForm(null, dose.sets)); setDirty(false); setError(''); }} className="underline">{c('resetForTarget')}</button></div>}<p className="text-xs text-slate-600">{c('actualDate')}: {date}</p>

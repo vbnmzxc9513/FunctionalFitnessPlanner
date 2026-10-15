@@ -88,7 +88,7 @@ try {
       const handle = await visibleElement(selector); const result = await handle.evaluate(reader, ...args); await handle.dispose(); return result;
     };
     const fill = async (selector, value) => {
-      const handle = await visibleElement(selector); await handle.click({ clickCount: 3 });
+      const handle = await visibleElement(selector); await handle.evaluate(element => element.scrollIntoView({ block: 'center' })); await handle.click({ clickCount: 3 });
       await page.keyboard.press('Backspace'); if (value) await handle.type(String(value)); await handle.dispose();
     };
     const select = async (selector, value) => { const handle = await visibleElement(selector); await handle.select(value); await handle.dispose(); };
@@ -100,7 +100,7 @@ try {
       const handle = await visibleElement(`${selector} > summary`);
       if (!await handle.evaluate(summary => summary.parentElement.open)) await clickElement(handle); else await handle.dispose();
     };
-    const weekPlan = async () => { await click('課表'); await click('本週課表'); };
+    const weekPlan = async () => { await click('課表'); await click('本週課表'); await visibleElement('[data-testid="week-overview"]'); };
     const selectMonday = async () => { await clickElement(await visibleElement('main button', TRANSLATIONS.zh.dayShort[0], true)); };
     const monday = async () => { await weekPlan(); await selectMonday(); };
     const completion = name => `button[aria-label=${JSON.stringify(name)}][aria-pressed]`;
@@ -111,7 +111,7 @@ try {
       await fill('[data-testid="picker-search"]', name);
       await clickSelector(`[data-testid="picker-option-${id}"]`); await clickSelector('[data-testid="picker-add"]');
     };
-    const library = async () => { await click('課表'); await click('動作庫'); await waitText('羽球訓練動作庫'); };
+    const library = async () => { await click('課表'); await click('動作庫'); await visibleElement('.exercise-library'); };
     const labeledSelect = async (label, value) => {
       const labelHandle = await visibleElement('label', label, true); const input = await labelHandle.$('select');
       assert.ok(input, `${label} has a select`); assert.ok(await input.evaluate(element => window.__smokeVisible(element)));
@@ -128,11 +128,15 @@ try {
     }
     const thirdTarget = await visibleElement('[data-testid="weekly-preferences"] label', '腿部／蹲與弓步');
     assert.equal(await thirdTarget.$eval('input', input => input.disabled), true, `${layout} caps priority areas at two`); await thirdTarget.dispose();
+    await click('下一步'); await click('上一步');
+    assert.equal(await read('[data-testid="planner-form"] select', element => element.value), 'coordination', `${layout} setup back preserves choices`);
+    await click('下一步'); await click('下一步');
     await click('產生免費課表'); await waitText('本分頁暫存');
     assert.equal(planningPayload, undefined, `${layout} creates a free plan without Gemini`);
     assert.equal(geminiRequests, 0, `${layout} free onboarding makes no Gemini requests`);
-    await monday();
+    await weekPlan();
     await visibleElement('[data-testid="week-overview"]');
+    assert.equal(await visibleCount('section[data-phase]'), 0, `${layout} overview does not stack daily routines`);
     assert.equal(await visibleCount('[data-testid^="week-role-"]'), 7, `${layout} shows all seven daily roles`);
     await waitText('排課時設定的方向：協調與步伐');
     assert.equal(await visibleCount('[data-testid="weekly-intent-pending"]'), 0);
@@ -140,15 +144,20 @@ try {
     assert.deepEqual(savedIntent.targetRegions, ['upper', 'core']);
     assert.deepEqual(savedIntent.stiffnessRegions, ['shoulder']);
     await click('調整本週目標');
+    assert.equal(await visibleCount('[data-testid="week-overview"]'), 0, `${layout} planning inputs have their own screen`);
     await labeledSelect('本週優先改善', 'strength');
+    await click('回到本週總覽');
     await visibleElement('[data-testid="weekly-intent-pending"]');
+    await click('調整本週目標');
     await labeledSelect('本週優先改善', 'coordination');
-    await clickSelector('[data-testid="planner-edit-conditions"]');
+    await click('回到本週總覽');
     await page.$eval('[data-testid="week-overview"]', element => element.scrollIntoView({ block: 'start' }));
     await page.screenshot({ path: `/tmp/fitness-week-${layout}.png`, fullPage: false });
     await openDetails('本週安排覆蓋');
     assert.equal(await visibleCount('[data-testid="weekly-balance"] table'), 2, `${layout} separates mobility coverage from training patterns`);
     await waitText('不是實際完成或訓練成效');
+    await selectMonday();
+    assert.equal(await visibleCount('[data-testid="week-overview"]'), 0, `${layout} daily detail is a focused view`);
     const previewName = await read('section[data-phase] button[aria-label][aria-pressed]', button => button.getAttribute('aria-label'));
     await clickSelector(completion(previewName)); await waitCompletion(previewName, true);
     await page.reload({ waitUntil: 'networkidle2' }); await waitText('本分頁暫存'); await monday(); await waitCompletion(previewName, true);
@@ -171,10 +180,14 @@ try {
     await page.evaluate(() => { for (const key of Object.keys(localStorage)) if (key.startsWith('planning_preferences_')) localStorage.removeItem(key); });
     await page.reload({ waitUntil: 'networkidle2' }); await monday();
     assert.equal(await visibleCount('[data-testid="weekly-intent-pending"]'), 0, `${layout} restores saved intent without local preferences`);
-    await waitText('排課時設定的方向：協調與步伐');
+    await weekPlan(); await waitText('排課時設定的方向：協調與步伐');
+    await selectMonday();
     await click('設定'); await waitText('綁定 Google 並保留紀錄'); await monday();
     const name = await read('section[data-phase] button[aria-label][aria-pressed]', button => button.getAttribute('aria-label'));
     await waitCompletion(name, true); await click('編輯課表');
+    await click('課表');
+    assert.equal(await visibleCount('[data-testid="week-overview"]'), 0, `${layout} current navigation preserves the active manual edit screen`);
+    assert.equal(await visibleCount('[data-testid="exercise-picker"]'), 1, `${layout} unsaved edits stay visible until saved or cancelled`);
     await clickSelector(`button[aria-label=${JSON.stringify(`移除動作 ${name}`)}]`);
     const removedId = Object.entries(EXERCISES_I18N.zh).find(([, exercise]) => exercise.name === name)?.[0];
     assert.ok(removedId, `${layout} removed exercise has a catalog identity`);
@@ -224,7 +237,7 @@ try {
 
     await click('設定'); await openDetails('進階：AI 教練自備金鑰');
     await fill('input[type="password"]', 'mock-test-only'); await click(TRANSLATIONS.zh.settingsSaveBtn);
-    await weekPlan(); await clickSelector('[data-testid="planner-edit-conditions"]'); await openDetailsSelector('[data-testid="planner-advanced"]');
+    await weekPlan(); await click('調整本週目標'); await openDetailsSelector('[data-testid="planner-advanced"]');
     assert.ok(await read('button', () => [...document.querySelectorAll('button')].find(button => window.__smokeVisible(button) && button.innerText === 'App AI 體驗').disabled));
     await click('AI 自備金鑰');
     await labeledSelect('肩部狀態與活動限制', 'restricted');
@@ -238,18 +251,19 @@ try {
     const candidateSection = planningPayload.contents[0].parts[0].text.split('【可用候選動作；ID 必須完全相同】')[1].split('【輸出要求】')[0].trim();
     assert.ok(!JSON.parse(candidateSection).some(item => item.shoulderLoaded));
     await monday(); await waitCompletion('分腿蹲', false);
+    await weekPlan(); await click('調整本週目標');
     await openDetails(TRANSLATIONS.zh.aiConclusionTitle); await waitText('Mock recovery plan');
     await page.reload({ waitUntil: 'networkidle2' }); await monday(); await waitText('每側');
-    assert.ok(await read('section[data-phase="strength"]', element => element.innerText.includes('1 組 × 6 下')));
+    assert.ok(await read('section[data-phase="strength"] .dose-grid', element => element.getAttribute('aria-label').includes('1 組 × 6 下')));
     assert.ok(await read('section[data-phase="warmup"]', element => element.innerText.includes('主項準備組') && element.innerText.includes('1 組 × 4 下')));
     assert.equal(await visibleCount(completion('分腿蹲')), 1); await waitText('Finish with gentle breathing.');
     await click('編輯課表');
     await select('[data-testid="picker-phase"]', 'accessory');
     assert.equal(await visibleCount('[data-testid^="picker-option-"]'), 0, `${layout} unclear clinical restrictions cannot add training manually`);
     await click('取消');
-    await clickSelector('[data-testid="planner-edit-conditions"]');
+    await weekPlan(); await click('調整本週目標');
     await labeledSelect('肩部狀態與活動限制', 'unrestricted');
-    await clickSelector('[data-testid="planner-edit-conditions"]');
+    await click('回到本週總覽'); await selectMonday();
     await click('編輯課表'); const breathing = EXERCISES_I18N.zh.bf_D09.name; const core = EXERCISES_I18N.zh.dead_bug.name;
     await select(`select[aria-label=${JSON.stringify(`訓練階段 ${breathing}`)}]`, 'accessory');
     await select('[data-testid="picker-phase"]', 'accessory'); await select('[data-testid="picker-scope"]', 'mine');
@@ -274,8 +288,8 @@ try {
     await changeDate('2026-01-01'); await changeDate(date);
     await page.waitForFunction(() => document.querySelector('input[name="bodyFat"]')?.value === '18');
     assert.equal(await read('input[name="weight"]', input => input.value), '72');
-    await monday();
-    const oldWeek = await page.evaluate(() => document.body.innerText.match(/\d{4}-W\d{2}/)[0]);
+    await weekPlan();
+    const oldWeek = (await read('[data-testid="week-overview"] .eyebrow', element => element.textContent)).split(' · ')[0];
     await page.evaluate(() => {
       const NativeDate = Date; const timestamp = Date.now() + 7 * 86400000;
       window.Date = class extends NativeDate { constructor(...args) { super(...(args.length ? args : [timestamp])); } static now() { return timestamp; } };

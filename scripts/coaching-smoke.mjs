@@ -43,24 +43,34 @@ try {
     });
     const waitText = text => page.waitForFunction(label => document.body.innerText.includes(label), {}, text);
     const click = async text => {
+      await page.waitForFunction(label => [...document.querySelectorAll('button')].some(item => item.innerText.trim() === label && !item.disabled && item.getClientRects().length && !item.closest('[hidden]')), {}, text);
       const handle = await page.evaluateHandle(label => [...document.querySelectorAll('button')].find(item => item.innerText.trim() === label && !item.disabled && item.getClientRects().length && !item.closest('[hidden]')), text);
       const element = handle.asElement(); if (!element) throw new Error(`Missing visible enabled button: ${text}`);
       await element.evaluate(item => item.scrollIntoView({ block: 'center' }));
-      await element.click(); await handle.dispose();
+      await element.asLocator().click(); await handle.dispose();
     };
     const openSummary = async text => {
+      await page.waitForFunction(label => [...document.querySelectorAll('summary')].some(item => item.innerText.trim().includes(label) && item.getClientRects().length && !item.closest('[hidden]')), {}, text);
       const handle = await page.evaluateHandle(label => [...document.querySelectorAll('summary')].find(item => item.innerText.trim().includes(label) && item.getClientRects().length && !item.closest('[hidden]')), text);
       const element = handle.asElement(); if (!element) throw new Error(`Missing visible summary: ${text}`);
-      if (!(await element.evaluate(item => item.parentElement.open))) { await element.evaluate(item => item.scrollIntoView({ block: 'center' })); await element.click(); } await handle.dispose();
+      if (!(await element.evaluate(item => item.parentElement.open))) { await element.evaluate(item => item.scrollIntoView({ block: 'center' })); await element.asLocator().click(); } await handle.dispose();
     };
-    const selectDay = label => page.evaluate(text => {
-      const button = [...document.querySelectorAll('main button')].find(item => item.innerText.startsWith(text));
-      if (!button) throw new Error(`Missing day: ${text}`); button.click();
-    }, label);
+    const selectDay = async label => {
+      const names = { '週一': 1, '週二': 2, '週三': 3, '週四': 4, '週五': 5, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5 };
+      await page.waitForFunction(text => [...document.querySelectorAll('main button')].some(item => item.innerText.startsWith(text) && item.getClientRects().length && !item.closest('[hidden]')), {}, label);
+      const handle = await page.evaluateHandle(text => [...document.querySelectorAll('main button')].find(item => item.innerText.startsWith(text) && item.getClientRects().length && !item.closest('[hidden]')), label);
+      const element = handle.asElement(); if (!element) throw new Error(`Missing visible day: ${label}`);
+      await element.evaluate(item => item.scrollIntoView({ block: 'center' })); await element.asLocator().click(); await handle.dispose();
+      await page.waitForFunction(date => {
+        const root = document.querySelector('#weekly-session-detail');
+        return root && !root.hidden && root.getClientRects().length && root.innerText.includes(date);
+      }, {}, dateForWeekDay(week, names[label]));
+    };
     const draft = () => page.evaluate(() => JSON.parse(sessionStorage.getItem('fitness_public_preview_v1')).publicDraft);
     await page.goto(siteUrl, { waitUntil: 'networkidle2' });
     assert.equal(await page.$$eval('nav button', buttons => buttons.length), 3);
     assert.equal(await page.$('button[aria-label][aria-pressed]'), null, `${layout}: no editable example before creating a personal plan`);
+    await click('下一步'); await click('下一步');
     await page.evaluate(() => {
       const label = [...document.querySelectorAll('label')].find(item => item.textContent.startsWith('肩部狀態與活動限制'));
       const select = label.querySelector('select'); select.value = 'unrestricted'; select.dispatchEvent(new Event('change', { bubbles: true }));
@@ -70,8 +80,18 @@ try {
     const initialCompletion = (await draft()).completed;
     await click('查看下一個動作');
     assert.deepEqual((await draft()).completed, initialCompletion, `${layout}: next does not complete warm-up`);
+    await click('查看下一個動作'); await click('查看下一個動作');
+    await page.waitForFunction(() => {
+      const prep = [...document.querySelectorAll('[data-preparation-for]')].find(item => item.getClientRects().length && !item.closest('[hidden]'));
+      const current = document.querySelector('[data-testid="current-exercise"]');
+      if (!prep || !current) return false;
+      const rectangle = prep.getBoundingClientRect();
+      return rectangle.top >= 0 && rectangle.bottom < innerHeight - 72 && !!(prep.compareDocumentPosition(current) & Node.DOCUMENT_POSITION_FOLLOWING);
+    });
+    assert.deepEqual((await draft()).completed, initialCompletion, `${layout}: navigating to preparation does not complete skipped work`);
+
     await click('課表'); await selectDay('週一');
-    await page.waitForSelector('section[data-phase="strength"] [data-testid^="exercise-log-"]');
+    await page.waitForSelector('section[data-phase="strength"] [data-testid^="exercise-log-"]', { visible: true });
     const id = await page.$eval('section[data-phase="strength"] [data-testid^="exercise-log-"]', item => item.dataset.testid.slice('exercise-log-'.length));
     const logSelector = `[data-testid="exercise-log-${id}"]`;
     await page.$eval(`${logSelector} summary`, item => item.click());
@@ -102,8 +122,8 @@ try {
     await click('儲存並標記完成');
     await page.waitForFunction(key => JSON.parse(sessionStorage.getItem('fitness_public_preview_v1')).publicDraft.completed[key] === true, {}, `day1_${id}`);
     assert.equal((await draft()).logs.length, 1, `${layout}: explicit combined save preserves one factual log and completion together`);
-    await page.$eval('[data-testid="planner-edit-conditions"]', item => item.click());
-    await click('產生免費課表'); await waitText('今天的訓練');
+    await click('課表'); await click('調整本週目標');
+    await click('產生免費課表'); await page.waitForSelector('[data-testid="session-hero"]', { visible: true });
     assert.equal((await draft()).completed[`day1_${id}`], true, `${layout}: public regeneration preserves matching completion facts`);
     assert.equal((await draft()).logs.length, 1, `${layout}: public regeneration preserves private logs`);
     await click('課表'); await selectDay('週一');
@@ -148,7 +168,7 @@ try {
     await openSummary('阻力、餘力與動作品質');
     assert.equal(await page.$eval(`${logSelector} input[max="10"]`, item => item.value), '3', `${layout}: cloud actual values populate after async load`);
     await page.$eval(`${logSelector} input[max="10"]`, input => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, '4'); input.dispatchEvent(new Event('input', { bubbles: true })); });
-    await click('設定'); await click('🌐 English'); await click('Plan'); await waitText('Actual training date');
+    await click('設定'); await click('🌐 English'); await click('Plan'); await selectDay('Mon'); await waitText('Actual training date');
     assert.equal(await page.$eval(`${logSelector} input[max="10"]`, item => item.value), '4', `${layout}: unsaved form survives language switch`);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${layout}: coaching UI fits viewport`);
     await page.screenshot({ path: `/tmp/fitness-ux-${layout}-record.png`, fullPage: false });
