@@ -71,7 +71,7 @@ try {
         && (label === null || (starts ? element.innerText.trim().startsWith(label) : element.innerText.trim().replace(/\s+/g, ' ') === label.replace(/\s+/g, ' ')))), selector, text, prefix);
       return handle.asElement();
     };
-    const clickElement = async handle => { await handle.evaluate(element => element.scrollIntoView({ block: 'center' })); await handle.click(); await handle.dispose(); };
+    const clickElement = async handle => { await page.waitForFunction(element => !element.disabled, {}, handle); await handle.evaluate(element => element.scrollIntoView({ block: 'center' })); await handle.click(); await handle.dispose(); };
     const clickSelector = async selector => {
       const handle = await visibleElement(selector);
       await page.waitForFunction(element => !element.disabled, {}, handle);
@@ -120,10 +120,32 @@ try {
     await page.goto(siteUrl, { waitUntil: 'networkidle2' });
     await visibleElement('[data-testid="first-plan"]');
     assert.equal(await visibleCount('section[data-phase]'), 0, `${layout} begins with onboarding, without an invented default plan`);
+    await labeledSelect('本週優先改善', 'coordination');
+    await openDetails('想加強的部位與僵硬位置（選填）');
+    for (const label of ['上肢推拉／肩背', '核心控制', '肩／胸前']) {
+      const item = await visibleElement('[data-testid="weekly-preferences"] label', label);
+      const box = await item.$('input'); await clickElement(box); await item.dispose();
+    }
+    const thirdTarget = await visibleElement('[data-testid="weekly-preferences"] label', '腿部／蹲與弓步');
+    assert.equal(await thirdTarget.$eval('input', input => input.disabled), true, `${layout} caps priority areas at two`); await thirdTarget.dispose();
     await click('產生免費課表'); await waitText('本分頁暫存');
     assert.equal(planningPayload, undefined, `${layout} creates a free plan without Gemini`);
     assert.equal(geminiRequests, 0, `${layout} free onboarding makes no Gemini requests`);
     await monday();
+    await visibleElement('[data-testid="week-overview"]');
+    assert.equal(await visibleCount('[data-testid^="week-role-"]'), 7, `${layout} shows all seven daily roles`);
+    await waitText('排課時設定的方向：協調與步伐');
+    assert.equal(await visibleCount('[data-testid="weekly-intent-pending"]'), 0);
+    const savedIntent = await page.evaluate(() => JSON.parse(sessionStorage.getItem('fitness_public_preview_v1')).publicDraft.plan.weeklyIntent);
+    assert.deepEqual(savedIntent.targetRegions, ['upper', 'core']);
+    assert.deepEqual(savedIntent.stiffnessRegions, ['shoulder']);
+    await click('調整本週目標');
+    await labeledSelect('本週優先改善', 'strength');
+    await visibleElement('[data-testid="weekly-intent-pending"]');
+    await labeledSelect('本週優先改善', 'coordination');
+    await clickSelector('[data-testid="planner-edit-conditions"]');
+    await page.$eval('[data-testid="week-overview"]', element => element.scrollIntoView({ block: 'start' }));
+    await page.screenshot({ path: `/tmp/fitness-week-${layout}.png`, fullPage: false });
     await openDetails('本週安排覆蓋');
     assert.equal(await visibleCount('[data-testid="weekly-balance"] table'), 2, `${layout} separates mobility coverage from training patterns`);
     await waitText('不是實際完成或訓練成效');
@@ -146,6 +168,10 @@ try {
       return !cache.publicDraft && !cache.pendingDraft && !document.body.innerText.includes('正在儲存預覽課表');
     });
     await monday(); await waitCompletion(previewName, true);
+    await page.evaluate(() => { for (const key of Object.keys(localStorage)) if (key.startsWith('planning_preferences_')) localStorage.removeItem(key); });
+    await page.reload({ waitUntil: 'networkidle2' }); await monday();
+    assert.equal(await visibleCount('[data-testid="weekly-intent-pending"]'), 0, `${layout} restores saved intent without local preferences`);
+    await waitText('排課時設定的方向：協調與步伐');
     await click('設定'); await waitText('綁定 Google 並保留紀錄'); await monday();
     const name = await read('section[data-phase] button[aria-label][aria-pressed]', button => button.getAttribute('aria-label'));
     await waitCompletion(name, true); await click('編輯課表');

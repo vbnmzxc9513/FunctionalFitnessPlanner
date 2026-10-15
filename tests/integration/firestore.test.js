@@ -210,3 +210,19 @@ test('actual identity switching can import captured guest plans and keep existin
   assert.equal((await getDoc(userDoc(target, 'progress', week))).data().completed.day1_thoracic, true);
   assert.deepEqual((await getDoc(userDoc(target, 'plans', week))).data().schedule, plan.schedule);
 });
+
+test('saved weekly intent survives editing and restore while rules bound its fields', async () => {
+  const owner = auth.currentUser.uid;
+  const weeklyIntent = { focus: 'stability', targetRegions: ['upper', 'core'], stiffnessRegions: ['thoracic'],
+    badmintonDays: [2, 5, 6], dailyTime: 35, competitionDate: '2026-11-16' };
+  const original = { ...plan, weeklyIntent };
+  await assertSucceeds(savePlan(owner, week, original, plan, false, 0));
+  assert.deepEqual((await getDoc(userDoc(owner, 'plans', week))).data().weeklyIntent, weeklyIntent);
+  await assertSucceeds(savePlan(owner, week, { ...original, weeklyIntent: { ...weeklyIntent, focus: 'strength' } }, plan, false, 1));
+  await assertSucceeds(savePlan(owner, week, null, plan, true, 2));
+  assert.deepEqual((await getDoc(userDoc(owner, 'plans', week))).data().weeklyIntent, weeklyIntent);
+  for (const change of [{ targetRegions: ['fake'] }, { targetRegions: ['core', 'core'] }, { stiffnessRegions: ['hip', 'ankle', 'thoracic'] },
+    { badmintonDays: [8] }, { dailyTime: 1000 }, { focus: 'medical' }, { healthNotes: 'not part of intent' }]) {
+    await assertFails(setDoc(userDoc(owner, 'plans', week), { ...plan, weeklyIntent: { ...weeklyIntent, ...change } }));
+  }
+});

@@ -1,15 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { UX_TRANSLATIONS } from '../../src/uxLocale.js';
 import { TRANSLATIONS } from '../../src/locale.js';
 import { PROMOTION_TRANSLATIONS } from '../../src/promotionLocale.js';
 
 test('planning and account entry text resolves in both languages without internal keys', async () => {
-  const sources = await Promise.all(['Onboarding', 'Coach', 'LoginPrompt'].map(name => readFile(new URL(`../../src/components/${name}.jsx`, import.meta.url), 'utf8')));
+  const sources = await Promise.all(['Onboarding', 'Coach', 'LoginPrompt', 'WeeklyPreferences'].map(name => readFile(new URL(`../../src/components/${name}.jsx`, import.meta.url), 'utf8')));
   const usedKeys = new Set(sources.flatMap(source => [...source.matchAll(/\bt\('([^']+)'\)/g)].map(match => match[1])));
   for (const lang of ['zh', 'en']) {
     for (const key of usedKeys) {
-      const value = PROMOTION_TRANSLATIONS[lang][key] ?? TRANSLATIONS[lang][key];
+      const value = UX_TRANSLATIONS[lang][key] ?? PROMOTION_TRANSLATIONS[lang][key] ?? TRANSLATIONS[lang][key];
       assert.ok(value !== undefined && value !== key && value !== '', `${lang}: ${key}`);
     }
   }

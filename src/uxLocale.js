@@ -1,5 +1,11 @@
 export const UX_TRANSLATIONS = {
   zh: {
+    weeklyPreferencesTitle: '想加強的部位與僵硬位置（選填）',
+    weeklyPreferencesHint: '各選最多兩項。優先部位影響主項順序與時間取捨，僵硬偏好影響現有暖身／收尾名額；不直接加組數。重新產生課表後生效。',
+    weeklyTargetRegions: '本週優先加強', weeklyStiffnessRegions: '無痛但感覺僵硬的位置',
+    weeklyStiffnessHint: '這不是活動度測試或傷勢判斷。疼痛、麻木或治療限制請填下方健康資訊，會優先於你的偏好。',
+    targetRegions_legs: '腿部／蹲與弓步', targetRegions_posterior: '臀部／腿後側', targetRegions_upper: '上肢推拉／肩背', targetRegions_core: '核心控制',
+    stiffnessRegions_hip: '髖／大腿', stiffnessRegions_ankle: '踝／小腿', stiffnessRegions_thoracic: '胸椎／上背', stiffnessRegions_shoulder: '肩／胸前',
     navTrain: '今天', navPlan: '課表', navRecords: '紀錄', accountSettings: '設定',
     firstPlanTitle: '建立第一份羽球體能課表', firstPlanIntro: '選好球日、時間與器材，安排適合今天的暖身、訓練與收操。',
     firstPlanHint: '免費排課不需要帳號或 AI 金鑰。', planningTab: '本週課表', libraryTab: '動作庫',
@@ -14,6 +20,12 @@ export const UX_TRANSLATIONS = {
     feedbackForNextPlan: '本週回顧，供下次排課參考', feedbackSubtitle: '回報本週感受，供下一次排課參考；不會直接增加本週劑量。',
   },
   en: {
+    weeklyPreferencesTitle: 'Priority areas and stiffness (optional)',
+    weeklyPreferencesHint: 'Choose up to two of each. Priorities guide main-work order and time trade-offs; stiffness guides existing warm-up / finish slots. No extra sets are added. Regenerate to apply.',
+    weeklyTargetRegions: 'Priority areas this week', weeklyStiffnessRegions: 'Stiff areas without pain',
+    weeklyStiffnessHint: 'This is not a mobility test or injury assessment. Record pain, numbness or treatment restrictions below; they take priority over preferences.',
+    targetRegions_legs: 'Legs / squat and lunge', targetRegions_posterior: 'Glutes / posterior thigh', targetRegions_upper: 'Upper-body push / pull', targetRegions_core: 'Trunk control',
+    stiffnessRegions_hip: 'Hip / thigh', stiffnessRegions_ankle: 'Ankle / calf', stiffnessRegions_thoracic: 'Thoracic / upper back', stiffnessRegions_shoulder: 'Shoulder / chest',
     navTrain: 'Today', navPlan: 'Plan', navRecords: 'Records', accountSettings: 'Settings',
     firstPlanTitle: 'Build your first badminton fitness plan', firstPlanIntro: 'Choose court days, time and equipment to arrange warm-up, training and cooldown.',
     firstPlanHint: 'Free planning needs no account or AI key.', planningTab: 'Weekly plan', libraryTab: 'Exercise library',

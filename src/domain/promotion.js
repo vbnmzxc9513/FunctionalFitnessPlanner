@@ -1,3 +1,4 @@
+import { normalizeWeeklyIntent } from './trainingPreferences.js';
 import { readStorage, writeStorage } from './storage.js';
 import { catalogExercises, eligibleExercises } from './exerciseCatalog.js';
 import { normalizePlanningContext, validateGeneratedPlan } from './planning.js';
@@ -34,7 +35,10 @@ function cleanAdjustedDose(dose, baseline, exercise) {
     ...(preparation ? { preparation } : {}) };
 }
 function promotionPlan(value, available, time, lang) {
-  const decorate = plan => ({ ...plan, language: lang, source: 'template' });
+  const decorate = plan => {
+    const weeklyIntent = normalizeWeeklyIntent(value.plan?.weeklyIntent);
+    return { ...plan, ...(weeklyIntent ? { weeklyIntent } : {}), language: lang, source: 'template' };
+  };
   if (!value.baselinePlan && !value.adjustment) return { plan: decorate(validateGeneratedPlan(value.plan, available, time)) };
   const reject = () => { throw new Error('INVALID_PREVIEW_ADJUSTMENT'); };
   if (value.baselinePlan?.source !== 'template' || !value.adjustment || Object.keys(value.adjustment).length !== 2

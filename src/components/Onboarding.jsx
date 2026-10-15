@@ -1,4 +1,5 @@
 import { Loader2 } from 'lucide-react';
+import WeeklyPreferences from './WeeklyPreferences.jsx';
 import { EQUIPMENT } from '../domain/exerciseCatalog.js';
 
 export default function Onboarding({ t, context, setContext, time, setTime, focus, setFocus, goal, setGoal, message, setMessage, generating, onGenerate, mode = 'template' }) {
@@ -7,6 +8,7 @@ export default function Onboarding({ t, context, setContext, time, setTime, focu
   return <form onSubmit={event => { event.preventDefault(); onGenerate(); }} className="space-y-5" data-testid="planner-form">
     <p className="text-xs text-slate-600 rounded-xl bg-sky-50 p-3">{t(mode === 'template' ? 'templateDescription' : `${mode}Description`)}</p>
     <label className="block text-sm">{t('plannerFocus')}<select value={focus} onChange={event => setFocus(event.target.value)} className="mt-2 w-full rounded-xl border border-sky-200 p-3">{['balanced', 'coordination', 'stability', 'strength'].map(value => <option key={value} value={value}>{t(`focus_${value}`)}</option>)}</select></label>
+    <WeeklyPreferences t={t} context={context} onChange={change} disabled={generating} />
     <fieldset><legend className="text-sm mb-2">{t('badmintonDaysLabel')}</legend><div className="flex flex-wrap gap-3">{t('allDayNames').map((name, index) => <label key={name} className="flex items-center gap-1 text-xs"><input type="checkbox" checked={context.badmintonDays.includes(index + 1)} onChange={() => toggle('badmintonDays', index + 1)} />{name}</label>)}</div></fieldset>
     <label className="block text-sm">{t('aiTimeLabel')}<input type="number" min={mode === 'trial' ? '10' : '5'} max={mode === 'trial' ? '60' : '240'} required value={time} onChange={event => setTime(event.target.value)} className="mt-2 w-full rounded-xl border border-sky-200 p-3" /></label>
     <fieldset><legend className="text-sm mb-2">{t('equipmentLabel')}</legend><div className="flex flex-wrap gap-x-4 gap-y-2">{EQUIPMENT.map(item => <label key={item} className="flex items-center gap-2 text-xs"><input type="checkbox" checked={context.equipment.includes(item)} onChange={() => toggle('equipment', item)} />{t(`equipment_${item}`)}</label>)}</div><p className="text-xs text-slate-500 mt-2">{t('bodyweightAlwaysAvailable')}</p></fieldset>

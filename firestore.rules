@@ -107,8 +107,21 @@ service cloud.firestore {
       return day.day == expected && confirmedPart(day, expected, userId, appId, week, 1)
         && confirmedPart(day, expected, userId, appId, week, 2);
     }
+    function validWeeklyIntent(intent) {
+      return intent is map && intent.keys().hasAll(['focus', 'targetRegions', 'stiffnessRegions', 'badmintonDays', 'dailyTime', 'competitionDate'])
+        && intent.keys().hasOnly(['focus', 'targetRegions', 'stiffnessRegions', 'badmintonDays', 'dailyTime', 'competitionDate'])
+        && intent.focus in ['balanced', 'strength', 'stability', 'coordination']
+        && intent.dailyTime is number && intent.dailyTime >= 5 && intent.dailyTime <= 240
+        && intent.targetRegions is list && intent.targetRegions.size() <= 2 && intent.targetRegions.hasOnly(['legs', 'posterior', 'upper', 'core'])
+        && intent.targetRegions.toSet().size() == intent.targetRegions.size()
+        && intent.stiffnessRegions is list && intent.stiffnessRegions.size() <= 2 && intent.stiffnessRegions.hasOnly(['hip', 'ankle', 'thoracic', 'shoulder'])
+        && intent.stiffnessRegions.toSet().size() == intent.stiffnessRegions.size()
+        && intent.badmintonDays is list && intent.badmintonDays.size() <= 7 && intent.badmintonDays.hasOnly([1, 2, 3, 4, 5, 6, 7])
+        && intent.competitionDate is string && (intent.competitionDate == '' || intent.competitionDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$'));
+    }
     function validPlan(data, userId, appId, week) {
-      return data.keys().hasOnly(['conclusion', 'schedule', 'previous', 'source', 'baseDefault', 'language', 'revision', 'savedAt', 'validationVersion'])
+      return data.keys().hasOnly(['conclusion', 'schedule', 'previous', 'source', 'baseDefault', 'language', 'revision', 'savedAt', 'validationVersion', 'weeklyIntent'])
+        && (!('weeklyIntent' in data) || validWeeklyIntent(data.weeklyIntent))
         && data.conclusion is string && data.schedule is list && data.schedule.size() == 5
         && data.get('previous', {}) is map
         && data.get('revision', 0) is int && data.get('revision', 0) >= 0

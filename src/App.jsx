@@ -28,11 +28,13 @@ import { readShareFromLocation } from './domain/sharing.js';
 import { generateTemplatePlan, manualPlanningExercises } from './domain/templatePlanner.js';
 import { trialEnabled, requestTrialPlan } from './services/aiTrial.js';
 import { PROMOTION_TRANSLATIONS } from './promotionLocale.js';
+import { createWeeklyIntent, normalizeWeeklyIntent } from './domain/trainingPreferences.js';
 import { UX_TRANSLATIONS } from './uxLocale.js';
 import { recordPromotionEvent, readPromotionDrafts, writePromotionDrafts, normalizePromotionDraft } from './domain/promotion.js';
 
 const Coach = lazy(() => import('./components/Coach.jsx'));
 const ExerciseLibrary = lazy(() => import('./components/ExerciseLibrary.jsx'));
+const WeekOverview = lazy(() => import('./components/WeekOverview.jsx'));
 const WeeklyBalance = lazy(() => import('./components/WeeklyBalance.jsx'));
 const Metrics = lazy(() => import('./components/Metrics.jsx'));
 const History = lazy(() => import('./components/History.jsx'));
@@ -146,6 +148,18 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
   const [keyInput, setKeyInput] = useState(() => readStorage('gemini_byok_key'));
   const [model, setModel] = useState(() => readStorage('app_ai_model', 'gemini-2.5-flash'));
   const [models, setModels] = useState(defaultModels);
+  const intentInitialized = useRef(false);
+  useEffect(() => {
+    const intent = normalizeWeeklyIntent(weeklyPlan?.weeklyIntent);
+    if (!user || !intent || intentInitialized.current || pendingDraft) return;
+    intentInitialized.current = true;
+    // Restore only saved non-clinical weekly intent; never infer health or equipment on another device.
+    Promise.resolve().then(() => {
+      setFocus(intent.focus); setTime(String(intent.dailyTime));
+      setPlanningContext(previous => ({ ...previous, targetRegions: intent.targetRegions, stiffnessRegions: intent.stiffnessRegions,
+        badmintonDays: intent.badmintonDays, competitionDate: intent.competitionDate }));
+    });
+  }, [weeklyPlan?.weeklyIntent, user, pendingDraft]);
   const profileApplied = useRef(null);
   useEffect(() => {
     if (!pendingDraft || profileApplied.current === pendingDraft) return;
@@ -365,7 +379,7 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
       else if (planningMode === 'trial') result = await requestTrialPlan({ context, dailyTime: time, lang, currentWeek, userGoal: aiGoal.slice(0, 300), userMessage: message });
       else result = await generateAIPlan(previous.completed || {}, difficultyLevel, previous.feedbackValue, apiKey, allProgress, data.metrics, aiGoal, time, message, available, lang, undefined,
         { context, currentDate: today, currentWeek, previousPlan: savedPlan || data.plans[lastWeek] || null });
-      const plan = { ...result, language: lang, source: planningMode === 'template' ? 'template' : 'ai' };
+      const plan = { ...result, weeklyIntent: createWeeklyIntent(context, focus, time), language: lang, source: planningMode === 'template' ? 'template' : 'ai' };
       if (!user) {
         const completed = Object.fromEntries(plan.schedule.flatMap(day => day.routine.map(id => [`day${day.day}_${id}`, publicProgress[`day${day.day}_${id}`]])).filter(([, done]) => done === true));
         onPublicDraft({ plan, profile, week: currentWeek, completed, logs: publicDraft?.logs || [], readiness: publicDraft?.readiness || [] }); setReadinessPreview(null); setPublicProgress(completed); setActiveTab('train');
@@ -475,13 +489,14 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
       {activeTab === 'plan' && <><h2 className="text-xl font-bold text-slate-800 mb-4">{t('navPlan')}</h2>{subnav([['week', 'planningTab'], ['library', 'libraryTab']], planView, setPlanView, t('navPlan'))}</>}
       {showPlanArea && !planLoaded && <p role="status" className="p-6 text-sm">{t('loadingPlan')}</p>}
       {showPlanArea && planLoaded && !hasCurrentPlan && !pendingDraft && firstPlan}
+      {activeTab === 'plan' && planView === 'week' && hasCurrentPlan && <Suspense fallback={null}><WeekOverview schedule={schedule} exercises={exercises} week={currentWeek} plan={weeklyPlan} context={planningContext} focus={focus} time={time} level={difficultyLevel} lang={lang} t={t} onEdit={() => { setEditingAI(true); document.querySelector('[data-testid="planner-conditions"]')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }} onSelectDay={day => { setActiveDay(day); document.getElementById('weekly-session-detail')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }} /></Suspense>}
       {activeTab === 'plan' && planView === 'week' && hasCurrentPlan && <Suspense fallback={null}><div className="mb-5"><WeeklyBalance schedule={schedule} exercises={exercises} context={planningContext} week={currentWeek} currentDate={today} lang={lang} /></div></Suspense>}
       {showPlanArea && hasCurrentPlan && <>
         <div className="mb-4 flex items-center justify-between gap-3 text-sm"><span className="text-slate-500">{t('weekLabel')}: {currentWeek}</span><span className="text-sky-700 font-semibold">{progressPercent}%</span></div>
         {!user && publicDraft && <details className="rounded-xl border border-sky-100 bg-sky-50 p-3 mb-5 text-xs"><summary className="cursor-pointer text-sky-800">{t('localPreview')} · {t('saveAccount')}</summary><p className="mt-2 text-slate-600">{t('localPreviewHint')}</p><div className="flex flex-wrap gap-2 mt-3"><button disabled={account.busy} onClick={account.guestLogin} className="bg-indigo-600 text-white px-3 py-2 rounded-lg">{t('savePreviewGuest')}</button><button disabled={account.busy} onClick={account.googleLogin} className="bg-white text-sky-800 px-3 py-2 rounded-lg">{t('savePreviewGoogle')}</button></div></details>}
         {activeTab === 'train' && weekend && <section className="rounded-2xl border border-sky-100 bg-white p-6 space-y-3"><h2 className="font-bold">{t('noCourtWeekend')}</h2><p className="text-sm text-slate-500">{t('noCourtWeekendHint')}</p><button onClick={() => navigate('plan')} className="rounded-xl bg-sky-600 text-white px-4 py-3 text-sm">{t('planningTab')}</button><button onClick={viewRecords} className="block text-sm text-sky-700">{t('viewRecords')}</button></section>}
       </>}
-      {hasCurrentPlan && <div hidden={!showPlanArea || (activeTab === 'train' && weekend)}>
+      {hasCurrentPlan && <div id="weekly-session-detail" hidden={!showPlanArea || (activeTab === 'train' && weekend)}>
         <Training eligibleExercises={manualPlanningExercises(exercises, planningContext)} t={t} lang={lang} mode={trainingMode} onViewRecords={viewRecords} schedule={schedule} draft={draft} activeDay={activeDay} setActiveDay={setActiveDay} currentWeek={currentWeek} exercises={exercises} progress={progress} level={difficultyLevel} editing={editing} selected={selected} setSelected={setSelected} onEdit={enterEditing} onCancel={cancelEditing} onSave={saveEdits} onAdd={add} onRemove={remove} onMove={move} onPhase={changePhase} onToggle={toggle} onFeedback={feedback} feedback={allProgress[currentWeek]?.feedbackValue} busy={busy || generating || coachingBusy || savingPlan || !!pendingDraft} saving={savingPlan} canEdit={!!user && !!data.loaded.plans && !!data.loaded.exercises && !generating && !pendingDraft} canRestore={!!weeklyPlan?.previous} onRestore={restore} exerciseLogs={exerciseLogs} readiness={readiness} readinessPreview={readinessPreview?.date === activeDate ? readinessPreview : null} onSaveExerciseLog={user && !trainingData.loaded ? undefined : recordExercise} onUpdateNextDay={recordNextDay} onSaveReadiness={recordReadiness} onPreviewReadiness={previewReadiness} onApplyReadiness={applyReadiness} loggingBusy={coachingBusy || busy || savingPlan || generating || (!!user && !trainingData.loaded)} readinessBusy={coachingBusy || busy || savingPlan || generating || (!!user && !trainingData.loaded)} loggingDisabled={!!pendingDraft || editing || (!!user && !trainingData.loaded)} readinessDisabled={activeDate !== today || !!pendingDraft || editing || (!!user && !trainingData.loaded)} coachingContext={{ ...planningContext, today, readiness: readinessRecords.find(record => record.date === today) || null }} />
       </div>}
       <Suspense fallback={<div role="status" className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>}>

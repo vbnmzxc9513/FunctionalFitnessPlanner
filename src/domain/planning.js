@@ -1,3 +1,4 @@
+import { selectedRegions, TARGET_REGIONS, STIFFNESS_REGIONS, normalizeWeeklyIntent } from './trainingPreferences.js';
 import { estimateSessionMinutes } from './sessions.js';
 export { estimateSessionMinutes } from './sessions.js';
 import { SESSION_PHASES, SESSION_TYPES } from './phases.js';
@@ -7,11 +8,13 @@ import { eligibleExercises } from './exerciseCatalog.js';
 export const DEFAULT_PLANNING_CONTEXT = {
   badmintonDays: [], badmintonMinutes: '', badmintonIntensity: 'unknown',
   equipment: [], partnerAvailable: false, experience: 'beginner',
-  competitionDate: '', healthStatus: 'unrestricted', healthNotes: '', recoveryNotes: '',
+  targetRegions: [], stiffnessRegions: [], competitionDate: '', healthStatus: 'unrestricted', healthNotes: '', recoveryNotes: '',
 };
 
 export function normalizePlanningContext(value = {}) {
   return {
+    targetRegions: selectedRegions(value.targetRegions, TARGET_REGIONS),
+    stiffnessRegions: selectedRegions(value.stiffnessRegions, STIFFNESS_REGIONS),
     badmintonDays: [...new Set((Array.isArray(value.badmintonDays) ? value.badmintonDays : []).filter(day => Number.isInteger(day) && day >= 1 && day <= 7))].sort(),
     badmintonMinutes: Number(value.badmintonMinutes) > 0 && Number(value.badmintonMinutes) <= 360 ? Number(value.badmintonMinutes) : '',
     badmintonIntensity: ['unknown', 'light', 'mixed', 'hard'].includes(value.badmintonIntensity) ? value.badmintonIntensity : 'unknown',
@@ -92,5 +95,7 @@ export function validateGeneratedPlan(plan, exercises, dailyTime) {
       routine: day.routine, prescriptions: day.routine.map(id => day.prescriptions.find(dose => dose.id === id)).map(({ id, sets, value, unit, restSeconds, perSide, phase, preparation }) => ({ id, sets, value, unit, restSeconds, perSide, phase,
         ...(preparation ? { preparation: { sets: preparation.sets, value: preparation.value, unit: preparation.unit, restSeconds: preparation.restSeconds, perSide: preparation.perSide, instruction: preparation.instruction } } : {}) })) };
   }).sort((a, b) => a.day - b.day);
-  return { conclusion: plan.conclusion, schedule };
+  const weeklyIntent = plan.weeklyIntent === undefined ? undefined : normalizeWeeklyIntent(plan.weeklyIntent);
+  if (weeklyIntent === null) throw new Error('INVALID_WEEKLY_INTENT');
+  return { conclusion: plan.conclusion, schedule, ...(weeklyIntent ? { weeklyIntent } : {}) };
 }
