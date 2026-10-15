@@ -8,6 +8,7 @@ export default function LoginPrompt({ t, title, googleLogin, guestLogin, busy })
     <button disabled={busy} onClick={googleLogin} className="flex items-center justify-center py-3 px-6 bg-sky-600 text-white rounded-xl font-bold w-full max-w-xs disabled:opacity-50">
       <LogIn className="mr-2" size={20} />{t('promoLoginBtn')}
     </button>
-    <button disabled={busy} onClick={guestLogin} className="mt-3 py-3 px-6 bg-slate-100 text-slate-700 rounded-xl font-bold w-full max-w-xs disabled:opacity-50">{t('guestPreview')}</button>
+    <button disabled={busy} onClick={guestLogin} className="mt-3 py-3 px-6 bg-slate-100 text-slate-700 rounded-xl font-bold w-full max-w-xs disabled:opacity-50">{t('promoAnonymousBtn')}</button>
+    <p className="text-xs text-slate-500 mt-4 max-w-xs">{t('accountStorageAnonymous')}</p>
   </div>;
 }

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { generateTemplatePlan } from '../../src/domain/templatePlanner.js';
+import { generateTemplatePlan, manualPlanningExercises } from '../../src/domain/templatePlanner.js';
 import { catalogExercises, equipmentChoices } from '../../src/domain/exerciseCatalog.js';
 import { estimateSessionMinutes, planningExercises, validateGeneratedPlan } from '../../src/domain/planning.js';
 
@@ -121,4 +121,20 @@ test('competition uses each scheduled date, includes post-event recovery and avo
 test('template rejects invalid times and reports missing court assumptions', () => {
   for (const minutes of [0, 4, 241, 'invalid']) assert.throws(() => generateTemplatePlan(catalog, context, minutes, 'zh', options), /INVALID_PLANNING_TIME/);
   assert.match(generateTemplatePlan(catalog, { ...context, badmintonDays: [] }, 35, 'zh', options).conclusion, /未提供球日/);
+});
+
+
+test('manual additions respect equipment and the same conservative clinical guard as templates', () => {
+  const exercises = catalogExercises();
+  const profile = { ...context, equipment: [], healthStatus: 'unrestricted', healthNotes: '', recoveryNotes: '' };
+  const available = manualPlanningExercises(exercises, profile);
+  assert.ok(available.bf_B01);
+  assert.equal(available.bf_C11, undefined);
+  for (const change of [
+    { healthStatus: 'unknown' }, { healthNotes: 'ankle pain when walking' },
+    { recoveryNotes: 'new weakness and numbness' }, { healthStatus: 'restricted', healthNotes: '' },
+  ]) assert.deepEqual(manualPlanningExercises(exercises, { ...profile, ...change }), {});
+  const shoulder = manualPlanningExercises(exercises, { ...profile, healthNotes: '肩部震波，治療限制未確認' });
+  assert.ok(Object.keys(shoulder).length > 0);
+  assert.ok(Object.values(shoulder).every(exercise => exercise.catalogCode === 'I01'));
 });

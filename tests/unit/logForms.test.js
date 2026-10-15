@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { defaultLoadBasis, emptySet, optionalNumber, readinessInput, trainingLogInput } from '../../src/domain/logForms.js';
+import { defaultLoadBasis, emptySet, optionalNumber, readinessInput, readinessForm, readinessMissing, readinessChanges, trainingLogInput } from '../../src/domain/logForms.js';
 import { coachText } from '../../src/coachLocale.js';
 
 const form = { variant: 'bodyweight', loadBasis: 'none', loadKg: '', resistanceLabel: '', sets: [emptySet()], rir: '', quality: 'unknown', symptoms: 'unknown', nextDay: 'pending' };
@@ -50,4 +50,41 @@ test('bodyweight variants remain factual descriptions without adding load', () =
   assert.equal(value.loadBasis, 'none');
   assert.match(coachText('zh', 'bodyweightPlaceholder'), /靠牆/);
   assert.match(coachText('en', 'bodyweightPlaceholder'), /kneeling/);
+});
+
+
+test('court question distinguishes unknown, explicit no session and an entered session', () => {
+  const unknown = readinessInput(readinessForm(null), '2026-10-15');
+  assert.equal(unknown.yesterdayCourtMinutes, null);
+  assert.equal(unknown.yesterdayCourtRpe, null);
+  const noCourt = readinessInput({ ...readinessForm(null), yesterdayCourt: 'none', yesterdayCourtMinutes: '90', yesterdayCourtRpe: '8' }, '2026-10-15');
+  assert.equal(noCourt.yesterdayCourtMinutes, 0, 'explicit no court overrides stale hidden minutes');
+  assert.equal(noCourt.yesterdayCourtRpe, null, 'no court does not invent an effort rating');
+  const played = readinessInput({ ...readinessForm(null), yesterdayCourt: 'yes', yesterdayCourtMinutes: '90', yesterdayCourtRpe: '' }, '2026-10-15');
+  assert.equal(played.yesterdayCourtMinutes, 90);
+  assert.equal(played.yesterdayCourtRpe, null);
+  assert.equal(readinessForm(noCourt).yesterdayCourt, 'none');
+  assert.equal(readinessForm(played).yesterdayCourt, 'yes');
+});
+
+test('readiness missing labels match decision inputs and do not ask RPE for no court', () => {
+  const value = readinessInput({ ...readinessForm(null), yesterdayCourt: 'none' }, '2026-10-15');
+  assert.deepEqual(readinessMissing(value), ['sleepHours', 'fatigue', 'soreness', 'symptoms', 'todayCourtIntensity']);
+  assert.deepEqual(readinessMissing({ ...value, sleepHours: 7, fatigue: 0, soreness: 0, symptoms: 'none', todayCourtIntensity: 'none' }), []);
+  assert.deepEqual(readinessMissing({ ...value, sleepHours: 7, fatigue: 0, soreness: 0, symptoms: 'none', todayCourtIntensity: 'none', yesterdayCourtMinutes: 60 }), ['yesterdayCourtRpe']);
+});
+
+test('adjustment preview lists only removed or changed exercises and preparation changes', () => {
+  const original = { routine: ['warmup', 'squat', 'jump'], prescriptions: [{ id: 'warmup', sets: 1, value: '5', unit: 'reps' }, { id: 'squat', sets: 2, value: '6–8', unit: 'reps', preparation: { sets: 1, value: '4' } }, { id: 'jump', sets: 2, value: '3', unit: 'reps' }] };
+  const adapted = { routine: ['warmup', 'squat'], prescriptions: [original.prescriptions[0], { ...original.prescriptions[1], sets: 1 }] };
+  const changes = readinessChanges(original, adapted);
+  assert.deepEqual(changes.map(change => change.id), ['squat', 'jump']);
+  assert.equal(changes[0].before.sets, 2);
+  assert.equal(changes[0].after.sets, 1);
+  assert.equal(changes[1].removed, true);
+  assert.deepEqual(readinessChanges(original, structuredClone(original)), []);
+  const preparationOnly = structuredClone(original);
+  preparationOnly.prescriptions[1].preparation.value = '2';
+  assert.deepEqual(readinessChanges(original, preparationOnly).map(change => change.id), ['squat']);
+  assert.equal(original.prescriptions[1].preparation.value, '4', 'preview does not mutate prescriptions');
 });

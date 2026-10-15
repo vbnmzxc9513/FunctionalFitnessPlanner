@@ -1,0 +1,28 @@
+export const LIBRARY_TEXT = {
+  zh: {
+    all: '全部動作', mine: '我的常用', purposeAll: '全部', warmup: '暖身', training: '主訓練', cooldown: '收操',
+    purposes: '依用途瀏覽', scope: '動作清單', moreFilters: '更多篩選', manage: '管理動作', done: '完成管理',
+    manageHint: '新增自訂動作，或調整哪些動作可用於排課。停用不會刪除既有訓練紀錄。',
+    loginHint: '登入後可儲存自己的常用動作；現在可先依用途瀏覽與閱讀教學。', login: '前往設定登入',
+    details: '器材與參考組次', doseHint: '以下為參考；訓練時以當天課表為準。', disabled: '已停用',
+    favorite: '加入常用', favoriteLogin: '加入常用（需登入）', removeFavorite: '移出常用', organize: '整理常用用途',
+    groupHint: '可同時選多個用途，變更後立即儲存；全部取消即移出常用。這不會改變課表或排課啟用狀態。',
+    currentGroups: '常用用途', noGroups: '尚未加入常用', savedFailure: '用途未儲存，請再試一次。',
+    emptyMine: '還沒有符合條件的常用動作。到「全部動作」加入，之後就能從這裡快速找到。',
+    favoriteHint: '常用清單用來整理自己常用的暖身、主訓練與收操動作；加入清單不會直接加入今天課表。',
+    count: count => `找到 ${count} 個動作`,
+  },
+  en: {
+    all: 'All movements', mine: 'My favorites', purposeAll: 'All', warmup: 'Warm-up', training: 'Main training', cooldown: 'Cool-down',
+    purposes: 'Browse by purpose', scope: 'Movement list', moreFilters: 'More filters', manage: 'Manage exercises', done: 'Finish managing',
+    manageHint: 'Add a custom exercise or choose which movements are available for planning. Disabling a movement keeps existing training records.',
+    loginHint: 'Sign in to save your favorite movements. You can browse by purpose and read guides now.', login: 'Open settings to sign in',
+    details: 'Equipment and reference dose', doseHint: 'These are reference values. Follow your daily plan when training.', disabled: 'Disabled',
+    favorite: 'Add to favorites', favoriteLogin: 'Add to favorites (sign in)', removeFavorite: 'Remove from favorites', organize: 'Organize favorite uses',
+    groupHint: 'Select multiple uses. Changes save immediately; clear all to remove the favorite. This does not change the plan or planning eligibility.',
+    currentGroups: 'Favorite uses', noGroups: 'Not in favorites', savedFailure: 'Uses were not saved. Please try again.',
+    emptyMine: 'No favorites match these filters. Add movements from “All movements” to find them here quickly.',
+    favoriteHint: 'Organize your warm-up, main training and cool-down favorites here. Adding a favorite does not add it to today’s plan.',
+    count: count => `${count} movements found`,
+  },
+};

@@ -1,6 +1,6 @@
 const strings = {
   zh: {
-    logTitle: '記錄實際訓練', logHint: '記錄工作組，不包含暖身準備組；儲存不會自動勾選完成。',
+    logTitle: '記錄實際訓練', logHint: '填寫正式組的實做與症狀；暖身準備組不用另記。可只儲存，或同時標記完成。',
     actual: '實際完成', set: '第 {n} 組', leftSide: '第一側', rightSide: '另一側', addSet: '增加一組', removeSet: '移除最後一組',
     variant: '阻力方式', bodyweight: '徒手／自體重', dumbbell: '啞鈴', cable: '纜繩／滑輪', band: '彈力繩', other: '其他',
     loadBasis: '重量記法', none: '無外加重量', per_dumbbell: '每顆啞鈴', total: '總外加重量', stack: '機器重量片標示', description: '文字描述阻力',
@@ -8,7 +8,7 @@ const strings = {
     resistanceLabel: '動作變式／器材與阻力說明', bodyweightPlaceholder: '例：靠牆／跪姿／標準；椅子高度', bandHint: '例如同一條紅色彈力繩、握距與站位；不要換算成假定公斤。', resistancePlaceholder: '例：家中紅色彈力繩、握距 40 cm',
     rir: '最後一組還能做幾下？（選填）', optional: '未記錄', quality: '動作品質', good: '穩定／良好', unstable: '不穩定', unknown: '尚未確認',
     symptoms: '訓練中症狀', noSymptoms: '沒有症狀', worse: '症狀增加', nextDay: '翌日反應', pending: '尚未回報', nextDayGood: '沒有惡化',
-    saveLog: '儲存訓練紀錄', saved: '已儲存', saveFailed: '儲存失敗，請稍後再試。', invalidLog: '請填寫每組實際完成量；分側動作需填兩側。重量、餘力與阻力描述也請確認。',
+    saveLog: '儲存紀錄', saved: '已儲存', saveFailed: '儲存失敗，請稍後再試。', invalidLog: '請填寫每組實際完成量；分側動作需填兩側。重量、餘力與阻力描述也請確認。',
     lastLog: '上次紀錄', todayLog: '這天已存紀錄', noLogs: '尚無實際訓練紀錄。', target: '當時課表', actualSets: '實做', unit_reps: '次', unit_seconds: '秒', unit_minutes: '分鐘', unit_breaths: '呼吸',
     adviceTitle: '下一次訓練建議', adviceHint: '建議不會自動改動課表或重量；先確認動作品質、當天狀態與翌日反應。', evidence: '參考紀錄',
     advice_hold: '維持目前安排', advice_record_more: '先累積可比較的紀錄', advice_complete_followup: '先補上翌日反應', advice_improve_quality: '先改善動作品質', advice_reduce: '先降低負荷', advice_rest: '先停止訓練並評估症狀', advice_progress_reps: '可考慮在原範圍內增加次數', advice_consider_load: '可考慮調整外加重量',
@@ -18,11 +18,11 @@ const strings = {
     loadTrend: '分鐘 × RPE = {value}，只用於你自己的負荷趨勢；不是受傷風險預測。', loadTrendMissing: '補上打球分鐘與 RPE 可追蹤個人負荷；這不是受傷風險預測。',
     saveReadiness: '儲存狀態', previewReadiness: '預覽今天調整', applyReadiness: '套用到今天', invalidReadiness: '請確認睡眠 0–24 小時、程度 0–4、打球 0–360 分鐘及 RPE 0–10。',
     previewTitle: '今天調整預覽', previewHint: '只調整這一天，保留完成紀錄；不自動變更整週課表。', readiness_normal: '目前可按原安排訓練', readiness_reduce: '今天降低訓練量', readiness_recover: '今天改為輕鬆恢復', readiness_rest: '今天休息並評估症狀', readiness_unknown: '資訊不足，暫不增加負荷',
-    historyTitle: '實際訓練與翌日追蹤', followupTitle: '待回報的翌日反應', followupHint: '回想訓練後隔天的症狀與恢復，不預設為良好。', followupGood: '翌日沒有惡化', followupWorse: '翌日症狀增加', noPending: '目前沒有待回報紀錄。',
+    historyTitle: '訓練紀錄', followupTitle: '待回報的翌日反應', followupHint: '回想訓練後隔天的症狀與恢復，不預設為良好。', followupGood: '翌日沒有惡化', followupWorse: '翌日症狀增加', noPending: '目前沒有待回報紀錄。',
     historyScope: '依日期、動作、阻力方式與重量記法保留紀錄；不同器材或記法不直接比較。', missingWeight: '重量未記錄', rirSummary: '還能做 {value} 下', actualSide: '{first} / {second}（兩側）',
   },
   en: {
-    logTitle: 'Log actual training', logHint: 'Record working sets, excluding warm-up sets. Saving does not mark the exercise complete.',
+    logTitle: 'Log actual training', logHint: 'Enter working sets and symptoms, excluding warm-up sets. Save only, or save and mark complete.',
     actual: 'Actual performance', set: 'Set {n}', leftSide: 'First side', rightSide: 'Other side', addSet: 'Add a set', removeSet: 'Remove last set',
     variant: 'Resistance type', bodyweight: 'Bodyweight', dumbbell: 'Dumbbell', cable: 'Cable / pulley', band: 'Resistance band', other: 'Other',
     loadBasis: 'Weight convention', none: 'No external weight', per_dumbbell: 'Per dumbbell', total: 'Total external weight', stack: 'Machine stack label', description: 'Describe resistance',
@@ -40,7 +40,7 @@ const strings = {
     loadTrend: 'Minutes × RPE = {value}, for your personal load trend only, not injury-risk prediction.', loadTrendMissing: 'Court minutes and RPE help track personal load, not predict injury risk.',
     saveReadiness: 'Save readiness', previewReadiness: 'Preview today’s adjustment', applyReadiness: 'Apply to this day', invalidReadiness: 'Check sleep 0–24 hours, scores 0–4, court minutes 0–360 and RPE 0–10.',
     previewTitle: 'Today’s adjustment preview', previewHint: 'Applies only to this day and preserves completed work. It does not automatically change the whole week.', readiness_normal: 'Follow the existing plan', readiness_reduce: 'Reduce today’s volume', readiness_recover: 'Use a gentle recovery session', readiness_rest: 'Rest and assess symptoms', readiness_unknown: 'Insufficient information; do not increase load',
-    historyTitle: 'Training logs and next-day follow-up', followupTitle: 'Pending next-day responses', followupHint: 'Report symptoms and recovery on the day after training. A good response is never assumed.', followupGood: 'No next-day worsening', followupWorse: 'Next-day symptoms increased', noPending: 'No pending responses.',
+    historyTitle: 'Training records', followupTitle: 'Pending next-day responses', followupHint: 'Report symptoms and recovery on the day after training. A good response is never assumed.', followupGood: 'No next-day worsening', followupWorse: 'Next-day symptoms increased', noPending: 'No pending responses.',
     historyScope: 'Records retain date, exercise, resistance type and weight convention. Different equipment or conventions are not compared directly.', missingWeight: 'Weight not recorded', rirSummary: '{value} reps left', actualSide: '{first} / {second} (each side)',
   },
 };
@@ -48,6 +48,13 @@ const strings = {
 
 const additions = {
   zh: {
+    required: '必填', savedCompletionFailed: '實做已儲存，但未能標記完成。請再點完成勾選；不需要重填紀錄。', saveAndComplete: '儲存並標記完成', savedComplete: '紀錄已儲存，並已標記完成。', alreadyComplete: '這個動作已標記完成；儲存只會更新實做紀錄。',
+    advancedLog: '阻力、餘力與動作品質（選填）', advancedLogHint: '選填資料有助比較下次表現。選擇文字描述阻力時，請填寫說明；未確認的品質仍保持未知。',
+    descriptionRequired: '請在「阻力、餘力與動作品質」填寫阻力描述，才能保存此阻力方式。',
+    targetChanged: '課表處方已改變。未儲存的數字保留在畫面，但不能直接套用到新處方；請確認後重新填寫。', resetForTarget: '使用新處方重新填寫',
+    currentSymptoms: '今天的身體症狀', yesterdayCourt: '昨天有打球嗎？', yesterdayNone: '沒有打球', yesterdayYes: '有打球', missingFields: '尚未確認',
+    noAdjustment: '目前沒有需要套用的課表調整。', fullComparison: '查看完整前後課表', removedToday: '今天移除未完成的安排', estimatedChange: '預估時間 {before} → {after} 分鐘', restChange: '組間休息 {before} → {after} 秒', preparationChanged: '準備組同步調整，詳見完整課表。', sessionChanged: '今日訓練類型或順序已調整，詳見完整課表。',
+    recentLogs: '最近實做', pastLogs: '較早紀錄', moreFollowups: '其他待回報紀錄',
     onlyToday: '狀態檢查與調整只開放今天，請切換到今天的課表。',
     actualDate: '實際訓練日期', original: '調整前', adapted: '調整後', restDay: '休息；沒有尚待完成的動作。',
     applyConflict: '今日狀態已保存，但課表或完成紀錄已改變，請重新預覽；課表未套用。',
@@ -71,6 +78,13 @@ const additions = {
     reason_non_numeric_resistance_review: '徒手或彈力繩不能直接換算公斤；先檢視控制、阻力與動作難度。',
   },
   en: {
+    required: 'Required', savedCompletionFailed: 'Your log was saved, but the exercise could not be marked complete. Use its completion checkbox; you do not need to re-enter the log.', saveAndComplete: 'Save and mark complete', savedComplete: 'Log saved and exercise marked complete.', alreadyComplete: 'This exercise is complete. Saving only updates the training log.',
+    advancedLog: 'Resistance, reps left and movement quality (optional)', advancedLogHint: 'Optional details help compare sessions. A resistance description is required when that convention is selected. Unknown quality remains unknown.',
+    descriptionRequired: 'Enter a resistance description in the optional details section before saving this resistance type.',
+    targetChanged: 'The prescription changed. Your unsaved entries are preserved but cannot be attached to the new target. Check the new prescription and restart your entry.', resetForTarget: 'Restart with the new prescription',
+    currentSymptoms: 'Current symptoms', yesterdayCourt: 'Did you play yesterday?', yesterdayNone: 'No court session', yesterdayYes: 'Played yesterday', missingFields: 'Still unknown',
+    noAdjustment: 'There is no plan adjustment to apply.', fullComparison: 'View the full before-and-after plan', removedToday: 'Remove unfinished work today', estimatedChange: 'Estimated time {before} → {after} minutes', restChange: 'Rest between sets {before} → {after} seconds', preparationChanged: 'Preparation sets also changed; see the full plan.', sessionChanged: 'The session type or order changed; see the full plan.',
+    recentLogs: 'Latest training', pastLogs: 'Earlier records', moreFollowups: 'More pending responses',
     onlyToday: 'Readiness and adjustments are available for today only. Select today’s plan.',
     actualDate: 'Actual training date', original: 'Before adjustment', adapted: 'After adjustment', restDay: 'Rest; no unfinished exercises remain.',
     applyConflict: 'Readiness was saved, but the plan or completion record changed. Preview again; the plan was not applied.',

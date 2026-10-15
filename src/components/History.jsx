@@ -11,6 +11,7 @@ export default function History({ t, lang, stats, months, weeks, hasMore, onLoad
   ];
   return <div className="space-y-6">
     <TrainingHistory lang={lang} logs={logs} exercises={exercises} onUpdateNextDay={onUpdateNextDay} busy={loggingBusy} today={today} />
+    <details className="rounded-2xl border border-sky-100 bg-white p-5"><summary className="cursor-pointer font-semibold text-sm text-slate-700">{lang === 'en' ? 'Training trends and summaries' : '訓練趨勢與統計'}</summary><div className="mt-4 space-y-6">
     <div className="grid grid-cols-2 gap-4">
       <div className="bg-white rounded-2xl p-5 text-center"><Flame className="text-orange-500 mx-auto mb-2" /><strong className="text-3xl">{stats.totalActiveDays}</strong><p className="text-xs text-slate-500 mt-2">{t('historyActiveDays')}</p></div>
       <div className="bg-white rounded-2xl p-5 text-center"><CheckCircle2 className="text-sky-600 mx-auto mb-2" /><strong className="text-3xl">{stats.totalCompleted}</strong><p className="text-xs text-slate-500 mt-2">{t('historyCompleted')}</p></div>
@@ -36,6 +37,7 @@ export default function History({ t, lang, stats, months, weeks, hasMore, onLoad
       const percent = month.total ? Math.round(month.completed / month.total * 100) : 0;
       return <div key={month.monthKey} className="bg-white rounded-2xl p-5 border border-sky-100"><h3 className="font-bold">{formatMonth(month.monthKey, lang)}</h3><strong className="text-2xl text-sky-600">{percent}%</strong><p className="text-sm text-slate-500 mt-2">{month.completed} / {month.total} {t('historyActionsUnit')}</p></div>;
     })}</div>}
+    </div></details>
     {hasMore && <button onClick={onLoadMore} className="text-sky-600 text-sm">{t('loadMore')}</button>}
   </div>;
 }

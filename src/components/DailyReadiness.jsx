@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { coachText } from '../coachLocale.js';
-import { readinessForm, readinessInput } from '../domain/logForms.js';
+import { readinessForm, readinessInput, readinessMissing, readinessChanges } from '../domain/logForms.js';
 import { evaluateReadiness, validateReadiness } from '../domain/coaching.js';
+import { estimateSessionMinutes } from '../domain/sessions.js';
 import { localDate } from '../domain/dates.js';
 
 export default function DailyReadiness({ lang = 'zh', value = null, date, onSave, preview = null, onPreview, onApply, busy = false, disabled = false, today = localDate(), exercises = {}, context = {} }) {
@@ -21,6 +22,8 @@ export default function DailyReadiness({ lang = 'zh', value = null, date, onSave
   const input = readinessInput(form, date);
   const decision = evaluateReadiness(input, { ...context, today });
   const blocked = disabled || busy || submitting || date > today;
+  const missing = readinessMissing(input);
+  const changes = preview ? readinessChanges(preview.original, preview.adapted) : [];
   const matchesPreview = preview && preview.date === date && previewInput === JSON.stringify(input);
   const change = (key, next) => { setDirty(true); setSuccess(false); setPreviewInput(null); setForm(current => ({ ...current, [key]: next })); };
   const act = async action => {
@@ -41,20 +44,25 @@ export default function DailyReadiness({ lang = 'zh', value = null, date, onSave
     <details><summary className="cursor-pointer text-sm text-sky-700">{value ? c('saved') : c('optional')} · {c(`readiness_${decision.action}`)}</summary>
       <fieldset disabled={blocked} className="mt-3 space-y-3 disabled:opacity-60">
         <div className="grid sm:grid-cols-2 gap-3">{numeric('sleepHours', '24', '0.5')}{score('fatigue')}{score('soreness')}
-          <label className="block text-xs text-slate-600">{c('symptoms')}<select value={form.symptoms} onChange={event => change('symptoms', event.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 p-2 text-sm">{[['unknown', 'unknown'], ['none', 'noSymptoms'], ['stable', 'stableSymptoms'], ['worse', 'worse'], ['red_flags', 'redFlags']].map(([value, label]) => <option key={value} value={value}>{c(label)}</option>)}</select></label>
+          <label className="block text-xs text-slate-800 font-semibold">{c('currentSymptoms')}<select value={form.symptoms} onChange={event => change('symptoms', event.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 p-2 text-sm">{[['unknown', 'unknown'], ['none', 'noSymptoms'], ['stable', 'stableSymptoms'], ['worse', 'worse'], ['red_flags', 'redFlags']].map(([value, label]) => <option key={value} value={value}>{c(label)}</option>)}</select></label>
         </div>
-        <details><summary className="cursor-pointer text-xs text-slate-600">{c('todayCourtIntensity')} / {c('yesterdayCourtMinutes')}</summary><div className="space-y-3 mt-3">{numeric('yesterdayCourtMinutes', '360')}{numeric('yesterdayCourtRpe', '10')}
-          <label className="block text-xs text-slate-600">{c('todayCourtIntensity')}<select value={form.todayCourtIntensity} onChange={event => change('todayCourtIntensity', event.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 p-2 text-sm">{[['unknown', 'unknown'], ['none', 'courtNone'], ['light', 'courtLight'], ['hard', 'courtHard']].map(([value, label]) => <option key={value} value={value}>{c(label)}</option>)}</select></label>
-          <p className="text-xs text-slate-500">{input.yesterdayCourtMinutes !== null && input.yesterdayCourtRpe !== null ? c('loadTrend', { value: input.yesterdayCourtMinutes * input.yesterdayCourtRpe }) : c('loadTrendMissing')}</p>
-        </div></details>
+        <label className="block text-xs text-slate-700">{c('todayCourtIntensity')}<select value={form.todayCourtIntensity} onChange={event => change('todayCourtIntensity', event.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 p-2 text-sm">{[['unknown', 'unknown'], ['none', 'courtNone'], ['light', 'courtLight'], ['hard', 'courtHard']].map(([value, label]) => <option key={value} value={value}>{c(label)}</option>)}</select></label>
+        <label className="block text-xs text-slate-700">{c('yesterdayCourt')}<select value={form.yesterdayCourt} onChange={event => { const next = event.target.value; setDirty(true); setSuccess(false); setPreviewInput(null); setForm(current => ({ ...current, yesterdayCourt: next, yesterdayCourtMinutes: '', yesterdayCourtRpe: '' })); }} className="mt-1 w-full rounded-lg border border-slate-200 p-2 text-sm">{[['unknown', 'unknown'], ['none', 'yesterdayNone'], ['yes', 'yesterdayYes']].map(([value, label]) => <option key={value} value={value}>{c(label)}</option>)}</select></label>
+        {form.yesterdayCourt === 'yes' && <div className="rounded-lg bg-slate-50 p-3 space-y-3">{numeric('yesterdayCourtMinutes', '360')}{numeric('yesterdayCourtRpe', '10')}<p className="text-xs text-slate-500">{input.yesterdayCourtMinutes !== null && input.yesterdayCourtRpe !== null ? c('loadTrend', { value: input.yesterdayCourtMinutes * input.yesterdayCourtRpe }) : c('loadTrendMissing')}</p></div>}
+        {missing.length > 0 && <p className="text-xs text-amber-800">{c('missingFields')}: {missing.map(key => c(key === 'symptoms' ? 'currentSymptoms' : key)).join('、')}</p>}
         <p className="text-sm font-medium">{c(`readiness_${decision.action}`)}</p>{decision.reasonCodes?.map(reason => <p key={reason} className="text-xs text-slate-600">{c(`reason_${reason}`)}</p>)}
         <div className="flex flex-wrap gap-2"><button type="button" onClick={() => act('save')} className="rounded-lg border border-sky-200 text-sky-700 px-3 py-2 text-sm">{c('saveReadiness')}</button>{onPreview && <button type="button" disabled={date !== today} onClick={() => act('preview')} className="rounded-lg bg-sky-600 text-white px-3 py-2 text-sm disabled:opacity-40">{c('previewReadiness')}</button>}</div>
       </fieldset>
       {matchesPreview && <div className="mt-3 rounded-xl border border-indigo-100 bg-indigo-50 p-3 space-y-2" data-testid="readiness-preview">
         <h4 className="font-semibold text-sm">{c('previewTitle')}</h4><p className="text-sm">{c(`readiness_${preview.decision?.action || decision.action}`)}</p>
-        <div className="grid sm:grid-cols-2 gap-3">{[['original', preview.original], ['adapted', preview.adapted]].map(([key, day]) => day && <div key={key}><h5 className="text-xs font-semibold mb-1">{c(key)}</h5>{!day.routine.length && <p className="text-xs">{c('restDay')}</p>}<ul className="text-xs text-slate-600 list-disc pl-4">{day.routine.map(id => { const dose = day.prescriptions?.find(item => item.id === id); return <li key={id}>{exercises[id]?.name || id}{dose && ` · ${dose.sets} × ${dose.value} ${c(`unit_${dose.unit}`)}`}</li>; })}</ul></div>)}</div>
-        <p className="text-xs text-slate-500">{c('previewHint')}</p>
-        {onApply && <button type="button" disabled={blocked || date !== today || !preview.changed} onClick={() => act('apply')} className="rounded-lg bg-indigo-600 text-white px-3 py-2 text-sm disabled:opacity-40">{c('applyReadiness')}</button>}
+        {preview.changed ? <>
+          <p className="text-sm font-semibold">{c('estimatedChange', { before: estimateSessionMinutes(preview.original, exercises, context.level || 1), after: estimateSessionMinutes(preview.adapted, exercises, context.level || 1) })}</p>
+          <ul className="space-y-2 text-sm">{changes.map(change => <li key={change.id}><span className="font-medium">{exercises[change.id]?.name || change.id}</span>{change.removed ? ` · ${c('removedToday')}` : <><span className="block text-slate-600">{change.before.sets} × {change.before.value} {c(`unit_${change.before.unit}`)} → {change.after.sets} × {change.after.value} {c(`unit_${change.after.unit}`)}</span>{change.before.restSeconds !== change.after.restSeconds && <span className="block text-xs">{c('restChange', { before: change.before.restSeconds || 0, after: change.after.restSeconds || 0 })}</span>}{JSON.stringify(change.before.preparation) !== JSON.stringify(change.after.preparation) && <span className="block text-xs">{c('preparationChanged')}</span>}</>}</li>)}</ul>
+          {changes.length === 0 && <p className="text-xs">{c('sessionChanged')}</p>}
+          <details className="pt-2"><summary className="cursor-pointer text-xs text-slate-600">{c('fullComparison')}</summary><div className="grid sm:grid-cols-2 gap-3 mt-3">{[['original', preview.original], ['adapted', preview.adapted]].map(([key, day]) => day && <div key={key}><h5 className="text-xs font-semibold mb-1">{c(key)}</h5>{!day.routine.length && <p className="text-xs">{c('restDay')}</p>}<ul className="text-xs text-slate-600 list-disc pl-4">{day.routine.map(id => { const dose = day.prescriptions?.find(item => item.id === id); return <li key={id}>{exercises[id]?.name || id}{dose && ` · ${dose.sets} × ${dose.value} ${c(`unit_${dose.unit}`)}`}</li>; })}</ul></div>)}</div></details>
+          <p className="text-xs text-slate-500">{c('previewHint')}</p>
+          {onApply && <button type="button" disabled={blocked || date !== today} onClick={() => act('apply')} className="rounded-lg bg-indigo-600 text-white px-3 py-2 text-sm disabled:opacity-40">{c('applyReadiness')}</button>}
+        </> : <p className="text-sm">{c('noAdjustment')}</p>}
       </div>}
       {error && <p role="alert" className="mt-3 text-sm text-red-600">{error}</p>}{success && <p role="status" className="mt-3 text-sm text-emerald-700">{c('saved')}</p>}
     </details>
