@@ -73,6 +73,7 @@ export function applyWeeklyChoices(day, available, ids, used, lang = 'zh') {
     .sort((a, b) => Number(used.has(a)) - Number(used.has(b)));
   for (const id of pending) {
     const exercise = available[id];
+    if (exercise.sequenceMinutes && !day.routine.some(item => available[item]?.catalogCode === 'A01')) continue;
     const phase = weeklyChoicePhase(id, exercise);
     const patterns = classifyBalanceExercise(id, exercise).patterns;
     const index = day.prescriptions.findIndex(dose => {
@@ -86,8 +87,8 @@ export function applyWeeklyChoices(day, available, ids, used, lang = 'zh') {
     if (index < 0) continue;
     const old = day.prescriptions[index];
     const base = exercise.prescription;
-    const value = old.unit === base.unit ? String(Math.min(...old.value.split(/[–-]/).map(Number), ...base.value.split(/[–-]/).map(Number))) : base.value;
-    day.prescriptions[index] = { id, ...base, phase: old.phase, sets: Math.min(old.sets, base.sets), value, restSeconds: Math.max(old.restSeconds, base.restSeconds) };
+    const value = !exercise.sequenceMinutes && old.unit === base.unit ? String(Math.min(...old.value.split(/[–-]/).map(Number), ...base.value.split(/[–-]/).map(Number))) : base.value;
+    day.prescriptions[index] = { id, ...base, phase: old.phase, sets: Math.min(old.sets, base.sets), value, restSeconds: exercise.sequenceMinutes ? base.restSeconds : Math.max(old.restSeconds, base.restSeconds) };
     day.routine = day.routine.map(item => item === old.id ? id : item);
     if (old.phase === 'warmup') day.warmupNote = lang === 'en'
       ? 'Raise body temperature, then follow the listed mobility and any listed main-lift preparation. No extra movements are added.'

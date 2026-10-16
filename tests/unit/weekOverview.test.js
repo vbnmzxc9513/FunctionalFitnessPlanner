@@ -32,7 +32,10 @@ test('target priorities change real main order and main-specific warm-up without
   const targeted = generateTemplatePlan(exercises, { ...context, targetRegions: ['upper'], stiffnessRegions: ['shoulder'] }, 35, 'zh', options);
   const main = targeted.schedule.find(day => day.prescriptions.some(dose => dose.phase === 'strength'));
   assert.equal(exercises[main.prescriptions.find(dose => dose.phase === 'strength').id].category, 'upper');
-  assert.ok(main.prescriptions.some(dose => dose.phase === 'warmup' && dose.id === 'bf_A09'));
+  assert.ok(main.prescriptions.some(dose => dose.phase === 'warmup' && dose.id === 'bf_A12'));
+  const compactCatalog = { ...exercises, bf_A12: { ...exercises.bf_A12, active: false } };
+  const compact = generateTemplatePlan(compactCatalog, { ...context, targetRegions: ['upper'], stiffnessRegions: ['shoulder'] }, 35, 'zh', options);
+  assert.ok(compact.schedule.some(day => day.prescriptions.some(dose => dose.phase === 'warmup' && dose.id === 'bf_A09')), 'when the flow is disabled, targeted individual warm-up remains available');
   const sets = plan => plan.schedule.flatMap(day => day.prescriptions).filter(dose => ['strength', 'accessory'].includes(dose.phase)).reduce((sum, dose) => sum + dose.sets, 0);
   assert.ok(sets(targeted) <= sets(base));
   const first = main.prescriptions.find(dose => dose.phase === 'strength');

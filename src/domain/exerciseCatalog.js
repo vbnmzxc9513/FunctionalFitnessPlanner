@@ -15,6 +15,7 @@ const EN_TIPS = {
   A09: 'Slide the arms through a comfortable range without flaring ribs or forcing wrists onto the wall.',
   A10: 'Move slowly between gentle spinal flexion and extension; avoid forcing the neck or lower back.',
   A11: 'Rotate the chest while keeping the pelvis steady; do not pull on the head.',
+  A12: 'Raise body temperature first, then follow all eight gentle parts. Mark the whole flow once, after finishing. Save longer static holds for cooldown.',
   B01: 'Lower with a stable front foot and knee aligned with the toes; use bodyweight first.',
   B02: 'Sit into the stepping hip, brake under control, then push back to the start.',
   B03: 'Secure the band under the feet, hinge at the hips and stand without arching the back.',
@@ -94,8 +95,16 @@ export function catalogExercises(lang = 'zh') {
     ...exercise,
     name: lang === 'en' ? exercise.nameEn : exercise.name,
     tip: lang === 'en' ? EN_TIPS[exercise.catalogCode] : exercise.cue,
-    aliases: [exercise.name, exercise.nameEn, ...(exercise.catalogCode === 'B12' ? ['保佳利亞蹲'] : [])],
+    aliases: [exercise.name, exercise.nameEn, ...(exercise.aliases || []), ...(exercise.catalogCode === 'B12' ? ['保佳利亞蹲'] : [])],
   }]));
+}
+
+// A timed sequence includes every part and both sides. It cannot be compressed
+// into a few reps by a generated/shared prescription while showing the full guide.
+export function validSequenceDose(id, dose) {
+  const minutes = catalog.find(exercise => exercise.id === id)?.sequenceMinutes;
+  return !minutes || dose.sets === 1 && dose.value === String(minutes) && dose.unit === 'minutes'
+    && dose.perSide === false && dose.restSeconds === 0 && !dose.preparation;
 }
 
 export function equipmentChoices(exercise, equipment = []) {

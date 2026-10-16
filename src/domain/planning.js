@@ -3,7 +3,7 @@ import { estimateSessionMinutes } from './sessions.js';
 export { estimateSessionMinutes } from './sessions.js';
 import { SESSION_PHASES, SESSION_TYPES } from './phases.js';
 import { isCalendarDate } from './dates.js';
-import { eligibleExercises } from './exerciseCatalog.js';
+import { eligibleExercises, validSequenceDose } from './exerciseCatalog.js';
 
 export const DEFAULT_PLANNING_CONTEXT = {
   badmintonDays: [], badmintonMinutes: '', badmintonIntensity: 'unknown',
@@ -54,6 +54,7 @@ export function validateGeneratedPlan(plan, exercises, dailyTime) {
     const doses = new Set();
     let contacts = 0;
     for (const dose of day.prescriptions) {
+      if (dose && !validSequenceDose(dose.id, dose)) throw new Error('INVALID_AI_PRESCRIPTION');
       if (!dose || !day.routine.includes(dose.id) || doses.has(dose.id) || !Number.isInteger(dose.sets) || dose.sets < 1 || dose.sets > 5
         || !SESSION_PHASES.includes(dose.phase)
         || typeof dose.value !== 'string' || !/^\d+(?:[–-]\d+)?$/.test(dose.value)

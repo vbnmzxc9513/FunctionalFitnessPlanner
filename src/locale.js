@@ -463,7 +463,7 @@ Object.assign(TRANSLATIONS.zh, {
   category_warmup: '動態暖身／活動度', category_lower: '下肢肌力／單腳支撐', category_upper: '上肢肌力／肩臂控制', category_core: '核心／呼吸／力量傳遞',
   category_power: '爆發力／彈跳落地', category_footwork: '步伐／急停變向', category_reaction: '反應／丟接球／判讀', category_recovery: '拉伸／滾筒', category_conditioning: '心肺／重複回合',
   starterDoseLabel: '起始參考：', eachSide: '每側', restLabel: '休息', breaths: '次呼吸',
-  catalogEligibilityNotice: '83 項分類動作；進階項目預設停用。啟用後仍會依器材、搭檔、經驗與肩部限制篩選。舊動作 ID 保留供歷史使用。',
+  catalogEligibilityNotice: '84 項分類動作與流程；進階項目預設停用。啟用後仍會依器材、搭檔、經驗與肩部限制篩選。舊動作 ID 保留供歷史使用。',
   exercisesTitle: '羽球訓練動作庫', exercisesSubtitle: '查看分類、提示、器材和起始劑量；可啟用或新增動作。AI 會依你的球量與恢復挑選，不必全做。',
   aiCoachTitle: '羽球體能教練', aiConclusionTitle: '本週安排與調整策略', aiTip: '球日也算訓練負荷；可排短課、恢復或休息。填寫比賽與治療限制，讓課表配合實際狀況。',
   feedbackSubtitle: '反饋會作為下次排課依據。本週 AI 劑量依已儲存的處方顯示；需要調整時到教練頁重新排課。',
@@ -486,14 +486,14 @@ Object.assign(TRANSLATIONS.en, {
   category_warmup: 'Dynamic warm-up / mobility', category_lower: 'Leg strength / single-leg support', category_upper: 'Upper strength / shoulder control', category_core: 'Core / breathing / force transfer',
   category_power: 'Power / jumping / landing', category_footwork: 'Footwork / braking / turning', category_reaction: 'Reaction / catching / anticipation', category_recovery: 'Stretching / foam rolling', category_conditioning: 'Aerobic / repeated rallies',
   starterDoseLabel: 'Starting reference:', eachSide: 'per side', restLabel: 'rest', breaths: 'breaths',
-  catalogEligibilityNotice: '83 categorized exercises. Advanced entries start disabled. Planning also filters equipment, partner, experience and shoulder restrictions. Legacy IDs remain readable.',
+  catalogEligibilityNotice: '84 categorized exercises and flows. Advanced entries start disabled. Planning also filters equipment, partner, experience and shoulder restrictions. Legacy IDs remain readable.',
   exercisesTitle: 'Badminton exercise library', exercisesSubtitle: 'Browse categories, cues, equipment and starting doses; enable or add exercises. Planning selects for your court load and recovery.',
   aiCoachTitle: 'Badminton fitness coach', aiConclusionTitle: 'Weekly plan and adjustment strategy', aiTip: 'Court sessions count as training load. Short sessions, recovery and rest are valid. Add competition and treatment details.',
   feedbackSubtitle: 'Feedback informs the next plan. Saved AI prescriptions stay fixed this week; open Coach to generate an adjusted plan.',
 });
 
 Object.assign(TRANSLATIONS.zh, {
-  sessionExerciseLimit: '每堂最多 8 個不同動作，包含暖身與收尾；可先移除或拆分到其他日。',
+  sessionExerciseLimit: '每堂最多 8 項，包含暖身流程與收尾；可先移除或拆分到其他日。',
   phase_warmup: '暖身與主項準備', phase_skill: '協調、步伐與爆發力', phase_strength: '主要肌力訓練', phase_accessory: '輔助控制與體能', phase_recovery: '輕量恢復活動', phase_cooldown: '收尾與收操',
   estimatedSessionTime: '本次預估', aboutTime: '約', sessionTimingHint: '依區塊順序做，時間包含左右側、準備組、休息與轉換；可依恢復狀況縮短。',
   preparationSetsLabel: '主項準備組', workingSetsLabel: '正式組', preparationTrackingHint: '輕鬆、可控，不做到疲勞；完成主項時一起記錄，不額外增加完成次數。',
@@ -506,7 +506,7 @@ Object.assign(TRANSLATIONS.zh, {
   defaultPreparationAdvice: '先用徒手、小幅度做幾次，確認動作與支撐舒服，再進入正式組。',
 });
 Object.assign(TRANSLATIONS.en, {
-  sessionExerciseLimit: 'Use at most 8 different exercises including warm-up and finish. Remove an item or split sessions.',
+  sessionExerciseLimit: 'Use at most 8 items including warm-up flows and finish. Remove an item or split sessions.',
   phase_warmup: 'Warm-up and preparation', phase_skill: 'Coordination, footwork and power', phase_strength: 'Main strength work', phase_accessory: 'Accessory control and conditioning', phase_recovery: 'Easy recovery activity', phase_cooldown: 'Finish and cool-down',
   estimatedSessionTime: 'Estimated session', aboutTime: 'About', sessionTimingHint: 'Follow section order. Time includes both sides, preparation, rest and transitions; shorten when recovery requires it.',
   preparationSetsLabel: 'Preparation set', workingSetsLabel: 'Working sets', preparationTrackingHint: 'Keep it light and controlled. Record completion with the main exercise; no extra completion count.',

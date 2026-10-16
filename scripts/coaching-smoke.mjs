@@ -81,6 +81,14 @@ try {
     const initialCompletion = (await draft()).completed;
     await click('查看下一個動作');
     assert.deepEqual((await draft()).completed, initialCompletion, `${layout}: next does not complete warm-up`);
+    const flow = '[data-testid="current-exercise"] [data-testid="exercise-guide-bf_A12"]';
+    await page.waitForSelector(flow, { visible: true });
+    assert.equal(await page.$eval(flow, item => item.open), true, `${layout}: eight-part flow starts expanded`);
+    assert.equal(await page.$$eval(`${flow} li`, items => items.length), 8, `${layout}: every part is visible without another page`);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${layout}: flow does not overflow horizontally`);
+    await page.screenshot({ path: `/tmp/fitness-ux-${layout}-daily-warmup.png`, fullPage: true });
+    await page.$eval(`${flow} summary`, item => item.click());
+    assert.equal(await page.$eval(flow, item => item.open), false, `${layout}: flow details can still be collapsed`);
     await click('查看下一個動作'); await click('查看下一個動作');
     await page.waitForFunction(() => {
       const prep = [...document.querySelectorAll('[data-preparation-for]')].find(item => item.getClientRects().length && !item.closest('[hidden]'));

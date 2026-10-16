@@ -365,6 +365,55 @@
     "betweenRepsSeconds": 0
   },
   {
+    "id": "bf_A12",
+    "category": "warmup",
+    "name": "每日動態暖身（8 段流程）",
+    "purpose": "準備胸椎、髖踝活動與肩胛控制；不取代主項準備組",
+    "equipment": "徒手、牆面與平坦地面",
+    "dose": "1 輪 × 6 分鐘（含換姿勢與左右側）",
+    "rest": "輕鬆銜接，不做到疲勞",
+    "cue": "先快走或踏步提高體溫，再依序做八段。整套完成才勾選一次；長時間靜態拉伸留到收操。",
+    "easier": "減小幅度、Y/T 徒手、前鋸肌使用牆推；若任一段無法舒適完成，停止並另選合適暖身，不把整套標成已完成。",
+    "harder": "不加重量或追求幅度；後接當天列出的步序與主項輕量準備組。",
+    "level": "基礎",
+    "priority": false,
+    "catalogCode": "A12",
+    "nameEn": "Daily dynamic warm-up (8-part flow)",
+    "type": "mobility",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "advanced": false,
+    "prescription": {
+      "sets": 1,
+      "value": "6",
+      "unit": "minutes",
+      "restSeconds": 0,
+      "perSide": false
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0,
+    "sequenceMinutes": 6,
+    "aliases": [
+      "嬰兒式",
+      "偉大拉伸",
+      "貓牛式",
+      "Y T",
+      "前鋸肌 push up",
+      "胸椎拉伸",
+      "90/90 髖轉換",
+      "9090髖",
+      "大小腿拉伸",
+      "child’s pose",
+      "world’s greatest stretch",
+      "serratus push-up",
+      "90/90 hip switches"
+    ]
+  },
+  {
     "id": "bf_B01",
     "category": "lower",
     "name": "分腿蹲",

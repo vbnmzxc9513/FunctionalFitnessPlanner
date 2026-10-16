@@ -6,7 +6,7 @@ import { catalogExercises } from '../../src/domain/exerciseCatalog.js';
 const catalog = catalogExercises();
 
 test('movement guides match real catalog identities, including the legacy dead_bug identity', () => {
-  assert.equal(Object.keys(EXERCISE_GUIDES).length, 20);
+  assert.equal(Object.keys(EXERCISE_GUIDES).length, 21);
   for (const [code, guide] of Object.entries(EXERCISE_GUIDES)) {
     assert.equal(catalog[guide.id]?.catalogCode, code, `${code} must describe its actual catalog movement`);
     assert.deepEqual(getExerciseGuide(guide.id, catalog[guide.id]).guide, guide.zh);
@@ -22,7 +22,7 @@ test('both languages cover starting position, actionable steps, common errors an
     for (const lang of ['zh', 'en']) {
       assert.deepEqual(Object.keys(guide[lang]).sort(), ['easier', 'mistake', 'start', 'steps']);
       for (const key of ['start', 'mistake', 'easier']) assert.ok(guide[lang][key].trim().length >= 6, `${guide.id} ${lang} ${key}`);
-      assert.ok(guide[lang].steps.length >= 2 && guide[lang].steps.length <= 3);
+      assert.ok(guide.id === 'bf_A12' ? guide[lang].steps.length === 8 : guide[lang].steps.length >= 2 && guide[lang].steps.length <= 3);
       for (const step of guide[lang].steps) assert.ok(step.trim().length > 10);
     }
   }

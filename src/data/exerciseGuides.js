@@ -1,6 +1,32 @@
-// Instructional cues only. Prescriptions and exercise identities remain in the catalog.
+// Exercise identities and total prescriptions remain in the catalog. A timed
+// flow also lists the allocation within its total; these are not extra sets.
 const entry = (id, zh, en) => ({ id, zh, en });
 export const EXERCISE_GUIDES = {
+  A12: entry('bf_A12',
+    { start: '先完成課表列出的快走／踏步。以下八段合計約 6 分鐘，已含左右側與換姿勢；每段的秒數是時間分配，次數是輕鬆參考，不必做滿或反覆填滿時間。整套完成才勾選一次；不趕動作、不憋氣。',
+      steps: [
+        '嬰兒式（約 40 秒）：臀部輕往腳跟坐，手臂放舒適位置，做 2–3 次自然呼吸，再回起始；不強壓膝或肩。',
+        '偉大拉伸（約 50 秒）：前腳跨至手旁、後膝著地，每側 1–2 次小幅前後移並輕轉胸口；不強迫手肘碰地或手臂上舉。',
+        '貓牛式（約 30 秒）：四足跪姿，配合呼吸緩慢拱背與回伸約 4 次，不把頸部或腰椎推到極限。',
+        'Y、T（約 40 秒）：俯臥，前額舒適支撐，徒手各約 3 次小幅抬臂；不聳肩、不加啞鈴、不做到疲勞。',
+        '前鋸肌 push-up（約 30 秒）：先站姿雙手推牆，手肘保持伸直，肩胛小幅靠近再推開約 6 次；不塌腰。',
+        '胸椎拉伸（約 45 秒）：側躺屈膝做開書，每側約 3 次；膝蓋疊好，隨胸口旋轉，不拉扯手臂或硬扭腰。',
+        '90/90 髖轉換（約 45 秒）：坐姿雙膝彎曲，緩慢向左右換側，各約 3 次；可扶地並縮小角度，不壓膝。這是髖活動，不是靠牆呼吸。',
+        '大腿與小腿動態活動（約 80 秒）：扶牆交替屈膝、腳跟靠近臀部各約 3 次，再做約 4 次徒手髖鉸鏈；最後腳跟貼地，直膝與微彎膝的踝前移各約 3 次／側。不彈震、不久停；長時間靜態拉伸留到收操。',
+      ], mistake: '把秒數當作持續拉住的時間、重複整套到疲勞，或為了在六分鐘內完成而趕動作。這套不取代課表列出的主項輕量準備組，也不等同完整上場暖身。',
+      easier: '每段採更小幅度與較少次數。肩部治療或撐地／抬手限制未確認時，不使用整套；任一段疼痛、麻木或無法舒適完成就停止，另選合適暖身，不把整套標成完成。' },
+    { start: 'First finish the listed walking or marching. All eight parts take about 6 minutes including both sides and position changes. Seconds allocate time, not continuous holds; reps are easy guides, not quotas. Mark the flow once after finishing. Do not rush or hold your breath.',
+      steps: [
+        'Child’s pose (about 40 sec): ease the hips toward the heels with arms comfortable. Take 2–3 natural breaths and return; do not force the knees or shoulders.',
+        'World’s greatest stretch (about 50 sec): step one foot beside the hand and rest the rear knee down. Gently rock and turn the chest 1–2 times per side; do not force the elbow down or arm overhead.',
+        'Cat–cow (about 30 sec): on hands and knees, slowly round and extend with the breath for about 4 cycles, avoiding end-range neck or lower-back pressure.',
+        'Y and T raises (about 40 sec): lie prone with the forehead comfortable. Lift the arms slightly about 3 times in each shape, unloaded, without shrugging or fatigue.',
+        'Serratus push-up (about 30 sec): start standing with hands on a wall. Keep elbows straight as the shoulder blades gently come together and spread about 6 times; do not sag through the trunk.',
+        'Thoracic open book (about 45 sec): lie on the side with bent, stacked knees and open the chest about 3 times per side. Do not pull the arm or force the lower back.',
+        '90/90 hip switches (about 45 sec): sit with bent knees and switch gently between sides about 3 times each. Support yourself and reduce the angle as needed; never press the knees. This is hip motion, not wall breathing.',
+        'Dynamic thigh and calf mobility (about 80 sec): hold a wall and gently curl each heel toward the glute about 3 times, then perform about 4 bodyweight hip hinges. Finish with heel-down ankle rocks, about 3 per side with a straight then soft knee. No bouncing or long holds; save longer static stretching for cooldown.',
+      ], mistake: 'Holding each stretch for its entire time allocation, repeating to fatigue or rushing to beat six minutes. This flow does not replace the listed light lift preparation or a full court warm-up.',
+      easier: 'Use smaller ranges and fewer reps. Do not use the full flow while shoulder treatment or support/arm-raising restrictions remain unclear. Stop for pain, numbness or inability to move comfortably; choose suitable alternatives without marking the whole flow complete.' }),
   A01: entry('bf_A01',
     { start: '在平坦、沒有障礙物的空間站好，身旁留足側移空間。', steps: ['先輕鬆踏步或走路，讓手臂自然擺動。', '面向前方做小步側移，雙腳不交叉，逐步提高節奏。'], mistake: '一開始衝刺、側移時交叉腳，或為了速度失去平衡。', easier: '全程走路或原地踏步。' },
     { start: 'Stand on a clear, level surface with room to move sideways.', steps: ['Start with easy steps or walking and let the arms swing naturally.', 'Face forward and take small side steps without crossing the feet; build the pace gradually.'], mistake: 'Sprinting immediately, crossing the feet or losing balance to move faster.', easier: 'Walk or march in place throughout.' }),

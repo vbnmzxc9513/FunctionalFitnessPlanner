@@ -1,4 +1,4 @@
-import { catalogExercises as loadCatalog } from './exerciseCatalog.js';
+import { catalogExercises as loadCatalog, validSequenceDose } from './exerciseCatalog.js';
 import { exercisePhase, SESSION_PHASES } from './phases.js';
 import { prescription } from './training.js';
 
@@ -38,6 +38,7 @@ export function validateSharePayload(payload) {
       || seen.has(item.id) || phase < lastPhase || phase < 0) fail();
     seen.add(item.id); lastPhase = phase;
     const dose = validateDose(Object.fromEntries(DOSE_FIELDS.map(key => [key, item[key]])));
+    if (!validSequenceDose(item.id, item)) fail();
     const exercise = catalogExercises[item.id];
     if (['power', 'footwork', 'reaction'].includes(exercise.category) && item.phase !== 'skill') fail();
     if (exercise.jumpContacts) {
