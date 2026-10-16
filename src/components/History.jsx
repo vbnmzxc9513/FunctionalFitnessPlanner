@@ -1,15 +1,18 @@
 import { CalendarDays, CheckCircle2, Flame, Shield, Zap } from 'lucide-react';
 import { formatMonth } from '../domain/dates.js';
 import TrainingHistory from './TrainingHistory.jsx';
+import TrainingExport from './TrainingExport.jsx';
 
-export default function History({ t, lang, stats, months, weeks, hasMore, onLoadMore, logs = [], onUpdateNextDay, loggingBusy = false, today, exercises = {}, previewOnly = false }) {
-  if (previewOnly) return <TrainingHistory lang={lang} logs={logs} exercises={exercises} onUpdateNextDay={onUpdateNextDay} busy={loggingBusy} today={today} />;
+export default function History({ t, lang, stats, months, weeks, hasMore, onLoadMore, logs = [], onUpdateNextDay, loggingBusy = false, today, exercises = {}, previewOnly = false, exportUid, publicDraft, exportProgress, exportDisabled = false }) {
+  const exporter = <TrainingExport lang={lang} today={today} uid={exportUid} publicDraft={publicDraft} exercises={exercises} sourceVersion={{ logs, progress: exportProgress }} disabled={exportDisabled} />;
+  if (previewOnly) return <div className="space-y-6">{exporter}<TrainingHistory lang={lang} logs={logs} exercises={exercises} onUpdateNextDay={onUpdateNextDay} busy={loggingBusy} today={today} /></div>;
   const rows = [
     ['radarLower', stats.typeStats.lower, 'bg-indigo-500'], ['radarCore', stats.typeStats.core, 'bg-blue-500'],
     ['radarUpper', stats.typeStats.upper_push + stats.typeStats.upper_pull, 'bg-sky-500'],
     ['radarMobility', stats.typeStats.mobility, 'bg-teal-500'], ['radarPower', stats.typeStats.power + stats.typeStats.full, 'bg-orange-500'],
   ];
   return <div className="space-y-6">
+    {exporter}
     <TrainingHistory lang={lang} logs={logs} exercises={exercises} onUpdateNextDay={onUpdateNextDay} busy={loggingBusy} today={today} />
     <details className="rounded-2xl border border-sky-100 bg-white p-5"><summary className="cursor-pointer font-semibold text-sm text-slate-700">{lang === 'en' ? 'Training trends and summaries' : '訓練趨勢與統計'}</summary><div className="mt-4 space-y-6">
     <div className="grid grid-cols-2 gap-4">

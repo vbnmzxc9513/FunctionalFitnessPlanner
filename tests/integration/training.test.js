@@ -2,15 +2,17 @@ import { after, before, beforeEach, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
-import { doc, getDoc, getDocs, setDoc, writeBatch } from 'firebase/firestore';
+import { disableNetwork, enableNetwork, doc, getDoc, getDocs, setDoc, writeBatch } from 'firebase/firestore';
 import { signInAnonymously, signOut } from 'firebase/auth';
-import { auth } from '../../src/services/firebase.js';
+import { auth, db } from '../../src/services/firebase.js';
 import { userDoc, userCollection, savePlan, captureGuestData, importGuestData } from '../../src/services/repository.js';
 import { saveTrainingLog, saveNextDayResponse, saveReadiness, plannedSnapshot, trainingHistoryQueries } from '../../src/services/trainingRepository.js';
 import { DEFAULT_SCHEDULE_I18N, LEGACY_DEFAULT_SCHEDULE_I18N, EXERCISES_I18N } from '../../src/locale.js';
 import { getWeekString, localDate, dateForWeekDay } from '../../src/domain/dates.js';
 import { trainingLogId } from '../../src/domain/coaching.js';
 import { createWeeklyIntent } from '../../src/domain/trainingPreferences.js';
+import { loadTrainingExport } from '../../src/services/trainingExport.js';
+import { buildTrainingReport } from '../../src/domain/trainingExport.js';
 
 const week = getWeekString();
 // Follow-up must be valid even when CI runs on Monday.
@@ -33,6 +35,37 @@ function log(day = 1, exerciseId = plan.schedule[day - 1].routine[0]) {
 const readiness = () => ({ date: localDate(), sleepHours: null, fatigue: null, soreness: null, symptoms: 'unknown',
   yesterdayCourtMinutes: null, yesterdayCourtRpe: null, todayCourtIntensity: 'unknown', schemaVersion: 1 });
 const save = record => saveTrainingLog(uid, record, { fallback: plan, expectedRevision: 0, exercise: EXERCISES_I18N.zh[record.exerciseId] });
+
+test('range export paginates by actual date, includes old-week completion dates, and stays read-only within the owner account', async () => {
+  const oldWeek = getWeekString(new Date(), -30);
+  const path = `artifacts/my-fitness-app-yp/users/${uid}`;
+  await environment.withSecurityRulesDisabled(async context => {
+    const batch = writeBatch(context.firestore());
+    for (let n = 0; n < 205; n++) {
+      const record = { ...log(), week: oldWeek, exerciseId: `export_${String(n).padStart(3, '0')}` };
+      batch.set(doc(context.firestore(), `${path}/trainingLogs/${trainingLogId(record)}`), record);
+    }
+    const outside = { ...log(), exerciseId: 'outside', date: localDate(new Date(Date.now() - 86400000 * 10)) };
+    batch.set(doc(context.firestore(), `${path}/trainingLogs/${trainingLogId(outside)}`), outside);
+    batch.set(doc(context.firestore(), `${path}/progress/${oldWeek}`), { completed: { day1_bf_A12: true, day2_undated: true }, completedAt: { day1_bf_A12: date } });
+    batch.set(doc(context.firestore(), 'artifacts/my-fitness-app-yp/users/other-export-user/trainingLogs/private'), { ...log(), exerciseId: 'OTHER_ACCOUNT_SECRET' });
+    await batch.commit();
+  });
+  const records = await loadTrainingExport(uid, { from: date, to: date, today: localDate() });
+  assert.equal(records.logs.length, 205, 'the second page is included despite plan weeks older than the normal 12-week view');
+  assert.equal(records.logs.some(record => record.exerciseId === 'outside'), false);
+  assert.equal(records.logs.some(record => record.exerciseId === 'OTHER_ACCOUNT_SECRET'), false);
+  const report = buildTrainingReport({ ...records, from: date, to: date });
+  assert.deepEqual(report.counts, { actual: 205, actualDays: 1, completion: 1 });
+  assert.equal(report.warnings.undated, 1);
+  assert.equal((await getDoc(userDoc(uid, 'progress', oldWeek))).data().completed.day1_bf_A12, true);
+  assert.deepEqual((await loadTrainingExport(uid, { from: date, to: date, includeCompletions: false })).progress, {});
+  await assert.rejects(loadTrainingExport('other-export-user', { from: date, to: date }), /SESSION_CHANGED/);
+  await assert.rejects(loadTrainingExport(uid, { from: date, to: 'invalid' }), /INVALID_EXPORT_RANGE/);
+  await disableNetwork(db);
+  try { await assert.rejects(loadTrainingExport(uid, { from: date, to: date }), /EXPORT_OFFLINE/); }
+  finally { await enableNetwork(db); }
+});
 
 test('private records persist five sets and both sides without changing completion', async () => {
   const record = { ...log(1, 'bf_B01'), variant: 'dumbbell', loadBasis: 'per_dumbbell', loadKg: 12.5, rir: 2,

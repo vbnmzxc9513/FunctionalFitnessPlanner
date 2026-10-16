@@ -67,6 +67,54 @@ try {
       }, {}, dateForWeekDay(week, names[label]));
     };
     const draft = () => page.evaluate(() => JSON.parse(sessionStorage.getItem('fitness_public_preview_v1')).publicDraft);
+    const verifyExport = async source => {
+      await click('紀錄'); await click('選擇區間與內容');
+      await click('產生分享預覽'); await page.waitForSelector('[data-testid="export-text"]', { visible: true });
+      const text = await page.$eval('[data-testid="export-text"]', item => item.value);
+      assert.ok(text.includes(today), `${layout}/${source}: export uses the actual Wednesday date`);
+      assert.ok(text.includes('每顆啞鈴'), `${layout}/${source}: the weight convention is preserved`);
+      assert.ok(!text.includes('PRIVATE_VARIANT_TEST'), `${layout}/${source}: private descriptions default off`);
+      assert.ok(!text.includes('訓練中症狀:'), `${layout}/${source}: symptom output defaults off`);
+      assert.ok(text.includes(source === 'preview' ? '此分頁暫存預覽' : '已儲存紀錄'));
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${layout}/${source}: export fits the viewport`);
+      await page.screenshot({ path: `/tmp/fitness-export-${layout}-${source}.png`, fullPage: true });
+      await page.evaluate(() => {
+        Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async text => { window.__exportCopy = text; } } });
+        Object.defineProperty(navigator, 'share', { configurable: true, value: async payload => { window.__exportShare = payload; } });
+        if (!window.__exportCaptureInstalled) {
+          window.__exportCaptureInstalled = true;
+          const create = URL.createObjectURL.bind(URL);
+          URL.createObjectURL = blob => { if (blob.type.startsWith('text/csv')) window.__exportCsv = blob.text(); return create(blob); };
+          const originalClick = HTMLAnchorElement.prototype.click;
+          HTMLAnchorElement.prototype.click = function () { if (!this.download.endsWith('.csv')) originalClick.call(this); };
+        }
+      });
+      await click('複製文字'); await waitText('已複製，可貼給教練或朋友。');
+      assert.equal(await page.evaluate(() => window.__exportCopy), text);
+      await click('分享文字');
+      await page.waitForFunction(() => !!window.__exportShare);
+      assert.deepEqual(await page.evaluate(() => window.__exportShare), { title: 'Fitness Planner 訓練紀錄', text });
+      await page.locator('[data-testid="export-includeDescriptions"]').click();
+      await page.waitForFunction(() => !document.querySelector('[data-testid="export-text"]'));
+      assert.equal(await page.$('[data-testid="export-download"]'), null, `${layout}/${source}: no stale download after changing privacy`);
+      await click('產生分享預覽'); await page.waitForSelector('[data-testid="export-text"]', { visible: true });
+      assert.ok((await page.$eval('[data-testid="export-text"]', item => item.value)).includes('PRIVATE_VARIANT_TEST'));
+      await click('下載 CSV'); await waitText('CSV 已準備下載。');
+      const csv = await page.evaluate(() => window.__exportCsv);
+      assert.ok(csv.includes('PRIVATE_VARIANT_TEST') && csv.includes('區間開始') && csv.includes('每顆啞鈴'));
+      assert.ok(!csv.includes('訓練中症狀'), `${layout}/${source}: opt-in descriptions do not opt into symptoms`);
+      await page.locator('[data-testid="export-includeResponses"]').click();
+      await click('產生分享預覽'); await page.waitForSelector('[data-testid="export-text"]', { visible: true });
+      assert.ok((await page.$eval('[data-testid="export-text"]', item => item.value)).includes('翌日反應:'));
+      await page.$eval('[data-testid="export-from"]', input => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, '2020-01-01'); input.dispatchEvent(new Event('input', { bubbles: true })); });
+      await page.waitForFunction(() => document.querySelector('[data-testid="export-preview"]').disabled);
+      assert.equal(await page.$('[data-testid="export-text"]'), null, `${layout}/${source}: invalid dates cannot export an old preview`);
+      await click('最近 30 天'); await click('產生分享預覽'); await page.waitForSelector('[data-testid="export-text"]', { visible: true });
+      const empty = dateForWeekDay(week, 1);
+      await page.$$eval('[data-testid="export-from"], [data-testid="export-to"]', (inputs, value) => { for (const input of inputs) { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, value); input.dispatchEvent(new Event('input', { bubbles: true })); } }, empty);
+      await click('產生分享預覽'); await waitText('此區間沒有可匯出的紀錄。');
+      assert.equal(await page.$('[data-testid="export-download"]'), null, `${layout}/${source}: scheduled Monday work is not actual Wednesday training`);
+    };
     await page.goto(siteUrl, { waitUntil: 'networkidle2' });
     assert.equal(await page.$$eval('nav button', buttons => buttons.length), 3);
     assert.equal(await page.$('button[aria-label][aria-pressed]'), null, `${layout}: no editable example before creating a personal plan`);
@@ -131,6 +179,7 @@ try {
     await click('儲存並標記完成');
     await page.waitForFunction(key => JSON.parse(sessionStorage.getItem('fitness_public_preview_v1')).publicDraft.completed[key] === true, {}, `day1_${id}`);
     assert.equal((await draft()).logs.length, 1, `${layout}: explicit combined save preserves one factual log and completion together`);
+    await verifyExport('preview');
     await click('課表'); await click('調整本週目標');
     await click('下一步'); await click('下一步'); await click('預覽本週課表'); await page.waitForSelector('[data-testid="weekly-plan-preview"]', { visible: true });
     await click('確認套用本週'); await click('今天'); await page.waitForSelector('[data-testid="session-hero"]', { visible: true });
@@ -173,6 +222,7 @@ try {
     await page.waitForFunction(() => !JSON.parse(sessionStorage.getItem('fitness_public_preview_v1') || '{}').pendingDraft && !JSON.parse(sessionStorage.getItem('fitness_public_preview_v1') || '{}').publicDraft);
     await click('紀錄'); await page.waitForSelector('[data-testid="latest-training-logs"]', { visible: true }); await waitText('PRIVATE_VARIANT_TEST');
     await page.reload({ waitUntil: 'networkidle2' }); await click('紀錄'); await page.waitForSelector('[data-testid="latest-training-logs"]', { visible: true }); await waitText('PRIVATE_VARIANT_TEST');
+    await verifyExport('cloud');
     await click('課表'); await selectDay('週一'); await page.waitForSelector(logSelector);
     await page.$eval(`${logSelector} summary`, item => item.click());
     await openSummary('阻力、餘力與動作品質');
@@ -182,8 +232,11 @@ try {
     assert.equal(await page.$eval(`${logSelector} input[max="10"]`, item => item.value), '4', `${layout}: unsaved form survives language switch`);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${layout}: coaching UI fits viewport`);
     await page.screenshot({ path: `/tmp/fitness-ux-${layout}-record.png`, fullPage: false });
+    await click('Records'); await click('Choose dates and content'); await click('Create share preview');
+    await page.waitForSelector('[data-testid="export-text"]', { visible: true });
+    assert.ok((await page.$eval('[data-testid="export-text"]', item => item.value)).includes('Actual training log: 1'), `${layout}: English export labels resolve`);
     assert.deepEqual(errors, [], `${layout}: no runtime errors`);
-    console.log(`${layout}: actual logs/date, private sharing, readiness preview/apply, completed-dose reload, next-day feedback, atomic guest adoption, async load and language persistence passed`);
+    console.log(`${layout}: actual logs/date, range exports/CSV/copy/share/privacy, private sharing, readiness preview/apply, completed-dose reload, next-day feedback, atomic guest adoption, async load and language persistence passed`);
     await context.close();
   }
 } finally { if (browser) await browser.close(); server.kill('SIGTERM'); }
