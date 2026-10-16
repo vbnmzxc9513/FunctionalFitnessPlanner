@@ -70,12 +70,13 @@ try {
     await page.goto(siteUrl, { waitUntil: 'networkidle2' });
     assert.equal(await page.$$eval('nav button', buttons => buttons.length), 3);
     assert.equal(await page.$('button[aria-label][aria-pressed]'), null, `${layout}: no editable example before creating a personal plan`);
-    await click('下一步'); await click('下一步');
+    await click('下一步');
     await page.evaluate(() => {
       const label = [...document.querySelectorAll('label')].find(item => item.textContent.startsWith('肩部狀態與活動限制'));
       const select = label.querySelector('select'); select.value = 'unrestricted'; select.dispatchEvent(new Event('change', { bubbles: true }));
     });
-    await click('產生免費課表'); await page.waitForSelector('[data-testid="session-start"]', { visible: true });
+    await click('下一步'); await click('預覽本週課表'); await page.waitForSelector('[data-testid="weekly-plan-preview"]', { visible: true });
+    await click('確認套用本週'); await click('今天'); await page.waitForSelector('[data-testid="session-start"]', { visible: true });
     await click('開始今天訓練'); await page.screenshot({ path: `/tmp/fitness-ux-${layout}-today.png`, fullPage: false }); await page.waitForSelector('[data-testid="current-exercise"]', { visible: true });
     const initialCompletion = (await draft()).completed;
     await click('查看下一個動作');
@@ -123,7 +124,8 @@ try {
     await page.waitForFunction(key => JSON.parse(sessionStorage.getItem('fitness_public_preview_v1')).publicDraft.completed[key] === true, {}, `day1_${id}`);
     assert.equal((await draft()).logs.length, 1, `${layout}: explicit combined save preserves one factual log and completion together`);
     await click('課表'); await click('調整本週目標');
-    await click('產生免費課表'); await page.waitForSelector('[data-testid="session-hero"]', { visible: true });
+    await click('下一步'); await click('下一步'); await click('預覽本週課表'); await page.waitForSelector('[data-testid="weekly-plan-preview"]', { visible: true });
+    await click('確認套用本週'); await click('今天'); await page.waitForSelector('[data-testid="session-hero"]', { visible: true });
     assert.equal((await draft()).completed[`day1_${id}`], true, `${layout}: public regeneration preserves matching completion facts`);
     assert.equal((await draft()).logs.length, 1, `${layout}: public regeneration preserves private logs`);
     await click('課表'); await selectDay('週一');

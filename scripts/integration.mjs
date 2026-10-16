@@ -14,3 +14,4 @@ async function run(args) {
 if (!process.argv.includes('--browser-only')) await run(['--test', '--test-concurrency=1', 'tests/integration/firestore.test.js', 'tests/integration/training.test.js']);
 await run(['scripts/browser-smoke.mjs']);
 await run(['scripts/coaching-smoke.mjs']);
+await run(['scripts/selection-smoke.mjs']);

@@ -21,9 +21,9 @@ export function normalizeTrialInput(raw, normalizeContext, allowedEquipment) {
   if (context.equipment !== undefined && (!Array.isArray(context.equipment) || context.equipment.length > allowedEquipment.length || context.equipment.some(item => !allowedEquipment.includes(item)))) fail('AI_TRIAL_INVALID_INPUT');
   if (context.badmintonDays !== undefined && (!Array.isArray(context.badmintonDays) || context.badmintonDays.length > 7 || context.badmintonDays.some(day => !Number.isInteger(day) || day < 1 || day > 7))) fail('AI_TRIAL_INVALID_INPUT');
   const normalized = normalizeContext({ ...context, healthNotes: text(context.healthNotes, 2000), recoveryNotes: text(context.recoveryNotes, 2000) });
-  for (const key of ['targetRegions', 'stiffnessRegions']) {
+  for (const key of ['targetRegions', 'stiffnessRegions', 'sorenessRegions', 'weeklyExerciseIds']) {
     const value = context[key];
-    if (value !== undefined && (!Array.isArray(value) || value.length > 2 || new Set(value).size !== value.length
+    if (value !== undefined && (!Array.isArray(value) || value.length > (key === 'weeklyExerciseIds' ? 8 : 2) || new Set(value).size !== value.length
       || value.some(item => !normalized[key].includes(item)))) fail('AI_TRIAL_INVALID_INPUT');
   }
   // Missing health status is uncertainty, not a declaration of unrestricted loading.

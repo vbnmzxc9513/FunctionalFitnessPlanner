@@ -14,6 +14,8 @@
 
 ## 回饋與限制
 
+本週選課以 `context.weeklyExerciseIds` 參與同目的槽位替換，不新增槽位；`context.sorenessRegions` 使本週採恢復優先。候選、時間取捨、準備組與預覽確認規則見 [本週選課](weekly-selection.md)。
+
 `options.focus`（亦接受 `goalFocus`）為 `balanced`、`strength`、`stability`、`coordination`。`lastWeekFeedback=-1` 或未確認的疲勞備註減少劑量；「太簡單」不會自動加重。自由文字目標不被當成程式指令，也不聲稱已完整解讀；更複雜的需求應由教練確認或使用 AI 方案。
 
 一般健康備註只接受明確「沒有疼痛／沒有受傷」等簡短否定。模板無法理解的非肩部限制、未指明的健康限制或新麻木／無力回報，產生完整休息課表。肩部治療限制不明時僅列低量走路，並明說須由治療端允許，否則休息；不以無痛或日期自動放行。這是保守模板，並不做診斷。

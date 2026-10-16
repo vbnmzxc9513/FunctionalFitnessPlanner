@@ -28,11 +28,15 @@ import { readShareFromLocation } from './domain/sharing.js';
 import { generateTemplatePlan, manualPlanningExercises } from './domain/templatePlanner.js';
 import { trialEnabled, requestTrialPlan } from './services/aiTrial.js';
 import { PROMOTION_TRANSLATIONS } from './promotionLocale.js';
-import { createWeeklyIntent, normalizeWeeklyIntent } from './domain/trainingPreferences.js';
+import { createWeeklyIntent, normalizeWeeklyIntent, MAX_WEEKLY_CHOICES } from './domain/trainingPreferences.js';
+import { buildWeeklyChoiceReport, weeklyChoiceBlockReason } from './domain/weeklyChoices.js';
+import { questionnaireProfile, readQuestionnaireDraft, planningFingerprint } from './domain/questionnaire.js';
+import WeeklyChoiceReport from './components/WeeklyChoiceReport.jsx';
 import { UX_TRANSLATIONS } from './uxLocale.js';
 import { recordPromotionEvent, readPromotionDrafts, writePromotionDrafts, normalizePromotionDraft } from './domain/promotion.js';
 
 const Coach = lazy(() => import('./components/Coach.jsx'));
+const WeeklyPlanPreview = lazy(() => import('./components/WeeklyPlanPreview.jsx'));
 const ExerciseLibrary = lazy(() => import('./components/ExerciseLibrary.jsx'));
 const WeekOverview = lazy(() => import('./components/WeekOverview.jsx'));
 const WeeklyBalance = lazy(() => import('./components/WeeklyBalance.jsx'));
@@ -130,17 +134,25 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
   const [adding, setAdding] = useState(false);
   const [metricForm, setMetricForm] = useState(() => emptyMetrics(today));
   const preferencesKey = `planning_preferences_${user?.uid || 'signed-out'}`;
+  const questionnaireKey = `fitness_questionnaire_${user?.uid || 'signed-out'}_${currentWeek}`;
+  const [questionnaireDraft] = useState(() => { try { return readQuestionnaireDraft(window.sessionStorage, questionnaireKey, currentWeek); } catch { return null; } });
   const [preferences] = useState(() => {
     try { return JSON.parse(readStorage(preferencesKey, '{}')) || {}; } catch { return {}; }
   });
-  const initialProfile = pendingDraft?.profile || (!user ? publicDraft?.profile : null) || preferences;
+  const initialProfile = pendingDraft?.profile || questionnaireDraft || (!user ? publicDraft?.profile : null) || preferences;
   const [goal, setGoal] = useState(initialProfile.goal || '');
   const [focus, setFocus] = useState(initialProfile.focus || 'balanced');
   const [planningMode, setPlanningMode] = useState('template');
   const [adoptionError, setAdoptionError] = useState(false);
   const adoptionAttempt = useRef(false);
   const [time, setTime] = useState(initialProfile.time || '30');
-  const [planningContext, setPlanningContext] = useState(() => normalizePlanningContext({ ...DEFAULT_PLANNING_CONTEXT, ...initialProfile.context }));
+  const [planningContext, setPlanningContext] = useState(() => normalizePlanningContext({ ...DEFAULT_PLANNING_CONTEXT, ...initialProfile.context,
+    ...(!pendingDraft && !publicDraft && initialProfile.week !== currentWeek ? { weeklyExerciseIds: [], sorenessRegions: [] } : {}) }));
+  const [planningStep, setPlanningStep] = useState(0);
+  const [planPreview, setPlanPreview] = useState(null);
+  const [draftStorageUnavailable, setDraftStorageUnavailable] = useState(false);
+  const planningWeek = useRef(currentWeek);
+  const planRequest = useRef(0);
   const [message, setMessage] = useState('');
   const [editingAI, setEditingAI] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -148,18 +160,27 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
   const [keyInput, setKeyInput] = useState(() => readStorage('gemini_byok_key'));
   const [model, setModel] = useState(() => readStorage('app_ai_model', 'gemini-2.5-flash'));
   const [models, setModels] = useState(defaultModels);
-  const intentInitialized = useRef(false);
+  const intentInitialized = useRef('');
   useEffect(() => {
+    const changedWeek = planningWeek.current !== currentWeek;
+    if (changedWeek) { planningWeek.current = currentWeek; ++planRequest.current; }
     const intent = normalizeWeeklyIntent(weeklyPlan?.weeklyIntent);
-    if (!user || !intent || intentInitialized.current || pendingDraft) return;
-    intentInitialized.current = true;
+    const restore = user && intent && intentInitialized.current !== currentWeek && !pendingDraft && questionnaireDraft?.week !== currentWeek;
+    if (!changedWeek && !restore) return;
+    if (restore) intentInitialized.current = currentWeek;
     // Restore only saved non-clinical weekly intent; never infer health or equipment on another device.
     Promise.resolve().then(() => {
-      setFocus(intent.focus); setTime(String(intent.dailyTime));
-      setPlanningContext(previous => ({ ...previous, targetRegions: intent.targetRegions, stiffnessRegions: intent.stiffnessRegions,
-        badmintonDays: intent.badmintonDays, competitionDate: intent.competitionDate }));
+      if (changedWeek) { setPlanPreview(null); setPlanningStep(0); setGenerating(false); }
+      if (restore) { setFocus(intent.focus); setTime(String(intent.dailyTime)); }
+      setPlanningContext(previous => ({ ...previous, ...(changedWeek ? { weeklyExerciseIds: [], sorenessRegions: [] } : {}),
+        ...(restore ? { targetRegions: intent.targetRegions, stiffnessRegions: intent.stiffnessRegions, badmintonDays: intent.badmintonDays,
+          competitionDate: intent.competitionDate, weeklyExerciseIds: intent.weeklyExerciseIds || [] } : {}) }));
     });
-  }, [weeklyPlan?.weeklyIntent, user, pendingDraft]);
+  }, [currentWeek, weeklyPlan?.weeklyIntent, user, pendingDraft, questionnaireDraft]);
+  useEffect(() => {
+    try { sessionStorage.setItem(questionnaireKey, JSON.stringify(questionnaireProfile({ context: planningContext, focus, time, goal }, currentWeek))); }
+    catch { Promise.resolve().then(() => setDraftStorageUnavailable(true)); }
+  }, [questionnaireKey, currentWeek, planningContext, focus, time, goal]);
   const profileApplied = useRef(null);
   useEffect(() => {
     if (!pendingDraft || profileApplied.current === pendingDraft) return;
@@ -359,18 +380,33 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
       finally { setSavingPlan(false); }
     });
   }, [pendingDraft, user, savedPlan, data.loaded.plans, data.loaded.exercises, currentWeek, lang, preferencesKey, onConsumeDraft]);
+  const planFingerprint = planningFingerprint({ week: currentWeek, uid: user?.uid || '', revision: savedPlan?.revision || 0,
+    context: planningContext, focus, time, goal, message, mode: planningMode, lang, exercises, progress, schedule, feedback: allProgress[lastWeek]?.feedbackValue });
+  const weeklyAvailable = manualPlanningExercises(exercises, planningContext);
+  const toggleWeeklyChoice = id => {
+    if (generating || savingPlan) return;
+    const ids = planningContext.weeklyExerciseIds;
+    if (!ids.includes(id)) {
+      if (ids.length >= MAX_WEEKLY_CHOICES) { showToast(t('choiceLimit')); return; }
+      const blocked = weeklyChoiceBlockReason(id, exercises, planningContext, weeklyAvailable);
+      if (blocked) { showToast(t(`choice_reason_${blocked}`)); return; }
+    }
+    setPlanningContext(previous => ({ ...previous, weeklyExerciseIds: previous.weeklyExerciseIds.includes(id)
+      ? previous.weeklyExerciseIds.filter(item => item !== id) : [...previous.weeklyExerciseIds, id] }));
+  };
   const requestPlan = async () => {
     if (generating || savingPlan || busy || coachingBusyRef.current || pendingDraft) return;
-    if (editing) { showToast(t('finishEditing')); setActiveTab('train'); return; }
+    if (editing) { showToast(t('finishEditing')); return; }
     if (user && (!data.loaded.plans || !data.loaded.exercises)) { showToast(t('dataLoadFailed')); return; }
     if (planningMode !== 'template' && !requireUser()) return;
     if (planningMode === 'byok' && !apiKey) { showToast(t('toastNoKey')); setActiveTab('settings'); return; }
     const context = normalizePlanningContext(planningContext);
     const available = planningExercises(exercises, context);
     const revision = savedPlan?.revision || 0;
+    const request = ++planRequest.current;
     setGenerating(true);
     try {
-      const profile = { goal, focus, time, context };
+      const profile = { week: currentWeek, goal, focus, time, context };
       const previous = allProgress[lastWeek] || {};
       const aiGoal = [t(`focus_${focus}`), goal].filter(Boolean).join(': ');
       let result;
@@ -379,28 +415,42 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
       else if (planningMode === 'trial') result = await requestTrialPlan({ context, dailyTime: time, lang, currentWeek, userGoal: aiGoal.slice(0, 300), userMessage: message });
       else result = await generateAIPlan(previous.completed || {}, difficultyLevel, previous.feedbackValue, apiKey, allProgress, data.metrics, aiGoal, time, message, available, lang, undefined,
         { context, currentDate: today, currentWeek, previousPlan: savedPlan || data.plans[lastWeek] || null });
+      if (request !== planRequest.current || (auth.currentUser?.uid || '') !== (user?.uid || '')) return;
       const plan = { ...result, weeklyIntent: createWeeklyIntent(context, focus, time), language: lang, source: planningMode === 'template' ? 'template' : 'ai' };
-      if (!user) {
-        const completed = Object.fromEntries(plan.schedule.flatMap(day => day.routine.map(id => [`day${day.day}_${id}`, publicProgress[`day${day.day}_${id}`]])).filter(([, done]) => done === true));
-        onPublicDraft({ plan, profile, week: currentWeek, completed, logs: publicDraft?.logs || [], readiness: publicDraft?.readiness || [] }); setReadinessPreview(null); setPublicProgress(completed); setActiveTab('train');
-      } else {
-        if (auth.currentUser?.uid !== user.uid) return;
-        await savePlan(user.uid, currentWeek, plan, fallbackPlan, false, revision);
-        setReadinessPreview(null);
-        writeStorage(preferencesKey, JSON.stringify(profile));
-        showToast(t(planningMode === 'template' ? 'templateSuccess' : 'toastAISuccess'));
-        setActiveTab('train');
+      const report = buildWeeklyChoiceReport(plan, exercises, context, weeklyAvailable, currentWeek, planningMode);
+      if (report.length) {
+        plan.conclusion += `\n\n${t('choiceReport')}\n${report.map(item => `${exercises[item.id]?.name || item.id}: ${item.days.length ? `${t('choicePlanned')} ${item.days.map(day => t('dayShort')[day - 1]).join(', ')}` : t(`choice_reason_${item.reason}`)}`).join('\n')}`;
       }
-      recordPromotionEvent('first_plan', currentWeek);
-      setTrainingMode('today');
-      const dayOfWeek = new Date(`${today}T12:00:00`).getDay();
-      if (dayOfWeek >= 1 && dayOfWeek <= 5) setActiveDay(dayOfWeek);
-      setEditingAI(false); setMessage('');
+      setPlanPreview({ plan, profile, week: currentWeek, revision, fingerprint: planFingerprint, mode: planningMode });
+      setActiveTab('plan'); setPlanView('week'); setPlanScreen('preview'); window.scrollTo({ top: 0 });
     } catch (err) {
       console.error('Plan generation failed', err.code || err.message);
       showToast(t(err.message === 'PLAN_CHANGED' ? 'planChanged' : err.code === 'permission-denied' ? 'planPermissionDenied'
         : planningMode === 'template' ? 'templateError' : planningMode === 'trial' ? err.message === 'AI_TRIAL_WEEK_EXHAUSTED' ? 'trialQuota' : err.message === 'AI_TRIAL_SIGN_IN_REQUIRED' ? 'trialGoogle' : err.message === 'AI_TRIAL_WEEK_MISMATCH' ? 'trialWeekMismatch' : 'trialError' : 'toastAIError'));
-    } finally { setGenerating(false); }
+    } finally { if (request === planRequest.current) setGenerating(false); }
+  };
+  const applyPlanPreview = async () => {
+    const preview = planPreview;
+    if (!preview || savingPlan || generating || busy || coachingBusyRef.current || pendingDraft) return;
+    if (preview.week !== currentWeek || preview.fingerprint !== planFingerprint) { showToast(t('choiceStale')); return; }
+    setSavingPlan(true);
+    try {
+      const { plan, profile } = preview;
+      if (!user) {
+        const completed = Object.fromEntries(plan.schedule.flatMap(day => day.routine.map(id => [`day${day.day}_${id}`, publicProgress[`day${day.day}_${id}`]])).filter(([, done]) => done === true));
+        onPublicDraft({ plan, profile, week: currentWeek, completed, logs: publicDraft?.logs || [], readiness: publicDraft?.readiness || [] });
+        setPublicProgress(completed);
+      } else {
+        await savePlan(user.uid, currentWeek, plan, fallbackPlan, false, preview.revision, {}, {}, progress);
+        if (auth.currentUser?.uid !== user.uid) return;
+        writeStorage(preferencesKey, JSON.stringify(profile));
+      }
+      setReadinessPreview(null); setPlanPreview(null); setPlanningStep(0); setEditingAI(false); setMessage('');
+      setTrainingMode('plan'); setActiveTab('plan'); setPlanView('week'); setPlanScreen('overview'); window.scrollTo({ top: 0 });
+      showToast(t(preview.mode === 'template' ? 'templateSuccess' : 'toastAISuccess'));
+      recordPromotionEvent('first_plan', currentWeek);
+    } catch (err) { showToast(t(['PLAN_CHANGED', 'PROGRESS_CHANGED'].includes(err.message) ? 'choiceStale' : err.code === 'permission-denied' ? 'planPermissionDenied' : 'toastSaveFail')); }
+    finally { setSavingPlan(false); }
   };
   const addExercise = async () => {
     if (!requireUser() || adding || !newName.trim()) return;
@@ -451,6 +501,8 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
   const weekend = calendarDay === 0 || calendarDay === 6;
   const navigate = tab => {
     if (editing) { showToast(t('finishEditing')); return; }
+    if (savingPlan) return;
+    setPlanPreview(null);
     if (tab === 'train') {
       setTrainingMode('today');
       if (!weekend) setActiveDay(calendarDay);
@@ -461,16 +513,23 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
   const viewRecords = () => { setRecordsView('training'); navigate('records'); };
   const showPlanArea = activeTab === 'train' || (activeTab === 'plan' && planView === 'week');
   const firstPlan = <section data-testid="first-plan" className="setup-card">
-    <div className="setup-heading"><p className="eyebrow">{t('firstPlanHint')}</p><h2>{t('firstPlanTitle')}</h2><p className="text-sm text-slate-500 mt-2">{t('firstPlanIntro')}</p></div>
-    <Onboarding guided t={t} context={planningContext} setContext={setPlanningContext} time={time} setTime={setTime} focus={focus} setFocus={setFocus} goal={goal} setGoal={setGoal} message={message} setMessage={setMessage} generating={generating} onGenerate={requestPlan} />
+    <div hidden={planningStep > 0} className="setup-heading"><p className="eyebrow">{t('firstPlanHint')}</p><h2>{t('firstPlanTitle')}</h2><p className="text-sm text-slate-500 mt-2">{t('firstPlanIntro')}</p></div>
+    <Onboarding lang={lang} exercises={exercises} available={weeklyAvailable} onToggleWeekly={toggleWeeklyChoice} step={planningStep} onStepChange={setPlanningStep} t={t} context={planningContext} setContext={setPlanningContext} time={time} setTime={setTime} focus={focus} setFocus={setFocus} goal={goal} setGoal={setGoal} message={message} setMessage={setMessage} generating={generating} onGenerate={requestPlan} />
   </section>;
   const openPlanScreen = screen => {
     if (editing && screen !== 'day') { showToast(t('finishEditing')); return; }
+    if (savingPlan) return;
+    setPlanPreview(null);
     setPlanScreen(screen);
-    if (screen === 'settings') { setCoachVisited(true); setEditingAI(true); setPlanningMode('template'); }
+    if (screen === 'settings') { setCoachVisited(true); setEditingAI(true); setPlanningMode('template'); setPlanningStep(0); }
     window.scrollTo({ top: 0 });
   };
   const selectPlanDay = day => { setActiveDay(day); setTrainingMode('plan'); openPlanScreen('day'); };
+  const openWeeklySelection = () => { setActiveTab('plan'); setPlanView('week'); openPlanScreen('settings'); setPlanningStep(hasCurrentPlan ? 2 : 0); };
+  const backFromPreview = () => {
+    if (savingPlan) return;
+    setPlanPreview(null); setPlanningStep(2); setPlanScreen('settings'); setCoachVisited(true); setEditingAI(true); window.scrollTo({ top: 0 });
+  };
   const changePlanView = value => {
     if (editing && value !== 'week') { showToast(t('finishEditing')); return; }
     setPlanView(value); setPlanScreen('overview');
@@ -488,6 +547,7 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
       {account.error && <p role="alert" className="mb-4 rounded-xl bg-red-50 text-red-700 p-4 text-sm">{t(account.error)}</p>}
       {trainingData.error && <p role="alert" className="mb-4 rounded-xl bg-red-50 text-red-700 p-4 text-sm">{t('dataLoadFailed')}</p>}
       {data.error && <p role="alert" className="mb-4 rounded-xl bg-red-50 text-red-700 p-4 text-sm">{t('dataLoadFailed')}</p>}
+      {draftStorageUnavailable && showPlanArea && <p role="status" className="mb-4 text-sm text-amber-800">{t('choiceDraftUnavailable')}</p>}
       {account.migrationPending && <div role="alert" className="mb-4 bg-amber-50 p-4 rounded-xl text-sm">{t('migrationPending')}<button disabled={account.busy} onClick={account.retryMigration} className="ml-3 text-sky-600">{t('retry')}</button></div>}
       {pendingDraft && <div role="status" className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm space-y-3">
         <p>{t(adoptionError ? 'adoptionFailed' : savedPlan ? 'adoptExisting' : 'previewSaving')}</p>
@@ -496,9 +556,10 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
       </div>}
       {activeTab === 'plan' && (planView === 'library' || planScreen === 'overview') && <>{planView === 'library' && <div className="screen-header"><p className="eyebrow">{t('planEyebrow')}</p><h2 className="screen-title">{t('libraryTab')}</h2><p className="screen-description">{t('libraryDescription')}</p></div>}{subnav([['week', 'planningTab'], ['library', 'libraryTab']], planView, changePlanView, t('navPlan'))}</>}
       {showPlanArea && !planLoaded && <p role="status" className="p-6 text-sm">{t('loadingPlan')}</p>}
-      {showPlanArea && planLoaded && !hasCurrentPlan && !pendingDraft && firstPlan}
-      {activeTab === 'plan' && planView === 'week' && hasCurrentPlan && planScreen !== 'overview' && <button type="button" data-testid="back-to-week" disabled={editing} onClick={() => openPlanScreen('overview')} className="screen-back"><ArrowLeft size={16} />{t('backToWeek')}</button>}
-      {activeTab === 'plan' && planView === 'week' && hasCurrentPlan && planScreen === 'overview' && <Suspense fallback={<p role="status" className="py-8 text-sm text-slate-500">{t('loadingPlan')}</p>}><WeekOverview schedule={schedule} exercises={exercises} week={currentWeek} plan={weeklyPlan} context={planningContext} focus={focus} time={time} level={difficultyLevel} lang={lang} t={t} currentDate={today} onEdit={() => openPlanScreen('settings')} onSelectDay={selectPlanDay}><WeeklyBalance schedule={schedule} exercises={exercises} context={planningContext} week={currentWeek} currentDate={today} lang={lang} /></WeekOverview></Suspense>}
+      {showPlanArea && planLoaded && !hasCurrentPlan && !pendingDraft && !planPreview && firstPlan}
+      {activeTab === 'plan' && planView === 'week' && hasCurrentPlan && ['day', 'settings'].includes(planScreen) && <button type="button" data-testid="back-to-week" disabled={editing || savingPlan} onClick={() => openPlanScreen('overview')} className="screen-back"><ArrowLeft size={16} />{t('backToWeek')}</button>}
+      {activeTab === 'plan' && planView === 'week' && planScreen === 'preview' && planPreview && <Suspense fallback={<p role="status" className="py-8 text-sm">{t('loadingPlan')}</p>}><WeeklyPlanPreview preview={planPreview} t={t} lang={lang} exercises={exercises} available={weeklyAvailable} today={today} onBack={backFromPreview} onApply={applyPlanPreview} busy={savingPlan} stale={planPreview.fingerprint !== planFingerprint} /></Suspense>}
+      {activeTab === 'plan' && planView === 'week' && hasCurrentPlan && planScreen === 'overview' && <Suspense fallback={<p role="status" className="py-8 text-sm text-slate-500">{t('loadingPlan')}</p>}><WeekOverview schedule={schedule} exercises={exercises} week={currentWeek} plan={weeklyPlan} context={planningContext} focus={focus} time={time} level={difficultyLevel} lang={lang} t={t} currentDate={today} onEdit={() => openPlanScreen('settings')} onSelectDay={selectPlanDay}><WeeklyChoiceReport report={buildWeeklyChoiceReport(weeklyPlan, exercises)} exercises={exercises} t={t} /><WeeklyBalance schedule={schedule} exercises={exercises} context={planningContext} week={currentWeek} currentDate={today} lang={lang} /></WeekOverview></Suspense>}
       {showPlanArea && hasCurrentPlan && <>
 
         {activeTab === 'train' && weekend && <section className="rounded-2xl border border-sky-100 bg-white p-6 space-y-3"><h2 className="font-bold">{t('noCourtWeekend')}</h2><p className="text-sm text-slate-500">{t('noCourtWeekendHint')}</p><button onClick={() => navigate('plan')} className="rounded-xl bg-sky-600 text-white px-4 py-3 text-sm">{t('planningTab')}</button><button onClick={viewRecords} className="block text-sm text-sky-700">{t('viewRecords')}</button></section>}
@@ -508,8 +569,8 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
       </div>}
       {showPlanArea && hasCurrentPlan && (activeTab === 'train' || planScreen !== 'settings') && !user && publicDraft && <details className="save-panel"><summary className="cursor-pointer text-sky-800">{t('localPreview')} · {t('saveAccount')}</summary><p className="mt-2 text-slate-600">{t('localPreviewHint')}</p><div className="flex flex-wrap gap-2 mt-3"><button disabled={account.busy} onClick={account.guestLogin} className="bg-indigo-600 text-white px-3 py-2 rounded-lg">{t('savePreviewGuest')}</button><button disabled={account.busy} onClick={account.googleLogin} className="bg-white text-sky-800 px-3 py-2 rounded-lg">{t('savePreviewGoogle')}</button></div></details>}
       <Suspense fallback={<div role="status" className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>}>
-        {hasCurrentPlan && coachVisited && <div hidden={activeTab !== 'plan' || planView !== 'week' || planScreen !== 'settings'} className="max-w-3xl"><Coach standalone onClose={() => openPlanScreen('overview')} t={t} mode={planningMode} setMode={setPlanningMode} trialAvailable={trialEnabled()} focus={focus} setFocus={setFocus} plan={weeklyPlan} editing={editingAI} setEditing={setEditingAI} generating={generating} apiKey={apiKey} goal={goal} setGoal={setGoal} time={time} setTime={setTime} message={message} setMessage={setMessage} context={planningContext} setContext={setPlanningContext} onGenerate={requestPlan} onRestore={restore} /></div>}
-        {activeTab === 'plan' && planView === 'library' && <ExerciseLibrary t={t} lang={lang} canManage={!!user} onOrganize={organizeExercise} onSignIn={() => navigate('settings')} exercises={exercises} name={newName} setName={setNewName} adding={adding} onAdd={addExercise} onToggle={toggleActive} onDelete={deleteExercise} busy={busy} />}
+        {hasCurrentPlan && coachVisited && <div hidden={activeTab !== 'plan' || planView !== 'week' || planScreen !== 'settings'} className="max-w-3xl"><Coach lang={lang} exercises={exercises} available={weeklyAvailable} onToggleWeekly={toggleWeeklyChoice} step={planningStep} onStepChange={setPlanningStep} standalone onClose={() => openPlanScreen('overview')} t={t} mode={planningMode} setMode={setPlanningMode} trialAvailable={trialEnabled()} focus={focus} setFocus={setFocus} plan={weeklyPlan} editing={editingAI} setEditing={setEditingAI} generating={generating} apiKey={apiKey} goal={goal} setGoal={setGoal} time={time} setTime={setTime} message={message} setMessage={setMessage} context={planningContext} setContext={setPlanningContext} onGenerate={requestPlan} onRestore={restore} /></div>}
+        {activeTab === 'plan' && planView === 'library' && <ExerciseLibrary weeklyExerciseIds={planningContext.weeklyExerciseIds} weeklyAvailable={weeklyAvailable} planningContext={planningContext} onToggleWeekly={toggleWeeklyChoice} onOpenWeeklySelection={openWeeklySelection} t={t} lang={lang} canManage={!!user} onOrganize={organizeExercise} onSignIn={() => navigate('settings')} exercises={exercises} name={newName} setName={setNewName} adding={adding} onAdd={addExercise} onToggle={toggleActive} onDelete={deleteExercise} busy={busy} />}
         {activeTab === 'records' && <div className="max-w-3xl"><div className="screen-header"><p className="eyebrow">{t('recordsEyebrow')}</p><h2 className="screen-title">{t('navRecords')}</h2><p className="screen-description">{t('recordsDescription')}</p></div>{subnav([['training', 'trainingRecordsTab'], ['body', 'bodyRecordsTab']], recordsView, setRecordsView, t('navRecords'))}
           {recordsView === 'body' ? (!user ? login : <Metrics t={t} form={metricForm} onChange={changeMetric} onSave={saveMetrics} history={data.metrics} saving={busy} hasMore={data.metrics.length >= metricLimit} onLoadMore={() => setMetricLimit(previous => previous + 365)} />)
             : !user && !publicDraft ? login : stats && <History t={t} lang={lang} previewOnly={!user} exercises={exercises} stats={stats} months={months} weeks={heatmapWeeks} logs={exerciseLogs} onUpdateNextDay={recordNextDay} loggingBusy={coachingBusy || busy || savingPlan || generating || editing || !!pendingDraft || (!!user && !trainingData.loaded)} today={today} hasMore={data.hasMoreProgress} onLoadMore={() => setWeekLimit(previous => previous + 104)} />}

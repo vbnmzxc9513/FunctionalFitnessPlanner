@@ -10,6 +10,7 @@ import { saveTrainingLog, saveNextDayResponse, saveReadiness, plannedSnapshot, t
 import { DEFAULT_SCHEDULE_I18N, LEGACY_DEFAULT_SCHEDULE_I18N, EXERCISES_I18N } from '../../src/locale.js';
 import { getWeekString, localDate, dateForWeekDay } from '../../src/domain/dates.js';
 import { trainingLogId } from '../../src/domain/coaching.js';
+import { createWeeklyIntent } from '../../src/domain/trainingPreferences.js';
 
 const week = getWeekString();
 // Follow-up must be valid even when CI runs on Monday.
@@ -144,13 +145,15 @@ test('forty preview slots adopt together with private records and all completion
   const base = structuredClone(DEFAULT_SCHEDULE_I18N.zh[3]);
   base.routine.splice(2, 0, 'bf_A03'); base.routine.push('bf_H03');
   for (const [id, phase] of [['bf_A03', 'warmup'], ['bf_H03', 'cooldown']]) base.prescriptions.push({ id, ...EXERCISES_I18N.zh[id].prescription, phase });
-  const full = { ...plan, schedule: Array.from({ length: 5 }, (_, i) => ({ ...structuredClone(base), day: i + 1 })) };
+  const choices = ['bf_B03', 'dead_bug', 'bf_A06', 'bf_H03', 'bf_B05', 'bf_A01', 'bf_F01', 'bf_D09'];
+  const full = { ...plan, weeklyIntent: createWeeklyIntent({ weeklyExerciseIds: choices }), schedule: Array.from({ length: 5 }, (_, i) => ({ ...structuredClone(base), day: i + 1 })) };
   const records = full.schedule.flatMap(day => day.prescriptions.map(dose => ({ ...log(), day: day.day, exerciseId: dose.id,
     unit: dose.unit, perSide: dose.perSide, planned: plannedSnapshot(dose), sets: Array.from({ length: 5 }, () => ({ value: 1, otherSide: dose.perSide ? 1 : null })) })));
   const completed = Object.fromEntries(records.map(record => [`day${record.day}_${record.exerciseId}`, true]));
   await savePlan(uid, week, full, plan, false, 0, completed, { logs: records, readiness: [readiness()] });
   assert.equal((await getDocs(userCollection(uid, 'trainingLogs'))).size, 40);
   assert.equal(Object.keys((await getDoc(userDoc(uid, 'progress', week))).data().completed).length, 40);
+  assert.deepEqual((await getDoc(userDoc(uid, 'plans', week))).data().weeklyIntent.weeklyExerciseIds, choices);
   await assert.rejects(savePlan(uid, week, full, plan, false, 1, {}, {}, {}), /PROGRESS_CHANGED/);
   assert.equal((await getDoc(userDoc(uid, 'plans', week))).data().revision, 1);
 });

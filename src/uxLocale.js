@@ -1,5 +1,8 @@
+import { SELECTION_TRANSLATIONS } from './selectionLocale.js';
+
 export const UX_TRANSLATIONS = {
   zh: {
+    ...SELECTION_TRANSLATIONS.zh,
     weeklyPreferencesTitle: '想加強的部位與僵硬位置（選填）',
     weeklyPreferencesHint: '各選最多兩項。優先部位影響主項順序與時間取捨，僵硬偏好影響現有暖身／收尾名額；不直接加組數。重新產生課表後生效。',
     weeklyTargetRegions: '本週優先加強', weeklyStiffnessRegions: '無痛但感覺僵硬的位置',
@@ -25,6 +28,7 @@ export const UX_TRANSLATIONS = {
     feedbackForNextPlan: '本週回顧，供下次排課參考', feedbackSubtitle: '回報本週感受，供下一次排課參考；不會直接增加本週劑量。',
   },
   en: {
+    ...SELECTION_TRANSLATIONS.en,
     weeklyPreferencesTitle: 'Priority areas and stiffness (optional)',
     weeklyPreferencesHint: 'Choose up to two of each. Priorities guide main-work order and time trade-offs; stiffness guides existing warm-up / finish slots. No extra sets are added. Regenerate to apply.',
     weeklyTargetRegions: 'Priority areas this week', weeklyStiffnessRegions: 'Stiff areas without pain',

@@ -2,7 +2,7 @@ import { SlidersHorizontal } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import Onboarding from './Onboarding.jsx';
 
-export default function Coach({ t, plan, editing, setEditing, generating, apiKey, goal, setGoal, time, setTime, message, setMessage, context, setContext, onGenerate, onRestore, mode = 'template', setMode, trialAvailable, focus, setFocus, standalone = false, onClose }) {
+export default function Coach({ t, lang, plan, editing, setEditing, generating, apiKey, goal, setGoal, time, setTime, message, setMessage, context, setContext, onGenerate, onRestore, mode = 'template', setMode, trialAvailable, focus, setFocus, standalone = false, onClose, exercises, available, onToggleWeekly, step, onStepChange }) {
   const showForm = standalone || !plan || editing;
   const advancedOptions = <details data-testid="planner-advanced" open={mode !== 'template' || undefined} onToggle={event => { if (!event.currentTarget.open && mode !== 'template') { if (generating) event.currentTarget.open = true; else setMode('template'); } }} className="rounded-xl border border-slate-200 p-4">
         <summary className="cursor-pointer text-sm font-semibold text-slate-600">{t('plannerAdvancedAI')}</summary>
@@ -22,7 +22,7 @@ export default function Coach({ t, plan, editing, setEditing, generating, apiKey
       {editing && !standalone && <p className="text-sm text-slate-600">{t('aiEditingHint')}</p>}
       <div className="flex flex-wrap items-center gap-2 text-sm"><span className="text-slate-600">{t('plannerMode')}：</span><span className="rounded-lg bg-sky-50 px-3 py-2 text-indigo-700 font-semibold" data-testid="planner-current-mode">{t(`mode_${mode}`)}</span>{mode !== 'template' && <button type="button" disabled={generating} onClick={() => setMode('template')} className="underline text-indigo-600">{t('plannerUseFree')}</button>}</div>
 
-      <Onboarding advancedOptions={advancedOptions} t={t} context={context} setContext={setContext} time={time} setTime={setTime} goal={goal} setGoal={setGoal} message={message} setMessage={setMessage} generating={generating} onGenerate={onGenerate} mode={mode} focus={focus} setFocus={setFocus} />
+      <Onboarding {...{ lang, exercises, available, onToggleWeekly, step, onStepChange }} advancedOptions={advancedOptions} t={t} context={context} setContext={setContext} time={time} setTime={setTime} goal={goal} setGoal={setGoal} message={message} setMessage={setMessage} generating={generating} onGenerate={onGenerate} mode={mode} focus={focus} setFocus={setFocus} />
       {editing && <button type="button" disabled={generating} onClick={() => { setEditing(false); setMode('template'); onClose?.(); }} className="text-sm text-slate-600 underline">{t('aiCancelBtn')}</button>}
       </div>
     </details>

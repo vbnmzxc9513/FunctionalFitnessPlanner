@@ -213,16 +213,26 @@ test('actual identity switching can import captured guest plans and keep existin
 
 test('saved weekly intent survives editing and restore while rules bound its fields', async () => {
   const owner = auth.currentUser.uid;
+  const persist = async (value, restore, revision) => {
+    try { await assertSucceeds(savePlan(owner, week, value, plan, restore, revision)); }
+    catch (cause) { throw new Error(`weekly intent write at revision ${revision}`, { cause }); }
+  };
   const weeklyIntent = { focus: 'stability', targetRegions: ['upper', 'core'], stiffnessRegions: ['thoracic'],
     badmintonDays: [2, 5, 6], dailyTime: 35, competitionDate: '2026-11-16' };
-  const original = { ...plan, weeklyIntent };
-  await assertSucceeds(savePlan(owner, week, original, plan, false, 0));
+  const original = { ...plan, weeklyIntent: { ...weeklyIntent, weeklyExerciseIds: ['bf_B03', 'dead_bug'] } };
+  weeklyIntent.weeklyExerciseIds = ['bf_B03', 'dead_bug'];
+  await persist(original, false, 0);
   assert.deepEqual((await getDoc(userDoc(owner, 'plans', week))).data().weeklyIntent, weeklyIntent);
-  await assertSucceeds(savePlan(owner, week, { ...original, weeklyIntent: { ...weeklyIntent, focus: 'strength' } }, plan, false, 1));
-  await assertSucceeds(savePlan(owner, week, null, plan, true, 2));
+  await persist({ ...original, weeklyIntent: { ...weeklyIntent, focus: 'strength' } }, false, 1);
+  await persist(null, true, 2);
   assert.deepEqual((await getDoc(userDoc(owner, 'plans', week))).data().weeklyIntent, weeklyIntent);
+  const maximum = ['bf_B03', 'dead_bug', 'bf_A06', 'bf_H03', 'bf_B05', 'bf_A01', 'bf_F01', 'bf_D09'];
+  await persist({ ...original, weeklyIntent: { ...weeklyIntent, weeklyExerciseIds: maximum } }, false, 3);
+  assert.deepEqual((await getDoc(userDoc(owner, 'plans', week))).data().weeklyIntent.weeklyExerciseIds, maximum);
   for (const change of [{ targetRegions: ['fake'] }, { targetRegions: ['core', 'core'] }, { stiffnessRegions: ['hip', 'ankle', 'thoracic'] },
-    { badmintonDays: [8] }, { dailyTime: 1000 }, { focus: 'medical' }, { healthNotes: 'not part of intent' }]) {
+    { badmintonDays: [8] }, { dailyTime: 1000 }, { focus: 'medical' }, { healthNotes: 'not part of intent' },
+    { weeklyExerciseIds: ['bad/id'] }, { weeklyExerciseIds: [8] }, { weeklyExerciseIds: ['bf_B03', 'bf_B03'] },
+    { weeklyExerciseIds: Array.from({ length: 9 }, (_, n) => `move_${n}`) }, { sorenessRegions: ['hip'] }]) {
     await assertFails(setDoc(userDoc(owner, 'plans', week), { ...plan, weeklyIntent: { ...weeklyIntent, ...change } }));
   }
 });

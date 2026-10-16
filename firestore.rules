@@ -98,26 +98,41 @@ service cloud.firestore {
         && day.get('name', '') is string && day.get('theme', '') is string
         && day.get('concept', '') is string && day.get('coachAdvice', '') is string;
     }
-    function confirmedPart(day, expected, userId, appId, week, part) {
-      let confirmed = getAfter(/databases/$(database)/documents/artifacts/$(appId)/users/$(userId)/planDays/$(week + '-D' + string(expected) + '-P' + string(part))).data;
-      return confirmed.savedAt == request.time && !('savedAt' in day)
-        && confirmed.diff(day).affectedKeys().hasOnly(['savedAt']);
-    }
     function confirmedDay(day, expected, userId, appId, week) {
-      return day.day == expected && confirmedPart(day, expected, userId, appId, week, 1)
-        && confirmedPart(day, expected, userId, appId, week, 2);
+      let prefix = week + '-D' + string(expected);
+      let first = getAfter(/databases/$(database)/documents/artifacts/$(appId)/users/$(userId)/planDays/$(prefix + '-P1')).data;
+      let second = getAfter(/databases/$(database)/documents/artifacts/$(appId)/users/$(userId)/planDays/$(prefix + '-P2')).data;
+      return day.day == expected && !('savedAt' in day)
+        && first.savedAt == request.time && second.savedAt == request.time
+        && first.diff(day).affectedKeys().hasOnly(['savedAt']) && second.diff(day).affectedKeys().hasOnly(['savedAt']);
     }
     function validWeeklyIntent(intent) {
-      return intent is map && intent.keys().hasAll(['focus', 'targetRegions', 'stiffnessRegions', 'badmintonDays', 'dailyTime', 'competitionDate'])
-        && intent.keys().hasOnly(['focus', 'targetRegions', 'stiffnessRegions', 'badmintonDays', 'dailyTime', 'competitionDate'])
+      let keys = intent.keys();
+      let targets = intent.targetRegions;
+      let stiffness = intent.stiffnessRegions;
+      let court = intent.badmintonDays;
+      let time = intent.dailyTime;
+      let date = intent.competitionDate;
+      return intent is map && keys.hasAll(['focus', 'targetRegions', 'stiffnessRegions', 'badmintonDays', 'dailyTime', 'competitionDate'])
+        && keys.hasOnly(['focus', 'targetRegions', 'stiffnessRegions', 'badmintonDays', 'dailyTime', 'competitionDate', 'weeklyExerciseIds'])
+        && (!('weeklyExerciseIds' in intent) || validWeeklyChoices(intent.weeklyExerciseIds))
         && intent.focus in ['balanced', 'strength', 'stability', 'coordination']
-        && intent.dailyTime is number && intent.dailyTime >= 5 && intent.dailyTime <= 240
-        && intent.targetRegions is list && intent.targetRegions.size() <= 2 && intent.targetRegions.hasOnly(['legs', 'posterior', 'upper', 'core'])
-        && intent.targetRegions.toSet().size() == intent.targetRegions.size()
-        && intent.stiffnessRegions is list && intent.stiffnessRegions.size() <= 2 && intent.stiffnessRegions.hasOnly(['hip', 'ankle', 'thoracic', 'shoulder'])
-        && intent.stiffnessRegions.toSet().size() == intent.stiffnessRegions.size()
-        && intent.badmintonDays is list && intent.badmintonDays.size() <= 7 && intent.badmintonDays.hasOnly([1, 2, 3, 4, 5, 6, 7])
-        && intent.competitionDate is string && (intent.competitionDate == '' || intent.competitionDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$'));
+        && time is number && time >= 5 && time <= 240
+        && targets is list && targets.size() <= 2 && targets.hasOnly(['legs', 'posterior', 'upper', 'core'])
+        && targets.toSet().size() == targets.size()
+        && stiffness is list && stiffness.size() <= 2 && stiffness.hasOnly(['hip', 'ankle', 'thoracic', 'shoulder'])
+        && stiffness.toSet().size() == stiffness.size()
+        && court is list && court.size() <= 7 && court.hasOnly([1, 2, 3, 4, 5, 6, 7])
+        && date is string && (date == '' || date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$'));
+    }
+    function validWeeklyChoiceId(id) { return id is string && id.matches('^[A-Za-z0-9_-]{1,100}$'); }
+    function validWeeklyChoices(ids) {
+      let count = ids.size();
+      return ids is list && count <= 8 && ids.toSet().size() == count
+        && (count < 1 || validWeeklyChoiceId(ids[0])) && (count < 2 || validWeeklyChoiceId(ids[1]))
+        && (count < 3 || validWeeklyChoiceId(ids[2])) && (count < 4 || validWeeklyChoiceId(ids[3]))
+        && (count < 5 || validWeeklyChoiceId(ids[4])) && (count < 6 || validWeeklyChoiceId(ids[5]))
+        && (count < 7 || validWeeklyChoiceId(ids[6])) && (count < 8 || validWeeklyChoiceId(ids[7]));
     }
     function validPlan(data, userId, appId, week) {
       return data.keys().hasOnly(['conclusion', 'schedule', 'previous', 'source', 'baseDefault', 'language', 'revision', 'savedAt', 'validationVersion', 'weeklyIntent'])

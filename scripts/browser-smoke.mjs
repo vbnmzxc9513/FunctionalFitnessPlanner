@@ -121,8 +121,7 @@ try {
     await visibleElement('[data-testid="first-plan"]');
     assert.equal(await visibleCount('section[data-phase]'), 0, `${layout} begins with onboarding, without an invented default plan`);
     await labeledSelect('本週優先改善', 'coordination');
-    await openDetails('想加強的部位與僵硬位置（選填）');
-    for (const label of ['上肢推拉／肩背', '核心控制', '肩／胸前']) {
+    for (const label of ['上肢推拉／肩背', '核心控制']) {
       const item = await visibleElement('[data-testid="weekly-preferences"] label', label);
       const box = await item.$('input'); await clickElement(box); await item.dispose();
     }
@@ -130,8 +129,12 @@ try {
     assert.equal(await thirdTarget.$eval('input', input => input.disabled), true, `${layout} caps priority areas at two`); await thirdTarget.dispose();
     await click('下一步'); await click('上一步');
     assert.equal(await read('[data-testid="planner-form"] select', element => element.value), 'coordination', `${layout} setup back preserves choices`);
-    await click('下一步'); await click('下一步');
-    await click('產生免費課表'); await waitText('本分頁暫存');
+    await click('下一步');
+    await clickElement(await visibleElement('[data-regions="stiffnessRegions"] label', '肩／胸前'));
+    await click('下一步');
+    await click('預覽本週課表'); await visibleElement('[data-testid="weekly-plan-preview"]');
+    assert.equal(await page.evaluate(() => !!JSON.parse(sessionStorage.getItem('fitness_public_preview_v1') || '{}').publicDraft), false, `${layout} preview does not create a usable plan before confirmation`);
+    await click('確認套用本週'); await waitText('本分頁暫存');
     assert.equal(planningPayload, undefined, `${layout} creates a free plan without Gemini`);
     assert.equal(geminiRequests, 0, `${layout} free onboarding makes no Gemini requests`);
     await weekPlan();
@@ -237,16 +240,17 @@ try {
 
     await click('設定'); await openDetails('進階：AI 教練自備金鑰');
     await fill('input[type="password"]', 'mock-test-only'); await click(TRANSLATIONS.zh.settingsSaveBtn);
-    await weekPlan(); await click('調整本週目標'); await openDetailsSelector('[data-testid="planner-advanced"]');
+    await weekPlan(); await click('調整本週目標');
+    await openDetailsSelector('[data-testid="planner-optional"]'); await labeledSelect('球局強度', 'mixed');
+    await openDetailsSelector('[data-testid="quiz-schedule"]');
+    for (const day of [2, 5, 6]) {
+      await clickSelector(`[data-testid="quiz-schedule"] label:has(input[aria-label=${JSON.stringify(TRANSLATIONS.zh.allDayNames[day - 1])}])`);
+    }
+    await click('下一步'); await labeledSelect('肩部狀態與活動限制', 'restricted'); await click('下一步');
+    await openDetailsSelector('[data-testid="planner-advanced"]');
     assert.ok(await read('button', () => [...document.querySelectorAll('button')].find(button => window.__smokeVisible(button) && button.innerText === 'App AI 體驗').disabled));
     await click('AI 自備金鑰');
-    await labeledSelect('肩部狀態與活動限制', 'restricted');
-    await openDetailsSelector('[data-testid="planner-optional"]'); await labeledSelect('球局強度', 'mixed');
-    for (const day of [2, 5, 6]) {
-      const dayLabel = await visibleElement('[data-testid="planner-form"] fieldset label', TRANSLATIONS.zh.allDayNames[day - 1]);
-      const checkbox = await dayLabel.$('input'); await clickElement(checkbox); await dayLabel.dispose();
-    }
-    await click(TRANSLATIONS.zh.aiGenerateBtn); await waitText(TRANSLATIONS.zh.toastAISuccess);
+    await click('產生 AI 預覽'); await visibleElement('[data-testid="weekly-plan-preview"]'); await click('確認套用本週'); await waitText(TRANSLATIONS.zh.toastAISuccess);
     assert.ok(planningPayload.contents[0].parts[0].text.includes('肩部／健康限制'));
     const candidateSection = planningPayload.contents[0].parts[0].text.split('【可用候選動作；ID 必須完全相同】')[1].split('【輸出要求】')[0].trim();
     assert.ok(!JSON.parse(candidateSection).some(item => item.shoulderLoaded));
@@ -262,6 +266,7 @@ try {
     assert.equal(await visibleCount('[data-testid^="picker-option-"]'), 0, `${layout} unclear clinical restrictions cannot add training manually`);
     await click('取消');
     await weekPlan(); await click('調整本週目標');
+    await click('下一步');
     await labeledSelect('肩部狀態與活動限制', 'unrestricted');
     await click('回到本週總覽'); await selectMonday();
     await click('編輯課表'); const breathing = EXERCISES_I18N.zh.bf_D09.name; const core = EXERCISES_I18N.zh.dead_bug.name;

@@ -109,7 +109,7 @@ export function normalizePromotionDraft(value, week, pending = false) {
         seenDates.add(clean.date); readiness.push(clean);
       } catch { /* Invalid private entries never become coaching evidence. */ }
     }
-    return { week, ...validatedPlan, completed, logs, readiness, profile: { context, time: String(time), goal: typeof value.profile?.goal === 'string' ? value.profile.goal.slice(0, 2000) : '',
+    return { week, ...validatedPlan, completed, logs, readiness, profile: { week, context, time: String(time), goal: typeof value.profile?.goal === 'string' ? value.profile.goal.slice(0, 2000) : '',
       focus: ['balanced', 'coordination', 'stability', 'strength'].includes(value.profile?.focus) ? value.profile.focus : 'balanced' }, ...(pending ? { targetUid: value.targetUid } : {}) };
   } catch { return null; }
 }
