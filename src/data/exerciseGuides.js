@@ -2,6 +2,31 @@
 // flow also lists the allocation within its total; these are not extra sets.
 const entry = (id, zh, en) => ({ id, zh, en });
 export const EXERCISE_GUIDES = {
+  A13: entry('bf_A13',
+    { start: '先完成列出的 2 分鐘快走／踏步，再依序做八段，合計約 10 分鐘，含左右側與換姿勢。秒數是時間分配，不是持續拉住；次數是參考，不必做滿、不趕動作。完成整套才勾選一次，之後仍做列出的主項準備組。',
+      steps: [
+        '嬰兒式動態後坐（約 50 秒）：四足跪姿，臀部輕往腳跟坐再回來約 4–6 次；手臂可放身側。自然呼吸，不壓肩、不硬坐到底，準備背部與髖活動。',
+        '偉大拉伸＋側向移重（約 120 秒）：前腳跨到手旁、後膝著地，骨盆穩定，小幅前移再回來各約 3 次／側，準備髖前側；胸口輕轉，不強迫抬手。再站寬扶穩，左右移重各約 3 次，準備內收肌。',
+        '貓牛式（約 50 秒）：四足跪姿，配合呼吸緩慢拱背與回伸約 5–6 次，讓脊椎順暢活動；不甩頭、不硬折腰。',
+        '徒手 Y、T（約 60 秒）：俯臥、前額舒適支撐，手臂擺 Y 與 T 各約 4 次小幅抬起再放下；自然呼吸、不聳肩、不加啞鈴，準備上背與肩胛控制。',
+        '前鋸肌 push-up（約 50 秒）：先採站姿牆推，手肘伸直，肩胛小幅靠近再推開約 6–8 次；身體一線、不塌腰。只有熟悉且無限制時才用較低支撐。',
+        '胸椎開書（約 70 秒）：側躺屈膝、膝蓋疊好，胸口帶著上側手臂緩慢打開再回來，各約 4 次／側；不拉手碰地、不用腰硬扭。手臂可彎曲，保持肩前側舒適。',
+        '90/90 髖轉換（約 70 秒）：坐姿屈膝，雙膝緩慢向左右換側各約 4 次；可扶地、減小角度，不用手壓膝。這是髖內外旋活動，不是靠牆呼吸。',
+        '大小腿動態活動（約 130 秒）：扶穩交替屈膝，腳跟靠近臀部各約 4 次，準備股四頭肌；再做約 5 次徒手髖鉸鏈，膝微彎、背部穩定，準備腿後側。最後腳跟貼地，直膝與微彎膝踝前移各約 3 次／側，分別活動腓腸肌與比目魚肌。不硬拉腳踝、不彈震、不久停。',
+      ], mistake: '每段長時間拉住、拉到疼痛、趕次數或重複整套到疲勞。這是活動度與啟動，不保證解除沾黏、治療疼痛或預防所有傷害，也不取代球場上的漸進步伐暖身。',
+      easier: '縮小幅度、減少次數，Y/T 徒手、前鋸肌用牆推、髖轉換可扶地。肩部治療、抬手或撐地限制未確認時不使用整套；任一段疼痛、麻木或症狀加劇就停止，另選合適活動，不把整套標成完成。' },
+    { start: 'Finish the listed 2-minute walk/march, then follow these eight parts for about 10 minutes including both sides and transitions. Times allocate movement, not continuous holds; reps are guides, not quotas. Do not rush. Mark once after the full flow, then do any listed lift preparation.',
+      steps: [
+        'Dynamic child’s-pose rock-back (about 50 seconds): from hands and knees, move hips gently toward heels and return about 4–6 times. Arms may rest beside you. Breathe without forcing shoulders or depth; prepare back and hips.',
+        'World’s greatest stretch plus lateral shifts (about 120 seconds): step a foot beside the hand, rear knee down. Keep the pelvis steady and glide gently forward and back about 3 times per side for hip flexors; turn the chest without forcing an arm overhead. Then stand wide with support and shift sideways about 3 times each way for the adductors.',
+        'Cat–cow (about 50 seconds): breathe through about 5–6 slow spinal rounding and extension cycles on hands and knees. Avoid throwing the head or forcing the lower back.',
+        'Unloaded Y and T (about 60 seconds): lie prone with forehead supported. Lift and lower arms gently about 4 times in each shape. Breathe without shrugging or dumbbells; prepare upper-back and shoulder-blade control.',
+        'Serratus push-up (about 50 seconds): start at a wall, elbows straight. Let shoulder blades move slightly together and then apart about 6–8 times without sagging. Use a lower support only when familiar and unrestricted.',
+        'Thoracic open book (about 70 seconds): lie on the side with bent knees stacked. Let the chest lead the upper arm open and return about 4 times per side. Avoid forcing the hand down or twisting the lower back; bend the arm for shoulder comfort.',
+        '90/90 hip switches (about 70 seconds): sit with knees bent and switch sides gently about 4 times each. Use hand support and smaller ranges without pressing knees. This is hip rotation, not wall-supported breathing.',
+        'Dynamic thighs and calves (about 130 seconds): hold support and bring alternate heels toward the buttocks about 4 times per side for quadriceps. Do about 5 unloaded hip hinges with soft knees and a steady back for hamstrings. Keeping heels down, glide ankles forward with straight and softly bent knees about 3 times each per side for gastrocnemius and soleus. Do not pull, bounce or hold for long periods.',
+      ], mistake: 'Long static holds, stretching into pain, rushing reps or repeating to fatigue. Mobility and activation cannot guarantee adhesion release, pain treatment or injury prevention, and do not replace progressive court-specific warm-up.',
+      easier: 'Use smaller ranges, fewer reps, unloaded Y/T, wall pushes and supported hip switches. Do not use the full flow while shoulder treatment, arm-raising or support restrictions remain unclear. Stop for pain, numbness or worsening symptoms; choose suitable activity without marking the whole flow complete.' }),
   A12: entry('bf_A12',
     { start: '先完成課表列出的快走／踏步。以下八段合計約 6 分鐘，已含左右側與換姿勢；每段的秒數是時間分配，次數是輕鬆參考，不必做滿或反覆填滿時間。整套完成才勾選一次；不趕動作、不憋氣。',
       steps: [

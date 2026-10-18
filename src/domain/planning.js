@@ -51,6 +51,7 @@ export function validateGeneratedPlan(plan, exercises, dailyTime, { calendarDays
       || !Array.isArray(day.routine) || day.routine.length > 8 || new Set(day.routine).size !== day.routine.length
       || day.routine.some(id => typeof id !== 'string' || !Object.hasOwn(exercises, id))) throw new Error('INVALID_AI_PLAN');
     seen.add(day.day);
+    if (day.routine.filter(id => exercises[id]?.sequenceMinutes).length > 1) throw new Error('INVALID_AI_PRESCRIPTION');
     if (!SESSION_TYPES.includes(day.sessionType) || !['warmupNote', 'cooldownNote'].every(key => typeof day[key] === 'string' && day[key].trim())) throw new Error('INVALID_AI_SESSION');
     if (!Array.isArray(day.prescriptions) || day.prescriptions.length !== day.routine.length) throw new Error('INVALID_AI_PRESCRIPTION');
     const doses = new Set();

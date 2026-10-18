@@ -41,7 +41,7 @@ try {
     assert.equal(await page.$('dialog[open]'), null);
     assert.equal(await page.$$eval('[data-testid="daily-exercise-list"] input, [data-testid="daily-exercise-list"] .dose-grid, [data-testid="daily-exercise-list"] [data-testid^="exercise-guide-"]', items => items.length), 0, `${layout}: overview has no detailed guides or forms`);
     const before = await page.evaluate(() => sessionStorage.getItem('fitness_public_preview_v1'));
-    const target = `${row('bf_A12')} h4`;
+    const target = `${row('bf_A13')} h4`;
     let position = await point(target); await down(position); await delay(80); await up(); await delay(550);
     assert.equal(await page.$('dialog[open]'), null, `${layout}: short tapping a name does not open or complete it`);
     assert.equal(await page.evaluate(() => sessionStorage.getItem('fitness_public_preview_v1')), before);
@@ -51,8 +51,8 @@ try {
     assert.equal(await page.$('dialog[open]'), null, `${layout}: scrolling/moving cancels a hold`);
     position = await point(target); await down(position); await delay(650); await up();
     await page.waitForSelector('dialog[open]', { visible: true });
-    assert.equal(await page.$eval('dialog[open] [data-testid="exercise-guide-bf_A12"]', item => item.open), true);
-    assert.equal(await page.$$eval('dialog[open] [data-testid="exercise-guide-bf_A12"] li', items => items.length), 8, `${layout}: held warm-up shows all eight parts`);
+    assert.equal(await page.$eval('dialog[open] [data-testid="exercise-guide-bf_A13"]', item => item.open), true);
+    assert.equal(await page.$$eval('dialog[open] [data-testid="exercise-guide-bf_A13"] li', items => items.length), 8, `${layout}: held warm-up shows all eight parts`);
     assert.equal(await page.evaluate(() => sessionStorage.getItem('fitness_public_preview_v1')), before, `${layout}: opening details creates no completion or log`);
     assert.equal(await page.evaluate(() => document.body.style.overflow), 'hidden');
     await page.screenshot({ path: `/tmp/fitness-compact-${layout}-details.png`, fullPage: false });
@@ -66,7 +66,7 @@ try {
     for (const input of inputs) { await input.evaluate(item => item.scrollIntoView({ block: 'center', behavior: 'instant' })); await input.asLocator().click(); await input.type('6'); await input.dispose(); }
     await close();
     assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('data-testid')), `exercise-open-${main.id}`, `${layout}: focus returns to the opener`);
-    await click(`[data-testid="exercise-open-bf_A12"]`); await close(); await click(openMain);
+    await click(`[data-testid="exercise-open-bf_A13"]`); await close(); await click(openMain);
     assert.ok(await page.$$eval('dialog[open] [data-testid="current-exercise"] input[required]', items => items.every(item => item.value === '6')), `${layout}: unsaved values survive close and another movement`);
     await click('dialog[open] button[type="submit"][value="complete"]');
     await page.waitForFunction(id => { const draft = JSON.parse(sessionStorage.getItem('fitness_public_preview_v1')).publicDraft; return draft.logs.length === 1 && draft.completed[`day3_${id}`] === true; }, {}, main.id);

@@ -16,6 +16,7 @@ const EN_TIPS = {
   A10: 'Move slowly between gentle spinal flexion and extension; avoid forcing the neck or lower back.',
   A11: 'Rotate the chest while keeping the pelvis steady; do not pull on the head.',
   A12: 'Raise body temperature first, then follow all eight gentle parts. Mark the whole flow once, after finishing. Save longer static holds for cooldown.',
+  A13: 'Walk or march for 2 minutes first, then follow the eight-part, 10-minute full-body dynamic flow. Use comfortable ranges without bouncing or pain; hold to see all steps. Mark once after finishing.',
   B01: 'Lower with a stable front foot and knee aligned with the toes; use bodyweight first.',
   B02: 'Sit into the stepping hip, brake under control, then push back to the start.',
   B03: 'Secure the band under the feet, hinge at the hips and stand without arching the back.',

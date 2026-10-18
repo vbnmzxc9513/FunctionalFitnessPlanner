@@ -2,7 +2,7 @@ import { getExerciseGuide } from '../data/exerciseGuides.js';
 
 export default function ExerciseGuide({ id, exercise = {}, lang = 'zh' }) {
   const { text, guide, tip } = getExerciseGuide(id, exercise, lang);
-  return <details open={(id || exercise.id) === 'bf_A12' ? true : undefined} className="mt-4 border-t border-slate-100 pt-2" data-testid={`exercise-guide-${id || exercise.id || 'custom'}`}>
+  return <details open={['bf_A12', 'bf_A13'].includes(id || exercise.id) ? true : undefined} className="mt-4 border-t border-slate-100 pt-2" data-testid={`exercise-guide-${id || exercise.id || 'custom'}`}>
     <summary className="cursor-pointer text-sm font-medium text-sky-800">{text.title}</summary>
     <div className="mt-3 space-y-3 text-sm text-slate-600 leading-relaxed">
       {guide ? <>

@@ -130,7 +130,7 @@ try {
     const initialCompletion = (await draft()).completed;
     await click('查看下一個動作');
     assert.deepEqual((await draft()).completed, initialCompletion, `${layout}: next does not complete warm-up`);
-    const flow = '[data-testid="current-exercise"] [data-testid="exercise-guide-bf_A12"]';
+    const flow = '[data-testid="current-exercise"] [data-testid="exercise-guide-bf_A13"]';
     await page.waitForSelector(flow, { visible: true });
     assert.equal(await page.$eval(flow, item => item.open), true, `${layout}: eight-part flow starts expanded`);
     assert.equal(await page.$$eval(`${flow} li`, items => items.length), 8, `${layout}: every part is visible without another page`);

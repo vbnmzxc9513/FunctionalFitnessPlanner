@@ -50,6 +50,7 @@ export function validateSharePayload(payload) {
     return { id: item.id, phase: item.phase, ...dose, ...(preparation ? { preparation } : {}) };
   });
   if (contacts > 24 || contacts > 0 && items.some(item => catalogExercises[item.id].catalogCode === 'I04')) fail();
+  if (items.filter(item => catalogExercises[item.id].sequenceMinutes).length > 1) fail();
   return { v: 1, items };
 }
 
