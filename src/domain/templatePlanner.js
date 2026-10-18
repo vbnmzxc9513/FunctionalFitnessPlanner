@@ -5,6 +5,8 @@ import { classifyBalanceExercise } from './weeklyBalance.js';
 import { createWeeklyIntent, TARGET_PATTERNS } from './trainingPreferences.js';
 import { catalogExercises } from './exerciseCatalog.js';
 import { applyWeeklyChoices } from './weeklyChoices.js';
+import { exercisePhase } from './phases.js';
+import { resolveExerciseId } from './training.js';
 
 const FOCUSES = ['balanced', 'strength', 'stability', 'coordination'];
 const CURATED = catalogExercises();
@@ -32,7 +34,7 @@ export function manualPlanningExercises(exercises, context) {
 }
 
 function emptyDay(day, lang) {
-  return { day, name: lang === 'en' ? ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'][day - 1] : ['星期一', '星期二', '星期三', '星期四', '星期五'][day - 1],
+  return { day, name: lang === 'en' ? ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][day - 1] : ['星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日'][day - 1],
     theme: text(lang, '完整休息', 'Full rest'), concept: text(lang, '恢復也屬於訓練安排。', 'Recovery is part of the training plan.'),
     coachAdvice: text(lang, '不補課；若症狀或活動限制未確認，先向治療端確認。', 'Do not make up missed sessions. Confirm unclear symptoms or activity restrictions with your clinician.'),
     sessionType: 'rest', warmupNote: text(lang, '今天沒有體能課，不需要額外暖身。', 'No conditioning session today; no extra warm-up is required.'),
@@ -139,7 +141,7 @@ function addTraining(day, available, lang, focus, kind, sets, familiar, upperOrd
 function rotateMobility(day, available, minutes, lang, preferences = {}) {
   const preferred = preferences.stiffnessRegions || [];
   const rotation = [...preferred, ...['thoracic', 'hip', 'ankle'].filter(region => !preferred.includes(region))];
-  const target = preferred.length ? rotation[(day.day - 1) % rotation.length] : ['thoracic', 'hip', 'ankle', 'thoracic', 'hip'][day.day - 1];
+  const target = preferred.length ? rotation[(day.day - 1) % rotation.length] : ['thoracic', 'hip', 'ankle', 'thoracic', 'hip', 'ankle', 'thoracic'][day.day - 1];
   const existingCoverage = day.routine.some(id => classifyBalanceExercise(id, available[id]).mobility.includes(target));
   if (existingCoverage) return day;
   const index = day.prescriptions.findIndex(dose => day.sessionType === 'recovery'
@@ -218,6 +220,11 @@ export function generateTemplatePlan(exercises, context, dailyTime, lang = 'zh',
   const focus = FOCUSES.includes(options.focus || options.goalFocus) ? options.focus || options.goalFocus : 'balanced';
   const today = isCalendarDate(options.currentDate) ? options.currentDate : localDate();
   const week = dateForWeekDay(options.currentWeek, 1) ? options.currentWeek : getWeekString(new Date(`${today}T12:00:00`));
+  const calendarDays = options.calendarDays || [1, 2, 3, 4, 5];
+  const inRange = day => !options.inRangeDates || options.inRangeDates.includes(dateForWeekDay(week, day));
+  const permitted = day => profile.trainingDays.includes(day) && inRange(day) && !(options.protectedDates || []).includes(dateForWeekDay(week, day));
+  const previousStrengthDates = [...new Set((options.previousSessions || []).filter(session => session.prescriptions?.some(dose => dose.phase === 'strength')
+    || session.routine?.some(id => exercisePhase(session, id, exercises[resolveExerciseId(id, exercises)]) === 'strength')).map(session => session.date).filter(isCalendarDate))];
   const court = new Set(profile.badmintonDays);
   const onCourt = day => court.has(((day - 1 + 7) % 7) + 1);
   const tired = options.lastWeekFeedback === -1 || profile.sorenessRegions.length > 0 || (!!profile.recoveryNotes.trim() && !CLEAN_NOTES.test(profile.recoveryNotes.trim()));
@@ -226,11 +233,12 @@ export function generateTemplatePlan(exercises, context, dailyTime, lang = 'zh',
   const strengthLimit = tired || (court.size >= 3 && (highLoad || consecutive)) ? 1 : 2;
   const familiar = new Set((options.previousPlan?.schedule || []).flatMap(day => day.routine || []));
   const proximity = day => competitionDaysAway(profile.competitionDate, dateForWeekDay(week, day));
-  const candidates = [1, 2, 3, 4, 5].filter(day => !onCourt(day) && mode === 'normal' && (proximity(day) === null || proximity(day) > 2 || proximity(day) < -5))
+  const candidates = calendarDays.filter(day => permitted(day) && !previousStrengthDates.some(date => Math.abs(competitionDaysAway(date, dateForWeekDay(week, day))) < 2) && !onCourt(day) && mode === 'normal' && (proximity(day) === null || proximity(day) > 2 || proximity(day) < -5))
     .sort((a, b) => ((onCourt(a - 1) ? 2 : 0) + (onCourt(a + 1) ? 1 : 0)) - ((onCourt(b - 1) ? 2 : 0) + (onCourt(b + 1) ? 1 : 0)) || a - b);
   const strengthDays = [];
   for (const day of candidates) {
-    if (strengthDays.length >= strengthLimit) break;
+    const preservedStrength = previousStrengthDates.filter(date => getWeekString(new Date(`${date}T12:00:00`)) === week).length;
+    if (strengthDays.length + preservedStrength >= strengthLimit) break;
     if (strengthDays.some(previous => Math.abs(day - previous) < 2)) continue;
     if (highLoad && onCourt(day + 1)) continue;
     const away = proximity(day);
@@ -240,14 +248,14 @@ export function generateTemplatePlan(exercises, context, dailyTime, lang = 'zh',
   let skillUsed = false;
   let upperOrdinal = 0;
   const usedChoices = new Set();
-  const schedule = [1, 2, 3, 4, 5].map(number => {
+  const schedule = calendarDays.map(number => {
     let day = emptyDay(number, lang);
     const away = proximity(number);
     const taper = away !== null && away >= 3 && away <= 10;
     const immediate = away !== null && away >= 0 && away <= 2;
     const post = away !== null && away < 0 && away >= -5;
     const reason = text(lang, '輕活動採可完整說話的速度；若疲勞或不適，改完整休息，不補強度。', 'Use a conversational pace. If tired or uncomfortable, choose full rest instead of making up intensity.');
-    if (mode === 'rest' || immediate || (post && away >= -2)) return day;
+    if (!permitted(number) || mode === 'rest' || immediate || (post && away >= -2)) return day;
     if (mode === 'shoulder') {
       makeRecovery(day, available, lang, text(lang, '治療限制尚未確認；僅在治療端允許走路時採這份輕活動，否則休息。無痛不代表已放行。', 'Treatment limits are unclear. Use this easy activity only if walking is permitted by your clinician; otherwise rest. Lack of pain is not clearance.'), true);
     } else if (post || onCourt(number) || (taper && !familiar.size)) makeRecovery(day, available, lang, reason);
@@ -281,5 +289,5 @@ export function generateTemplatePlan(exercises, context, dailyTime, lang = 'zh',
   const warmupStrategy = text(lang,
     '\n\n一般訓練日優先以快走／踏步接八段動態暖身起手，再接當天步序與主項準備組；整套為一項流程、內含八段，時間全部計入。短課、停用此流程、疲勞、球日恢復、治療限制或賽前熟悉度優先時，依每天實際列出的精簡安排，不補做整套；休息日不另暖身。',
     '\n\nOrdinary training days prioritize walking/marching followed by the eight-part dynamic flow, then the listed step practice and lift preparation. The flow is one tracked item containing eight parts, with all time included. Short sessions, disabled flows, fatigue, court-day recovery, treatment limits and taper familiarity take priority: follow each day’s actual shorter list without adding the full flow. Rest days need no extra warm-up.');
-  return validateGeneratedPlan({ conclusion: conclusion + weeklyView + warmupStrategy, schedule, weeklyIntent: createWeeklyIntent(profile, focus, minutes) }, eligible, minutes);
+  return validateGeneratedPlan({ conclusion: conclusion + weeklyView + warmupStrategy, schedule, weeklyIntent: createWeeklyIntent(profile, focus, minutes) }, eligible, minutes, { calendarDays });
 }

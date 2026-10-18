@@ -19,8 +19,8 @@ export function resolveExerciseId(id, exercises) {
 
 export function normalizeSchedule(schedule, exercises, fallback = []) {
   if (!Array.isArray(schedule)) return fallback;
-  const days = schedule.filter(day => day && Number.isInteger(day.day) && day.day >= 1 && day.day <= 5 && Array.isArray(day.routine));
-  if (days.length !== 5 || new Set(days.map(day => day.day)).size !== 5) return fallback;
+  const days = schedule.filter(day => day && Number.isInteger(day.day) && day.day >= 1 && day.day <= 7 && Array.isArray(day.routine));
+  if (![5, 7].includes(days.length) || new Set(days.map(day => day.day)).size !== days.length || (days.length === 5 && days.some(day => day.day > 5))) return fallback;
   return days.map(day => {
     let routine = [...new Set(day.routine.map(id => resolveExerciseId(id, exercises)).filter(Boolean))];
     if (day.prescriptions?.some(dose => dose.phase)) routine = orderedRoutine({ ...day, routine }, exercises);
@@ -60,7 +60,7 @@ export function calculateStats(allProgress, exercises) {
   Object.entries(allProgress).forEach(([week, data]) => {
     if (!dateForWeekDay(week)) return;
     Object.entries(data.completed || {}).forEach(([key, done]) => {
-      const match = /^day([1-5])_(.+)$/.exec(key);
+      const match = /^day([1-7])_(.+)$/.exec(key);
       if (done !== true || !match) return;
       totalCompleted++;
       const type = data.exerciseTypes?.[key] || exercises[match[2]]?.type;

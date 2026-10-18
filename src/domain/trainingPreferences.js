@@ -15,6 +15,7 @@ export function createWeeklyIntent(context = {}, focus = 'balanced', dailyTime =
     focus: WEEKLY_FOCUSES.includes(focus) ? focus : 'balanced',
     targetRegions: selectedRegions(context.targetRegions, TARGET_REGIONS),
     stiffnessRegions: selectedRegions(context.stiffnessRegions, STIFFNESS_REGIONS),
+    trainingDays: [...new Set((Array.isArray(context.trainingDays) ? context.trainingDays : [1, 2, 3, 4, 5]).filter(day => Number.isInteger(day) && day >= 1 && day <= 7))].sort(),
     badmintonDays: [...new Set((Array.isArray(context.badmintonDays) ? context.badmintonDays : []).filter(day => Number.isInteger(day) && day >= 1 && day <= 7))].sort(),
     dailyTime: Number(dailyTime), competitionDate: isCalendarDate(context.competitionDate) ? context.competitionDate : '',
     ...(weeklyChoiceIds(context.weeklyExerciseIds).length ? { weeklyExerciseIds: weeklyChoiceIds(context.weeklyExerciseIds) } : {}),
@@ -23,13 +24,14 @@ export function createWeeklyIntent(context = {}, focus = 'balanced', dailyTime =
 
 export function normalizeWeeklyIntent(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)
-    || Object.keys(value).some(key => !['focus', 'targetRegions', 'stiffnessRegions', 'badmintonDays', 'dailyTime', 'competitionDate', 'weeklyExerciseIds'].includes(key))
+    || Object.keys(value).some(key => !['focus', 'targetRegions', 'stiffnessRegions', 'badmintonDays', 'dailyTime', 'competitionDate', 'weeklyExerciseIds', 'trainingDays'].includes(key))
     || !WEEKLY_FOCUSES.includes(value.focus) || !Number.isFinite(value.dailyTime) || value.dailyTime < 5 || value.dailyTime > 240
     || !Array.isArray(value.badmintonDays) || value.badmintonDays.length > 7 || value.badmintonDays.some(day => !Number.isInteger(day) || day < 1 || day > 7)
     || (value.competitionDate !== '' && !isCalendarDate(value.competitionDate))) return null;
   for (const [key, allowed] of [['targetRegions', TARGET_REGIONS], ['stiffnessRegions', STIFFNESS_REGIONS]]) {
     if (!Array.isArray(value[key]) || value[key].length > 2 || value[key].some(item => !allowed.includes(item)) || new Set(value[key]).size !== value[key].length) return null;
   }
+  if (value.trainingDays !== undefined && (!Array.isArray(value.trainingDays) || value.trainingDays.length > 7 || value.trainingDays.some(day => !Number.isInteger(day) || day < 1 || day > 7) || new Set(value.trainingDays).size !== value.trainingDays.length)) return null;
   if (value.weeklyExerciseIds !== undefined && (!Array.isArray(value.weeklyExerciseIds) || value.weeklyExerciseIds.length > MAX_WEEKLY_CHOICES
     || weeklyChoiceIds(value.weeklyExerciseIds).length !== value.weeklyExerciseIds.length)) return null;
   return createWeeklyIntent(value, value.focus, value.dailyTime);

@@ -59,7 +59,7 @@ export function analyzeWeeklyBalance(schedule = [], exercises = {}, context = {}
   const restricted = profile.healthStatus !== 'unrestricted' || hasNotes
     || /麻|無力|功能下降|停止運動|醫囑休息|numb|weak|loss of function|no exercise/i.test(profile.recoveryNotes);
   const recoveryPriority = profile.sorenessRegions.length > 0 || !!profile.recoveryNotes.trim() && !CLEAN_NOTES.test(profile.recoveryNotes.trim());
-  const days = [1, 2, 3, 4, 5].map(day => {
+  const days = [1, 2, 3, 4, 5, 6, 7].map(day => {
     const entry = schedule.find(item => item?.day === day);
     const date = dateForWeekDay(week, day);
     const away = competitionDaysAway(profile.competitionDate, date);

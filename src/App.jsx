@@ -22,16 +22,22 @@ import LoginPrompt from './components/LoginPrompt.jsx';
 import Training from './components/Training.jsx';
 
 import Settings from './components/Settings.jsx';
-import Onboarding from './components/Onboarding.jsx';
+import PeriodWorkspace from './components/PeriodWorkspace.jsx';
+import { enumeratePeriodDates } from './domain/periodPlanning.js';
+import { periodQuestionnaireText } from './periodLocale.js';
+import { usePlanningPeriods } from './hooks/usePlanningPeriods.js';
+import { useDateSessions } from './hooks/useDateSessions.js';
+import { saveDateReadinessAdjustment } from './services/periodRepository.js';
+import { readPeriodDraft, writePeriodDraft, upsertLocalPeriodLog, periodFromWeeklyDraft, localPeriodProgressView } from './domain/periodDraft.js';
 import SharedWorkout from './components/SharedWorkout.jsx';
 import { readShareFromLocation } from './domain/sharing.js';
 import { generateTemplatePlan, manualPlanningExercises } from './domain/templatePlanner.js';
-import { trialEnabled, requestTrialPlan } from './services/aiTrial.js';
 import { PROMOTION_TRANSLATIONS } from './promotionLocale.js';
-import { createWeeklyIntent, normalizeWeeklyIntent, MAX_WEEKLY_CHOICES } from './domain/trainingPreferences.js';
+import { createWeeklyIntent, MAX_WEEKLY_CHOICES } from './domain/trainingPreferences.js';
 import { buildWeeklyChoiceReport, weeklyChoiceBlockReason } from './domain/weeklyChoices.js';
-import { questionnaireProfile, readQuestionnaireDraft, planningFingerprint } from './domain/questionnaire.js';
 import WeeklyChoiceReport from './components/WeeklyChoiceReport.jsx';
+import { trialEnabled, requestTrialPlan } from './services/aiTrial.js';
+import { planningFingerprint } from './domain/questionnaire.js';
 import { UX_TRANSLATIONS } from './uxLocale.js';
 import { recordPromotionEvent, readPromotionDrafts, writePromotionDrafts, normalizePromotionDraft } from './domain/promotion.js';
 
@@ -40,14 +46,18 @@ const WeeklyPlanPreview = lazy(() => import('./components/WeeklyPlanPreview.jsx'
 const ExerciseLibrary = lazy(() => import('./components/ExerciseLibrary.jsx'));
 const WeekOverview = lazy(() => import('./components/WeekOverview.jsx'));
 const WeeklyBalance = lazy(() => import('./components/WeeklyBalance.jsx'));
+const TrainingExport = lazy(() => import('./components/TrainingExport.jsx'));
 const Metrics = lazy(() => import('./components/Metrics.jsx'));
 const History = lazy(() => import('./components/History.jsx'));
 const defaultModels = [{ id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' }];
+function readSavedPeriod(key) { try { const value = JSON.parse(readStorage(key, 'null')); enumeratePeriodDates(value?.range); return value; } catch { return null; } }
 const tabs = [['train', Feather, 'navTrain'], ['plan', CalendarDays, 'navPlan'], ['records', BarChart3, 'navRecords']];
 
 export default function App() {
   const account = useAuth();
   const calendar = useCalendar();
+  const [localPeriod, setLocalPeriod] = useState(readPeriodDraft);
+  useEffect(() => { writePeriodDraft(localPeriod); }, [localPeriod]);
   const [publicDraft, setPublicDraft] = useState(() => readPromotionDrafts(calendar.currentWeek).publicDraft);
   const [pendingDraft, setPendingDraft] = useState(() => readPromotionDrafts(calendar.currentWeek).pendingDraft);
   useEffect(() => { writePromotionDrafts(publicDraft, pendingDraft); }, [publicDraft, pendingDraft]);
@@ -58,7 +68,9 @@ export default function App() {
     return () => { window.removeEventListener('hashchange', update); window.removeEventListener('popstate', update); };
   }, []);
   const loginWithPreview = async method => {
-    const preview = !account.user ? publicDraft : null;
+    // Date plans retain the carried device facts and require an account preview.
+    // An older weekly cache must not independently auto-adopt over that flow.
+    const preview = !account.user && !localPeriod ? publicDraft : null;
     await account[method]();
     const uid = auth.currentUser?.uid;
     if (preview && uid) {
@@ -75,41 +87,48 @@ export default function App() {
   if (account.loading) return <div className="min-h-screen flex items-center justify-center gap-2"><Loader2 className="animate-spin" />{readLanguage() === 'zh' ? '載入中…' : 'Loading…'}</div>;
   const sessionAccount = { ...account, logout, googleLogin: () => loginWithPreview('googleLogin'), guestLogin: () => loginWithPreview('guestLogin') };
   // A new UID starts with fresh data. Public previews are bound to the chosen UID only after sign-in.
-  return <FitnessApp key={`${account.user?.uid || 'signed-out'}:${calendar.currentWeek}`} account={sessionAccount} calendar={calendar}
+  return <FitnessApp key={account.user?.uid || 'signed-out'} account={sessionAccount} calendar={calendar}
+    localPeriod={localPeriod} onLocalPeriod={setLocalPeriod}
     publicDraft={publicDraft?.week === calendar.currentWeek ? publicDraft : null} onPublicDraft={setPublicDraft}
     pendingDraft={pendingDraft?.targetUid === account.user?.uid && pendingDraft?.week === calendar.currentWeek ? pendingDraft : null} onConsumeDraft={() => { writePromotionDrafts(null, null); setPendingDraft(null); }} />;
 }
 
-function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraft, onConsumeDraft }) {
+function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraft, onConsumeDraft, localPeriod, onLocalPeriod }) {
   const { user } = account;
   const { currentWeek, lastWeek, today } = calendar;
   const [lang, setLang] = useState(readLanguage);
   useEffect(() => { document.documentElement.lang = lang === 'zh' ? 'zh-Hant' : 'en'; }, [lang]);
-  const t = key => UX_TRANSLATIONS[lang][key] ?? PROMOTION_TRANSLATIONS[lang][key] ?? TRANSLATIONS[lang][key] ?? TRANSLATIONS.zh[key] ?? key;
+  const t = key => { const value = UX_TRANSLATIONS[lang][key] ?? PROMOTION_TRANSLATIONS[lang][key] ?? TRANSLATIONS[lang][key] ?? TRANSLATIONS.zh[key] ?? key; return key === 'dayShort' && Array.isArray(value) && value.length < 7 ? [...value, ...(lang === 'zh' ? ['週六', '週日'] : ['Sat', 'Sun'])] : value; };
   const [activeTab, setActiveTab] = useState('train');
   const [planView, setPlanView] = useState('week');
   const [planScreen, setPlanScreen] = useState('overview');
-  const [coachVisited, setCoachVisited] = useState(false);
+  const [periodCreating, setPeriodCreating] = useState(false);
+  const periodKey = `fitness_saved_period_${user?.uid || 'signed-out'}`;
+  const [savedPeriod, setSavedPeriod] = useState(() => user ? readSavedPeriod(periodKey) : localPeriod);
   const [recordsView, setRecordsView] = useState('training');
   const [trainingMode, setTrainingMode] = useState('today');
-  const [activeDay, setActiveDay] = useState(() => { const day = new Date().getDay(); return day >= 1 && day <= 5 ? day : 1; });
+  const [activeDay, setActiveDay] = useState(() => { return new Date(`${today}T12:00:00`).getDay() || 7; });
   const [weekLimit, setWeekLimit] = useState(104);
   const [metricLimit, setMetricLimit] = useState(365);
   const data = useUserData(user?.uid, weekLimit, metricLimit, currentWeek);
   const trainingData = useTrainingData(user?.uid, currentWeek);
+  const periodsData = usePlanningPeriods(user?.uid);
+  const dateData = useDateSessions(user?.uid, currentWeek);
+  const nativeSessions = user ? dateData.sessionsByDate : localPeriod?.sessionsByDate || {};
+  const hasNativeWeek = Object.keys(nativeSessions).some(date => date >= dateForWeekDay(currentWeek, 1) && date <= dateForWeekDay(currentWeek, 7));
   const [readinessPreview, setReadinessPreview] = useState(null);
   const [coachingBusy, setCoachingBusy] = useState(false);
   const coachingBusyRef = useRef(false);
-  const exerciseLogs = user ? Object.values(trainingData.logs) : publicDraft?.logs || [];
-  const readinessRecords = user ? Object.values(trainingData.readiness) : publicDraft?.readiness || [];
+  const exerciseLogs = user ? Object.values(trainingData.logs) : localPeriod?.logs || publicDraft?.logs || [];
+  const readinessRecords = user ? Object.values(trainingData.readiness) : localPeriod?.readiness || publicDraft?.readiness || [];
   const activeDate = dateForWeekDay(currentWeek, activeDay);
   const readiness = readinessRecords.find(record => record.date === activeDate) || null;
   const defaultSchedule = DEFAULT_SCHEDULE_I18N[lang];
   const exercises = { ...EXERCISES_I18N[lang] };
   for (const [id, custom] of Object.entries(data.exercises)) exercises[id] = { ...exercises[id], ...custom };
-  const allProgress = data.progress;
+  const allProgress = user ? data.progress : localPeriod ? localPeriodProgressView(localPeriod, exercises) : data.progress;
   const [publicProgress, setPublicProgress] = useState(() => publicDraft?.completed || {});
-  const progress = user ? allProgress[currentWeek]?.completed || {} : publicProgress;
+  const progress = user || localPeriod ? allProgress[currentWeek]?.completed || {} : publicProgress;
   const savedPlan = data.plans[currentWeek] || null;
   const weeklyPlan = savedPlan || (!user ? publicDraft?.plan : null) || null;
   // Default/manual themes can switch language without translating stored AI text.
@@ -117,7 +136,16 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
     ? weeklyPlan.schedule.map(day => { const base = defaultSchedule.find(item => item.day === day.day); return { ...day, name: base.name, theme: base.theme, concept: base.concept, coachAdvice: day.coachAdvice || base.coachAdvice }; })
     : weeklyPlan?.schedule;
   const currentSchedule = normalizeSchedule(localizedSchedule, exercises, defaultSchedule);
-  const schedule = weeklyPlan ? currentSchedule : availableSchedule(currentSchedule, exercises);
+  const legacySchedule = weeklyPlan ? currentSchedule : availableSchedule(currentSchedule, exercises);
+  const schedule = (hasNativeWeek ? Array.from({ length: 7 }, (_, index) => {
+    const day = index + 1; const date = dateForWeekDay(currentWeek, day);
+    return nativeSessions[date] || (weeklyPlan && !Object.hasOwn(nativeSessions, date) ? legacySchedule.find(item => item.day === day) : null) || { day, date, name: t('allDayNames')[index], theme: lang === 'zh' ? '未安排訓練' : 'No session scheduled', concept: '', routine: [], sessionType: 'rest' };
+  }) : legacySchedule);
+  const activeNative = nativeSessions[activeDate];
+  useEffect(() => {
+    if (trainingMode !== 'today') return;
+    Promise.resolve().then(() => { setActiveDay(new Date(`${today}T12:00:00`).getDay() || 7); setReadinessPreview(null); });
+  }, [today, trainingMode]);
   const difficultyLevel = clampLevel(data.difficultyLevel);
   const [toast, setToast] = useState('');
   const toastTimer = useRef();
@@ -134,53 +162,25 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
   const [adding, setAdding] = useState(false);
   const [metricForm, setMetricForm] = useState(() => emptyMetrics(today));
   const preferencesKey = `planning_preferences_${user?.uid || 'signed-out'}`;
-  const questionnaireKey = `fitness_questionnaire_${user?.uid || 'signed-out'}_${currentWeek}`;
-  const [questionnaireDraft] = useState(() => { try { return readQuestionnaireDraft(window.sessionStorage, questionnaireKey, currentWeek); } catch { return null; } });
-  const [preferences] = useState(() => {
-    try { return JSON.parse(readStorage(preferencesKey, '{}')) || {}; } catch { return {}; }
-  });
-  const initialProfile = pendingDraft?.profile || questionnaireDraft || (!user ? publicDraft?.profile : null) || preferences;
+  const [preferences] = useState(() => { try { return JSON.parse(readStorage(preferencesKey, '{}')) || {}; } catch { return {}; } });
+  const initialProfile = pendingDraft?.profile || (!user ? localPeriod?.profile || publicDraft?.profile : null) || preferences;
   const [goal, setGoal] = useState(initialProfile.goal || '');
   const [focus, setFocus] = useState(initialProfile.focus || 'balanced');
-  const [planningMode, setPlanningMode] = useState('template');
   const [adoptionError, setAdoptionError] = useState(false);
   const adoptionAttempt = useRef(false);
   const [time, setTime] = useState(initialProfile.time || '30');
-  const [planningContext, setPlanningContext] = useState(() => normalizePlanningContext({ ...DEFAULT_PLANNING_CONTEXT, ...initialProfile.context,
-    ...(!pendingDraft && !publicDraft && initialProfile.week !== currentWeek ? { weeklyExerciseIds: [], sorenessRegions: [] } : {}) }));
-  const [planningStep, setPlanningStep] = useState(0);
-  const [planPreview, setPlanPreview] = useState(null);
-  const [draftStorageUnavailable, setDraftStorageUnavailable] = useState(false);
-  const planningWeek = useRef(currentWeek);
-  const planRequest = useRef(0);
-  const [message, setMessage] = useState('');
-  const [editingAI, setEditingAI] = useState(false);
+  const [planningContext, setPlanningContext] = useState(() => normalizePlanningContext({ ...DEFAULT_PLANNING_CONTEXT, ...initialProfile.context }));
   const [generating, setGenerating] = useState(false);
+  const [planningMode, setPlanningMode] = useState('byok');
+  const [planningStep, setPlanningStep] = useState(0);
+  const [message, setMessage] = useState('');
+  const [editingAI, setEditingAI] = useState(true);
+  const [legacyPreview, setLegacyPreview] = useState(null);
+  const planRequest = useRef(0);
   const [apiKey, setApiKey] = useState(() => readStorage('gemini_byok_key'));
   const [keyInput, setKeyInput] = useState(() => readStorage('gemini_byok_key'));
   const [model, setModel] = useState(() => readStorage('app_ai_model', 'gemini-2.5-flash'));
   const [models, setModels] = useState(defaultModels);
-  const intentInitialized = useRef('');
-  useEffect(() => {
-    const changedWeek = planningWeek.current !== currentWeek;
-    if (changedWeek) { planningWeek.current = currentWeek; ++planRequest.current; }
-    const intent = normalizeWeeklyIntent(weeklyPlan?.weeklyIntent);
-    const restore = user && intent && intentInitialized.current !== currentWeek && !pendingDraft && questionnaireDraft?.week !== currentWeek;
-    if (!changedWeek && !restore) return;
-    if (restore) intentInitialized.current = currentWeek;
-    // Restore only saved non-clinical weekly intent; never infer health or equipment on another device.
-    Promise.resolve().then(() => {
-      if (changedWeek) { setPlanPreview(null); setPlanningStep(0); setGenerating(false); }
-      if (restore) { setFocus(intent.focus); setTime(String(intent.dailyTime)); }
-      setPlanningContext(previous => ({ ...previous, ...(changedWeek ? { weeklyExerciseIds: [], sorenessRegions: [] } : {}),
-        ...(restore ? { targetRegions: intent.targetRegions, stiffnessRegions: intent.stiffnessRegions, badmintonDays: intent.badmintonDays,
-          competitionDate: intent.competitionDate, weeklyExerciseIds: intent.weeklyExerciseIds || [] } : {}) }));
-    });
-  }, [currentWeek, weeklyPlan?.weeklyIntent, user, pendingDraft, questionnaireDraft]);
-  useEffect(() => {
-    try { sessionStorage.setItem(questionnaireKey, JSON.stringify(questionnaireProfile({ context: planningContext, focus, time, goal }, currentWeek))); }
-    catch { Promise.resolve().then(() => setDraftStorageUnavailable(true)); }
-  }, [questionnaireKey, currentWeek, planningContext, focus, time, goal]);
   const profileApplied = useRef(null);
   useEffect(() => {
     if (!pendingDraft || profileApplied.current === pendingDraft) return;
@@ -217,6 +217,7 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
   const cancelEditing = () => { setDraft(null); setEditing(false); setSelected(''); };
   const enterEditing = () => {
     if (coachingBusyRef.current || busyRef.current || savingPlan || generating || pendingDraft || !requireUser() || !data.loaded.plans || !data.loaded.exercises) return;
+    if (hasNativeWeek) { showToast(lang === 'zh' ? '日期課表請從日期規劃重新預覽調整。' : 'Replan the date range to edit date sessions.'); return; }
     setDraft(structuredClone(schedule)); setDraftRevision(weeklyPlan?.revision || 0); setEditing(true); setSelected('');
   };
   const saveEdits = () => operation(async () => {
@@ -229,7 +230,7 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
   }, 'toastPlanSaved');
   const restore = () => operation(async () => {
     setSavingPlan(true);
-    try { await savePlan(user.uid, currentWeek, null, fallbackPlan, true, weeklyPlan?.revision || 0); cancelEditing(); setEditingAI(false); }
+    try { await savePlan(user.uid, currentWeek, null, fallbackPlan, true, weeklyPlan?.revision || 0); cancelEditing();  }
     finally { setSavingPlan(false); }
   }, 'toastRestored');
   const remove = (day, index) => setDraft(previous => previous.map(item => item.day === day ? syncSessionType({ ...item, routine: item.routine.filter((_, i) => i !== index),
@@ -259,7 +260,17 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
   };
   const toggle = (day, id) => {
     if (coachingBusyRef.current || busyRef.current || savingPlan || generating || pendingDraft) return;
+    if (nativeSessions[dateForWeekDay(currentWeek, day)] && dateForWeekDay(currentWeek, day) > today) return;
     const done = !progress[`day${day}_${id}`];
+    if (!user && localPeriod && nativeSessions[dateForWeekDay(currentWeek, day)]) {
+      if (dateForWeekDay(currentWeek, day) > today) return;
+      const key = `day${day}_${id}`;
+      const completed = { ...progress, [key]: done };
+      const completedAt = { ...localPeriod.progressByWeek[currentWeek]?.completedAt };
+      if (done) completedAt[key] = today; else delete completedAt[key];
+      onLocalPeriod({ ...localPeriod, progressByWeek: { ...localPeriod.progressByWeek, [currentWeek]: { ...localPeriod.progressByWeek[currentWeek], completed, completedAt } } });
+      return;
+    }
     if (!user && publicDraft) {
       const completed = { ...publicProgress, [`day${day}_${id}`]: done };
       const candidate = { ...publicDraft, completed };
@@ -277,8 +288,8 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
 
   const coachingOperation = async action => {
     if (coachingBusyRef.current || busyRef.current || savingPlan || generating || editing || pendingDraft) throw new Error('COACHING_BUSY');
-    if (user && (!trainingData.loaded || !data.loaded.plans || !data.loaded.exercises)) throw new Error('COACHING_NOT_LOADED');
-    if (!user && !publicDraft) throw new Error('COACHING_NO_PLAN');
+    if (user && (!trainingData.loaded || !dateData.loaded || !data.loaded.plans || !data.loaded.exercises)) throw new Error('COACHING_NOT_LOADED');
+    if (!user && !publicDraft && !localPeriod) throw new Error('COACHING_NO_PLAN');
     coachingBusyRef.current = true; setCoachingBusy(true);
     try { return await action(); }
     finally { coachingBusyRef.current = false; setCoachingBusy(false); }
@@ -286,6 +297,7 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
   const recordExercise = (record, { markComplete = false } = {}) => coachingOperation(async () => {
     const clean = validateTrainingLog(record, { today });
     if (clean.week !== currentWeek) throw new Error('INVALID_TRAINING_LOG');
+    const scheduledDate = dateForWeekDay(clean.week, clean.day);
     const day = schedule.find(item => item.day === clean.day);
     const old = exerciseLogs.find(item => trainingLogId(item) === trainingLogId(clean));
     if (!day?.routine.includes(clean.exerciseId)) throw new Error('PLAN_CHANGED');
@@ -293,14 +305,16 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
     const dose = prescription(clean.exerciseId, exercises[clean.exerciseId]?.type, difficultyLevel, exercises[clean.exerciseId], day);
     const expected = old?.planned || plannedSnapshot(dose);
     if (!['sets', 'value', 'unit', 'perSide', 'phase', 'restSeconds'].every(key => clean.planned[key] === expected[key])) throw new Error('PLAN_CHANGED');
-    if (!user && !old && exerciseLogs.length >= 40) throw new Error('TRAINING_RECORD_LIMIT');
+    if (!user && !old && exerciseLogs.length >= (localPeriod ? 1120 : 40)) throw new Error('TRAINING_RECORD_LIMIT');
     if (user) {
-      await saveTrainingLog(user.uid, clean, { fallback: weeklyPlan || fallbackPlan, expectedRevision: weeklyPlan?.revision || 0, exercise: exercises[clean.exerciseId], level: difficultyLevel });
+      await saveTrainingLog(user.uid, clean, { fallback: weeklyPlan || fallbackPlan, expectedRevision: nativeSessions[scheduledDate]?.revision ?? weeklyPlan?.revision ?? 0, exercise: exercises[clean.exerciseId], level: difficultyLevel });
       if (markComplete && progress[`day${clean.day}_${clean.exerciseId}`] !== true) {
         try { await setCompletion(user.uid, currentWeek, clean.day, clean.exerciseId, true, exercises[clean.exerciseId], schedule); }
         catch { throw new Error('LOG_SAVED_COMPLETION_FAILED'); }
         recordPromotionEvent('first_completion', currentWeek);
       }
+    } else if (localPeriod && nativeSessions[scheduledDate]) {
+      onLocalPeriod(upsertLocalPeriodLog(localPeriod, clean, markComplete, today));
     } else {
       const completed = markComplete ? { ...publicProgress, [`day${clean.day}_${clean.exerciseId}`]: true } : publicProgress;
       onPublicDraft({ ...publicDraft, completed, logs: [...exerciseLogs.filter(item => trainingLogId(item) !== trainingLogId(clean)), clean] });
@@ -312,23 +326,25 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
     if (!original || original.date >= today || !['good', 'worse'].includes(status)) throw new Error('INVALID_NEXT_DAY');
     const clean = validateTrainingLog({ ...original, nextDay: status }, { today });
     if (user) await saveNextDayResponse(user.uid, trainingLogId(clean), status);
+    else if (localPeriod) onLocalPeriod({ ...localPeriod, logs: localPeriod.logs.map(item => trainingLogId(item) === trainingLogId(clean) ? clean : item) });
     else onPublicDraft({ ...publicDraft, logs: exerciseLogs.map(item => trainingLogId(item) === trainingLogId(clean) ? clean : item) });
   });
   const recordReadiness = value => coachingOperation(async () => {
     const clean = validateReadiness(value, { today });
     if (clean.date !== today || activeDate !== today) throw new Error('READINESS_DATE_CHANGED');
     if (user) await saveReadiness(user.uid, clean);
+    else if (localPeriod) onLocalPeriod({ ...localPeriod, readiness: [...readinessRecords.filter(record => record.date !== clean.date), clean] });
     else onPublicDraft({ ...publicDraft, readiness: [...readinessRecords.filter(record => record.date !== clean.date), clean] });
     setReadinessPreview(null);
   });
-  const readinessFingerprint = () => JSON.stringify({ schedule, revision: weeklyPlan?.revision || 0, completed: progress, context: normalizePlanningContext(planningContext), time, lang, today });
+  const readinessFingerprint = () => JSON.stringify({ schedule, revision: activeNative?.revision ?? weeklyPlan?.revision ?? 0, completed: progress, context: normalizePlanningContext(planningContext), time, lang, today });
   const previewReadiness = value => coachingOperation(async () => {
     const clean = validateReadiness(value, { today });
     if (clean.date !== today || activeDate !== today) throw new Error('READINESS_DATE_CHANGED');
     const decision = evaluateReadiness(clean, { ...planningContext, today });
     const original = schedule.find(day => day.day === activeDay);
     const adapted = adaptDayForReadiness(original, decision, progress, exercises, lang, Number(time));
-    const preview = { date: today, value: clean, decision, original, adapted, revision: weeklyPlan?.revision || 0,
+    const preview = { date: today, value: clean, decision, original, adapted, revision: activeNative?.revision ?? weeklyPlan?.revision ?? 0,
       changed: JSON.stringify({ routine: original.routine, prescriptions: original.prescriptions, sessionType: original.sessionType }) !== JSON.stringify({ routine: adapted.routine, prescriptions: adapted.prescriptions, sessionType: adapted.sessionType }), fingerprint: readinessFingerprint() };
     setReadinessPreview(preview);
     return preview;
@@ -343,9 +359,13 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
     const plan = { ...(weeklyPlan || fallbackPlan), schedule: schedule.map(day => day.day === activeDay ? adapted : day) };
     if (user) {
       await saveReadiness(user.uid, clean);
-      try { await savePlan(user.uid, currentWeek, plan, fallbackPlan, false, preview.revision, {}, {}, progress); }
+      try {
+        if (activeNative) await saveDateReadinessAdjustment(user.uid, activeDate, adapted, { expectedRevision: preview.revision, expectedCompleted: progress });
+        else await savePlan(user.uid, currentWeek, plan, fallbackPlan, false, preview.revision, {}, {}, progress);
+      }
       catch (error) { if (['PLAN_CHANGED', 'PROGRESS_CHANGED'].includes(error.message)) { setReadinessPreview(null); throw new Error('READINESS_PLAN_CHANGED'); } throw error; }
-    } else onPublicDraft({ ...publicDraft, plan, baselinePlan: publicDraft.baselinePlan || publicDraft.plan,
+    } else if (localPeriod && activeNative) onLocalPeriod({ ...localPeriod, sessionsByDate: { ...localPeriod.sessionsByDate, [activeDate]: { ...adapted, date: activeDate, week: currentWeek, revision: activeNative.revision + 1 } }, readiness: [...readinessRecords.filter(record => record.date !== clean.date), clean] });
+    else onPublicDraft({ ...publicDraft, plan, baselinePlan: publicDraft.baselinePlan || publicDraft.plan,
       adjustment: { days: [...new Set([...(publicDraft.adjustment?.days || []), activeDay])], completed: publicDraft.adjustment?.completed || Object.fromEntries(Object.entries(progress).filter(([, done]) => done === true)) },
       readiness: [...readinessRecords.filter(record => record.date !== clean.date), clean] });
     setReadinessPreview(null); showToast(lang === 'zh' ? '已依今日狀態調整尚未完成的訓練。' : 'Adjusted today’s unfinished training.');
@@ -380,22 +400,22 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
       finally { setSavingPlan(false); }
     });
   }, [pendingDraft, user, savedPlan, data.loaded.plans, data.loaded.exercises, currentWeek, lang, preferencesKey, onConsumeDraft]);
-  const planFingerprint = planningFingerprint({ week: currentWeek, uid: user?.uid || '', revision: savedPlan?.revision || 0,
-    context: planningContext, focus, time, goal, message, mode: planningMode, lang, exercises, progress, schedule, feedback: allProgress[lastWeek]?.feedbackValue });
+  const choicesChanged = useRef(false);
   const weeklyAvailable = manualPlanningExercises(exercises, planningContext);
   const toggleWeeklyChoice = id => {
-    if (generating || savingPlan) return;
+    choicesChanged.current = true;
+    if (savingPlan) return;
     const ids = planningContext.weeklyExerciseIds;
     if (!ids.includes(id)) {
       if (ids.length >= MAX_WEEKLY_CHOICES) { showToast(t('choiceLimit')); return; }
       const blocked = weeklyChoiceBlockReason(id, exercises, planningContext, weeklyAvailable);
       if (blocked) { showToast(t(`choice_reason_${blocked}`)); return; }
     }
-    setPlanningContext(previous => ({ ...previous, weeklyExerciseIds: previous.weeklyExerciseIds.includes(id)
-      ? previous.weeklyExerciseIds.filter(item => item !== id) : [...previous.weeklyExerciseIds, id] }));
+    setPlanningContext(previous => ({ ...previous, weeklyExerciseIds: previous.weeklyExerciseIds.includes(id) ? previous.weeklyExerciseIds.filter(item => item !== id) : [...previous.weeklyExerciseIds, id] }));
   };
+  const legacyFingerprint = planningFingerprint({ week: currentWeek, uid: user?.uid || '', revision: savedPlan?.revision || 0, context: planningContext, focus, time, goal, message, mode: planningMode, lang, exercises, progress, schedule, feedback: allProgress[lastWeek]?.feedbackValue }) + String(hasNativeWeek);
   const requestPlan = async () => {
-    if (generating || savingPlan || busy || coachingBusyRef.current || pendingDraft) return;
+    if (hasNativeWeek || !requireUser() || generating || savingPlan || busy || coachingBusyRef.current || pendingDraft) return;
     if (editing) { showToast(t('finishEditing')); return; }
     if (user && (!data.loaded.plans || !data.loaded.exercises)) { showToast(t('dataLoadFailed')); return; }
     if (planningMode !== 'template' && !requireUser()) return;
@@ -421,8 +441,8 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
       if (report.length) {
         plan.conclusion += `\n\n${t('choiceReport')}\n${report.map(item => `${exercises[item.id]?.name || item.id}: ${item.days.length ? `${t('choicePlanned')} ${item.days.map(day => t('dayShort')[day - 1]).join(', ')}` : t(`choice_reason_${item.reason}`)}`).join('\n')}`;
       }
-      setPlanPreview({ plan, profile, week: currentWeek, revision, fingerprint: planFingerprint, mode: planningMode });
-      setActiveTab('plan'); setPlanView('week'); setPlanScreen('preview'); window.scrollTo({ top: 0 });
+      setLegacyPreview({ plan, profile, week: currentWeek, revision, fingerprint: legacyFingerprint, mode: planningMode });
+      setActiveTab('plan'); setPlanView('week'); setPlanScreen('legacy-preview'); window.scrollTo({ top: 0 });
     } catch (err) {
       console.error('Plan generation failed', err.code || err.message);
       showToast(t(err.message === 'PLAN_CHANGED' ? 'planChanged' : err.code === 'permission-denied' ? 'planPermissionDenied'
@@ -430,9 +450,9 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
     } finally { if (request === planRequest.current) setGenerating(false); }
   };
   const applyPlanPreview = async () => {
-    const preview = planPreview;
-    if (!preview || savingPlan || generating || busy || coachingBusyRef.current || pendingDraft) return;
-    if (preview.week !== currentWeek || preview.fingerprint !== planFingerprint) { showToast(t('choiceStale')); return; }
+    const preview = legacyPreview;
+    if (hasNativeWeek || !preview || savingPlan || generating || busy || coachingBusyRef.current || pendingDraft) return;
+    if (preview.week !== currentWeek || preview.fingerprint !== legacyFingerprint) { showToast(t('choiceStale')); return; }
     setSavingPlan(true);
     try {
       const { plan, profile } = preview;
@@ -445,8 +465,8 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
         if (auth.currentUser?.uid !== user.uid) return;
         writeStorage(preferencesKey, JSON.stringify(profile));
       }
-      setReadinessPreview(null); setPlanPreview(null); setPlanningStep(0); setEditingAI(false); setMessage('');
-      setTrainingMode('plan'); setActiveTab('plan'); setPlanView('week'); setPlanScreen('overview'); window.scrollTo({ top: 0 });
+      setReadinessPreview(null); setLegacyPreview(null); setPlanningStep(0); setEditingAI(false); setMessage('');
+      setPeriodCreating(false); setTrainingMode('plan'); setActiveTab('plan'); setPlanView('week'); setPlanScreen('overview'); window.scrollTo({ top: 0 });
       showToast(t(preview.mode === 'template' ? 'templateSuccess' : 'toastAISuccess'));
       recordPromotionEvent('first_plan', currentWeek);
     } catch (err) { showToast(t(['PLAN_CHANGED', 'PROGRESS_CHANGED'].includes(err.message) ? 'choiceStale' : err.code === 'permission-denied' ? 'planPermissionDenied' : 'toastSaveFail')); }
@@ -495,41 +515,42 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
   const heatmapWeeks = stats ? [...new Set(Object.keys(stats.dailyMap).map(key => key.slice(0, 8)))].sort().slice(-12) : [];
   const login = <LoginPrompt t={t} googleLogin={account.googleLogin} guestLogin={account.guestLogin} busy={account.busy} />;
 
-  const planLoaded = !user || (data.loaded.plans && data.loaded.progress && data.loaded.exercises);
-  const hasCurrentPlan = !!weeklyPlan || (!!user && !!allProgress[currentWeek]);
+  const planLoaded = !user || (data.loaded.plans && data.loaded.progress && data.loaded.exercises && dateData.loaded);
+  const hasCurrentPlan = hasNativeWeek || !!weeklyPlan || (!!user && !!allProgress[currentWeek]);
   const calendarDay = new Date(`${today}T12:00:00`).getDay();
-  const weekend = calendarDay === 0 || calendarDay === 6;
+  const weekend = (calendarDay === 0 || calendarDay === 6) && !nativeSessions[today];
   const navigate = tab => {
     if (editing) { showToast(t('finishEditing')); return; }
     if (savingPlan) return;
-    setPlanPreview(null);
+
     if (tab === 'train') {
       setTrainingMode('today');
-      if (!weekend) setActiveDay(calendarDay);
+      setActiveDay(calendarDay || 7);
     }
-    if (tab === 'plan') { setTrainingMode('plan'); setPlanScreen('overview'); setPlanView('week'); }
+    setLegacyPreview(null);
+    if (tab === 'plan') { setTrainingMode('plan'); setPlanScreen('overview'); setPlanView('week'); setPeriodCreating(false); }
     setActiveTab(tab); window.scrollTo({ top: 0 });
   };
   const viewRecords = () => { setRecordsView('training'); navigate('records'); };
   const showPlanArea = activeTab === 'train' || (activeTab === 'plan' && planView === 'week');
-  const firstPlan = <section data-testid="first-plan" className="setup-card">
-    <div hidden={planningStep > 0} className="setup-heading"><p className="eyebrow">{t('firstPlanHint')}</p><h2>{t('firstPlanTitle')}</h2><p className="text-sm text-slate-500 mt-2">{t('firstPlanIntro')}</p></div>
-    <Onboarding lang={lang} exercises={exercises} available={weeklyAvailable} onToggleWeekly={toggleWeeklyChoice} step={planningStep} onStepChange={setPlanningStep} t={t} context={planningContext} setContext={setPlanningContext} time={time} setTime={setTime} focus={focus} setFocus={setFocus} goal={goal} setGoal={setGoal} message={message} setMessage={setMessage} generating={generating} onGenerate={requestPlan} />
-  </section>;
-  const openPlanScreen = screen => {
-    if (editing && screen !== 'day') { showToast(t('finishEditing')); return; }
-    if (savingPlan) return;
-    setPlanPreview(null);
-    setPlanScreen(screen);
-    if (screen === 'settings') { setCoachVisited(true); setEditingAI(true); setPlanningMode('template'); setPlanningStep(0); }
-    window.scrollTo({ top: 0 });
-  };
+  const openPlanScreen = screen => { if (editing || savingPlan) return; setPlanScreen(screen); if (screen === 'settings') setPeriodCreating(true); window.scrollTo({ top: 0 }); };
   const selectPlanDay = day => { setActiveDay(day); setTrainingMode('plan'); openPlanScreen('day'); };
-  const openWeeklySelection = () => { setActiveTab('plan'); setPlanView('week'); openPlanScreen('settings'); setPlanningStep(hasCurrentPlan ? 2 : 0); };
-  const backFromPreview = () => {
-    if (savingPlan) return;
-    setPlanPreview(null); setPlanningStep(2); setPlanScreen('settings'); setCoachVisited(true); setEditingAI(true); window.scrollTo({ top: 0 });
+  const openWeeklySelection = () => { setActiveTab('plan'); setPlanView('week'); setPeriodCreating(true); setPlanScreen('settings'); };
+  const [selectedPeriodId, setSelectedPeriodId] = useState('');
+  const cloudPeriod = periodsData.periods.find(period => period.periodId === selectedPeriodId) || periodsData.periods[0];
+  const selectedPeriod = !user ? localPeriod : selectedPeriodId ? savedPeriod?.periodId === selectedPeriodId ? savedPeriod : cloudPeriod : savedPeriod && (!cloudPeriod || (savedPeriod.createdAt || 0) >= cloudPeriod.createdAt) ? savedPeriod : cloudPeriod;
+  const profile = { context: planningContext, focus, time, goal };
+  const setProfile = action => { const next = typeof action === 'function' ? action(profile) : action; setPlanningContext(normalizePlanningContext(next.context)); setFocus(next.focus); setTime(next.time); setGoal(next.goal); };
+  const periodApplied = preview => {
+    const saved = { range: preview.range, profile: preview.profile, conclusion: preview.conclusion, weeklySummaries: preview.weeklySummaries, periodId: preview.periodId, createdAt: Date.now() };
+    setSavedPeriod(saved); setSelectedPeriodId(preview.periodId || ''); if (user) { writeStorage(periodKey, JSON.stringify(saved)); writeStorage(preferencesKey, JSON.stringify(preview.profile)); }
+    setPeriodCreating(false); setActiveTab('plan'); setPlanView('week'); setPlanScreen('overview'); setReadinessPreview(null);
+    showToast(lang === 'zh' ? '已套用所選日期的課表，已有紀錄與其他日期保持完整。' : 'Applied the selected dates. Recorded sessions and other dates are preserved.');
   };
+  const publicPeriodBase = localPeriod || (!user ? periodFromWeeklyDraft(publicDraft) : null);
+  const periodWorkspace = <PeriodWorkspace key={`${user?.uid || 'public'}:${periodCreating ? 'create' : selectedPeriod ? `${selectedPeriod.range.from}_${selectedPeriod.range.to}_${selectedPeriod.periodId || ''}` : 'first'}`} uid={user?.uid} today={today} lang={lang} t={t} exercises={exercises} profile={profile} setProfile={setProfile} available={weeklyAvailable} onToggleWeekly={toggleWeeklyChoice} preserveCurrentChoices={choicesChanged.current} localPeriod={publicPeriodBase} onLocalPeriod={onLocalPeriod} onApplied={periodApplied} fallbackPlans={data.plans} refreshToken={JSON.stringify({ progress: allProgress, logs: exerciseLogs, nativeSessions })} overview={periodCreating ? null : selectedPeriod} onClose={hasCurrentPlan && periodCreating ? () => { setPeriodCreating(false); setPlanScreen('overview'); } : undefined} onToday={() => navigate('train')} />;
+  const openLegacyAI = () => { if (hasNativeWeek || editing || savingPlan || !user) return; setActiveTab('plan'); setPlanView('week'); setPlanScreen('legacy-ai'); setPlanningMode('byok'); setPlanningStep(0); setEditingAI(true); setLegacyPreview(null); setPeriodCreating(false); };
+  const firstPlan = <div data-testid="first-plan">{periodWorkspace}</div>;
   const changePlanView = value => {
     if (editing && value !== 'week') { showToast(t('finishEditing')); return; }
     setPlanView(value); setPlanScreen('overview');
@@ -545,10 +566,13 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
     </aside>
     <main className="app-main">
       {account.error && <p role="alert" className="mb-4 rounded-xl bg-red-50 text-red-700 p-4 text-sm">{t(account.error)}</p>}
+      {periodsData.error && <p role="alert" className="mb-4 rounded-xl bg-red-50 text-red-700 p-4 text-sm">{t('dataLoadFailed')}</p>}
+      {dateData.error && <p role="alert" className="mb-4 rounded-xl bg-red-50 text-red-700 p-4 text-sm">{t('dataLoadFailed')}</p>}
       {trainingData.error && <p role="alert" className="mb-4 rounded-xl bg-red-50 text-red-700 p-4 text-sm">{t('dataLoadFailed')}</p>}
       {data.error && <p role="alert" className="mb-4 rounded-xl bg-red-50 text-red-700 p-4 text-sm">{t('dataLoadFailed')}</p>}
-      {draftStorageUnavailable && showPlanArea && <p role="status" className="mb-4 text-sm text-amber-800">{t('choiceDraftUnavailable')}</p>}
+
       {account.migrationPending && <div role="alert" className="mb-4 bg-amber-50 p-4 rounded-xl text-sm">{t('migrationPending')}<button disabled={account.busy} onClick={account.retryMigration} className="ml-3 text-sky-600">{t('retry')}</button></div>}
+      {user && localPeriod && <div role="status" className="mb-4 rounded-xl border border-indigo-100 bg-indigo-50 p-4 text-sm"><p>{lang === 'zh' ? '這台裝置的日期課表與暫存紀錄已保留。帳號課表需重新預覽後套用；暫存紀錄不會自動覆蓋帳號資料。' : 'This device’s date plan and temporary records are retained. Preview the range again to apply an account plan; local records remain available on this device.'}</p><button onClick={openWeeklySelection} className="text-link mt-2">{lang === 'zh' ? '重新預覽日期課表' : 'Preview date plan for this account'}</button><button onClick={() => navigate('settings')} className="text-link mt-2 ml-3">{lang === 'zh' ? '查看裝置暫存紀錄' : 'View this device’s temporary records'}</button>{activeTab === 'settings' && <details className="mt-4"><summary>{lang === 'zh' ? '匯出這台裝置的暫存實際紀錄' : 'Export this device’s temporary actual records'}</summary><Suspense fallback={<p>{t('loadingPlan')}</p>}><TrainingExport lang={lang} today={today} publicDraft={{ periodDraft: localPeriod }} exercises={exercises} sourceVersion={localPeriod} /></Suspense></details>}</div>}
       {pendingDraft && <div role="status" className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm space-y-3">
         <p>{t(adoptionError ? 'adoptionFailed' : savedPlan ? 'adoptExisting' : 'previewSaving')}</p>
         {(savedPlan || adoptionError) && <button disabled={savingPlan} onClick={adoptPreview} className="bg-indigo-600 text-white rounded-lg px-3 py-2">{t(savedPlan ? 'adoptPreview' : 'retryPreview')}</button>}
@@ -556,24 +580,29 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
       </div>}
       {activeTab === 'plan' && (planView === 'library' || planScreen === 'overview') && <>{planView === 'library' && <div className="screen-header"><p className="eyebrow">{t('planEyebrow')}</p><h2 className="screen-title">{t('libraryTab')}</h2><p className="screen-description">{t('libraryDescription')}</p></div>}{subnav([['week', 'planningTab'], ['library', 'libraryTab']], planView, changePlanView, t('navPlan'))}</>}
       {showPlanArea && !planLoaded && <p role="status" className="p-6 text-sm">{t('loadingPlan')}</p>}
-      {showPlanArea && planLoaded && !hasCurrentPlan && !pendingDraft && !planPreview && firstPlan}
+      {showPlanArea && planLoaded && !hasCurrentPlan && !pendingDraft && !['legacy-ai', 'legacy-preview'].includes(planScreen) && firstPlan}
       {activeTab === 'plan' && planView === 'week' && hasCurrentPlan && ['day', 'settings'].includes(planScreen) && <button type="button" data-testid="back-to-week" disabled={editing || savingPlan} onClick={() => openPlanScreen('overview')} className="screen-back"><ArrowLeft size={16} />{t('backToWeek')}</button>}
-      {activeTab === 'plan' && planView === 'week' && planScreen === 'preview' && planPreview && <Suspense fallback={<p role="status" className="py-8 text-sm">{t('loadingPlan')}</p>}><WeeklyPlanPreview preview={planPreview} t={t} lang={lang} exercises={exercises} available={weeklyAvailable} today={today} onBack={backFromPreview} onApply={applyPlanPreview} busy={savingPlan} stale={planPreview.fingerprint !== planFingerprint} /></Suspense>}
-      {activeTab === 'plan' && planView === 'week' && hasCurrentPlan && planScreen === 'overview' && <Suspense fallback={<p role="status" className="py-8 text-sm text-slate-500">{t('loadingPlan')}</p>}><WeekOverview schedule={schedule} exercises={exercises} week={currentWeek} plan={weeklyPlan} context={planningContext} focus={focus} time={time} level={difficultyLevel} lang={lang} t={t} currentDate={today} onEdit={() => openPlanScreen('settings')} onSelectDay={selectPlanDay}><WeeklyChoiceReport report={buildWeeklyChoiceReport(weeklyPlan, exercises)} exercises={exercises} t={t} /><WeeklyBalance schedule={schedule} exercises={exercises} context={planningContext} week={currentWeek} currentDate={today} lang={lang} /></WeekOverview></Suspense>}
+      {activeTab === 'plan' && planView === 'week' && hasCurrentPlan && !selectedPeriod && !periodCreating && planScreen === 'overview' && <Suspense fallback={<p role="status" className="py-8 text-sm text-slate-500">{t('loadingPlan')}</p>}><WeekOverview schedule={schedule} exercises={exercises} week={currentWeek} plan={weeklyPlan} context={planningContext} focus={focus} time={time} level={difficultyLevel} lang={lang} t={t} currentDate={today} onEdit={() => openPlanScreen('settings')} onSelectDay={selectPlanDay}><WeeklyChoiceReport report={buildWeeklyChoiceReport(weeklyPlan, exercises)} exercises={exercises} t={t} /><WeeklyBalance schedule={schedule} exercises={exercises} context={planningContext} week={currentWeek} currentDate={today} lang={lang} /></WeekOverview></Suspense>}
+      {activeTab === 'plan' && planView === 'week' && planScreen === 'overview' && !periodCreating && periodsData.periods.length > 1 && <label className="block text-sm mb-4">{lang === 'zh' ? '已儲存的日期規劃' : 'Saved date ranges'}<select className="block w-full mt-2 border rounded-xl p-3 bg-white" value={selectedPeriod?.periodId || ''} onChange={event => { setSelectedPeriodId(event.target.value); setSavedPeriod(null); }}>{periodsData.periods.map(period => <option key={period.periodId} value={period.periodId}>{period.range.from} — {period.range.to}</option>)}</select></label>}
+      {activeTab === 'plan' && planView === 'week' && hasCurrentPlan && (periodCreating || (selectedPeriod && planScreen === 'overview')) && periodWorkspace}
+      {activeTab === 'plan' && planView === 'week' && planScreen === 'overview' && user && !hasNativeWeek && <details className="panel mt-5 mb-5"><summary className="text-sm font-medium">{lang === 'zh' ? '進階：本週 AI 排課' : 'Advanced: AI for this week'}</summary><p className="text-sm text-slate-500 my-3">{lang === 'zh' ? `僅更新 ${currentWeek} 的週一至週五；使用自己的 API 金鑰或現有試用額度，不涵蓋所選日期範圍。` : `Updates Monday–Friday of ${currentWeek} only, using your API key or existing trial. It does not cover a selected date range.`}</p><button data-testid="legacy-ai-open" type="button" onClick={openLegacyAI} className="button-secondary">{lang === 'zh' ? '開啟本週 AI 排課' : 'Open this week’s AI planner'}</button></details>}
+      {activeTab === 'plan' && hasNativeWeek && ['legacy-ai', 'legacy-preview'].includes(planScreen) && <p role="status" className="panel">{lang === 'zh' ? '本週已有日期課表，請使用日期規劃重新預覽。' : 'This week has date sessions. Use date planning to create a fresh preview.'}<button className="text-link ml-3" onClick={openWeeklySelection}>{lang === 'zh' ? '規劃日期' : 'Plan dates'}</button></p>}
+      {activeTab === 'plan' && planView === 'week' && planScreen === 'legacy-ai' && !hasNativeWeek && <Suspense fallback={<p role="status">{t('loadingPlan')}</p>}><p className="text-sm text-indigo-800 mb-4">{currentWeek} · {lang === 'zh' ? '進階 AI 排課僅適用本週週一至週五' : 'Advanced AI plans Monday–Friday of this week only'}</p><Coach lang={lang} exercises={exercises} available={weeklyAvailable} onToggleWeekly={toggleWeeklyChoice} step={planningStep} onStepChange={setPlanningStep} standalone onClose={() => setPlanScreen('overview')} t={t} mode={planningMode} setMode={setPlanningMode} trialAvailable={trialEnabled()} focus={focus} setFocus={setFocus} plan={weeklyPlan} editing={editingAI} setEditing={setEditingAI} generating={generating} apiKey={apiKey} goal={goal} setGoal={setGoal} time={time} setTime={setTime} message={message} setMessage={setMessage} context={planningContext} setContext={setPlanningContext} onGenerate={requestPlan} onRestore={restore} /></Suspense>}
+      {activeTab === 'plan' && planView === 'week' && planScreen === 'legacy-preview' && legacyPreview && <Suspense fallback={<p role="status">{t('loadingPlan')}</p>}><WeeklyPlanPreview preview={legacyPreview} t={t} lang={lang} exercises={exercises} available={weeklyAvailable} today={today} onBack={() => { setLegacyPreview(null); setPlanningStep(2); setPlanScreen('legacy-ai'); }} onApply={applyPlanPreview} busy={savingPlan} stale={hasNativeWeek || legacyPreview.fingerprint !== legacyFingerprint} /></Suspense>}
       {showPlanArea && hasCurrentPlan && <>
 
         {activeTab === 'train' && weekend && <section className="rounded-2xl border border-sky-100 bg-white p-6 space-y-3"><h2 className="font-bold">{t('noCourtWeekend')}</h2><p className="text-sm text-slate-500">{t('noCourtWeekendHint')}</p><button onClick={() => navigate('plan')} className="rounded-xl bg-sky-600 text-white px-4 py-3 text-sm">{t('planningTab')}</button><button onClick={viewRecords} className="block text-sm text-sky-700">{t('viewRecords')}</button></section>}
       </>}
-      {hasCurrentPlan && <div id="weekly-session-detail" hidden={!showPlanArea || (activeTab === 'train' && weekend) || (activeTab === 'plan' && planScreen !== 'day')}>
-        <Training eligibleExercises={manualPlanningExercises(exercises, planningContext)} t={t} lang={lang} mode={trainingMode} onViewRecords={viewRecords} schedule={schedule} draft={draft} activeDay={activeDay} setActiveDay={setActiveDay} currentWeek={currentWeek} exercises={exercises} progress={progress} level={difficultyLevel} editing={editing} selected={selected} setSelected={setSelected} onEdit={enterEditing} onCancel={cancelEditing} onSave={saveEdits} onAdd={add} onRemove={remove} onMove={move} onPhase={changePhase} onToggle={toggle} onFeedback={feedback} feedback={allProgress[currentWeek]?.feedbackValue} busy={busy || generating || coachingBusy || savingPlan || !!pendingDraft} saving={savingPlan} canEdit={!!user && !!data.loaded.plans && !!data.loaded.exercises && !generating && !pendingDraft} canRestore={!!weeklyPlan?.previous} onRestore={restore} exerciseLogs={exerciseLogs} readiness={readiness} readinessPreview={readinessPreview?.date === activeDate ? readinessPreview : null} onSaveExerciseLog={user && !trainingData.loaded ? undefined : recordExercise} onUpdateNextDay={recordNextDay} onSaveReadiness={recordReadiness} onPreviewReadiness={previewReadiness} onApplyReadiness={applyReadiness} loggingBusy={coachingBusy || busy || savingPlan || generating || (!!user && !trainingData.loaded)} readinessBusy={coachingBusy || busy || savingPlan || generating || (!!user && !trainingData.loaded)} loggingDisabled={!!pendingDraft || editing || (!!user && !trainingData.loaded)} readinessDisabled={activeDate !== today || !!pendingDraft || editing || (!!user && !trainingData.loaded)} coachingContext={{ ...planningContext, today, readiness: readinessRecords.find(record => record.date === today) || null }} />
+      {hasNativeWeek && showPlanArea && !periodCreating && (activeTab === 'train' || planScreen === 'day') && <p className="mb-4 rounded-xl bg-indigo-50 p-4 text-sm text-indigo-900">{lang === 'zh' ? '日期課表的內容調整需先重新預覽；已有紀錄的日期會保留。' : 'Preview a date range to change its sessions. Dates with records are retained.'}<button type="button" onClick={openWeeklySelection} className="text-link ml-3">{lang === 'zh' ? '調整日期課表' : 'Replan dates'}</button></p>}
+      {hasCurrentPlan && <div id="weekly-session-detail" hidden={!planLoaded || !showPlanArea || (activeTab === 'train' && weekend) || (activeTab === 'plan' && planScreen !== 'day')}>
+        <Training eligibleExercises={manualPlanningExercises(exercises, planningContext)} t={t} lang={lang} mode={trainingMode} onViewRecords={viewRecords} schedule={schedule} draft={draft} activeDay={activeDay} setActiveDay={setActiveDay} currentWeek={currentWeek} exercises={exercises} progress={progress} level={difficultyLevel} editing={editing} selected={selected} setSelected={setSelected} onEdit={enterEditing} onCancel={cancelEditing} onSave={saveEdits} onAdd={add} onRemove={remove} onMove={move} onPhase={changePhase} onToggle={toggle} onFeedback={feedback} feedback={allProgress[currentWeek]?.feedbackValue} busy={busy || generating || coachingBusy || savingPlan || !!pendingDraft} saving={savingPlan} canEdit={!hasNativeWeek && !!user && !!data.loaded.plans && !!data.loaded.exercises && !generating && !pendingDraft} canRestore={!hasNativeWeek && !!weeklyPlan?.previous} onRestore={restore} exerciseLogs={exerciseLogs} readiness={readiness} readinessPreview={readinessPreview?.date === activeDate ? readinessPreview : null} onSaveExerciseLog={user && !trainingData.loaded ? undefined : recordExercise} onUpdateNextDay={recordNextDay} onSaveReadiness={recordReadiness} onPreviewReadiness={previewReadiness} onApplyReadiness={applyReadiness} loggingBusy={coachingBusy || busy || savingPlan || generating || (!!user && !trainingData.loaded)} readinessBusy={coachingBusy || busy || savingPlan || generating || (!!user && !trainingData.loaded)} loggingDisabled={!!pendingDraft || editing || (!!user && !trainingData.loaded)} readinessDisabled={activeDate !== today || !!pendingDraft || editing || (!!user && !trainingData.loaded)} coachingContext={{ ...planningContext, today, readiness: readinessRecords.find(record => record.date === today) || null }} />
       </div>}
-      {showPlanArea && hasCurrentPlan && (activeTab === 'train' || planScreen !== 'settings') && !user && publicDraft && <details className="save-panel"><summary className="cursor-pointer text-sky-800">{t('localPreview')} · {t('saveAccount')}</summary><p className="mt-2 text-slate-600">{t('localPreviewHint')}</p><div className="flex flex-wrap gap-2 mt-3"><button disabled={account.busy} onClick={account.guestLogin} className="bg-indigo-600 text-white px-3 py-2 rounded-lg">{t('savePreviewGuest')}</button><button disabled={account.busy} onClick={account.googleLogin} className="bg-white text-sky-800 px-3 py-2 rounded-lg">{t('savePreviewGoogle')}</button></div></details>}
+      {showPlanArea && hasCurrentPlan && (activeTab === 'train' || planScreen !== 'settings') && !user && (publicDraft || localPeriod) && <details className="save-panel"><summary className="cursor-pointer text-sky-800">{t('localPreview')} · {localPeriod ? (lang === 'zh' ? '登入後重新預覽' : 'Sign in and re-preview') : t('saveAccount')}</summary><p className="mt-2 text-slate-600">{localPeriod ? (lang === 'zh' ? '登入後需要重新預覽並套用日期課表。這台裝置的暫存實際紀錄會保留，可在設定匯出，不會自動存入帳號。' : 'After signing in, preview and apply your date plan again. Temporary actual records stay on this device and can be exported in Settings; they are not automatically saved to your account.') : t('localPreviewHint')}</p><div className="flex flex-wrap gap-2 mt-3"><button disabled={account.busy} onClick={account.guestLogin} className="bg-indigo-600 text-white px-3 py-2 rounded-lg">{localPeriod ? (lang === 'zh' ? '訪客登入後重新預覽' : 'Guest sign-in and re-preview') : t('savePreviewGuest')}</button><button disabled={account.busy} onClick={account.googleLogin} className="bg-white text-sky-800 px-3 py-2 rounded-lg">{localPeriod ? (lang === 'zh' ? 'Google 登入後重新預覽' : 'Google sign-in and re-preview') : t('savePreviewGoogle')}</button></div></details>}
       <Suspense fallback={<div role="status" className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>}>
-        {hasCurrentPlan && coachVisited && <div hidden={activeTab !== 'plan' || planView !== 'week' || planScreen !== 'settings'} className="max-w-3xl"><Coach lang={lang} exercises={exercises} available={weeklyAvailable} onToggleWeekly={toggleWeeklyChoice} step={planningStep} onStepChange={setPlanningStep} standalone onClose={() => openPlanScreen('overview')} t={t} mode={planningMode} setMode={setPlanningMode} trialAvailable={trialEnabled()} focus={focus} setFocus={setFocus} plan={weeklyPlan} editing={editingAI} setEditing={setEditingAI} generating={generating} apiKey={apiKey} goal={goal} setGoal={setGoal} time={time} setTime={setTime} message={message} setMessage={setMessage} context={planningContext} setContext={setPlanningContext} onGenerate={requestPlan} onRestore={restore} /></div>}
-        {activeTab === 'plan' && planView === 'library' && <ExerciseLibrary weeklyExerciseIds={planningContext.weeklyExerciseIds} weeklyAvailable={weeklyAvailable} planningContext={planningContext} onToggleWeekly={toggleWeeklyChoice} onOpenWeeklySelection={openWeeklySelection} t={t} lang={lang} canManage={!!user} onOrganize={organizeExercise} onSignIn={() => navigate('settings')} exercises={exercises} name={newName} setName={setNewName} adding={adding} onAdd={addExercise} onToggle={toggleActive} onDelete={deleteExercise} busy={busy} />}
+        {activeTab === 'plan' && planView === 'library' && <ExerciseLibrary weeklyExerciseIds={planningContext.weeklyExerciseIds} weeklyAvailable={weeklyAvailable} planningContext={planningContext} onToggleWeekly={toggleWeeklyChoice} onOpenWeeklySelection={openWeeklySelection} t={periodQuestionnaireText(lang, t)} lang={lang} canManage={!!user} onOrganize={organizeExercise} onSignIn={() => navigate('settings')} exercises={exercises} name={newName} setName={setNewName} adding={adding} onAdd={addExercise} onToggle={toggleActive} onDelete={deleteExercise} busy={busy} />}
         {activeTab === 'records' && <div className="max-w-3xl"><div className="screen-header"><p className="eyebrow">{t('recordsEyebrow')}</p><h2 className="screen-title">{t('navRecords')}</h2><p className="screen-description">{t('recordsDescription')}</p></div>{subnav([['training', 'trainingRecordsTab'], ['body', 'bodyRecordsTab']], recordsView, setRecordsView, t('navRecords'))}
           {recordsView === 'body' ? (!user ? login : <Metrics t={t} form={metricForm} onChange={changeMetric} onSave={saveMetrics} history={data.metrics} saving={busy} hasMore={data.metrics.length >= metricLimit} onLoadMore={() => setMetricLimit(previous => previous + 365)} />)
-            : !user && !publicDraft ? login : stats && <History t={t} lang={lang} exportUid={user?.uid} publicDraft={publicDraft} exportProgress={allProgress} exportDisabled={coachingBusy || busy || savingPlan || generating || editing || !!pendingDraft || (!!user && (!trainingData.loaded || !data.loaded.progress || !data.loaded.exercises))} previewOnly={!user} exercises={exercises} stats={stats} months={months} weeks={heatmapWeeks} logs={exerciseLogs} onUpdateNextDay={recordNextDay} loggingBusy={coachingBusy || busy || savingPlan || generating || editing || !!pendingDraft || (!!user && !trainingData.loaded)} today={today} hasMore={data.hasMoreProgress} onLoadMore={() => setWeekLimit(previous => previous + 104)} />}
+            : !user && !publicDraft && !localPeriod ? login : stats && <History t={t} lang={lang} exportUid={user?.uid} publicDraft={localPeriod ? { ...publicDraft, periodDraft: localPeriod, logs: localPeriod.logs } : publicDraft} exportProgress={allProgress} exportDisabled={coachingBusy || busy || savingPlan || generating || editing || !!pendingDraft || (!!user && (!trainingData.loaded || !data.loaded.progress || !data.loaded.exercises))} previewOnly={!user} exercises={exercises} stats={stats} months={months} weeks={heatmapWeeks} logs={exerciseLogs} onUpdateNextDay={recordNextDay} loggingBusy={coachingBusy || busy || savingPlan || generating || editing || !!pendingDraft || (!!user && !trainingData.loaded)} today={today} hasMore={data.hasMoreProgress} onLoadMore={() => setWeekLimit(previous => previous + 104)} />}
         </div>}
       </Suspense>
       {activeTab === 'settings' && <div className="space-y-5 max-w-2xl"><h2 className="screen-title">{t('accountSettings')}</h2><section className="bg-white p-5 rounded-2xl border border-sky-100 space-y-4">

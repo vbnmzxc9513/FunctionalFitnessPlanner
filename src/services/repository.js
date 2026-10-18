@@ -70,8 +70,23 @@ export async function setCompletion(uid, week, day, id, done, exercise, fallback
     const ref = userDoc(uid, 'progress', week);
     const plan = await transaction.get(userDoc(uid, 'plans', week));
     const progress = await transaction.get(ref);
+    const native = [];
+    for (let slot = 1; slot <= 7; slot++) {
+      const snapshot = await transaction.get(userDoc(uid, 'dateSessions', dateForWeekDay(week, slot)));
+      if (snapshot.exists()) native.push(snapshot.data());
+    }
     assertUser(uid);
-    const schedule = plan.exists() ? plan.data().schedule : fallback;
+    const savedSchedule = plan.exists() ? plan.data().schedule : fallback || [];
+    const priorSchedule = progress.data()?.scheduleSnapshot || [];
+    const schedule = Array.from({ length: 7 }, (_, index) => {
+      const slot = index + 1;
+      const dated = native.find(item => item.day === slot);
+      const prior = priorSchedule.find(item => item.day === slot);
+      const legacy = savedSchedule.find(item => item.day === slot);
+      if (!dated) return prior || legacy;
+      const { date: _date, week: _week, revision: _revision, periodId: _periodId, weeklyIntent: _intent, ...daily } = dated;
+      return { ...daily, ...(prior?.prescriptions ? { prescriptions: prior.prescriptions } : {}) };
+    }).filter(Boolean);
     if (!schedule.some(item => item.day === day && (item.routine.includes(id) || item.routine.includes(exercise.name)))) throw new Error('PLAN_CHANGED');
     const key = exerciseKey(day, id);
     const data = progress.data() || {};
@@ -108,7 +123,7 @@ export async function saveMeasurement(uid, values) {
 
 export async function captureGuestData(uid) {
   assertUser(uid);
-  const groups = ['profile', 'progress', 'plans', 'metrics', 'exercises', 'trainingLogs', 'readiness'];
+  const groups = ['profile', 'progress', 'plans', 'metrics', 'exercises', 'trainingLogs', 'readiness', 'dateSessions', 'dateDoses', 'planningPeriods'];
   const snapshots = await Promise.all(groups.map(group => getDocs(userCollection(uid, group))));
   return snapshots.flatMap((snapshot, index) => snapshot.docs.map(item => ({ group: groups[index], id: item.id, data: item.data() })));
 }
@@ -116,9 +131,27 @@ export async function captureGuestData(uid) {
 export async function importGuestData(uid, records) {
   assertUser(uid);
   // Transactions allow retry and preserve existing account data on collisions.
-  const allowedGroups = new Set(['profile', 'progress', 'plans', 'metrics', 'exercises', 'trainingLogs', 'readiness']);
+  const allowedGroups = new Set(['profile', 'progress', 'plans', 'metrics', 'exercises', 'trainingLogs', 'readiness', 'dateSessions', 'dateDoses', 'planningPeriods']);
   if (!Array.isArray(records) || records.some(record => !allowedGroups.has(record?.group) || typeof record.id !== 'string' || record.id.includes('/'))) throw new Error('INVALID_IMPORT');
+  const dateDoses = new Map(records.filter(record => record.group === 'dateDoses').map(record => [record.id, record.data]));
   for (const record of records) {
+    // Date metadata and its active doses are one migration unit. Collisions
+    // preserve the destination's entire session; stale unreferenced source
+    // doses have no effect on the active plan and do not need to be copied.
+    if (record.group === 'dateDoses') continue;
+    if (record.group === 'dateSessions') {
+      const doses = (record.data.routine || []).map(id => dateDoses.get(`${record.id}_${id}`));
+      if (doses.some(dose => !dose || dose.date !== record.id || dose.revision !== record.data.revision)) throw new Error('INVALID_IMPORT');
+      await runTransaction(db, async transaction => {
+        const ref = userDoc(uid, record.group, record.id);
+        const existing = await transaction.get(ref);
+        assertUser(uid);
+        if (existing.exists()) return;
+        transaction.set(ref, record.data);
+        for (const dose of doses) transaction.set(userDoc(uid, 'dateDoses', `${record.id}_${dose.exerciseId}`), dose);
+      });
+      continue;
+    }
     await runTransaction(db, async transaction => {
       const ref = userDoc(uid, record.group, record.id);
       const existing = await transaction.get(ref);
@@ -126,7 +159,8 @@ export async function importGuestData(uid, records) {
       if (!existing.exists()) {
         if (record.group === 'plans') writePlanDays(transaction, uid, record.id, record.data.schedule);
         transaction.set(ref, record.group === 'profile' ? { ...record.data, isAnonymous: false }
-          : record.group === 'plans' ? { ...record.data, validationVersion: 1, savedAt: serverTimestamp() } : record.data);
+          : record.group === 'plans' ? { ...record.data, validationVersion: 1, savedAt: serverTimestamp() }
+            : record.group === 'planningPeriods' ? { ...record.data, createdAt: serverTimestamp() } : record.data);
       } else if (record.group === 'progress') {
         const target = existing.data();
         const completed = { ...record.data.completed, ...target.completed };

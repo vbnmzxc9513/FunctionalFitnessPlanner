@@ -1,14 +1,16 @@
 import assert from 'node:assert/strict';
+import { writeFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import puppeteer from 'puppeteer';
+import { legacyFixture } from './legacy-fixture.mjs';
 import { getWeekString, dateForWeekDay } from '../src/domain/dates.js';
 
 const week = getWeekString(new Date(), -1);
 const today = dateForWeekDay(week, 3);
 const timestamp = new Date(`${today}T12:00:00`).getTime();
 const siteUrl = 'http://127.0.0.1:5175/FunctionalFitnessPlanner/';
-const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', '5175', '--strictPort'], { env: process.env, stdio: ['ignore', 'pipe', 'pipe'] });
-let output = ''; let serverExit = null; let browser;
+const server = spawn(process.execPath, ['scripts/smoke-server.mjs', '5175'], { env: process.env, stdio: ['ignore', 'pipe', 'pipe'] });
+let output = ''; let serverExit = null; let browser; let diagnosticPage;
 server.stdout.on('data', chunk => { output = (output + chunk).slice(-4000); });
 server.stderr.on('data', chunk => { output = (output + chunk).slice(-4000); });
 server.on('exit', code => { serverExit = code; });
@@ -23,8 +25,9 @@ try {
   assert.ok(ready, `Vite startup timed out\n${output}`);
   browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
   for (const [layout, width, height] of [['desktop', 1280, 900], ['mobile', 390, 844]]) {
-    const context = await browser.createBrowserContext(); const page = await context.newPage(); const errors = [];
+    const context = await browser.createBrowserContext(); const page = await context.newPage(); diagnosticPage = page; const errors = [];
     await page.setViewport({ width, height });
+    await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
     await page.evaluateOnNewDocument(now => {
       localStorage.setItem('app_lang', localStorage.getItem('app_lang') || 'zh');
       if (!sessionStorage.getItem('__coachingTestNow')) sessionStorage.setItem('__coachingTestNow', String(now));
@@ -43,8 +46,9 @@ try {
     });
     const waitText = text => page.waitForFunction(label => document.body.innerText.includes(label), {}, text);
     const click = async text => {
-      await page.waitForFunction(label => [...document.querySelectorAll('button')].some(item => item.innerText.trim() === label && !item.disabled && item.getClientRects().length && !item.closest('[hidden]')), {}, text);
-      const handle = await page.evaluateHandle(label => [...document.querySelectorAll('button')].find(item => item.innerText.trim() === label && !item.disabled && item.getClientRects().length && !item.closest('[hidden]')), text);
+      const navLabel = ['課表', '今天', '紀錄', 'Plan', 'Today', 'Records'].includes(text);
+      await page.waitForFunction((label, nav) => [...document.querySelectorAll(nav ? 'nav button' : 'button')].some(item => item.innerText.trim() === label && !item.disabled && item.getClientRects().length && !item.closest('[hidden]')), {}, text, navLabel);
+      const handle = await page.evaluateHandle((label, nav) => [...document.querySelectorAll(nav ? 'nav button' : 'button')].find(item => item.innerText.trim() === label && !item.disabled && item.getClientRects().length && !item.closest('[hidden]')), text, navLabel);
       const element = handle.asElement(); if (!element) throw new Error(`Missing visible enabled button: ${text}`);
       await element.evaluate(item => item.scrollIntoView({ block: 'center' }));
       await element.asLocator().click(); await handle.dispose();
@@ -56,6 +60,7 @@ try {
       if (!(await element.evaluate(item => item.parentElement.open))) { await element.evaluate(item => item.scrollIntoView({ block: 'center' })); await element.asLocator().click(); } await handle.dispose();
     };
     const selectDay = async label => {
+      await page.waitForSelector('[data-testid="week-overview"]', { visible: true });
       const names = { '週一': 1, '週二': 2, '週三': 3, '週四': 4, '週五': 5, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5 };
       await page.waitForFunction(text => [...document.querySelectorAll('main button')].some(item => item.innerText.startsWith(text) && item.getClientRects().length && !item.closest('[hidden]')), {}, label);
       const handle = await page.evaluateHandle(text => [...document.querySelectorAll('main button')].find(item => item.innerText.startsWith(text) && item.getClientRects().length && !item.closest('[hidden]')), label);
@@ -115,16 +120,10 @@ try {
       await click('產生分享預覽'); await waitText('此區間沒有可匯出的紀錄。');
       assert.equal(await page.$('[data-testid="export-download"]'), null, `${layout}/${source}: scheduled Monday work is not actual Wednesday training`);
     };
+    await page.evaluateOnNewDocument(fixture => { if (!sessionStorage.getItem('__legacySeeded')) { sessionStorage.setItem('fitness_public_preview_v1', JSON.stringify({ publicDraft: fixture })); sessionStorage.setItem('__legacySeeded', 'true'); } }, legacyFixture(new Date(timestamp), { focus: 'balanced' }));
     await page.goto(siteUrl, { waitUntil: 'networkidle2' });
     assert.equal(await page.$$eval('nav button', buttons => buttons.length), 3);
-    assert.equal(await page.$('button[aria-label][aria-pressed]'), null, `${layout}: no editable example before creating a personal plan`);
-    await click('下一步');
-    await page.evaluate(() => {
-      const label = [...document.querySelectorAll('label')].find(item => item.textContent.startsWith('肩部狀態與活動限制'));
-      const select = label.querySelector('select'); select.value = 'unrestricted'; select.dispatchEvent(new Event('change', { bubbles: true }));
-    });
-    await click('下一步'); await click('預覽本週課表'); await page.waitForSelector('[data-testid="weekly-plan-preview"]', { visible: true });
-    await click('確認套用本週'); await click('今天'); await page.waitForSelector('[data-testid="session-start"]', { visible: true });
+    await click('今天'); await page.waitForSelector('[data-testid="session-start"]', { visible: true });
     await click('開始今天訓練'); await page.screenshot({ path: `/tmp/fitness-ux-${layout}-today.png`, fullPage: false }); await page.waitForSelector('[data-testid="current-exercise"]', { visible: true });
     const initialCompletion = (await draft()).completed;
     await click('查看下一個動作');
@@ -180,11 +179,9 @@ try {
     await page.waitForFunction(key => JSON.parse(sessionStorage.getItem('fitness_public_preview_v1')).publicDraft.completed[key] === true, {}, `day1_${id}`);
     assert.equal((await draft()).logs.length, 1, `${layout}: explicit combined save preserves one factual log and completion together`);
     await verifyExport('preview');
-    await click('課表'); await click('調整本週目標');
-    await click('下一步'); await click('下一步'); await click('預覽本週課表'); await page.waitForSelector('[data-testid="weekly-plan-preview"]', { visible: true });
-    await click('確認套用本週'); await click('今天'); await page.waitForSelector('[data-testid="session-hero"]', { visible: true });
-    assert.equal((await draft()).completed[`day1_${id}`], true, `${layout}: public regeneration preserves matching completion facts`);
-    assert.equal((await draft()).logs.length, 1, `${layout}: public regeneration preserves private logs`);
+    await click('今天');
+    assert.equal((await draft()).completed[`day1_${id}`], true, `${layout}: navigation preserves matching completion facts`);
+    assert.equal((await draft()).logs.length, 1, `${layout}: navigation preserves private logs`);
     await click('課表'); await selectDay('週一');
     await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async text => { window.__link = text; } } }));
     await openSummary('分享與本週回饋'); await click('複製連結'); await waitText('課表連結已複製。');
@@ -239,4 +236,4 @@ try {
     console.log(`${layout}: actual logs/date, range exports/CSV/copy/share/privacy, private sharing, readiness preview/apply, completed-dose reload, next-day feedback, atomic guest adoption, async load and language persistence passed`);
     await context.close();
   }
-} finally { if (browser) await browser.close(); server.kill('SIGTERM'); }
+} catch (error) { if (diagnosticPage && !diagnosticPage.isClosed()) { await diagnosticPage.screenshot({ path: '/tmp/coaching-smoke.png', fullPage: true }); await writeFile('/tmp/coaching-smoke.txt', await diagnosticPage.evaluate(() => document.body.innerText)); await writeFile('/tmp/coaching-cache.json', await diagnosticPage.evaluate(() => sessionStorage.getItem('fitness_public_preview_v1') || 'null')); } throw error; } finally { if (browser) await browser.close(); server.kill('SIGTERM'); }

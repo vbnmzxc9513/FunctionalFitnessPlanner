@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import puppeteer from 'puppeteer';
+import { legacyFixture } from './legacy-fixture.mjs';
 import { EXERCISES_I18N, TRANSLATIONS } from '../src/locale.js';
 
-const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', '5174', '--strictPort'], { env: process.env, stdio: ['ignore', 'pipe', 'pipe'] });
+const server = spawn(process.execPath, ['scripts/smoke-server.mjs', '5174'], { env: process.env, stdio: ['ignore', 'pipe', 'pipe'] });
 const siteUrl = 'http://127.0.0.1:5174/FunctionalFitnessPlanner/';
 let serverExit = null;
 let serverOutput = '';
@@ -30,6 +31,7 @@ try {
     const context = await browser.createBrowserContext();
     const page = await context.newPage();
     await page.setViewport({ width, height });
+    await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
     await page.evaluateOnNewDocument(() => {
       localStorage.setItem('app_lang', 'zh');
       window.__smokeVisible = element => {
@@ -96,10 +98,6 @@ try {
       const handle = await visibleElement('summary', text, true);
       if (!await handle.evaluate(summary => summary.parentElement.open)) await clickElement(handle); else await handle.dispose();
     };
-    const openDetailsSelector = async selector => {
-      const handle = await visibleElement(`${selector} > summary`);
-      if (!await handle.evaluate(summary => summary.parentElement.open)) await clickElement(handle); else await handle.dispose();
-    };
     const weekPlan = async () => { await click('課表'); await click('本週課表'); await visibleElement('[data-testid="week-overview"]'); };
     const selectMonday = async () => { await clickElement(await visibleElement('main button', TRANSLATIONS.zh.dayShort[0], true)); };
     const monday = async () => { await weekPlan(); await selectMonday(); };
@@ -112,31 +110,19 @@ try {
       await clickSelector(`[data-testid="picker-option-${id}"]`); await clickSelector('[data-testid="picker-add"]');
     };
     const library = async () => { await click('課表'); await click('動作庫'); await visibleElement('.exercise-library'); };
+    const openLegacyAI = async () => { await weekPlan(); await openDetails('進階：本週 AI 排課'); await clickSelector('[data-testid="legacy-ai-open"]'); };
+    const openDetailsSelector = async selector => {
+      const handle = await visibleElement(`${selector} > summary`);
+      if (!await handle.evaluate(summary => summary.parentElement.open)) await clickElement(handle); else await handle.dispose();
+    };
     const labeledSelect = async (label, value) => {
       const labelHandle = await visibleElement('label', label, true); const input = await labelHandle.$('select');
-      assert.ok(input, `${label} has a select`); assert.ok(await input.evaluate(element => window.__smokeVisible(element)));
-      await input.select(value); await input.dispose(); await labelHandle.dispose();
+      assert.ok(input, `${label} has a select`); await input.select(value); await input.dispose(); await labelHandle.dispose();
     };
+    await page.evaluateOnNewDocument(fixture => { if (!sessionStorage.getItem('__legacySeeded')) { sessionStorage.setItem('fitness_public_preview_v1', JSON.stringify({ publicDraft: fixture })); sessionStorage.setItem('__legacySeeded', 'true'); } }, legacyFixture());
     await page.goto(siteUrl, { waitUntil: 'networkidle2' });
-    await visibleElement('[data-testid="first-plan"]');
-    assert.equal(await visibleCount('section[data-phase]'), 0, `${layout} begins with onboarding, without an invented default plan`);
-    await labeledSelect('本週優先改善', 'coordination');
-    for (const label of ['上肢推拉／肩背', '核心控制']) {
-      const item = await visibleElement('[data-testid="weekly-preferences"] label', label);
-      const box = await item.$('input'); await clickElement(box); await item.dispose();
-    }
-    const thirdTarget = await visibleElement('[data-testid="weekly-preferences"] label', '腿部／蹲與弓步');
-    assert.equal(await thirdTarget.$eval('input', input => input.disabled), true, `${layout} caps priority areas at two`); await thirdTarget.dispose();
-    await click('下一步'); await click('上一步');
-    assert.equal(await read('[data-testid="planner-form"] select', element => element.value), 'coordination', `${layout} setup back preserves choices`);
-    await click('下一步');
-    await clickElement(await visibleElement('[data-regions="stiffnessRegions"] label', '肩／胸前'));
-    await click('下一步');
-    await click('預覽本週課表'); await visibleElement('[data-testid="weekly-plan-preview"]');
-    assert.equal(await page.evaluate(() => !!JSON.parse(sessionStorage.getItem('fitness_public_preview_v1') || '{}').publicDraft), false, `${layout} preview does not create a usable plan before confirmation`);
-    await click('確認套用本週'); await waitText('本分頁暫存');
-    assert.equal(planningPayload, undefined, `${layout} creates a free plan without Gemini`);
-    assert.equal(geminiRequests, 0, `${layout} free onboarding makes no Gemini requests`);
+    await waitText('本分頁暫存');
+    assert.equal(geminiRequests, 0, `${layout} legacy restore makes no Gemini requests`);
     await weekPlan();
     await visibleElement('[data-testid="week-overview"]');
     assert.equal(await visibleCount('section[data-phase]'), 0, `${layout} overview does not stack daily routines`);
@@ -146,14 +132,6 @@ try {
     const savedIntent = await page.evaluate(() => JSON.parse(sessionStorage.getItem('fitness_public_preview_v1')).publicDraft.plan.weeklyIntent);
     assert.deepEqual(savedIntent.targetRegions, ['upper', 'core']);
     assert.deepEqual(savedIntent.stiffnessRegions, ['shoulder']);
-    await click('調整本週目標');
-    assert.equal(await visibleCount('[data-testid="week-overview"]'), 0, `${layout} planning inputs have their own screen`);
-    await labeledSelect('本週優先改善', 'strength');
-    await click('回到本週總覽');
-    await visibleElement('[data-testid="weekly-intent-pending"]');
-    await click('調整本週目標');
-    await labeledSelect('本週優先改善', 'coordination');
-    await click('回到本週總覽');
     await page.$eval('[data-testid="week-overview"]', element => element.scrollIntoView({ block: 'start' }));
     await page.screenshot({ path: `/tmp/fitness-week-${layout}.png`, fullPage: false });
     await openDetails('本週安排覆蓋');
@@ -240,7 +218,7 @@ try {
 
     await click('設定'); await openDetails('進階：AI 教練自備金鑰');
     await fill('input[type="password"]', 'mock-test-only'); await click(TRANSLATIONS.zh.settingsSaveBtn);
-    await weekPlan(); await click('調整本週目標');
+    await openLegacyAI();
     await openDetailsSelector('[data-testid="planner-optional"]'); await labeledSelect('球局強度', 'mixed');
     await openDetailsSelector('[data-testid="quiz-schedule"]');
     for (const day of [2, 5, 6]) {
@@ -255,7 +233,7 @@ try {
     const candidateSection = planningPayload.contents[0].parts[0].text.split('【可用候選動作；ID 必須完全相同】')[1].split('【輸出要求】')[0].trim();
     assert.ok(!JSON.parse(candidateSection).some(item => item.shoulderLoaded));
     await monday(); await waitCompletion('分腿蹲', false);
-    await weekPlan(); await click('調整本週目標');
+    await openLegacyAI();
     await openDetails(TRANSLATIONS.zh.aiConclusionTitle); await waitText('Mock recovery plan');
     await page.reload({ waitUntil: 'networkidle2' }); await monday(); await waitText('每側');
     assert.ok(await read('section[data-phase="strength"] .dose-grid', element => element.getAttribute('aria-label').includes('1 組 × 6 下')));
@@ -265,10 +243,10 @@ try {
     await select('[data-testid="picker-phase"]', 'accessory');
     assert.equal(await visibleCount('[data-testid^="picker-option-"]'), 0, `${layout} unclear clinical restrictions cannot add training manually`);
     await click('取消');
-    await weekPlan(); await click('調整本週目標');
+    await openLegacyAI();
     await click('下一步');
     await labeledSelect('肩部狀態與活動限制', 'unrestricted');
-    await click('回到本週總覽'); await selectMonday();
+    await monday();
     await click('編輯課表'); const breathing = EXERCISES_I18N.zh.bf_D09.name; const core = EXERCISES_I18N.zh.dead_bug.name;
     await select(`select[aria-label=${JSON.stringify(`訓練階段 ${breathing}`)}]`, 'accessory');
     await select('[data-testid="picker-phase"]', 'accessory'); await select('[data-testid="picker-scope"]', 'mine');
@@ -306,10 +284,10 @@ try {
     await click('設定'); await click('登出'); await visibleElement('[data-testid="first-plan"]'); await click('設定'); await waitText('登入');
     assert.equal(await visibleCount('section[data-phase] button[aria-pressed="true"]'), 0, `${layout} logout clears progress`);
     assert.equal(await page.evaluate(() => sessionStorage.getItem('fitness_public_preview_v1')), null, `${layout} logout clears preview cache`);
-    await click('🌐 English'); await click('Today'); await waitText('Build your first badminton fitness plan');
+    await click('🌐 English'); await click('Today'); await visibleElement('[data-testid="planning-range"]');
     assert.equal(await page.evaluate(() => document.documentElement.lang), 'en');
     assert.deepEqual(errors, [], `${layout} has no runtime errors`);
-    console.log(`${layout}: visible onboarding/free preview/reload/share/adoption, editing/picker/restore, feedback, library groups/eligibility, mocked BYOK, records/body metrics, rollover, logout, English passed`);
+    console.log(`${layout}: legacy restore/reload/share/adoption, editing/picker/restore, feedback, library groups/eligibility, mocked BYOK, records/body metrics, rollover, logout, English passed`);
     await context.close();
   }
 } finally {

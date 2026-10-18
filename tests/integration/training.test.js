@@ -95,7 +95,7 @@ test('strict rules reject malformed records, dates, unknown keys and negative bo
   const ref = userDoc(uid, 'trainingLogs', trainingLogId(record));
   const invalid = [
     { ...record, loadKg: -1 }, { ...record, loadKg: 501 }, { ...record, rir: -1 }, { ...record, rir: 1.5 },
-    { ...record, day: 6 }, { ...record, week: '2026-W99' }, { ...record, exerciseId: '../admin' },
+    { ...record, day: 8 }, { ...record, week: '2026-W99' }, { ...record, exerciseId: '../admin' },
     { ...record, loadBasis: 'invented' }, { ...record, resistanceLabel: null }, { ...record, resistanceLabel: 'x'.repeat(121) },
     { ...record, unit: 'kg' }, { ...record, perSide: 'yes' }, { ...record, sets: [{ value: 1, otherSide: 1 }] }, { ...record, variant: 'invented' }, { ...record, quality: null }, { ...record, symptoms: 'good' },
     { ...record, nextDay: 'unknown' }, { ...record, date: '2999-01-01' }, { ...record, date: '2026-02-31' }, { ...record, schemaVersion: 2 },
@@ -209,9 +209,9 @@ test('bounded history scans prefer recent records and include weekend readiness'
   });
   const scan = trainingHistoryQueries(uid, week, 1);
   const logs = await getDocs(scan.logs);
-  assert.equal(logs.size, 41);
+  assert.equal(logs.size, 42);
   assert.equal(logs.docs[0].data().exerciseId, 'custom_41');
-  assert.equal(logs.docs.at(-1).data().exerciseId, 'custom_01');
+  assert.equal(logs.docs.at(-1).data().exerciseId, 'custom_00');
   const recovery = await getDocs(trainingHistoryQueries(uid, week, 2).readiness);
   assert.equal(recovery.size, 2);
   assert.equal(recovery.docs[0].id, dateForWeekDay(previousWeek, 7));

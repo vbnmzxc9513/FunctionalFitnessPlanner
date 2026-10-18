@@ -114,7 +114,8 @@ service cloud.firestore {
       let time = intent.dailyTime;
       let date = intent.competitionDate;
       return intent is map && keys.hasAll(['focus', 'targetRegions', 'stiffnessRegions', 'badmintonDays', 'dailyTime', 'competitionDate'])
-        && keys.hasOnly(['focus', 'targetRegions', 'stiffnessRegions', 'badmintonDays', 'dailyTime', 'competitionDate', 'weeklyExerciseIds'])
+        && keys.hasOnly(['focus', 'targetRegions', 'stiffnessRegions', 'badmintonDays', 'dailyTime', 'competitionDate', 'weeklyExerciseIds', 'trainingDays'])
+        && (!('trainingDays' in intent) || (intent.trainingDays is list && intent.trainingDays.size() <= 7 && intent.trainingDays.hasOnly([1, 2, 3, 4, 5, 6, 7]) && intent.trainingDays.toSet().size() == intent.trainingDays.size()))
         && (!('weeklyExerciseIds' in intent) || validWeeklyChoices(intent.weeklyExerciseIds))
         && intent.focus in ['balanced', 'strength', 'stability', 'coordination']
         && time is number && time >= 5 && time <= 240
@@ -157,13 +158,14 @@ service cloud.firestore {
         && data.get('completed', {}).values().hasOnly([true, false])
         && data.get('completedAt', {}) is map && data.get('exerciseTypes', {}) is map
         && data.get('exerciseTypes', {}).values().hasOnly(['mobility', 'lower', 'core', 'upper_pull', 'upper_push', 'full', 'power'])
-        && data.get('scheduleSnapshot', []) is list && data.get('scheduleSnapshot', []).size() <= 5
+        && data.get('scheduleSnapshot', []) is list && data.get('scheduleSnapshot', []).size() <= 7
         && data.get('totalExercises', 0) is int && data.get('totalExercises', 0) >= 0 && data.get('totalExercises', 0) <= 500
         && data.get('difficultyBase', 1) in [0, 1, 2] && data.get('feedbackValue', 0) in [-1, 0, 1]
         && data.get('feedbackProvided', false) is bool && data.get('schemaVersion', 2) == 2;
     }
     function calendarDate(value) {
-      return value is string && value.matches('^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$');
+      return value is string && value.matches('^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$')
+        && dateTimestamp(value).month() == int(value.split('-')[1]) && dateTimestamp(value).day() == int(value.split('-')[2]);
     }
     function dateTimestamp(value) {
       let parts = value.split('-');
@@ -213,7 +215,7 @@ service cloud.firestore {
     function validTrainingLog(id) {
       let data = request.resource.data;
       return data.keys().hasOnly(['week', 'day', 'exerciseId', 'date', 'variant', 'loadKg', 'loadBasis', 'resistanceLabel', 'unit', 'perSide', 'sets', 'rir', 'quality', 'symptoms', 'nextDay', 'planned', 'schemaVersion'])
-        && weekId(data.week) && data.day in [1, 2, 3, 4, 5] && data.exerciseId.matches('^[A-Za-z0-9_-]{1,80}$')
+        && weekId(data.week) && data.day in [1, 2, 3, 4, 5, 6, 7] && data.exerciseId.matches('^[A-Za-z0-9_-]{1,80}$')
         && id == data.week + '-D' + string(data.day) + '-' + data.exerciseId && currentDate(data.date)
         && data.schemaVersion == 1 && data.variant in ['bodyweight', 'dumbbell', 'cable', 'band', 'other']
         && requiredNullableNumber(data, 'loadKg', 0, 500, false) && data.loadBasis in ['none', 'per_dumbbell', 'total', 'stack', 'description']
@@ -235,8 +237,81 @@ service cloud.firestore {
         && data.symptoms in ['none', 'stable', 'worse', 'red_flags', 'unknown']
         && data.todayCourtIntensity in ['unknown', 'none', 'light', 'hard'];
     }
+    // Date-native documents validate independently: a four-week commit uses
+    // no rule document lookups and stays below both transaction budgets.
+    function nativeDateIdentity(data, id) {
+      let value = dateTimestamp(id);
+      let day = value.dayOfWeek();
+      let thursday = value + duration.value(4 - day, 'd');
+      let week = int((thursday.dayOfYear() - 1) / 7) + 1;
+      let weekString = string(thursday.year()) + '-W' + (week < 10 ? '0' : '') + string(week);
+      return calendarDate(id) && data.date == id && data.day == day && data.week == weekString;
+    }
+    function boundedText(data, key, maximum) {
+      return data[key] is string && data[key].size() <= maximum;
+    }
+    function validDateSession(data, id) {
+      return data.keys().hasAll(['date', 'week', 'day', 'name', 'theme', 'concept', 'coachAdvice', 'routine', 'sessionType', 'warmupNote', 'cooldownNote', 'revision', 'periodId'])
+        && data.keys().hasOnly(['date', 'week', 'day', 'name', 'theme', 'concept', 'coachAdvice', 'routine', 'sessionType', 'warmupNote', 'cooldownNote', 'revision', 'periodId', 'weeklyIntent'])
+        && nativeDateIdentity(data, id) && data.day is int && data.day >= 1 && data.day <= 7
+        && data.revision is int && data.revision >= 1
+        && data.periodId is string && data.periodId.matches('^[A-Za-z0-9_-]{1,120}$')
+        && validWeeklyChoices(data.routine)
+        && data.sessionType in ['training', 'recovery', 'rest'] && ((data.sessionType == 'rest') == (data.routine.size() == 0))
+        && boundedText(data, 'name', 1000) && boundedText(data, 'theme', 1000)
+        && boundedText(data, 'concept', 4000) && boundedText(data, 'coachAdvice', 4000)
+        && boundedText(data, 'warmupNote', 4000) && boundedText(data, 'cooldownNote', 4000)
+        && (!('weeklyIntent' in data) || validWeeklyIntent(data.weeklyIntent));
+    }
+    function nativeDoseValue(value, maximum) {
+      let parts = value.split('[–-]');
+      let low = int(parts[0]);
+      let high = parts.size() == 2 ? int(parts[1]) : low;
+      return value is string && value.matches('^[0-9]{1,3}([–-][0-9]{1,3})?$') && low >= 1 && high >= low && high <= maximum;
+    }
+    function validNativePreparation(prep) {
+      return prep is map && prep.keys().hasAll(['sets', 'value', 'unit', 'restSeconds', 'perSide', 'instruction'])
+        && prep.keys().hasOnly(['sets', 'value', 'unit', 'restSeconds', 'perSide', 'instruction'])
+        && prep.sets is int && prep.sets in [1, 2] && prep.unit in ['reps', 'seconds', 'breaths']
+        && nativeDoseValue(prep.value, prep.unit == 'seconds' ? 30 : 8)
+        && prep.restSeconds is int && prep.restSeconds >= 0 && prep.restSeconds <= 120
+        && prep.perSide is bool && prep.instruction is string && prep.instruction.matches('.*[^ ].*') && prep.instruction.size() <= 1000;
+    }
+    function validNativeDose(data, id) {
+      let dose = data.dose;
+      let prep = dose.get('preparation', null);
+      return data.keys().hasAll(['date', 'exerciseId', 'revision', 'dose']) && data.keys().hasOnly(['date', 'exerciseId', 'revision', 'dose'])
+        && calendarDate(data.date) && validWeeklyChoiceId(data.exerciseId) && id == data.date + '_' + data.exerciseId
+        && data.revision is int && data.revision >= 1
+        && dose is map && dose.keys().hasAll(['id', 'sets', 'value', 'unit', 'restSeconds', 'perSide', 'phase'])
+        && dose.keys().hasOnly(['id', 'sets', 'value', 'unit', 'restSeconds', 'perSide', 'phase', 'preparation'])
+        && dose.id == data.exerciseId && dose.sets is int && dose.sets in [1, 2, 3, 4, 5]
+        && dose.unit in ['reps', 'seconds', 'minutes', 'breaths'] && nativeDoseValue(dose.value, dose.unit == 'minutes' ? 240 : 120)
+        && dose.restSeconds is int && dose.restSeconds >= 0 && dose.restSeconds <= 300 && dose.perSide is bool
+        && dose.phase in ['warmup', 'skill', 'strength', 'accessory', 'recovery', 'cooldown']
+        && (!('preparation' in dose) || (dose.phase in ['strength', 'accessory'] && validNativePreparation(prep)));
+    }
+    function validPlanningPeriod(data, id) {
+      return id.matches('^[A-Za-z0-9_-]{1,120}$')
+        && data.keys().hasAll(['from', 'to', 'createdAt', 'weeklyIntent', 'conclusion'])
+        && data.keys().hasOnly(['from', 'to', 'createdAt', 'weeklyIntent', 'conclusion'])
+        && calendarDate(data.from) && calendarDate(data.to)
+        && dateTimestamp(data.to) >= dateTimestamp(data.from)
+        && dateTimestamp(data.to) - dateTimestamp(data.from) <= duration.value(27, 'd')
+        && data.createdAt == request.time && validWeeklyIntent(data.weeklyIntent)
+        && boundedText(data, 'conclusion', 4000);
+    }
+    match /artifacts/{appId}/users/{userId}/dateSessions/{id} {
+      allow create, update: if owner(userId) && validDateSession(request.resource.data, id);
+    }
+    match /artifacts/{appId}/users/{userId}/dateDoses/{id} {
+      allow create, update: if owner(userId) && validNativeDose(request.resource.data, id);
+    }
+    match /artifacts/{appId}/users/{userId}/planningPeriods/{id} {
+      allow create: if owner(userId) && validPlanningPeriod(request.resource.data, id);
+    }
     match /artifacts/{appId}/users/{userId}/{group}/{id} {
-      allow read, delete: if owner(userId) && group in ['profile', 'progress', 'plans', 'metrics', 'exercises', 'planDays', 'trainingLogs', 'readiness'];
+      allow read, delete: if owner(userId) && group in ['profile', 'progress', 'plans', 'metrics', 'exercises', 'planDays', 'trainingLogs', 'readiness', 'dateSessions', 'dateDoses', 'planningPeriods'];
     }
     // Scope each validator to its collection, keeping unrelated validation out
     // of the expression budget for a complete five-day plan.

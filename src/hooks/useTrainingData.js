@@ -16,7 +16,7 @@ export function useTrainingData(uid, currentWeek = getWeekString(), weeks = 12) 
     const bounds = trainingHistoryQueries(uid, currentWeek, boundedWeeks);
     const unsubscribes = Object.entries(bounds).map(([field, source]) => onSnapshot(source, snapshot => {
       if (!active) return;
-      const cap = boundedWeeks * (field === 'logs' ? 40 : 7);
+      const cap = boundedWeeks * (field === 'logs' ? 56 : 7);
       const records = {};
       for (const item of snapshot.docs.slice(0, cap)) {
         try {

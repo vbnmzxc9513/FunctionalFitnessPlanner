@@ -15,8 +15,10 @@ export default function TrainingExport({ lang = 'zh', today, uid, publicDraft, e
   const [status, setStatus] = useState('');
   const request = useRef(0);
   useEffect(() => () => { ++request.current; }, []);
+  const localRecords = publicDraft?.periodDraft || publicDraft;
   const fingerprint = JSON.stringify({ range, options, lang, today, sourceVersion, exercises,
-    previewRecords: uid ? null : { logs: publicDraft?.logs, completed: publicDraft?.completed, completedAt: publicDraft?.completedAt } });
+    previewRecords: uid ? null : { logs: localRecords?.logs, completed: localRecords?.completed, completedAt: localRecords?.completedAt,
+      progressByWeek: localRecords?.progressByWeek, range: localRecords?.range } });
   const stale = !!preview && preview.fingerprint !== fingerprint;
   let rangeError = false;
   try { validateExportRange(range.from, range.to, today); } catch { rangeError = true; }
@@ -27,8 +29,8 @@ export default function TrainingExport({ lang = 'zh', today, uid, publicDraft, e
     setBusy(true); setStatus(''); setPreview(null);
     try {
       const data = uid ? await loadTrainingExport(uid, { ...range, today, ...options }) : {
-        logs: publicDraft?.logs || [],
-        progress: publicDraft ? { [publicDraft.week]: { completed: publicDraft.completed, completedAt: publicDraft.completedAt } } : {},
+        logs: localRecords?.logs || [],
+        progress: localRecords?.progressByWeek || (publicDraft ? { [publicDraft.week]: { completed: publicDraft.completed, completedAt: publicDraft.completedAt } } : {}),
       };
       const report = buildTrainingReport({ ...data, ...range, ...options, today, exercises, source: uid ? 'cloud' : 'preview' });
       if (request.current === ticket) setPreview({ report, fingerprint });

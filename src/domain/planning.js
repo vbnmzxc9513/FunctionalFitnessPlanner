@@ -6,7 +6,7 @@ import { isCalendarDate } from './dates.js';
 import { eligibleExercises, validSequenceDose } from './exerciseCatalog.js';
 
 export const DEFAULT_PLANNING_CONTEXT = {
-  badmintonDays: [], badmintonMinutes: '', badmintonIntensity: 'unknown',
+  trainingDays: [1, 2, 3, 4, 5], badmintonDays: [], badmintonMinutes: '', badmintonIntensity: 'unknown',
   equipment: [], partnerAvailable: false, experience: 'beginner',
   targetRegions: [], stiffnessRegions: [], sorenessRegions: [], weeklyExerciseIds: [], competitionDate: '', healthStatus: 'unrestricted', healthNotes: '', recoveryNotes: '',
 };
@@ -17,6 +17,7 @@ export function normalizePlanningContext(value = {}) {
     stiffnessRegions: selectedRegions(value.stiffnessRegions, STIFFNESS_REGIONS),
     sorenessRegions: selectedRegions(value.sorenessRegions, SORENESS_REGIONS),
     weeklyExerciseIds: weeklyChoiceIds(value.weeklyExerciseIds),
+    trainingDays: [...new Set((Array.isArray(value.trainingDays) ? value.trainingDays : [1, 2, 3, 4, 5]).filter(day => Number.isInteger(day) && day >= 1 && day <= 7))].sort(),
     badmintonDays: [...new Set((Array.isArray(value.badmintonDays) ? value.badmintonDays : []).filter(day => Number.isInteger(day) && day >= 1 && day <= 7))].sort(),
     badmintonMinutes: Number(value.badmintonMinutes) > 0 && Number(value.badmintonMinutes) <= 360 ? Number(value.badmintonMinutes) : '',
     badmintonIntensity: ['unknown', 'light', 'mixed', 'hard'].includes(value.badmintonIntensity) ? value.badmintonIntensity : 'unknown',
@@ -39,12 +40,13 @@ export function planningExercises(exercises, context) {
   return eligibleExercises(exercises, normalizePlanningContext(context));
 }
 
-export function validateGeneratedPlan(plan, exercises, dailyTime) {
+export function validateGeneratedPlan(plan, exercises, dailyTime, { calendarDays = [1, 2, 3, 4, 5] } = {}) {
   if (!Number.isFinite(Number(dailyTime)) || Number(dailyTime) < 5 || Number(dailyTime) > 240) throw new Error('INVALID_PLANNING_TIME');
-  if (!plan || typeof plan.conclusion !== 'string' || !Array.isArray(plan.schedule) || plan.schedule.length !== 5) throw new Error('INVALID_AI_PLAN');
+  if (!Array.isArray(calendarDays) || !calendarDays.length || calendarDays.some(day => !Number.isInteger(day) || day < 1 || day > 7) || new Set(calendarDays).size !== calendarDays.length) throw new Error('INVALID_AI_PLAN');
+  if (!plan || typeof plan.conclusion !== 'string' || !Array.isArray(plan.schedule) || plan.schedule.length !== calendarDays.length) throw new Error('INVALID_AI_PLAN');
   const seen = new Set();
   const schedule = plan.schedule.map(day => {
-    if (!day || !Number.isInteger(day.day) || day.day < 1 || day.day > 5 || seen.has(day.day)
+    if (!day || !Number.isInteger(day.day) || !calendarDays.includes(day.day) || seen.has(day.day)
       || !['name', 'theme', 'concept', 'coachAdvice'].every(key => typeof day[key] === 'string')
       || !Array.isArray(day.routine) || day.routine.length > 8 || new Set(day.routine).size !== day.routine.length
       || day.routine.some(id => typeof id !== 'string' || !Object.hasOwn(exercises, id))) throw new Error('INVALID_AI_PLAN');
@@ -95,10 +97,15 @@ export function validateGeneratedPlan(plan, exercises, dailyTime) {
     if (estimateSessionMinutes(day, exercises) > Number(dailyTime)) throw new Error('AI_SESSION_TOO_LONG');
     return { day: day.day, name: day.name, theme: day.theme, concept: day.concept, coachAdvice: day.coachAdvice,
       sessionType: day.sessionType, warmupNote: day.warmupNote, cooldownNote: day.cooldownNote,
-      routine: day.routine, prescriptions: day.routine.map(id => day.prescriptions.find(dose => dose.id === id)).map(({ id, sets, value, unit, restSeconds, perSide, phase, preparation }) => ({ id, sets, value, unit, restSeconds, perSide, phase,
+      routine: [...day.routine], prescriptions: day.routine.map(id => day.prescriptions.find(dose => dose.id === id)).map(({ id, sets, value, unit, restSeconds, perSide, phase, preparation }) => ({ id, sets, value, unit, restSeconds, perSide, phase,
         ...(preparation ? { preparation: { sets: preparation.sets, value: preparation.value, unit: preparation.unit, restSeconds: preparation.restSeconds, perSide: preparation.perSide, instruction: preparation.instruction } } : {}) })) };
   }).sort((a, b) => a.day - b.day);
   const weeklyIntent = plan.weeklyIntent === undefined ? undefined : normalizeWeeklyIntent(plan.weeklyIntent);
   if (weeklyIntent === null) throw new Error('INVALID_WEEKLY_INTENT');
   return { conclusion: plan.conclusion, schedule, ...(weeklyIntent ? { weeklyIntent } : {}) };
+}
+
+/** Apply the same prescription, sequence and time guards to one dated session. */
+export function validateGeneratedDay(day, exercises, dailyTime) {
+  return validateGeneratedPlan({ conclusion: '', schedule: [day] }, exercises, dailyTime, { calendarDays: [day?.day] }).schedule[0];
 }

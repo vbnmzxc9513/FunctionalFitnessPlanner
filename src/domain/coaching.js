@@ -44,7 +44,7 @@ function validPlanned(planned) {
 }
 
 export function trainingLogId(record) {
-  if (!dateForWeekDay(record?.week, record?.day) || record.day > 5 || !/^[A-Za-z0-9_-]{1,80}$/.test(record.exerciseId || '')) throw new Error('INVALID_TRAINING_LOG');
+  if (!dateForWeekDay(record?.week, record?.day) || record.day > 7 || !/^[A-Za-z0-9_-]{1,80}$/.test(record.exerciseId || '')) throw new Error('INVALID_TRAINING_LOG');
   return `${record.week}-D${record.day}-${record.exerciseId}`;
 }
 export const logId = trainingLogId;

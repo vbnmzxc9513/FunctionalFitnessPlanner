@@ -43,7 +43,7 @@ export function buildTrainingReport({ from, to, today = localDate(), logs = [], 
     if (!dateForWeekDay(week)) continue;
     for (const [key, done] of Object.entries(record?.completed || {})) {
       if (done !== true) continue;
-      const match = /^day([1-5])_([A-Za-z0-9_-]{1,80})$/.exec(key);
+      const match = /^day([1-7])_([A-Za-z0-9_-]{1,80})$/.exec(key);
       if (!match) { invalid++; continue; }
       const id = `${week}-D${match[1]}-${match[2]}`;
       if (actualIds.has(id)) continue;
