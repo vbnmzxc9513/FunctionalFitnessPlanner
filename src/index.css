@@ -188,3 +188,27 @@ form[data-guided="true"] .setup-actions { position: sticky; bottom: calc(82px + 
 }
 @media (min-width: 640px) { .choice-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media (min-width: 1024px) { .preview-actions { bottom: 16px; } }
+
+@layer components {
+  .exercise-row { display: flex; align-items: center; gap: 10px; padding: 14px 12px; border: 1px solid var(--color-slate-200); border-radius: 15px; background: white; touch-action: pan-y pinch-zoom; user-select: none; -webkit-touch-callout: none; }
+  .exercise-row[data-pressing="true"] { border-color: var(--color-sky-400); background: var(--color-sky-50); }
+  .exercise-row-check { display: grid; place-items: center; flex-shrink: 0; color: var(--color-slate-400); }
+  .exercise-row-check[aria-pressed="true"] { color: var(--color-sky-600); }
+  .exercise-row-number { flex-shrink: 0; width: 24px; text-align: center; font-size: 13px; color: var(--color-slate-500); }
+  .exercise-row-title { font-size: 15px; line-height: 1.5; font-weight: 650; overflow-wrap: anywhere; }
+  .exercise-row-dose { margin-top: 3px; font-size: 12px; line-height: 1.5; color: var(--color-slate-500); }
+  .exercise-row-preparation { display: inline-block; margin-top: 4px; color: var(--color-amber-800); font-size: 11px; }
+  .exercise-row-open { display: flex; align-items: center; gap: 3px; flex-shrink: 0; max-width: 82px; font-size: 12px; line-height: 1.4; text-align: left; color: var(--color-sky-700); }
+  .exercise-row-open span { overflow-wrap: anywhere; }
+  .exercise-details { position: fixed; inset: auto 0 0; margin: auto auto 0; width: min(100%, 680px); max-width: 100%; height: min(90dvh, 900px); max-height: 90dvh; border: 1px solid var(--color-sky-100); border-radius: 24px 24px 0 0; padding: 0; background: white; color: var(--color-slate-700); display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 -10px 50px #0f172a20; }
+  .exercise-details:not([open]) { display: none; }
+  .exercise-details::backdrop { background: #0f172a66; }
+  .exercise-details-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 18px 20px; border-bottom: 1px solid var(--color-slate-100); flex-shrink: 0; }
+  .exercise-details-close { display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; color: var(--color-slate-500); font-size: 11px; }
+  .exercise-details-content { padding: 20px; overflow-y: auto; overscroll-behavior: contain; flex: 1; min-height: 0; }
+  .exercise-details-content [hidden] { display: none; }
+  .exercise-details-content .exercise-card { padding: 0; border: 0; box-shadow: none; }
+  .exercise-details-content .dose-grid { margin-top: 14px; }
+  .exercise-details-footer { padding: 12px 20px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--color-slate-100); display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; flex-shrink: 0; }
+}
+@media (min-width: 640px) { .exercise-details { inset: 0; margin: auto; border-radius: 22px; height: min(86dvh, 900px); } }

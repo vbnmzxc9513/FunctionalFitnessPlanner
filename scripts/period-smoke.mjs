@@ -1,3 +1,4 @@
+import { closeExerciseDetails } from './exercise-details-helpers.mjs';
 import assert from 'node:assert/strict';
 import { writeFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
@@ -34,6 +35,7 @@ try {
     const visible = selector => page.waitForSelector(selector, { visible: true });
     const clickSelector = async selector => { const element = await visible(selector); await element.evaluate(item => item.scrollIntoView({ block: 'center', behavior: 'instant' })); await element.click(); await element.dispose(); };
     const click = async text => {
+      if (['課表', '今天', '紀錄', '設定', 'Plan', 'Today', 'Records', 'Settings'].includes(text)) await closeExerciseDetails(page);
       await page.waitForFunction(label => [...document.querySelectorAll('button')].some(item => item.innerText.trim() === label && item.getClientRects().length && !item.closest('[hidden]') && !item.matches(':disabled')), {}, text);
       const handle = await page.evaluateHandle(label => [...document.querySelectorAll('button')].find(item => item.innerText.trim() === label && item.getClientRects().length && !item.closest('[hidden]') && !item.matches(':disabled')), text);
       await handle.asElement().evaluate(item => item.scrollIntoView({ block: 'center', behavior: 'instant' })); await handle.asElement().click(); await handle.dispose();

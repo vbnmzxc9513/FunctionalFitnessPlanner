@@ -1,3 +1,4 @@
+import { closeExerciseDetails } from './exercise-details-helpers.mjs';
 import assert from 'node:assert/strict';
 import { writeFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
@@ -42,6 +43,7 @@ try {
     const physicalClick = async handle => { await handle.evaluate(element => element.scrollIntoView({ block: 'center', behavior: 'instant' })); await handle.asLocator().click(); await handle.dispose(); };
     const clickSelector = async selector => physicalClick(await visible(selector));
     const click = async text => {
+      if (['課表', '今天', '紀錄', '設定', 'Plan', 'Today', 'Records', 'Settings'].includes(text)) await closeExerciseDetails(page);
       await page.waitForFunction(label => [...document.querySelectorAll('button')].some(element => element.innerText.trim() === label && element.getClientRects().length && !element.closest('[hidden]') && !element.matches(':disabled')), {}, text);
       const handle = await page.evaluateHandle(label => [...document.querySelectorAll('button')].find(element => element.innerText.trim() === label && element.getClientRects().length && !element.closest('[hidden]') && !element.matches(':disabled')), text);
       await physicalClick(handle.asElement());
@@ -84,7 +86,7 @@ try {
     await page.waitForFunction(() => !!localStorage.getItem('fitness_date_period_v1'));
     const applied = await draft(); assert.deepEqual(applied.profile.context.weeklyExerciseIds, selected.filter((_, index) => index !== 2));
     await click('今天'); await click('開始今天訓練');
-    const warmup = byCode('A01'); await clickSelector(`button[aria-label=${JSON.stringify(catalog[warmup].name)}][aria-pressed]`);
+    const warmup = byCode('A01'); await clickSelector(`dialog[open] button[aria-label=${JSON.stringify(catalog[warmup].name)}][aria-pressed]`);
     await page.waitForFunction(({ id, week }) => JSON.parse(localStorage.getItem('fitness_date_period_v1')).progressByWeek[week].completed[`day3_${id}`] === true, {}, { id: warmup, week });
     const beforeLibrary = await draft();
     await click('課表'); await click('動作庫'); await visible('.exercise-library');

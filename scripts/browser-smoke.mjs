@@ -1,3 +1,4 @@
+import { closeExerciseDetails, openExerciseDetails } from './exercise-details-helpers.mjs';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import puppeteer from 'puppeteer';
@@ -80,6 +81,7 @@ try {
       await clickElement(handle);
     };
     const click = async text => {
+      if (['課表', '今天', '紀錄', '設定', 'Plan', 'Today', 'Records', 'Settings'].includes(text)) await closeExerciseDetails(page);
       const handle = await visibleElement('button', text);
       await page.waitForFunction(element => !element.disabled, {}, handle);
       await clickElement(handle);
@@ -236,9 +238,11 @@ try {
     await openLegacyAI();
     await openDetails(TRANSLATIONS.zh.aiConclusionTitle); await waitText('Mock recovery plan');
     await page.reload({ waitUntil: 'networkidle2' }); await monday(); await waitText('每側');
-    assert.ok(await read('section[data-phase="strength"] .dose-grid', element => element.getAttribute('aria-label').includes('1 組 × 6 下')));
-    assert.ok(await read('section[data-phase="warmup"]', element => element.innerText.includes('主項準備組') && element.innerText.includes('1 組 × 4 下')));
-    assert.equal(await visibleCount(completion('分腿蹲')), 1); await waitText('Finish with gentle breathing.');
+    await openExerciseDetails(page, 'bf_B01');
+    assert.ok(await read('dialog[open] section[data-phase="strength"] .dose-grid', element => element.getAttribute('aria-label').includes('1 組 × 6 下')));
+    assert.ok(await read('dialog[open] [data-preparation-for="bf_B01"]', element => element.innerText.includes('主項準備組') && element.innerText.includes('1 組 × 4 下')));
+    await closeExerciseDetails(page);
+    assert.equal(await visibleCount(completion('分腿蹲')), 1); await openExerciseDetails(page, 'bf_D09'); await waitText('Finish with gentle breathing.'); await closeExerciseDetails(page);
     await click('編輯課表');
     await select('[data-testid="picker-phase"]', 'accessory');
     assert.equal(await visibleCount('[data-testid^="picker-option-"]'), 0, `${layout} unclear clinical restrictions cannot add training manually`);
@@ -255,8 +259,10 @@ try {
     await click('儲存修改'); await waitText('課表已儲存'); await page.reload({ waitUntil: 'networkidle2' }); await monday();
     const accessoryOrder = await page.$$eval('section[data-phase="accessory"] button[aria-pressed]', buttons => buttons.filter(window.__smokeVisible).map(button => button.getAttribute('aria-label')));
     assert.deepEqual(accessoryOrder, [core, breathing], `${layout} persists phase and within-phase order`);
-    assert.ok(await read('section[data-phase="warmup"]', element => element.innerText.includes('1 組 × 4 下')));
-    await click('↩ 復原上一次的課表'); await waitText('Finish with gentle breathing.'); assert.equal(await visibleCount('section[data-phase="accessory"]'), 0);
+    await openExerciseDetails(page, 'bf_B01');
+    assert.ok(await read('dialog[open] [data-preparation-for="bf_B01"]', element => element.innerText.includes('1 組 × 4 下')));
+    await closeExerciseDetails(page);
+    await click('↩ 復原上一次的課表'); await openExerciseDetails(page, 'bf_D09'); await waitText('Finish with gentle breathing.'); await closeExerciseDetails(page); assert.equal(await visibleCount('section[data-phase="accessory"]'), 0);
 
     await click('紀錄'); await click('身體紀錄'); await fill('input[name="weight"]', '70'); await fill('input[name="bodyFat"]', '18');
     await click('儲存紀錄'); await waitText('身體數據已成功儲存'); await fill('input[name="weight"]', '72'); await fill('input[name="bodyFat"]', '');

@@ -16,3 +16,5 @@ await run(['scripts/browser-smoke.mjs']);
 await run(['scripts/coaching-smoke.mjs']);
 await run(['scripts/selection-smoke.mjs']);
 await run(['scripts/period-smoke.mjs']);
+
+await run(['scripts/compact-smoke.mjs']);

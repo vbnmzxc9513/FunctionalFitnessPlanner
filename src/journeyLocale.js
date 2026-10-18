@@ -1,5 +1,6 @@
 const messages = {
   zh: {
+    previewBrowseHint: '長按動作或按「查看詳情」，閱讀操作說明。', browseHint: '長按動作查看詳情與填寫紀錄，也可按右側「詳細／記錄」。', detailsLog: '詳細／記錄', details: '查看詳情', returnList: '返回課表', previous: '上一個動作', markedDone: '已標記完成', hasPreparation: '含主項準備組', futureReadonly: '這是預計安排，請於訓練當天記錄。',
     short_warmup: '暖身', short_skill: '協調', short_strength: '肌力', short_accessory: '輔助', short_recovery: '恢復', short_cooldown: '收操',
     movementCount: '個動作', markDone: '完成這個動作', sequence: '今天的訓練順序',
     today: '今天的訓練', week: '本週課表', start: '開始今天訓練', resume: '繼續訓練',
@@ -17,6 +18,7 @@ const messages = {
     rest: '今天以恢復與休息為主，無需完成訓練動作。',
   },
   en: {
+    previewBrowseHint: 'Hold a movement or choose Details to read its instructions.', browseHint: 'Hold a movement to view details and log sets, or use its Details / Log button.', detailsLog: 'Details / Log', details: 'Details', returnList: 'Back to plan', previous: 'Previous exercise', markedDone: 'Marked complete', hasPreparation: 'Includes preparation sets', futureReadonly: 'This is a planned session. Log it when you train.',
     short_warmup: 'Warm-up', short_skill: 'Skill', short_strength: 'Strength', short_accessory: 'Support', short_recovery: 'Recovery', short_cooldown: 'Finish',
     movementCount: 'movements', markDone: 'Complete this exercise', sequence: 'Today’s training sequence',
     today: 'Today’s training', week: 'Weekly plan', start: 'Start today’s session', resume: 'Continue session',
