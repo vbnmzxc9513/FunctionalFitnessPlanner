@@ -6,7 +6,7 @@ import { catalogExercises } from '../../src/domain/exerciseCatalog.js';
 const catalog = catalogExercises();
 
 test('movement guides match real catalog identities, including the legacy dead_bug identity', () => {
-  assert.equal(Object.keys(EXERCISE_GUIDES).length, 22);
+  assert.equal(Object.keys(EXERCISE_GUIDES).length, 24);
   for (const [code, guide] of Object.entries(EXERCISE_GUIDES)) {
     assert.equal(catalog[guide.id]?.catalogCode, code, `${code} must describe its actual catalog movement`);
     assert.deepEqual(getExerciseGuide(guide.id, catalog[guide.id]).guide, guide.zh);

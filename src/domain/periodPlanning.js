@@ -61,7 +61,7 @@ export function preservePeriodSession(session, { exercises } = {}) {
 }
 
 export function generatePeriodPlan(exercises, profile, range, {
-  today = localDate(), existingSessions = {}, protectedDates = [], previousSessions = [],
+  today = localDate(), existingSessions = {}, protectedDates = [], previousSessions = [], logs = [], progressByWeek = {}, readiness = [],
 } = {}, lang = 'zh') {
   range = normalizePlanningRange(range, today);
   const dates = enumeratePeriodDates(range);
@@ -87,7 +87,7 @@ export function generatePeriodPlan(exercises, profile, range, {
     const plan = generateTemplatePlan(exercises, context, time, lang, {
       currentDate: today, currentWeek: week, focus,
       calendarDays: [1, 2, 3, 4, 5, 6, 7], inRangeDates: weekDates,
-      protectedDates: [...protectedSet], previousSessions: history,
+      protectedDates: [...protectedSet], previousSessions: history, logs, progressByWeek, readiness,
       previousPlan: { schedule: unchanged.filter(session => session.date < range.from && session.date <= today) },
     });
     const effective = weekDates.map(date => preserved.find(session => session.date === date)

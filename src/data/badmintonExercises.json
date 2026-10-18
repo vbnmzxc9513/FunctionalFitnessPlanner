@@ -470,6 +470,80 @@
     ]
   },
   {
+    "id": "bf_A14",
+    "category": "warmup",
+    "name": "扶穩交替屈膝活動",
+    "purpose": "動態活動大腿前側，練習舒適的膝屈曲幅度",
+    "equipment": "徒手與穩固支撐",
+    "dose": "1 組 × 每側 4 次，慢速進出",
+    "rest": "15–20 秒",
+    "cue": "扶穩固支撐，交替屈膝讓腳跟朝臀部靠近，再慢慢放下；大腿自然向下，不硬拉腳踝、不拱腰或久停。",
+    "easier": "縮小屈膝角度；不需要用手拉腳踝。",
+    "harder": "維持慢速與可控制幅度，不以加重量或拉到極限為目標。",
+    "level": "基礎",
+    "priority": true,
+    "catalogCode": "A14",
+    "nameEn": "Supported alternating knee flexion",
+    "type": "mobility",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": false,
+    "advanced": false,
+    "prescription": {
+      "sets": 1,
+      "value": "4",
+      "unit": "reps",
+      "restSeconds": 20,
+      "perSide": true
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0,
+    "aliases": [
+      "扶穩交替屈膝活動",
+      "Supported alternating knee flexion"
+    ]
+  },
+  {
+    "id": "bf_A15",
+    "category": "warmup",
+    "name": "坐姿 90/90 髖轉換",
+    "purpose": "準備髖內外旋與可控制的活動範圍",
+    "equipment": "徒手與穩固支撐",
+    "dose": "1 組 × 每側 4 次，慢速進出",
+    "rest": "15–20 秒",
+    "cue": "坐姿屈膝、雙腳舒適分開，雙膝慢慢向左右換側；可以扶地、縮小角度，不壓膝，不是 90/90 靠牆呼吸。",
+    "easier": "雙手在身後輕扶，縮小換側幅度；膝不適時停止。",
+    "harder": "維持慢速與可控制幅度，不以加重量或拉到極限為目標。",
+    "level": "基礎",
+    "priority": true,
+    "catalogCode": "A15",
+    "nameEn": "Seated 90/90 hip switches",
+    "type": "mobility",
+    "equipmentOptions": [
+      []
+    ],
+    "requiresPartner": false,
+    "shoulderLoaded": false,
+    "advanced": false,
+    "prescription": {
+      "sets": 1,
+      "value": "4",
+      "unit": "reps",
+      "restSeconds": 20,
+      "perSide": true
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0,
+    "aliases": [
+      "坐姿 90/90 髖轉換",
+      "Seated 90/90 hip switches"
+    ]
+  },
+  {
     "id": "bf_B01",
     "category": "lower",
     "name": "分腿蹲",

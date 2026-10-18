@@ -42,7 +42,15 @@ try {
     };
     const fill = async (selector, value) => { const input = await visible(selector); await input.evaluate((item, value) => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(item, value); item.dispatchEvent(new Event('input', { bubbles: true })); item.dispatchEvent(new Event('change', { bubbles: true })); }, value); await input.dispose(); };
     const draft = () => page.evaluate(() => JSON.parse(localStorage.getItem('fitness_date_period_v1') || 'null'));
-    const preview = async () => { await clickSelector('[data-testid="plan-preview-create"]'); await visible('[data-testid="period-plan-preview"]'); };
+    const preview = async () => {
+      await clickSelector('[data-testid="plan-preview-create"]'); await visible('[data-testid="period-plan-preview"]');
+      assert.equal(await page.$$eval('[data-testid="period-mobility-overview"] [data-mobility-area]', items => items.length), 8, `${layout}: preview lists all eight mobility regions`);
+      assert.equal(await page.$eval('[data-testid="period-mobility-overview"]', item => item.open), false, `${layout}: regional detail stays collapsed`);
+      await clickSelector('[data-testid="period-mobility-overview"] summary');
+      assert.ok(await page.$eval('[data-testid="period-mobility-overview"]', item => item.innerText.includes(document.documentElement.lang === 'en' ? 'not confirmed completion' : '並非實際完成')), `${layout}: scheduled coverage is not measured mobility`);
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${layout}: regional dates fit the viewport`);
+      await clickSelector('[data-testid="period-mobility-overview"] summary');
+    };
     await page.goto(site, { waitUntil: 'networkidle2' }); await visible('[data-testid="first-plan"] [data-testid="planning-range"]');
     assert.equal(await page.$('[data-testid="planner-form"]'), null, `${layout}: dates precede questionnaire`);
     await fill('[data-testid="planning-range"] input:first-of-type', shift(-1));

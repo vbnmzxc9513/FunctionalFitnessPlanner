@@ -1,3 +1,4 @@
+import MobilityOverview from './MobilityOverview.jsx';
 import { useRef, useState } from 'react';
 import { ArrowLeft, Check, Loader2 } from 'lucide-react';
 import { sessionSections, estimateSessionMinutes } from '../domain/sessions.js';
@@ -44,6 +45,7 @@ export default function PeriodPlanPreview({ preview, lang = 'zh', exercises = {}
     {stale && <p role="alert" className="text-sm text-amber-800 bg-amber-50 p-4 rounded-xl">{p('stale')}</p>}
     {incomplete && <p role="alert" className="text-sm text-amber-800 bg-amber-50 p-4 rounded-xl">{p('missing')}</p>}
     <section className="panel space-y-3" aria-label={p('summary')}><h3 className="font-bold text-lg">{p('summary')}</h3><p data-testid="period-minutes-scope" className="text-xs text-slate-500">{p('minutesScope')}</p>{weeklySummaries.map(summary => <div key={summary.week} className="rounded-xl bg-sky-50 p-4 text-sm space-y-2"><p className="font-semibold text-indigo-800">{summary.from} – {summary.to}</p><p>{p('goal')} · {p(summary.focus || 'balanced')}</p>{eventSummary(summary) && <p className="text-amber-800" data-testid="period-event-summary">{eventSummary(summary)}</p>}<p>{summary.trainingSessions ?? 0} {p('count')} · {summary.recoverySessions ?? 0} {p('recovery')} · {summary.restDays ?? 0} {p('rest')} · {summary.minutes ?? 0} {p('minutes')}</p></div>)}</section>
+    <MobilityOverview sessions={sessions} exercises={exercises} lang={lang} testId="period-mobility-overview" />
     {groups.map(week => {
       const weekDates = dates.filter(date => getWeekString(new Date(`${date}T12:00:00`)) === week);
       return <section className="panel space-y-3" key={week} data-week={week}><h3 className="font-semibold text-lg">{weekDates[0]} – {weekDates.at(-1)}</h3><div className="grid sm:grid-cols-2 gap-3">{weekDates.map(date => {

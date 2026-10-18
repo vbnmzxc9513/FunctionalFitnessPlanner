@@ -13,7 +13,7 @@ import { auth } from '../services/firebase.js';
 import { periodQuestionnaireText } from '../periodLocale.js';
 
 export default function PeriodWorkspace({ uid, today, lang, t, exercises, profile, setProfile, available, onToggleWeekly,
-  localPeriod, onLocalPeriod, onApplied, onClose, overview, refreshToken = 0, fallbackPlans = {}, onToday, preserveCurrentChoices = false }) {
+  localPeriod, onLocalPeriod, onApplied, onClose, overview, refreshToken = 0, fallbackPlans = {}, onToday, preserveCurrentChoices = false, history = {} }) {
   const scope = uid || 'signed-out';
   const questionnaireT = periodQuestionnaireText(lang, t);
   const storageKey = `fitness_period_questionnaire_${scope}`;
@@ -32,7 +32,7 @@ export default function PeriodWorkspace({ uid, today, lang, t, exercises, profil
   const [storageFailed, setStorageFailed] = useState(false);
   const request = useRef(0);
   const rangeKey = `${range.from}_${range.to}`;
-  const fingerprint = JSON.stringify({ uid, range, profile, exercises, localPeriod, today, lang, refreshToken });
+  const fingerprint = JSON.stringify({ uid, range, profile, exercises, localPeriod, history, today, lang, refreshToken });
   const fingerprintRef = useRef(fingerprint);
   useEffect(() => { fingerprintRef.current = fingerprint; }, [fingerprint]);
   useEffect(() => () => { ++request.current; }, []);
@@ -81,7 +81,8 @@ export default function PeriodWorkspace({ uid, today, lang, t, exercises, profil
     try {
       const selected = normalizePlanningRange(range, today);
       const state = await loadState(selected);
-      const result = generatePeriodPlan(exercises, periodProfile(profile), selected, { today, existingSessions: state.sessionsByDate, protectedDates: state.protectedDates, previousSessions: state.previousSessions }, lang);
+      const logs = [...new Map([...(history.logs || []), ...Object.values(state.logs || {})].map(log => [`${log.week}_${log.day}_${log.exerciseId}`, log])).values()];
+      const result = generatePeriodPlan(exercises, periodProfile(profile), selected, { today, existingSessions: state.sessionsByDate, protectedDates: state.protectedDates, previousSessions: state.previousSessions, logs, progressByWeek: { ...history.progress, ...state.progressByWeek }, readiness: history.readiness }, lang);
       if (id !== request.current || captured !== fingerprintRef.current) return;
       setPreview({ ...result, profile: periodProfile(profile), protectedDates: state.protectedDates, expectedState: state.expectedState, fingerprint: captured });
       setStage('preview'); window.scrollTo({ top: 0 });

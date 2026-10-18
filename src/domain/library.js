@@ -9,7 +9,7 @@ export function libraryGroups(exercise = {}) {
 export function suggestedUses(id, exercise = {}) {
   const code = exercise.catalogCode || (typeof id === 'string' && id.startsWith('bf_') ? id.slice(3) : '');
   // These unloaded mobility drills also occupy the existing template's recovery slots.
-  if (['D09', 'A02', 'A03', 'A04', 'A05', 'A06', 'A09', 'A10', 'A11'].includes(code)) return ['warmup', 'cooldown'];
+  if (['D09', 'A02', 'A03', 'A04', 'A05', 'A06', 'A09', 'A10', 'A11', 'A14', 'A15'].includes(code)) return ['warmup', 'cooldown'];
   // Scapular control and light shoulder rotation can be preparation or accessory work.
   if (['A07', 'A08'].includes(code)) return ['warmup', 'training'];
   if (exercise.category === 'warmup') return ['warmup'];

@@ -7,7 +7,7 @@ export const TRAINING_PATTERNS = ['squat_lunge', 'hinge', 'push', 'pull', 'core'
 const CURATED_CODES = Object.fromEntries(Object.entries(catalogExercises()).map(([id, exercise]) => [id, exercise.catalogCode]));
 const CLEAN_NOTES = /^(?:無|沒有|沒有疼痛|沒有受傷|正常|none|no pain|no injuries|no restrictions)[。.!\s]*$/i;
 const MOBILITY_CODES = {
-  hip: ['A03', 'A04', 'A05', 'A12', 'A13', 'H03', 'H04', 'H05', 'H06'],
+  hip: ['A03', 'A04', 'A05', 'A12', 'A13', 'A14', 'A15', 'H03', 'H04', 'H05', 'H06'],
   ankle: ['A02', 'A12', 'A13', 'H01', 'H02'],
   thoracic: ['A06', 'A10', 'A11', 'A12', 'A13', 'H12'],
   shoulder: ['A09', 'H07'],

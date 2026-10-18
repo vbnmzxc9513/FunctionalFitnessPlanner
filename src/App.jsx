@@ -32,6 +32,7 @@ import { readPeriodDraft, writePeriodDraft, upsertLocalPeriodLog, periodFromWeek
 import SharedWorkout from './components/SharedWorkout.jsx';
 import { readShareFromLocation } from './domain/sharing.js';
 import { generateTemplatePlan, manualPlanningExercises } from './domain/templatePlanner.js';
+import { datedPlanningSessions } from './domain/mobility.js';
 import { PROMOTION_TRANSLATIONS } from './promotionLocale.js';
 import { createWeeklyIntent, MAX_WEEKLY_CHOICES } from './domain/trainingPreferences.js';
 import { buildWeeklyChoiceReport, weeklyChoiceBlockReason } from './domain/weeklyChoices.js';
@@ -428,13 +429,14 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
     try {
       const profile = { week: currentWeek, goal, focus, time, context };
       const previous = allProgress[lastWeek] || {};
+      const recentSessions = datedPlanningSessions(data.plans, nativeSessions);
       const aiGoal = [t(`focus_${focus}`), goal].filter(Boolean).join(': ');
       let result;
       if (planningMode === 'template') result = generateTemplatePlan(exercises, context, time, lang,
-        { currentDate: today, currentWeek, lastWeekFeedback: previous.feedbackValue, userGoal: goal, goalFocus: focus, previousPlan: savedPlan || data.plans[lastWeek] || null });
+        { currentDate: today, currentWeek, lastWeekFeedback: previous.feedbackValue, userGoal: goal, goalFocus: focus, previousPlan: savedPlan || data.plans[lastWeek] || null, previousSessions: recentSessions.filter(session => session.date < dateForWeekDay(currentWeek, 1)), mobilitySessions: recentSessions.filter(session => session.date < today), logs: exerciseLogs, progressByWeek: allProgress, readiness: readinessRecords });
       else if (planningMode === 'trial') result = await requestTrialPlan({ context, dailyTime: time, lang, currentWeek, userGoal: aiGoal.slice(0, 300), userMessage: message });
       else result = await generateAIPlan(previous.completed || {}, difficultyLevel, previous.feedbackValue, apiKey, allProgress, data.metrics, aiGoal, time, message, available, lang, undefined,
-        { context, currentDate: today, currentWeek, previousPlan: savedPlan || data.plans[lastWeek] || null });
+        { context, currentDate: today, currentWeek, previousPlan: savedPlan || data.plans[lastWeek] || null, previousSessions: recentSessions, logs: exerciseLogs, progressByWeek: allProgress, readiness: readinessRecords });
       if (request !== planRequest.current || (auth.currentUser?.uid || '') !== (user?.uid || '')) return;
       const plan = { ...result, weeklyIntent: createWeeklyIntent(context, focus, time), language: lang, source: planningMode === 'template' ? 'template' : 'ai' };
       const report = buildWeeklyChoiceReport(plan, exercises, context, weeklyAvailable, currentWeek, planningMode);
@@ -548,7 +550,7 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
     showToast(lang === 'zh' ? '已套用所選日期的課表，已有紀錄與其他日期保持完整。' : 'Applied the selected dates. Recorded sessions and other dates are preserved.');
   };
   const publicPeriodBase = localPeriod || (!user ? periodFromWeeklyDraft(publicDraft) : null);
-  const periodWorkspace = <PeriodWorkspace key={`${user?.uid || 'public'}:${periodCreating ? 'create' : selectedPeriod ? `${selectedPeriod.range.from}_${selectedPeriod.range.to}_${selectedPeriod.periodId || ''}` : 'first'}`} uid={user?.uid} today={today} lang={lang} t={t} exercises={exercises} profile={profile} setProfile={setProfile} available={weeklyAvailable} onToggleWeekly={toggleWeeklyChoice} preserveCurrentChoices={choicesChanged.current} localPeriod={publicPeriodBase} onLocalPeriod={onLocalPeriod} onApplied={periodApplied} fallbackPlans={data.plans} refreshToken={JSON.stringify({ progress: allProgress, logs: exerciseLogs, nativeSessions })} overview={periodCreating ? null : selectedPeriod} onClose={hasCurrentPlan && periodCreating ? () => { setPeriodCreating(false); setPlanScreen('overview'); } : undefined} onToday={() => navigate('train')} />;
+  const periodWorkspace = <PeriodWorkspace key={`${user?.uid || 'public'}:${periodCreating ? 'create' : selectedPeriod ? `${selectedPeriod.range.from}_${selectedPeriod.range.to}_${selectedPeriod.periodId || ''}` : 'first'}`} uid={user?.uid} today={today} lang={lang} t={t} exercises={exercises} profile={profile} setProfile={setProfile} available={weeklyAvailable} onToggleWeekly={toggleWeeklyChoice} preserveCurrentChoices={choicesChanged.current} history={{ logs: exerciseLogs, progress: allProgress, readiness: readinessRecords }} localPeriod={publicPeriodBase} onLocalPeriod={onLocalPeriod} onApplied={periodApplied} fallbackPlans={data.plans} refreshToken={JSON.stringify({ progress: allProgress, logs: exerciseLogs, nativeSessions })} overview={periodCreating ? null : selectedPeriod} onClose={hasCurrentPlan && periodCreating ? () => { setPeriodCreating(false); setPlanScreen('overview'); } : undefined} onToday={() => navigate('train')} />;
   const openLegacyAI = () => { if (hasNativeWeek || editing || savingPlan || !user) return; setActiveTab('plan'); setPlanView('week'); setPlanScreen('legacy-ai'); setPlanningMode('byok'); setPlanningStep(0); setEditingAI(true); setLegacyPreview(null); setPeriodCreating(false); };
   const firstPlan = <div data-testid="first-plan">{periodWorkspace}</div>;
   const changePlanView = value => {

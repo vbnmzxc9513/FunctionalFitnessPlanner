@@ -17,6 +17,8 @@ const EN_TIPS = {
   A11: 'Rotate the chest while keeping the pelvis steady; do not pull on the head.',
   A12: 'Raise body temperature first, then follow all eight gentle parts. Mark the whole flow once, after finishing. Save longer static holds for cooldown.',
   A13: 'Walk or march for 2 minutes first, then follow the eight-part, 10-minute full-body dynamic flow. Use comfortable ranges without bouncing or pain; hold to see all steps. Mark once after finishing.',
+  A14: 'Hold stable support and slowly alternate bending the knee, bringing the heel toward the buttock. Do not pull the ankle, arch the back or hold at end range.',
+  A15: 'Sit with knees bent and switch gently from side to side with hand support if needed. Keep a comfortable range without pressing the knees; this is not wall-supported breathing.',
   B01: 'Lower with a stable front foot and knee aligned with the toes; use bodyweight first.',
   B02: 'Sit into the stepping hip, brake under control, then push back to the start.',
   B03: 'Secure the band under the feet, hinge at the hips and stand without arching the back.',

@@ -2,6 +2,12 @@
 // flow also lists the allocation within its total; these are not extra sets.
 const entry = (id, zh, en) => ({ id, zh, en });
 export const EXERCISE_GUIDES = {
+  A14: entry('bf_A14',
+    { start: '站在穩固支撐旁，身體直立、膝蓋自然放鬆。', steps: ['輕扶支撐，一側屈膝讓腳跟慢慢靠近臀部；大腿自然向下，不拱腰。', '在舒服幅度慢慢放下，再換側；不拉腳踝、不彈震或長時間停住。'], mistake: '用手硬扳腳踝、憋氣、拱腰，或忍著膝痛增加角度。', easier: '扶穩並減小屈膝幅度，不必碰到臀部；疼痛時停止。' },
+    { start: 'Stand upright beside stable support with relaxed knees.', steps: ['Hold lightly and slowly bend one knee, bringing the heel toward the buttock without arching the back.', 'Lower within a comfortable range and alternate sides without pulling the ankle, bouncing or long holds.'], mistake: 'Pulling forcefully on the ankle, holding the breath, arching or pushing through knee pain.', easier: 'Use support and a smaller knee bend; the heel need not touch the buttock. Stop for pain.' }),
+  A15: entry('bf_A15',
+    { start: '坐姿屈膝，雙腳舒適分開，可用雙手在身後輕扶。', steps: ['雙膝緩慢向一側轉，讓髖內外旋；停在能控制且膝蓋舒服的角度。', '回到中間，再向另一側轉；不壓膝、不要求雙腿貼地，也不是靠牆呼吸。'], mistake: '為了湊成直角而扳膝、快速甩腿或憋氣硬轉。', easier: '雙手扶地、縮小換側幅度；膝或髖疼痛時停止。' },
+    { start: 'Sit with bent knees and comfortably spaced feet; lightly support yourself with hands behind you.', steps: ['Slowly turn both knees to one side, rotating at the hips within a controlled, comfortable range.', 'Return to the middle and switch sides without pressing the knees or forcing the legs flat. This is not wall-supported breathing.'], mistake: 'Forcing right angles through the knees, throwing the legs or holding the breath.', easier: 'Use hand support and smaller switches. Stop for knee or hip pain.' }),
   A13: entry('bf_A13',
     { start: '先完成列出的 2 分鐘快走／踏步，再依序做八段，合計約 10 分鐘，含左右側與換姿勢。秒數是時間分配，不是持續拉住；次數是參考，不必做滿、不趕動作。完成整套才勾選一次，之後仍做列出的主項準備組。',
       steps: [

@@ -138,7 +138,7 @@ try {
     await page.screenshot({ path: `/tmp/fitness-ux-${layout}-daily-warmup.png`, fullPage: true });
     await page.$eval(`${flow} summary`, item => item.click());
     assert.equal(await page.$eval(flow, item => item.open), false, `${layout}: flow details can still be collapsed`);
-    await click('查看下一個動作'); await click('查看下一個動作');
+    for (let index = 0; index < 8 && !await page.$('dialog[open] [data-preparation-for]'); index++) await click('查看下一個動作');
     await page.waitForFunction(() => {
       const prep = [...document.querySelectorAll('[data-preparation-for]')].find(item => item.getClientRects().length && !item.closest('[hidden]'));
       const current = document.querySelector('[data-testid="current-exercise"]');

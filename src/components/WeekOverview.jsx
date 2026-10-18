@@ -1,3 +1,4 @@
+import MobilityOverview from './MobilityOverview.jsx';
 import { ArrowRight, CalendarDays, Dumbbell, Footprints, Moon, MoveUpRight, Target } from 'lucide-react';
 import { buildWeekOverview } from '../domain/weekOverview.js';
 import { createWeeklyIntent } from '../domain/trainingPreferences.js';
@@ -25,6 +26,7 @@ export default function WeekOverview({ schedule, exercises, week, plan, context,
       })}</div><p className="text-xs text-slate-500 mt-3">{text.excludingCourt}</p>
     </div><aside className="week-aside">
       <section className="panel"><h4 className="aside-title flex items-center gap-2"><Target size={17} />{lang === 'en' ? 'This week’s intention' : '本週目標'}</h4>{saved ? <><p className="text-sm text-slate-600 mt-3">{text.intent}：{t(`focus_${saved.focus}`)}</p>{preferences(text.targets, overview.targetCoverage, 'targetRegions')}{preferences(text.stiffness, overview.stiffnessCoverage, 'stiffnessRegions')}{saved.badmintonDays.length === 0 && <p className="text-xs text-slate-500 mt-4">{text.courtUnknown}</p>}{saved.competitionDate && <p className="text-sm text-sky-700 mt-4 flex gap-2"><CalendarDays size={16} />{saved.competitionDate}</p>}</> : <p className="text-sm text-slate-500 mt-3">{text.unknown}</p>}</section>
+      <MobilityOverview sessions={overview.days.filter(day => day.entry).map(day => ({ ...day.entry, date: day.date }))} exercises={exercises} lang={lang} />
       {children}
       <details className="panel"><summary className="aside-title">{text.checkpoint}</summary>{saved && <p className="mt-3 text-sm text-slate-600 leading-relaxed">{text[`track_${saved.focus}`]}</p>}<p className="text-sm text-slate-500 leading-relaxed mt-3">{text.checkpointText}</p></details>
     </aside></div>

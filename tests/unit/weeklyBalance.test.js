@@ -82,9 +82,9 @@ test('normal template includes thoracic, hip and ankle days through existing sho
   assert.ok(main.routine.length <= 8);
   for (const day of plan.schedule.filter(item => context.badmintonDays.includes(item.day))) {
     assert.equal(day.sessionType, 'recovery');
-    assert.equal(day.routine.length, 2);
+    assert.equal(day.routine.length, 3);
     assert.equal(day.prescriptions.find(dose => dose.id === 'bf_I01').value, '5');
-    assert.ok(estimateSessionMinutes(day, catalog) <= 8);
+    assert.ok(estimateSessionMinutes(day, catalog) <= 10);
   }
 });
 
