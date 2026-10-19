@@ -11,7 +11,7 @@ import ExerciseRow from './ExerciseRow.jsx';
 import ExerciseDetails from './ExerciseDetails.jsx';
 import { journeyText } from '../journeyLocale.js';
 
-export default function PeriodPlanPreview({ preview, lang = 'zh', exercises = {}, today, onBack, onApply, busy = false, stale = false }) {
+export default function PeriodPlanPreview({ preview, lang = 'zh', t = key => key, exercises = {}, today, onBack, onApply, busy = false, stale = false }) {
   const [selected, setSelected] = useState(null);
   const [opened, setOpened] = useState(null);
   const j = key => journeyText(lang, key);
@@ -39,9 +39,15 @@ export default function PeriodPlanPreview({ preview, lang = 'zh', exercises = {}
   const eventSummary = summary => [...new Set(dates.filter(date => date >= summary.from && date <= summary.to).map(eventPhase).filter(Boolean))]
     .map(phase => phase === 'competitionDay' ? `${p(phase)} ${preview.profile.context.competitionDate}` : p(phase)).join(' · ');
   const dose = params => `${params.sets} ${p('sets')} × ${params.value} ${p(params.unit)}${params.perSide ? ` · ${p('eachSide')}` : ''}${params.restSeconds > 0 ? ` · ${p('restLabel')} ${params.restSeconds} ${p('seconds')}` : ''}`;
+  const conditions = preview.profile?.context;
+  const equipmentKnown = Array.isArray(conditions?.equipment);
+  const noTraining = sessions.length > 0 && sessions.every(session => (session.sessionType || (session.routine?.length ? 'training' : 'rest')) !== 'training');
+  const recoveryReason = sessions.find(session => !conditions?.badmintonDays?.includes(session.day) && session.coachAdvice)?.coachAdvice || sessions.find(session => session.coachAdvice)?.coachAdvice;
   const incomplete = dates.length === 0 || dates.some(date => !sessions.some(session => session.date === date));
   return <section data-testid="period-plan-preview" className="space-y-5">
     <div className="preview-notice"><h2 className="font-bold text-xl">{p(onApply ? 'title' : 'overview')}</h2><p className="text-sm mt-2">{range?.from} – {range?.to} · {dates.length} {p('days')}</p><p className="text-sm mt-2">{p(onApply ? 'previewHint' : 'savedHint')}</p>{onApply && <p className="text-sm mt-2">{p('scope')}</p>}</div>
+    <p data-testid="period-equipment-summary" className="text-sm text-slate-600">{t('equipmentLabel')}：{equipmentKnown ? conditions.equipment.length ? conditions.equipment.map(item => t(`equipment_${item}`)).join('、') : t('equipment_bodyweight') : lang === 'en' ? 'Not preserved in this saved summary; check preferences before replanning.' : '這份儲存摘要未保留器材條件；重排前請確認問卷。'}</p>
+    {noTraining && <section data-testid="period-recovery-explanation" role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-2 text-sm text-amber-900"><h3 className="font-semibold">{lang === 'en' ? 'This range contains recovery / rest only' : '這段日期只有恢復／休息安排'}</h3>{recoveryReason && <p>{recoveryReason}</p>}<p>{lang === 'en' ? 'Recovery includes easy activity. If you expected strength work, review court intensity and duration, recovery information, available days and equipment before applying.' : '恢復日包含低負荷活動。如果你預期要有肌力訓練，請先核對球局強度／時間、恢復資訊、可用日及器材，再決定是否套用。'}</p></section>}
     {stale && <p role="alert" className="text-sm text-amber-800 bg-amber-50 p-4 rounded-xl">{p('stale')}</p>}
     {incomplete && <p role="alert" className="text-sm text-amber-800 bg-amber-50 p-4 rounded-xl">{p('missing')}</p>}
     <section className="panel space-y-3" aria-label={p('summary')}><h3 className="font-bold text-lg">{p('summary')}</h3><p data-testid="period-minutes-scope" className="text-xs text-slate-500">{p('minutesScope')}</p>{weeklySummaries.map(summary => <div key={summary.week} className="rounded-xl bg-sky-50 p-4 text-sm space-y-2"><p className="font-semibold text-indigo-800">{summary.from} – {summary.to}</p><p>{p('goal')} · {p(summary.focus || 'balanced')}</p>{eventSummary(summary) && <p className="text-amber-800" data-testid="period-event-summary">{eventSummary(summary)}</p>}<p>{summary.trainingSessions ?? 0} {p('count')} · {summary.recoverySessions ?? 0} {p('recovery')} · {summary.restDays ?? 0} {p('rest')} · {summary.minutes ?? 0} {p('minutes')}</p></div>)}</section>

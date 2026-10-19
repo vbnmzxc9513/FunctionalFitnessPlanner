@@ -28,7 +28,7 @@ import { periodQuestionnaireText } from './periodLocale.js';
 import { usePlanningPeriods } from './hooks/usePlanningPeriods.js';
 import { useDateSessions } from './hooks/useDateSessions.js';
 import { saveDateReadinessAdjustment } from './services/periodRepository.js';
-import { readPeriodDraft, writePeriodDraft, upsertLocalPeriodLog, periodFromWeeklyDraft, localPeriodProgressView } from './domain/periodDraft.js';
+import { selectSavedPeriod, readPeriodDraft, writePeriodDraft, upsertLocalPeriodLog, periodFromWeeklyDraft, localPeriodProgressView } from './domain/periodDraft.js';
 import SharedWorkout from './components/SharedWorkout.jsx';
 import { readShareFromLocation } from './domain/sharing.js';
 import { generateTemplatePlan, manualPlanningExercises } from './domain/templatePlanner.js';
@@ -540,7 +540,7 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
   const openWeeklySelection = () => { setActiveTab('plan'); setPlanView('week'); setPeriodCreating(true); setPlanScreen('settings'); };
   const [selectedPeriodId, setSelectedPeriodId] = useState('');
   const cloudPeriod = periodsData.periods.find(period => period.periodId === selectedPeriodId) || periodsData.periods[0];
-  const selectedPeriod = !user ? localPeriod : selectedPeriodId ? savedPeriod?.periodId === selectedPeriodId ? savedPeriod : cloudPeriod : savedPeriod && (!cloudPeriod || (savedPeriod.createdAt || 0) >= cloudPeriod.createdAt) ? savedPeriod : cloudPeriod;
+  const selectedPeriod = !user ? localPeriod : selectedPeriodId ? savedPeriod?.periodId === selectedPeriodId ? savedPeriod : cloudPeriod : selectSavedPeriod(savedPeriod, cloudPeriod);
   const profile = { context: planningContext, focus, time, goal };
   const setProfile = action => { const next = typeof action === 'function' ? action(profile) : action; setPlanningContext(normalizePlanningContext(next.context)); setFocus(next.focus); setTime(next.time); setGoal(next.goal); };
   const periodApplied = preview => {

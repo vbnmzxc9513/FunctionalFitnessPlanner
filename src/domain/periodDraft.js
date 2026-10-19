@@ -6,6 +6,12 @@ import { exerciseKey, resolveExerciseId } from './training.js';
 import { readStorage, writeStorage } from './storage.js';
 
 const KEY = 'fitness_date_period_v1';
+// Server timestamps may resolve after the local save. The matching local
+// snapshot retains questionnaire fields absent from the cloud's bounded intent.
+export function selectSavedPeriod(saved, cloud) {
+  if (saved?.periodId && saved.periodId === cloud?.periodId) return saved;
+  return saved && (!cloud || (saved.createdAt || 0) >= cloud.createdAt) ? saved : cloud;
+}
 export function periodProfile(value = {}) {
   return { context: normalizePlanningContext(value.context), focus: ['balanced', 'coordination', 'stability', 'strength'].includes(value.focus) ? value.focus : 'balanced',
     time: String(Math.max(5, Math.min(240, Number(value.time) || 30))), goal: String(value.goal || '').slice(0, 2000) };

@@ -196,9 +196,10 @@ export function generateTemplatePlan(exercises, context, dailyTime, lang = 'zh',
   const onCourt = day => court.has(((day - 1 + 7) % 7) + 1);
   const recentMobility = createMobilityContext({ date: today, today, logs: options.logs, readiness: options.readiness, exercises, context: profile });
   const tired = recentMobility.recentSymptoms || recentMobility.recoveryPriority || options.lastWeekFeedback === -1 || profile.sorenessRegions.length > 0 || (!!profile.recoveryNotes.trim() && !CLEAN_NOTES.test(profile.recoveryNotes.trim()));
-  const highLoad = profile.badmintonIntensity === 'hard' || Number(profile.badmintonMinutes) >= 120;
+  const highLoad = profile.badmintonIntensity === 'hard';
+  const longCourt = Number(profile.badmintonMinutes) >= 120;
   const consecutive = profile.badmintonDays.some(day => onCourt(day + 1));
-  const strengthLimit = tired || (court.size >= 3 && (highLoad || consecutive)) ? 1 : 2;
+  const strengthLimit = tired || (court.size >= 3 && (highLoad || longCourt || consecutive)) ? 1 : 2;
   const familiar = new Set((options.previousPlan?.schedule || []).flatMap(day => day.routine || []));
   const proximity = day => competitionDaysAway(profile.competitionDate, dateForWeekDay(week, day));
   const candidates = calendarDays.filter(day => permitted(day) && !previousStrengthDates.some(date => Math.abs(competitionDaysAway(date, dateForWeekDay(week, day))) < 2) && !onCourt(day) && mode === 'normal' && (proximity(day) === null || proximity(day) > 2 || proximity(day) < -5))
@@ -223,14 +224,20 @@ export function generateTemplatePlan(exercises, context, dailyTime, lang = 'zh',
     const taper = away !== null && away >= 3 && away <= 10;
     const immediate = away !== null && away >= 0 && away <= 2;
     const post = away !== null && away < 0 && away >= -5;
-    const reason = text(lang, '輕活動採可完整說話的速度；若疲勞或不適，改完整休息，不補強度。', 'Use a conversational pace. If tired or uncomfortable, choose full rest instead of making up intensity.');
+    const cause = post ? text(lang, '本日仍在賽後恢復期。', 'This date is in post-event recovery.')
+      : taper && !familiar.size ? text(lang, '本日在賽前十天內，且沒有可沿用的熟悉動作紀錄。', 'This date is within ten days of competition, with no familiar movement history to retain.')
+        : onCourt(number) ? text(lang, '今天另有羽球安排，午休保留低負荷活動。', 'Court play is scheduled today; lunch conditioning stays easy.')
+          : highLoad && onCourt(number + 1) ? text(lang, '明天安排高強度球局，這次未在前一天加主要肌力。', 'Hard court play is scheduled tomorrow; no main strength work is added on the preceding day.')
+            : tired ? text(lang, '恢復資訊觸發減量，保留低量活動與其他允許部位的舒適活動。', 'Recovery information calls for reduced work, with gentle activity in other permitted regions.')
+              : text(lang, '本週肌力名額與前後課表間隔已納入，這天安排恢復。', 'Weekly strength capacity and neighboring-session spacing are accounted for; this day uses recovery.');
+    const reason = cause + text(lang, ' 輕活動採可完整說話的速度；若疲勞或不適，改完整休息，不補強度。', ' Use a conversational pace. If tired or uncomfortable, rest rather than making up intensity.');
     if (recentMobility.recentSymptoms) return { ...day, coachAdvice: text(lang, '近期訓練或狀態回報有症狀惡化；先停止額外體能與針對性拉伸，確認狀態和可用活動後再排課。', 'Recent training or readiness records report worsening symptoms. Pause extra conditioning and targeted stretching; confirm your status and permitted activity before replanning.') };
     if (!permitted(number) || mode === 'rest' || immediate || (post && away >= -2)) return day;
     if (mode === 'shoulder') {
       makeRecovery(day, available, lang, text(lang, '治療限制尚未確認；僅在治療端允許走路時採這份輕活動，否則休息。無痛不代表已放行。', 'Treatment limits are unclear. Use this easy activity only if walking is permitted by your clinician; otherwise rest. Lack of pain is not clearance.'), true);
     } else if (post || onCourt(number) || (taper && !familiar.size)) makeRecovery(day, available, lang, reason);
     else if (strengthDays.includes(number)) {
-      addTraining(day, available, lang, focus, 'strength', tired || taper || onCourt(number - 1) ? 1 : 2, taper ? familiar : null, upperOrdinal++, !tired && !taper ? profile : {}, !tired && !taper ? minutes : 0);
+      addTraining(day, available, lang, focus, 'strength', tired || taper || longCourt || onCourt(number - 1) ? 1 : 2, taper ? familiar : null, upperOrdinal++, !tired && !taper ? profile : {}, !tired && !taper ? minutes : 0);
       day.coachAdvice = text(lang, '正式組保留約 2–3 次姿勢良好的餘力；若睡眠、精神或隔天反應變差，少做一組或改恢復。', 'Keep about 2–3 good-form repetitions in reserve. Reduce a set or switch to recovery if sleep, readiness or next-day symptoms worsen.');
     } else if (!skillUsed && !tired && !highLoad && !consecutive && (!taper || familiar.size)) {
       addTraining(day, available, lang, focus, 'skill', 1, taper ? familiar : null, 0, !taper ? profile : {}, !taper ? minutes : 0); skillUsed = true;
@@ -242,9 +249,9 @@ export function generateTemplatePlan(exercises, context, dailyTime, lang = 'zh',
     }
     day = fitDay(day, available, minutes, lang, !taper && !tired ? profile.targetRegions : [], mode === 'normal' && !taper && !post && !tired ? profile.weeklyExerciseIds : []);
     let mobilityIntent;
-    if (mode === 'normal' && !taper && !post && !tired) {
+    if (mode === 'normal' && !taper && !post) {
       mobilityIntent = createMobilityContext({ date: dateForWeekDay(week, number), today, sessions: mobilitySessions, logs: options.logs, progressByWeek: options.progressByWeek, readiness: options.readiness, context: profile, exercises, day });
-      day = adaptMobilityDay(day, available, minutes, mobilityIntent, profile.weeklyExerciseIds);
+      day = adaptMobilityDay(day, available, minutes, mobilityIntent, tired ? [] : profile.weeklyExerciseIds, { gentle: tired });
       day = fitDay(day, available, minutes, lang, profile.targetRegions, profile.weeklyExerciseIds);
     }
     const flow = day.routine.map(id => available[id]).find(exercise => exercise?.sequenceMinutes);
@@ -261,8 +268,15 @@ export function generateTemplatePlan(exercises, context, dailyTime, lang = 'zh',
   const assumption = !court.size ? text(lang, '未提供球日，先用一般週安排；補上球日後請重新排課。', 'Court days are missing; this is a general weekly example. Regenerate after adding court days.') : text(lang, `已把每週球日 ${profile.badmintonDays.join('、')}（含週末）納入；球日午休以恢復為主。`, `Court weekdays ${profile.badmintonDays.join(', ')} including weekends are counted; court-day lunch sessions emphasize recovery.`);
   const clinical = mode === 'rest' ? text(lang, '健康資訊包含模板無法安全解讀的限制，本週不開立體能動作；先確認允許的活動。', 'The health notes contain restrictions this template cannot safely interpret. No conditioning exercises are prescribed; confirm permitted activities first.') : mode === 'shoulder' ? text(lang, '肩部／治療限制未確認，暫不排正式肌力、揮拍、跳躍或肩部負重；走路也以治療端允許為前提。', 'Unclear shoulder/treatment restrictions mean no formal strength, swings, jumps or shoulder loading. Even walking requires clinician permission.') : text(lang, '這是固定規則起步課表，不能判斷傷勢或取代教練觀察。', 'This is a rules-based starting plan; it cannot assess injuries or replace coaching observation.');
   const competition = profile.competitionDate ? text(lang, '以本課表每一天到比賽的實際日期安排：前 10 天減量、前 2 天休息、賽後先恢復；沒有先前動作紀錄時，賽前只排恢復，不新增訓練。', 'Competition timing is calculated for each planned date: reduce extra work in the final 10 days, rest in the final 2, and recover afterward. Without prior movement history, taper days use recovery rather than new training.') : text(lang, '尚未提供比賽日期，不假設賽前週期。', 'No competition date was provided; no taper period is assumed.');
+  const selectedAway = calendarDays.filter(inRange).map(proximity).filter(value => value !== null);
+  const competitionStatus = profile.competitionDate ? text(lang,
+    `比賽日 ${profile.competitionDate}；本段${selectedAway.every(value => value > 10) ? '尚未進入賽前十天減量期' : '依各日期與比賽的距離調整，詳見每日原因'}。`,
+    `Competition: ${profile.competitionDate}. ${selectedAway.every(value => value > 10) ? 'These dates are outside the final ten-day taper.' : 'Each date uses its actual event proximity; see daily reasons.'}`) : '';
+  const noStrength = actualStrength === 0 ? text(lang,
+    `本段未排主要肌力。${mode !== 'normal' ? '健康或治療限制優先。' : recentMobility.recentSymptoms ? '近期回報症狀惡化。' : schedule.find(day => day.routine.length && !court.has(day.day))?.coachAdvice || '可用日期、球量、比賽或時間條件沒有留下肌力安排；請檢查條件與每日原因。'}`,
+    `No main strength work is scheduled. ${mode !== 'normal' ? 'Health or treatment limits take priority.' : recentMobility.recentSymptoms ? 'Recent records report worsening symptoms.' : schedule.find(day => day.routine.length && !court.has(day.day))?.coachAdvice || 'Availability, court load, competition or time leaves no strength session; check preferences and daily reasons.'}`) : '';
   const conclusion = text(lang, `本週免金鑰模板：${focus === 'balanced' ? '整體肌力、協調與穩定' : { strength: '肌力', stability: '穩定', coordination: '協調' }[focus]}。安排 ${actualStrength} 堂主要肌力，不要求每天練滿 ${minutes} 分鐘。`, `No-key weekly template: ${focus} focus with ${actualStrength} main strength sessions. Filling all ${minutes} minutes every day is not required.`)
-    + `\n\n${assumption}\n\n${competition}\n\n${clinical}\n\n` + text(lang, '每天先檢查睡眠、精神和症狀；疲勞先減量。完成品質穩定、保有餘力且翌日無惡化兩次後，才考慮增加最小阻力；本模板不會因「太簡單」自動加重。每週回報難度與疲勞再排課；每 4–8 週回顧同版本動作表現。', 'Check sleep, readiness and symptoms daily; reduce work when fatigued. Only consider the smallest resistance increase after two quality sessions with reserve and no next-day worsening. “Too easy” does not automatically increase load. Report difficulty and fatigue weekly; review consistent movement measures every 4–8 weeks.');
+    + `\n\n${noStrength ? noStrength + '\n\n' : ''}${assumption}\n\n${competitionStatus} ${competition}\n\n${clinical}\n\n` + text(lang, '每天先檢查睡眠、精神和症狀；疲勞先減量。完成品質穩定、保有餘力且翌日無惡化兩次後，才考慮增加最小阻力；本模板不會因「太簡單」自動加重。每週回報難度與疲勞再排課；每 4–8 週回顧同版本動作表現。', 'Check sleep, readiness and symptoms daily; reduce work when fatigued. Only consider the smallest resistance increase after two quality sessions with reserve and no next-day worsening. “Too easy” does not automatically increase load. Report difficulty and fatigue weekly; review consistent movement measures every 4–8 weeks.');
   const weeklyView = text(lang, '\n\n一般無限制、非賽前／恢復優先週，保留主肌力的目的性重複，以全身動態開場及短活動槽維護八個區域，參考當日主項、近兩天訓練／球日及滾動七天的活動間隔；球日走路後採一至兩項短動態活動。時間、器材、恢復與治療限制優先；安排不等於實做或實測活動度，缺少資料不推定失衡或要求補課。', '\n\nIn unrestricted weeks outside taper or recovery priority, main lifts repeat for a purpose. The dynamic opening and short mobility slots maintain eight regions using today’s main movements, the prior two days of training/court context and rolling seven-day gaps. Court days use easy walking plus one or two short dynamic drills. Time, equipment, recovery and treatment limits take priority. Scheduled work is not actual completion or measured range; missing data does not diagnose imbalance or require catch-up work.');
   const warmupStrategy = text(lang,
     '\n\n30 分鐘以上的一般訓練日優先以 2 分鐘快走／踏步接 10 分鐘全身動態暖身起手；20–29 分鐘採 6 分鐘精簡流程，再接當天步序與主項準備組；整套為一項流程、內含八段，時間全部計入。短課、停用此流程、疲勞、球日恢復、治療限制或賽前熟悉度優先時，依每天實際列出的精簡安排，不補做整套；休息日不另暖身。',

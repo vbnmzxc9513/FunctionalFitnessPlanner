@@ -9,6 +9,7 @@ import { applyLocalPeriod, localPeriodState, periodProfile } from '../domain/per
 import { readStorage, writeStorage } from '../domain/storage.js';
 import { estimateSessionMinutes } from '../domain/sessions.js';
 import { buildWeeklyChoiceReport } from '../domain/weeklyChoices.js';
+import { manualPlanningExercises } from '../domain/templatePlanner.js';
 import { auth } from '../services/firebase.js';
 import { periodQuestionnaireText } from '../periodLocale.js';
 
@@ -108,7 +109,7 @@ export default function PeriodWorkspace({ uid, today, lang, t, exercises, profil
         : (lang === 'zh' ? '無法套用課表。請重新預覽後再試。' : 'Could not apply this plan. Create a fresh preview and retry.'));
     } finally { setBusy(false); }
   };
-  const choices = preview ? buildWeeklyChoiceReport({ schedule: preview.sessions, weeklyIntent: { weeklyExerciseIds: preview.profile?.context?.weeklyExerciseIds } }, exercises, preview.profile?.context, available, preview.sessions?.[0]?.week) : [];
+  const choices = preview ? buildWeeklyChoiceReport({ schedule: preview.sessions, weeklyIntent: { weeklyExerciseIds: preview.profile?.context?.weeklyExerciseIds } }, exercises, preview.profile?.context, manualPlanningExercises(exercises, preview.profile?.context), preview.sessions?.[0]?.week) : [];
   const update = (key, value) => setProfile(previous => ({ ...previous, [key]: typeof value === 'function' ? value(previous[key]) : value }));
   const replan = () => { if (range.from < today) setRange(defaultPlanningRange(today)); setPreview(null); setStage('range'); setStep(0); };
   return <section className="setup-card" data-testid="period-workspace">

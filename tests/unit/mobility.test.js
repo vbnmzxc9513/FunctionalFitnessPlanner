@@ -101,7 +101,9 @@ test('same-day readiness symptoms and fatigue keep their existing rest and recov
   const stopped = plan({ readiness: [ready] });
   assert.ok(stopped.sessions.every(day => !day.routine.length));
   const fatigued = plan({ readiness: [{ ...ready, symptoms: 'none', fatigue: 4 }] });
-  assert.ok(fatigued.sessions.every(day => !day.routine.includes('bf_A13') && !day.warmupNote.includes('活動度重點')));
+  assert.ok(fatigued.sessions.every(day => !day.routine.includes('bf_A13')));
+  assert.ok(fatigued.sessions.some(day => day.warmupNote.includes('活動度重點')));
+  assert.ok(fatigued.sessions.filter(day => day.sessionType === 'recovery').flatMap(day => day.prescriptions).filter(dose => exercises[dose.id].type === 'mobility').every(dose => dose.sets === 1 && dose.value === '2'));
 });
 
 test('regional history during whole-week replanning does not reserve replaced future strength sessions', () => {

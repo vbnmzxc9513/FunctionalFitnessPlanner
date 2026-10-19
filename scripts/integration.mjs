@@ -18,3 +18,4 @@ await run(['scripts/selection-smoke.mjs']);
 await run(['scripts/period-smoke.mjs']);
 
 await run(['scripts/compact-smoke.mjs']);
+await run(['scripts/recovery-smoke.mjs']);

@@ -51,6 +51,7 @@ export default function Onboarding({ t, lang = 'zh', context, setContext, time, 
     </fieldset>
     <fieldset className="form-section space-y-5" hidden={step !== 2} disabled={generating || step !== 2}>
       <legend tabIndex={-1} ref={node => { stepTitles.current[2] = node; }}>{t('quizChoicesTitle')}</legend><p className="section-copy">{t('quizChoicesHint')}</p>
+      <button type="button" data-testid="review-planning-conditions" onClick={() => moveStep(0)} className="text-left text-sm text-sky-800 rounded-xl border border-sky-100 bg-sky-50 p-3 w-full">{time} {t('minutes')} · {t('equipmentLabel')}：{context.equipment.length ? context.equipment.map(item => t(`equipment_${item}`)).join('、') : t('equipment_bodyweight')} · {lang === 'en' ? 'Edit' : '修改'}</button>
       <WeeklyExerciseChoices {...{ t, lang, context, focus, exercises, available }} onToggle={onToggleWeekly} disabled={generating} />
       {advancedOptions}
       {mode !== 'template' && <label className="block text-sm">{t('aiMessageLabel')}<textarea maxLength={mode === 'trial' ? 500 : 2000} value={message} onChange={event => setMessage(event.target.value)} placeholder={t('aiMessagePlaceholder')} className="mt-2 w-full rounded-xl border border-slate-200 p-3 h-24" /></label>}

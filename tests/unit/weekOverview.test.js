@@ -62,7 +62,11 @@ test('preference matrix keeps phase validation, eligibility, time, court recover
     const profile = { ...context, ...change };
     const base = generateTemplatePlan(exercises, profile, 35, 'zh', options);
     const preferred = generateTemplatePlan(exercises, { ...profile, targetRegions: ['upper'], stiffnessRegions: ['shoulder'] }, 35, 'zh', options);
-    assert.deepEqual(preferred.schedule, base.schedule, JSON.stringify(change));
+    if (change.recoveryNotes === 'poor sleep') {
+      const work = plan => plan.schedule.map(day => day.prescriptions.filter(dose => ['strength', 'skill', 'accessory'].includes(dose.phase)));
+      assert.deepEqual(work(preferred), work(base));
+      assert.ok(preferred.schedule.every(day => estimateSessionMinutes(day, exercises) <= 35));
+    } else assert.deepEqual(preferred.schedule, base.schedule, JSON.stringify(change));
   }
 });
 

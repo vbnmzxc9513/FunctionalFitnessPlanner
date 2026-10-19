@@ -54,12 +54,14 @@ export function buildWeeklyChoiceReport(plan, exercises, context = {}, available
     const days = (plan.schedule || []).filter(day => day.routine.includes(id)).map(day => day.day);
     if (days.length) return { id, days, reason: 'planned' };
     if (!week) return { id, days, reason: 'omitted' };
-    const blocked = weeklyChoiceBlockReason(id, exercises, context, available);
+    const conditionsKnown = Array.isArray(context.equipment);
+    const blocked = conditionsKnown ? weeklyChoiceBlockReason(id, exercises, context, available) : null;
     const protectedWeek = [1, 2, 3, 4, 5].some(day => {
       const away = competitionDaysAway(context.competitionDate, dateForWeekDay(week, day));
       return away !== null && away <= 10 && away >= -5;
     });
-    return { id, days, reason: blocked || (source !== 'template' ? 'omitted' : protectedWeek ? 'competition'
+    const noStrength = weeklyChoicePhase(id, exercises[id]) === 'strength' && !(plan.schedule || []).some(day => day.prescriptions?.some(dose => dose.phase === 'strength'));
+    return { id, days, reason: blocked || (source !== 'template' ? 'omitted' : protectedWeek ? 'competition' : noStrength ? 'no_strength' : !conditionsKnown ? 'conditions_unknown'
       : context.sorenessRegions?.length || context.recoveryNotes?.trim() && !/^(?:無|沒有|沒有疼痛|沒有受傷|正常|none|no pain|no injuries|no restrictions)[。.!\s]*$/i.test(context.recoveryNotes.trim()) ? 'recovery' : 'capacity') };
   });
 }

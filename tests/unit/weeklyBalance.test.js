@@ -113,7 +113,8 @@ test('restricted, unknown, fatigue and taper templates preserve their clinical/r
   assert.ok(taper.schedule.every(day => JSON.stringify(day.routine) === JSON.stringify(['bf_I01', 'bf_A02'])));
   assert.equal(byKey(analysis(taper.schedule, taperProfile), 'mobility', 'thoracic').count, 0);
   const fatigue = generateTemplatePlan(catalog, { ...context, recoveryNotes: 'poor sleep' }, 35, 'zh', options);
-  assert.equal(byKey(analysis(fatigue.schedule), 'mobility', 'thoracic').count, 0);
+  assert.ok(byKey(analysis(fatigue.schedule), 'mobility', 'thoracic').count > 0);
+  assert.ok(fatigue.schedule.every(day => !day.routine.includes('bf_A13')));
 });
 
 test('rotation never uses disabled/no-equipment thoracic moves, is deterministic and short sessions remain validated', () => {

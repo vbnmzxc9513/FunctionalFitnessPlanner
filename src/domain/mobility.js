@@ -23,6 +23,7 @@ const DYNAMIC = { thoracic: ['A06', 'A11', 'A10'], shoulder: ['A09'], hip_front:
 const PATTERNS = { squat_lunge: ['hip_front', 'quads', 'adductors', 'ankle'], hinge: ['hamstrings', 'hip_rotation'],
   push: ['shoulder', 'thoracic'], pull: ['shoulder', 'thoracic'], footwork_reaction: ['ankle', 'adductors', 'hip_rotation'] };
 const STIFFNESS = { hip: ['hip_front', 'hip_rotation', 'adductors'], ankle: ['ankle'], thoracic: ['thoracic'], shoulder: ['shoulder'] };
+const SORE_AREAS = { legs: ['quads'], posterior: ['hip_rotation', 'hamstrings'], calf: ['ankle'], upper: ['shoulder', 'thoracic'], core: ['thoracic'] };
 const daysApart = (later, earlier) => (Date.parse(`${later}T12:00:00Z`) - Date.parse(`${earlier}T12:00:00Z`)) / 86400000;
 const shift = (date, days) => new Date(Date.parse(`${date}T12:00:00Z`) + days * 86400000).toISOString().slice(0, 10);
 const values = input => Array.isArray(input) ? input : Object.values(input || {});
@@ -101,12 +102,13 @@ export function createMobilityContext({ date, today, sessions = [], logs = [], p
       + (recent.length ? 8 : 0) + (court.length ? 8 : 0) + (current.includes(area) ? 10 : 0) + (preferences.includes(area) ? 6 : 0);
     return { area, dates, gapDays, reasons, score };
   }).sort((a, b) => b.score - a.score || MOBILITY_AREAS.indexOf(a.area) - MOBILITY_AREAS.indexOf(b.area));
-  return { ranked, recentSymptoms: evidence.recentSymptoms, recoveryPriority };
+  return { ranked, recentSymptoms: evidence.recentSymptoms, recoveryPriority,
+    excludedAreas: [...new Set((context.sorenessRegions || []).flatMap(region => SORE_AREAS[region] || []))] };
 }
 
 // Reuse an easy slot. Recovery may use two short dynamic drills after its walk;
 // training retains its full opening flow and uses the old optional finish slot.
-export function adaptMobilityDay(day, available, minutes, intent, selected = []) {
+export function adaptMobilityDay(day, available, minutes, intent, selected = [], { gentle = false } = {}) {
   if (!day.routine.length || intent.recentSymptoms) return day;
   let next = { ...day, routine: [...day.routine], prescriptions: day.prescriptions.map(dose => ({ ...dose })) };
   const recovery = day.sessionType === 'recovery';
@@ -116,15 +118,16 @@ export function adaptMobilityDay(day, available, minutes, intent, selected = [])
   next.prescriptions.splice(slot, 1); next.routine = next.routine.filter(id => id !== removed);
   let added = 0;
   for (const { area } of intent.ranked) {
+    if (intent.excludedAreas?.includes(area)) continue;
     if (next.routine.some(id => mobilityAreas(id, available).includes(area))) continue;
     const id = DYNAMIC[area].map(code => Object.keys(available).find(id => available[id].catalogCode === code && !next.routine.includes(id))).find(Boolean);
     if (!id) continue;
-    const candidate = { ...next, routine: [...next.routine, id], prescriptions: [...next.prescriptions, { id, ...available[id].prescription, sets: 1, value: '4', phase: recovery ? 'recovery' : 'warmup' }] };
+    const candidate = { ...next, routine: [...next.routine, id], prescriptions: [...next.prescriptions, { id, ...available[id].prescription, sets: 1, value: gentle ? '2' : '4', phase: recovery ? 'recovery' : 'warmup' }] };
     if (recovery && estimateSessionMinutes(candidate, available) > minutes) continue;
     next = candidate; added++;
     if (added >= (recovery ? 2 : 1)) break;
   }
-  if (!added) return day;
+  if (!added) return mobilityAreas(removed, available).some(area => intent.excludedAreas?.includes(area)) ? next : day;
   next.prescriptions.sort((a, b) => SESSION_PHASES.indexOf(a.phase) - SESSION_PHASES.indexOf(b.phase));
   next.routine = next.prescriptions.map(dose => dose.id);
   return next;

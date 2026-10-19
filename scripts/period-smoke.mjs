@@ -122,11 +122,20 @@ try {
         const selected = await page.$eval(`[data-testid="training-days"] label:nth-of-type(${day}) input`, item => item.checked);
         if (!selected) await clickSelector(`[data-testid="training-days"] label:nth-of-type(${day})`);
       }
+      if (!await page.$eval('[data-testid="quiz-schedule"]', item => item.open)) await clickSelector('[data-testid="quiz-schedule"] > summary');
+      if (!await page.$eval('[data-testid="quiz-equipment"]', item => item.open)) await clickSelector('[data-testid="quiz-equipment"] > summary');
+      const dumbbell = '[data-testid="quiz-equipment"] label:first-child input';
+      if (!await page.$eval(dumbbell, item => item.checked)) await clickSelector('[data-testid="quiz-equipment"] label:first-child');
       await click('Next');
       await page.select('[data-testid="planner-form"] fieldset:not([hidden]) select', 'unrestricted');
-      await click('Next'); await preview();
+      await click('Next');
+      assert.ok(await page.$eval('[data-testid="review-planning-conditions"]', item => item.innerText.includes('Dumbbell')), `${layout}: selected equipment is visible before preview`);
+      await preview();
+      assert.ok(await page.$eval('[data-testid="period-equipment-summary"]', item => item.innerText.includes('Dumbbell')), `${layout}: preview retains selected equipment`);
       await clickSelector('[data-testid="period-plan-apply"]'); await page.waitForFunction(() => !document.querySelector('[data-testid="period-plan-apply"]'));
+      await page.evaluate(() => { for (const key of Object.keys(localStorage).filter(key => key.startsWith('fitness_saved_period_'))) { const saved = JSON.parse(localStorage.getItem(key)); if (saved?.periodId) { saved.createdAt = 1; localStorage.setItem(key, JSON.stringify(saved)); } } });
       await page.reload({ waitUntil: 'networkidle2' }); await click('Plan'); await visible('[data-testid="period-plan-preview"]');
+      assert.ok(await page.$eval('[data-testid="period-equipment-summary"]', item => item.innerText.includes('Dumbbell')), `${layout}: a newer cloud timestamp cannot discard the matching equipment snapshot`);
       assert.deepEqual(await draft(), beforeStale, `${layout}: applying an account plan never overwrites device actuals`);
       await click('Records');
       assert.equal(await page.$$eval('[data-testid="latest-training-logs"] article', items => items.length), 0, `${layout}: account history does not silently import local actuals`);
