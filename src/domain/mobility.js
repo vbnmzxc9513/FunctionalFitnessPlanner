@@ -13,7 +13,7 @@ export const MOBILITY_LABELS = {
   en: { thoracic: 'Thoracic spine', shoulder: 'Shoulder / chest', hip_front: 'Hip flexors', hip_rotation: 'Hip rotation', adductors: 'Adductors', quads: 'Quadriceps', hamstrings: 'Hamstrings', ankle: 'Ankles / calves' },
 };
 const CODES = {
-  thoracic: ['A06', 'A10', 'A11', 'A12', 'A13', 'H12'], shoulder: ['A09', 'H07'],
+  thoracic: ['A06', 'A10', 'A11', 'A12', 'A13', 'H12'], shoulder: ['A09', 'A12', 'A13', 'H07'],
   hip_front: ['A04', 'A12', 'A13', 'H03'], hip_rotation: ['A12', 'A13', 'A15', 'H04'],
   adductors: ['A05', 'A13', 'H06'], quads: ['A12', 'A13', 'A14'],
   hamstrings: ['A03', 'A12', 'A13', 'H05'], ankle: ['A02', 'A12', 'A13', 'H01', 'H02'],
@@ -69,13 +69,14 @@ export function createMobilityContext({ date, today, sessions = [], logs = [], p
   if (![date, today].every(isCalendarDate)) return { ranked: [], recentSymptoms: false };
   const evidence = mobilityEvidence({ date, today, sessions, logs, progressByWeek, exercises });
   const courtReports = new Map();
-  let recoveryPriority = false;
+  let recoveryPriority = false; let recoveryOnly = false;
   for (const value of values(readiness).sort((a, b) => String(a.date).localeCompare(String(b.date)))) {
     let record; try { record = validateReadiness(value, { today }); } catch { continue; }
     if (record.date === today) {
       const decision = evaluateReadiness(record, { today, healthStatus: context.healthStatus, healthNotes: context.healthNotes });
       if (decision.action === 'rest') evidence.recentSymptoms = true;
       if (['reduce', 'recover'].includes(decision.action)) recoveryPriority = true;
+      if (decision.action === 'recover') recoveryOnly = true;
     }
     if (record.yesterdayCourtMinutes !== null) courtReports.set(shift(record.date, -1), record.yesterdayCourtMinutes > 0);
     if (record.todayCourtIntensity !== 'unknown' && !courtReports.has(record.date)) courtReports.set(record.date, record.todayCourtIntensity !== 'none');
@@ -102,20 +103,20 @@ export function createMobilityContext({ date, today, sessions = [], logs = [], p
       + (recent.length ? 8 : 0) + (court.length ? 8 : 0) + (current.includes(area) ? 10 : 0) + (preferences.includes(area) ? 6 : 0);
     return { area, dates, gapDays, reasons, score };
   }).sort((a, b) => b.score - a.score || MOBILITY_AREAS.indexOf(a.area) - MOBILITY_AREAS.indexOf(b.area));
-  return { ranked, recentSymptoms: evidence.recentSymptoms, recoveryPriority,
+  return { ranked, recentSymptoms: evidence.recentSymptoms, recoveryPriority, recoveryOnly,
     excludedAreas: [...new Set((context.sorenessRegions || []).flatMap(region => SORE_AREAS[region] || []))] };
 }
 
-// Reuse an easy slot. Recovery may use two short dynamic drills after its walk;
+// Reuse an easy slot. Short recovery may use two gentle dynamic drills;
 // training retains its full opening flow and uses the old optional finish slot.
 export function adaptMobilityDay(day, available, minutes, intent, selected = [], { gentle = false } = {}) {
   if (!day.routine.length || intent.recentSymptoms) return day;
   let next = { ...day, routine: [...day.routine], prescriptions: day.prescriptions.map(dose => ({ ...dose })) };
   const recovery = day.sessionType === 'recovery';
   const slot = next.prescriptions.findIndex(dose => !selected.includes(dose.id) && (recovery ? available[dose.id]?.catalogCode === 'A02' : dose.phase === 'cooldown' && available[dose.id]?.catalogCode === 'D09'));
-  if (slot < 0) return day;
-  const removed = next.prescriptions[slot].id;
-  next.prescriptions.splice(slot, 1); next.routine = next.routine.filter(id => id !== removed);
+  if (slot < 0 && !(recovery && next.routine.some(id => available[id]?.sequenceMinutes))) return day;
+  const removed = slot >= 0 ? next.prescriptions[slot].id : null;
+  if (removed) { next.prescriptions.splice(slot, 1); next.routine = next.routine.filter(id => id !== removed); }
   let added = 0;
   for (const { area } of intent.ranked) {
     if (intent.excludedAreas?.includes(area)) continue;
@@ -125,7 +126,7 @@ export function adaptMobilityDay(day, available, minutes, intent, selected = [],
     const candidate = { ...next, routine: [...next.routine, id], prescriptions: [...next.prescriptions, { id, ...available[id].prescription, sets: 1, value: gentle ? '2' : '4', phase: recovery ? 'recovery' : 'warmup' }] };
     if (recovery && estimateSessionMinutes(candidate, available) > minutes) continue;
     next = candidate; added++;
-    if (added >= (recovery ? 2 : 1)) break;
+    if (added >= (recovery ? 2 : 1) || next.routine.length >= (recovery ? 3 : 8)) break;
   }
   if (!added) return mobilityAreas(removed, available).some(area => intent.excludedAreas?.includes(area)) ? next : day;
   next.prescriptions.sort((a, b) => SESSION_PHASES.indexOf(a.phase) - SESSION_PHASES.indexOf(b.phase));

@@ -15,23 +15,24 @@ const context = { healthStatus: 'unrestricted', equipment: ['dumbbell', 'band', 
 const options = { currentDate: '2026-10-14', currentWeek: '2026-W43' };
 const generate = (profile = context, minutes = 35, catalog = exercises, extra = {}) => generateTemplatePlan(catalog, profile, minutes, 'zh', { ...options, ...extra });
 
-test('normal lunch sessions start with heat then the complete flow, with honest timing and main preparation', () => {
+test('normal lunch sessions start directly with the complete stretching flow, with honest timing and main preparation', () => {
   for (const badmintonDays of [[2, 4, 5], [2, 5, 6]]) for (const minutes of [30, 35, 40]) {
     const plan = generate({ ...context, badmintonDays }, minutes);
     const training = plan.schedule.filter(day => day.sessionType === 'training');
     assert.ok(training.length);
     for (const day of training) {
-      assert.deepEqual(day.routine.slice(0, 2), ['bf_A01', 'bf_A13']);
+      assert.equal(day.routine[0], 'bf_A13');
+      assert.ok(!day.routine.some(id => ['bf_A01', 'bf_I01'].includes(id)));
       const dose = day.prescriptions.find(item => item.id === 'bf_A13');
       assert.deepEqual(dose, { id: 'bf_A13', ...exercises.bf_A13.prescription, phase: 'warmup' });
-      assert.ok(sessionSections(day, exercises)[0].seconds >= 12 * 60, 'both timed warm-ups count, before any lift preparation');
+      assert.ok(sessionSections(day, exercises)[0].seconds >= 10 * 60, 'the full flow and each light preparation count');
       assert.ok(estimateSessionMinutes(day, exercises) <= minutes);
       assert.ok(day.routine.length <= 8);
       const main = day.prescriptions.find(item => item.phase === 'strength');
       if (main) assert.ok(main.preparation);
       assert.equal(createSharePayload(day).items.filter(item => item.id === 'bf_A13').length, 1);
     }
-    for (const day of plan.schedule.filter(day => day.sessionType !== 'training')) assert.ok(!day.routine.includes('bf_A13'));
+    for (const day of plan.schedule.filter(day => day.sessionType === 'recovery')) assert.ok(day.routine.includes('bf_A13'));
   }
 });
 
@@ -43,7 +44,7 @@ test('flow guide contains eight paced parts in both languages, distinct hip swit
     assert.equal(total, 600, 'internal allocation fits ten minutes including transitions');
   }
   assert.match(getExerciseGuide('bf_A13').guide.steps[6], /不是靠牆呼吸/);
-  assert.deepEqual(classifyBalanceExercise('bf_A13', exercises.bf_A13), { mobility: ['hip', 'ankle', 'thoracic'], patterns: [], unclassified: false });
+  assert.deepEqual(classifyBalanceExercise('bf_A13', exercises.bf_A13), { mobility: ['hip', 'ankle', 'thoracic', 'shoulder'], patterns: [], unclassified: false });
   assert.ok(exercises.bf_A13.shoulderLoaded);
   assert.ok(exercises.bf_A13.aliases.includes('嬰兒式'));
   for (const region of ['髖前側', '內收肌', '股四頭肌', '腿後側', '腓腸肌', '比目魚肌']) assert.ok(getExerciseGuide('bf_A13').guide.steps.join(' ').includes(region));
@@ -53,7 +54,8 @@ test('shorter sessions and historical six-minute flows retain their own complete
   for (const minutes of [20, 25, 29]) {
     const plan = generate(context, minutes);
     for (const day of plan.schedule.filter(day => day.sessionType === 'training')) {
-      assert.deepEqual(day.routine.slice(0, 2), ['bf_A01', 'bf_A12']);
+      assert.equal(day.routine[0], 'bf_A12');
+      assert.ok(!day.routine.includes('bf_A01'));
       assert.ok(!day.routine.includes('bf_A13'));
       assert.ok(estimateSessionMinutes(day, exercises) <= minutes);
       assert.match(day.warmupNote, /6 分鐘/);
@@ -75,7 +77,8 @@ test('time pressure reduces training work while retaining the complete full-body
   for (const minutes of [30, 35, 40]) {
     const plan = generate(profile, minutes);
     for (const day of plan.schedule.filter(day => day.sessionType === 'training')) {
-      assert.deepEqual(day.routine.slice(0, 2), ['bf_A01', 'bf_A13']);
+      assert.equal(day.routine[0], 'bf_A13');
+      assert.ok(!day.routine.some(id => ['bf_A01', 'bf_I01'].includes(id)));
       assert.equal(day.prescriptions.find(dose => dose.id === 'bf_A13').value, '10');
       assert.ok(!day.routine.includes('bf_A12'));
       assert.match(day.warmupNote, /10 分鐘/);
@@ -86,24 +89,24 @@ test('time pressure reduces training work while retaining the complete full-body
 });
 
 test('clinical limits, recovery priority, taper, disabled flows and short sessions keep their exceptions', () => {
-  for (const change of [{ healthStatus: 'unknown' }, { healthNotes: '肩部震波' }, { healthNotes: '膝痛' }, { sorenessRegions: ['upper'] }, { recoveryNotes: 'poor sleep' }]) {
+  for (const change of [{ healthStatus: 'unknown' }, { healthNotes: '肩部震波' }, { healthNotes: '膝痛' }, { sorenessRegions: ['upper'] }]) {
     const plan = generate({ ...context, ...change });
     assert.ok(plan.schedule.every(day => !day.routine.some(id => ['bf_A12', 'bf_A13'].includes(id))), JSON.stringify(change));
   }
   assert.equal(planningExercises(exercises, { ...context, healthStatus: 'restricted' }).bf_A13, undefined);
   const taperProfile = { ...context, competitionDate: '2026-10-26' };
   const previous = generate();
-  for (const previousPlan of [undefined, previous]) {
-    const plan = generate(taperProfile, 35, exercises, { previousPlan });
-    assert.ok(plan.schedule.every(day => !day.routine.includes('bf_A13')), 'no new full flow is introduced during taper');
-  }
+  const noHistory = generate(taperProfile);
+  assert.ok(noHistory.schedule.every(day => !day.routine.includes('bf_A13')), 'taper does not invent familiarity');
+  const familiar = generate({ ...taperProfile, warmupFamiliar: true });
+  assert.ok(familiar.schedule.some(day => day.routine.includes('bf_A13')), 'confirmed familiar stretching can remain during taper');
   const disabled = { ...exercises, bf_A13: { ...exercises.bf_A13, active: false }, bf_A12: { ...exercises.bf_A12, active: false } };
   const without = generate(context, 35, disabled);
   assert.ok(without.schedule.every(day => !day.routine.includes('bf_A13')));
   const noHeat = { ...exercises, bf_A01: { ...exercises.bf_A01, active: false } };
   for (const weeklyExerciseIds of [[], ['bf_A13']]) {
     const plan = generate({ ...context, weeklyExerciseIds }, 35, noHeat);
-    assert.ok(plan.schedule.every(day => !day.routine.includes('bf_A13')), 'the flow cannot claim a listed heat-raising step when it is disabled');
+    assert.ok(plan.schedule.some(day => day.routine.includes('bf_A13')), 'stretching does not depend on a disabled running warm-up');
   }
   for (const minutes of [5, 10, 15]) {
     const plan = generate(context, minutes);
@@ -115,12 +118,12 @@ test('clinical limits, recovery priority, taper, disabled flows and short sessio
   assert.ok(!recovered.routine.includes('bf_A13'));
 });
 
-test('an explicit weekly warm-up choice can replace the default without adding hidden work', () => {
-  const plan = generate({ ...context, weeklyExerciseIds: ['bf_A06'] });
-  assert.ok(plan.schedule.some(day => day.prescriptions.some(dose => dose.id === 'bf_A06' && dose.phase === 'warmup')));
-  for (const day of plan.schedule.filter(day => day.routine.includes('bf_A06'))) {
-    assert.ok(!day.routine.includes('bf_A13'));
-    assert.ok(!day.warmupNote.includes('10 分鐘八段'));
+test('single warm-up preferences preserve the requested eight-part opening without hidden work', () => {
+  const plan = generate({ ...context, weeklyExerciseIds: ['bf_A06', 'bf_A01'] });
+  for (const day of plan.schedule.filter(day => day.sessionType === 'training')) {
+    assert.equal(day.routine[0], 'bf_A13');
+    assert.ok(!day.routine.includes('bf_A01'));
+    assert.ok(estimateSessionMinutes(day, exercises) <= 35);
   }
 });
 

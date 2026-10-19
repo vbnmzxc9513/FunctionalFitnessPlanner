@@ -7,6 +7,7 @@ export function doseSeconds(dose, exercise = {}, preparation = false) {
   const work = dose.unit === 'minutes' ? maximum * 60 : dose.unit === 'seconds' ? maximum
     : maximum * (dose.unit === 'breaths' ? 8 : 3);
   let seconds = rounds * work + Math.max(0, rounds - 1) * (dose.restSeconds || 0) + 20;
+  if (preparation) seconds += dose.restSeconds || 0;
   if (!preparation && dose.unit === 'reps') seconds += rounds * Math.max(0, maximum - 1) * (exercise.betweenRepsSeconds || 0);
   return seconds;
 }

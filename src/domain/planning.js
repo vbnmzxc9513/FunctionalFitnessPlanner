@@ -1,3 +1,4 @@
+import { RECOVERY_STATES } from './recovery.js';
 import { selectedRegions, TARGET_REGIONS, STIFFNESS_REGIONS, SORENESS_REGIONS, normalizeWeeklyIntent, weeklyChoiceIds } from './trainingPreferences.js';
 import { estimateSessionMinutes } from './sessions.js';
 export { estimateSessionMinutes } from './sessions.js';
@@ -8,7 +9,7 @@ import { eligibleExercises, validSequenceDose } from './exerciseCatalog.js';
 export const DEFAULT_PLANNING_CONTEXT = {
   trainingDays: [1, 2, 3, 4, 5], badmintonDays: [], badmintonMinutes: '', badmintonIntensity: 'unknown',
   equipment: [], partnerAvailable: false, experience: 'beginner',
-  targetRegions: [], stiffnessRegions: [], sorenessRegions: [], weeklyExerciseIds: [], competitionDate: '', healthStatus: 'unrestricted', healthNotes: '', recoveryNotes: '',
+  targetRegions: [], stiffnessRegions: [], sorenessRegions: [], weeklyExerciseIds: [], warmupFamiliar: false, recoveryState: 'unknown', sorenessImpact: 'unknown', competitionDate: '', healthStatus: 'unrestricted', healthNotes: '', recoveryNotes: '',
 };
 
 export function normalizePlanningContext(value = {}) {
@@ -27,6 +28,9 @@ export function normalizePlanningContext(value = {}) {
     competitionDate: isCalendarDate(value.competitionDate) ? value.competitionDate : '',
     healthStatus: /震波|shockwave|ESWT/i.test(value.healthNotes || '') ? 'restricted' : ['unrestricted', 'restricted', 'unknown'].includes(value.healthStatus) ? value.healthStatus : 'unknown',
     healthNotes: typeof value.healthNotes === 'string' ? value.healthNotes.slice(0, 2000) : '',
+    warmupFamiliar: value.warmupFamiliar === true,
+    recoveryState: RECOVERY_STATES.includes(value.recoveryState) ? value.recoveryState : 'unknown',
+    sorenessImpact: ['unknown', 'mild', 'limited'].includes(value.sorenessImpact) ? value.sorenessImpact : 'unknown',
     recoveryNotes: typeof value.recoveryNotes === 'string' ? value.recoveryNotes.slice(0, 2000) : '',
   };
 }

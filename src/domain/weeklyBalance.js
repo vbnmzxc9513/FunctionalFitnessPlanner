@@ -1,3 +1,4 @@
+import { recoveryDecision } from './recovery.js';
 import { competitionDaysAway, normalizePlanningContext, planningExercises } from './planning.js';
 import { dateForWeekDay, getWeekString, isCalendarDate, localDate } from './dates.js';
 import { catalogExercises } from './exerciseCatalog.js';
@@ -10,7 +11,7 @@ const MOBILITY_CODES = {
   hip: ['A03', 'A04', 'A05', 'A12', 'A13', 'A14', 'A15', 'H03', 'H04', 'H05', 'H06'],
   ankle: ['A02', 'A12', 'A13', 'H01', 'H02'],
   thoracic: ['A06', 'A10', 'A11', 'A12', 'A13', 'H12'],
-  shoulder: ['A09', 'H07'],
+  shoulder: ['A09', 'A12', 'A13', 'H07'],
 };
 const PATTERN_CODES = {
   squat_lunge: ['B01', 'B02', 'B10', 'B12'],
@@ -58,7 +59,7 @@ export function analyzeWeeklyBalance(schedule = [], exercises = {}, context = {}
   const missingClinical = !['unrestricted', 'restricted'].includes(context.healthStatus);
   const restricted = profile.healthStatus !== 'unrestricted' || hasNotes
     || /麻|無力|功能下降|停止運動|醫囑休息|numb|weak|loss of function|no exercise/i.test(profile.recoveryNotes);
-  const recoveryPriority = profile.sorenessRegions.length > 0 || !!profile.recoveryNotes.trim() && !CLEAN_NOTES.test(profile.recoveryNotes.trim());
+  const recoveryPriority = recoveryDecision(profile).action !== 'normal';
   const days = [1, 2, 3, 4, 5, 6, 7].map(day => {
     const entry = schedule.find(item => item?.day === day);
     const date = dateForWeekDay(week, day);

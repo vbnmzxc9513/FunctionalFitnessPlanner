@@ -1,3 +1,4 @@
+import { recoveryDecision } from './recovery.js';
 import { competitionDaysAway, normalizePlanningContext, planningExercises, validateGeneratedPlan } from './planning.js';
 import { dateForWeekDay, getWeekString, isCalendarDate, localDate } from './dates.js';
 import { estimateSessionMinutes } from './sessions.js';
@@ -52,57 +53,60 @@ function add(day, available, code, phase, overrides = {}) {
 }
 
 function prepareMain(day, available, lang) {
-  const first = day.prescriptions.find(dose => dose.phase === 'strength');
-  for (const dose of day.prescriptions) if (dose !== first) delete dose.preparation;
-  if (!first) return;
-  first.preparation = { sets: 1, value: first.unit === 'seconds' ? '10' : '4', unit: first.unit === 'seconds' ? 'seconds' : 'reps', restSeconds: 30, perSide: first.perSide,
-    instruction: available[first.id].equipmentOptions.some(option => !option.length)
-      ? text(lang, '使用同一動作的徒手版本，保留餘力，不做到疲勞。', 'Use the bodyweight version of the same movement, with ample reserve and no fatigue.')
-      : text(lang, '使用此動作已選器材的最輕可控阻力，保留餘力，不做到疲勞。', 'Use the lightest controllable resistance with this movement’s selected equipment, with ample reserve and no fatigue.') };
+  const seen = new Set();
+  for (const dose of day.prescriptions) {
+    delete dose.preparation;
+    if (dose.phase !== 'strength') continue;
+    const patterns = classifyBalanceExercise(dose.id, available[dose.id]).patterns;
+    if (patterns.length && patterns.every(pattern => seen.has(pattern))) continue;
+    patterns.forEach(pattern => seen.add(pattern));
+    dose.preparation = { sets: 1, value: dose.unit === 'seconds' ? '10' : '4', unit: dose.unit === 'seconds' ? 'seconds' : 'reps', restSeconds: 30, perSide: dose.perSide,
+      instruction: available[dose.id].equipmentOptions.some(option => !option.length)
+        ? text(lang, '使用同一動作的徒手版本，保留餘力，不做到疲勞；完成後休息 30 秒再進正式組。', 'Use the bodyweight version of this movement without fatigue; rest 30 seconds before work sets.')
+        : text(lang, '使用同一動作最輕可控阻力，不做到疲勞；完成後休息 30 秒再進正式組。', 'Use the lightest controllable resistance for this movement without fatigue; rest 30 seconds before work sets.') };
+  }
 }
 
-function makeRecovery(day, available, lang, reason, shoulder = false) {
+function addStretchOpening(day, available, minutes, phase = 'warmup', compact = false) {
+  if (!compact && minutes >= 30 && Object.values(available).some(exercise => exercise.catalogCode === 'A13')) add(day, available, 'A13', phase);
+  else if (!compact && minutes >= 10 && Object.values(available).some(exercise => exercise.catalogCode === 'A12')) add(day, available, 'A12', phase);
+  else add(day, available, 'A02', phase, { sets: 1, value: '4' });
+}
+
+function makeRecovery(day, available, lang, reason, minutes, compact = false) {
   day.sessionType = 'recovery';
-  day.theme = text(lang, '輕活動與恢復', 'Easy activity and recovery');
-  day.concept = text(lang, '保留球場與下一堂訓練的精神和動作品質。', 'Preserve readiness and movement quality for court play and the next session.');
+  day.theme = text(lang, '拉伸與活動度恢復', 'Stretching and mobility recovery');
+  day.concept = text(lang, '以舒適動態拉伸維持活動，保留球場與下一堂訓練的精神。', 'Use comfortable dynamic stretches while preserving readiness for court play and the next session.');
   day.coachAdvice = reason;
-  add(day, available, 'I01', 'recovery', { sets: 1, value: shoulder ? '3' : '5', unit: 'minutes', restSeconds: 0 });
-  // Unclear treatment limits cannot be translated into prescribed stretching.
-  if (!shoulder) add(day, available, 'A02', 'recovery', { sets: 1, value: '4' });
-  day.warmupNote = text(lang, '輕活動從更慢的速度開始，不另加高負荷暖身。', 'Start the easy activity at a slower pace; no additional loaded warm-up.');
-  day.cooldownNote = text(lang, '本次是輕活動，不必再加拉伸；有不適就停止。', 'This is easy activity; additional stretching is optional. Stop if uncomfortable.');
+  addStretchOpening(day, available, minutes, 'recovery', compact);
+  day.warmupNote = text(lang, '依列出的拉伸慢速進出，不跑步、不追求最大幅度或疲勞。', 'Move slowly through the listed stretches, without running, forcing range or chasing fatigue.');
+  day.cooldownNote = text(lang, '本次已是拉伸活動，不另加收操；不適就停止。', 'This session is already gentle stretching; no extra cooldown is needed. Stop if uncomfortable.');
 }
 
-function addTraining(day, available, lang, focus, kind, sets, familiar, upperOrdinal = 0, preferences = {}, warmupMinutes = 0) {
+function addTraining(day, available, lang, focus, kind, sets, familiar, variant = 0, preferences = {}, warmupMinutes = 0, reduced = false) {
   day.sessionType = 'training';
   day.theme = kind === 'skill' ? text(lang, '短協調與步序', 'Short coordination and step sequencing') : text(lang, '全身肌力與穩定', 'Strength and stability');
   day.concept = text(lang, '先練清楚的步序與控制，再以可恢復的劑量累積力量；不追求疲勞。', 'Practice controlled movement, then build strength with recoverable doses rather than chasing fatigue.');
-  add(day, available, 'A01', 'warmup');
-  if (warmupMinutes >= 20 && day.routine.some(id => available[id]?.catalogCode === 'A01')) {
-    const code = warmupMinutes >= 30 && Object.values(available).some(exercise => exercise.catalogCode === 'A13') ? 'A13' : 'A12';
-    add(day, available, code, 'warmup');
-  }
-  if (!day.routine.some(id => available[id]?.sequenceMinutes)) add(day, available, kind === 'skill' ? 'A02' : 'A03', 'warmup', { value: '4' });
+  addStretchOpening(day, available, warmupMinutes);
   const skillCodes = focus === 'stability' ? ['E01', 'F03'] : ['F01', 'F02'];
-  if (kind === 'skill' || focus !== 'strength') {
+  if (!reduced && (kind === 'skill' || focus !== 'strength')) {
     const partner = Object.values(available).some(exercise => exercise.catalogCode === 'G01');
     const code = focus === 'coordination' && partner ? 'G01' : skillCodes[0];
-    add(day, available, code, 'skill', { sets: 1, value: code === 'G01' ? '10' : '3', restSeconds: 60 });
+    add(day, available, code, 'skill', { sets: 2, value: code === 'G01' ? '10' : '3', restSeconds: 60 });
     if (kind === 'skill') add(day, available, skillCodes[1], 'skill', { sets: 1, value: '3', restSeconds: 60 });
   }
   if (kind === 'strength') {
-    const codes = focus === 'stability' ? ['B05', 'B01'] : ['B10', 'B01'];
-    const main = codes.find(code => Object.values(available).some(exercise => exercise.catalogCode === code));
-    if (main) add(day, available, main, 'strength', { sets, value: '6', restSeconds: 90 });
-    const hinge = ['B11', 'B03', 'B04', 'B06'].find(code => Object.values(available).some(exercise => exercise.catalogCode === code));
-    if (hinge) add(day, available, hinge, 'strength', { sets, value: '6', restSeconds: 90 });
-    const upperAvailable = codes => codes.find(code => Object.values(available).some(exercise => exercise.catalogCode === code));
-    const preferred = upperAvailable(['C01', 'C11', 'C03']);
-    const opposite = preferred === 'C01' ? upperAvailable(['C11', 'C02', 'C03']) : upperAvailable(['C10', 'C01', 'C04']);
-    // Use an existing upper-body slot; lack of a pulling tool does not invent a bodyweight pull.
-    const upper = !familiar && upperOrdinal % 2 === 1 && opposite ? opposite : preferred;
-    if (upper) add(day, available, upper, 'strength', { sets: 1, value: '6', restSeconds: 90 });
-    add(day, available, 'D01', 'accessory', { sets: 1, value: '4', restSeconds: 45 });
+    const pick = codes => codes.find(code => Object.values(available).some(exercise => exercise.catalogCode === code));
+    // Stable A/B lower-body slots span calendar weeks, including one-session weeks.
+    const knee = pick(focus === 'stability' || variant % 2 ? ['B01', 'B10', 'B02'] : ['B10', 'B01', 'B02']);
+    const hinge = pick(focus === 'stability' ? ['B05', 'B11', 'B03', 'B06'] : ['B11', 'B03', 'B04', 'B06', 'B05']);
+    const lower = reduced ? [variant % 2 ? hinge || knee : knee || hinge] : focus === 'stability' ? [hinge, knee] : [knee, hinge];
+    for (const code of lower.filter(Boolean)) add(day, available, code, 'strength', { sets, value: '6', restSeconds: 90 });
+    const upper = pattern => pick(['C01', 'C11', 'C10', 'C03', 'C02', 'C04'].filter(code => Object.entries(available).some(([id, exercise]) => exercise.catalogCode === code && classifyBalanceExercise(id, exercise).patterns.includes(pattern))));
+    const pull = upper('pull'), push = upper('push');
+    const uppers = variant % 2 ? [push, pull] : [pull, push];
+    for (const code of uppers.filter(Boolean)) add(day, available, code, 'strength', { sets: 1, value: '6', restSeconds: 90 });
+    if (!reduced) add(day, available, 'D01', 'accessory', { sets: 1, value: '4', restSeconds: 45 });
   }
   add(day, available, 'D09', 'cooldown', { sets: 1, value: '4' });
   if (familiar) {
@@ -134,26 +138,30 @@ function addTraining(day, available, lang, focus, kind, sets, familiar, upperOrd
       day.prescriptions[slot] = { id, ...exercise.prescription, sets: 1, value: '4', phase: 'warmup' };
       day.routine = day.routine.map(item => item === oldId ? id : item);
     }
-    day.warmupNote = text(lang, '先提高體溫，再做列出的主項相關活動與輕量準備組；僵硬偏好只影響舒適活動，不代表治療或可以忍痛。', 'Raise body temperature, then use the listed movement-specific mobility and light preparation sets. Stiffness preferences guide comfortable activity, not treatment or permission to train through pain.');
+    day.warmupNote = text(lang, '先做列出的動態拉伸，再接各動作模式的輕準備組；僵硬偏好不代表治療或可以忍痛。', 'Use the listed dynamic stretches and light preparation for each movement pattern. Stiffness preferences are not treatment or permission to train through pain.');
   }
   prepareMain(day, available, lang);
-  if (!day.warmupNote || !preferences.targetRegions?.length && !preferences.stiffnessRegions?.length || familiar) day.warmupNote = text(lang, '先提高體溫與準備髖／踝活動，再做短步序或主項準備組；準備組不做到疲勞。', 'Raise body temperature and prepare hip/ankle motion, then perform short step practice or main-lift preparation without fatigue.');
+  if (!day.warmupNote || !preferences.targetRegions?.length && !preferences.stiffnessRegions?.length || familiar) day.warmupNote = text(lang, '先做列出的動態拉伸，再做短步序與主項輕準備組；不跑步、不做到疲勞。', 'Start with the listed dynamic stretches, then short step practice and light lift preparation without running or fatigue.');
   day.cooldownNote = text(lang, '安排短呼吸收尾，可依感受省略；不以拉伸取代睡眠與合理球量。', 'A short breathing finish is optional; stretching does not replace sleep and reasonable court load.');
 }
 
 function fitDay(day, available, minutes, lang, targets = [], selected = []) {
   const patterns = targets.flatMap(region => TARGET_PATTERNS[region] || []);
-  const priority = dose => Number(available[dose.id]?.catalogCode === 'A01') * 4 + Number(selected.includes(dose.id)) * 2 + Number(classifyBalanceExercise(dose.id, available[dose.id]).patterns.some(pattern => patterns.includes(pattern)));
+  const priority = dose => Number(selected.includes(dose.id)) * 2 + Number(classifyBalanceExercise(dose.id, available[dose.id]).patterns.some(pattern => patterns.includes(pattern)));
   // Remove lower-priority work instead of hiding time or shortening required rests.
-  const removal = ['accessory', 'strength', 'warmup', 'skill', 'cooldown'];
-  while (estimateSessionMinutes(day, available) > minutes && day.routine.length) {
+  const removal = ['cooldown', 'accessory', 'skill', 'strength'];
+  while ((estimateSessionMinutes(day, available) > minutes || day.routine.length > 8) && day.routine.length) {
     let index = -1;
     for (const phase of removal) {
-      const hasFlow = day.routine.some(id => available[id]?.sequenceMinutes);
-      const matches = day.prescriptions.map((dose, i) => dose.phase === phase && !(phase === 'warmup' && hasFlow) ? i : -1).filter(i => i >= 0);
+      if (phase === 'strength') {
+        const multi = day.prescriptions.find(dose => dose.phase === 'strength' && dose.sets > 1);
+        if (multi) { multi.sets = 1; index = -2; break; }
+      }
+      const matches = day.prescriptions.map((dose, i) => dose.phase === phase ? i : -1).filter(i => i >= 0);
       matches.sort((a, b) => Number(priority(day.prescriptions[b])) - Number(priority(day.prescriptions[a])));
       if (matches.length > 1 || ['accessory', 'cooldown'].includes(phase)) { index = matches.at(-1); if (index >= 0) break; }
     }
+    if (index === -2) continue;
     if (index < 0) {
       const multi = day.prescriptions.find(dose => dose.sets > 1);
       if (multi) { multi.sets = 1; continue; }
@@ -183,7 +191,7 @@ export function generateTemplatePlan(exercises, context, dailyTime, lang = 'zh',
   const mode = clinicalMode(profile);
   const safeProfile = mode === 'normal' ? profile : { ...profile, healthStatus: 'restricted' };
   const eligible = planningExercises(exercises, safeProfile);
-  const available = Object.fromEntries(Object.entries(eligible).filter(([id, exercise]) => CURATED[id]?.catalogCode === exercise.catalogCode && exercise.prescription && Array.isArray(exercise.equipmentOptions)));
+  const available = Object.fromEntries(Object.entries(eligible).filter(([id, exercise]) => CURATED[id]?.catalogCode === exercise.catalogCode && !['A01', 'I01'].includes(exercise.catalogCode) && exercise.prescription && Array.isArray(exercise.equipmentOptions)));
   const focus = FOCUSES.includes(options.focus || options.goalFocus) ? options.focus || options.goalFocus : 'balanced';
   const today = isCalendarDate(options.currentDate) ? options.currentDate : localDate();
   const week = dateForWeekDay(options.currentWeek, 1) ? options.currentWeek : getWeekString(new Date(`${today}T12:00:00`));
@@ -195,12 +203,16 @@ export function generateTemplatePlan(exercises, context, dailyTime, lang = 'zh',
   const court = new Set(profile.badmintonDays);
   const onCourt = day => court.has(((day - 1 + 7) % 7) + 1);
   const recentMobility = createMobilityContext({ date: today, today, logs: options.logs, readiness: options.readiness, exercises, context: profile });
-  const tired = recentMobility.recentSymptoms || recentMobility.recoveryPriority || options.lastWeekFeedback === -1 || profile.sorenessRegions.length > 0 || (!!profile.recoveryNotes.trim() && !CLEAN_NOTES.test(profile.recoveryNotes.trim()));
+  const recovery = recoveryDecision(profile);
+  const recoveryOnly = recovery.action === 'recover' || recentMobility.recoveryOnly;
+  const tired = recovery.action !== 'normal' || recentMobility.recoveryPriority || options.lastWeekFeedback === -1;
   const highLoad = profile.badmintonIntensity === 'hard';
   const longCourt = Number(profile.badmintonMinutes) >= 120;
   const consecutive = profile.badmintonDays.some(day => onCourt(day + 1));
-  const strengthLimit = tired || (court.size >= 3 && (highLoad || longCourt || consecutive)) ? 1 : 2;
+  const shortLightCourt = profile.badmintonIntensity === 'light' && Number(profile.badmintonMinutes) > 0 && Number(profile.badmintonMinutes) <= 60;
+  const strengthLimit = recoveryOnly ? 0 : tired || (court.size >= 3 && (highLoad || longCourt || (consecutive && !shortLightCourt))) ? 1 : 2;
   const familiar = new Set((options.previousPlan?.schedule || []).flatMap(day => day.routine || []));
+  const familiarWarmup = profile.warmupFamiliar || Object.entries(available).some(([id, exercise]) => exercise.sequenceMinutes && familiar.has(id));
   const proximity = day => competitionDaysAway(profile.competitionDate, dateForWeekDay(week, day));
   const candidates = calendarDays.filter(day => permitted(day) && !previousStrengthDates.some(date => Math.abs(competitionDaysAway(date, dateForWeekDay(week, day))) < 2) && !onCourt(day) && mode === 'normal' && (proximity(day) === null || proximity(day) > 2 || proximity(day) < -5))
     .sort((a, b) => ((onCourt(a - 1) ? 2 : 0) + (onCourt(a + 1) ? 1 : 0)) - ((onCourt(b - 1) ? 2 : 0) + (onCourt(b + 1) ? 1 : 0)) || a - b);
@@ -215,7 +227,8 @@ export function generateTemplatePlan(exercises, context, dailyTime, lang = 'zh',
     strengthDays.push(day);
   }
   let skillUsed = false;
-  let upperOrdinal = 0;
+  let sessionOrdinal = 0;
+  const weekVariant = (Number(week.slice(-2)) + 1) % 2;
   const usedChoices = new Set();
   const mobilitySessions = [...(options.mobilitySessions || options.previousSessions || [])];
   const schedule = [...calendarDays].sort((a, b) => a - b).map(number => {
@@ -230,19 +243,20 @@ export function generateTemplatePlan(exercises, context, dailyTime, lang = 'zh',
           : highLoad && onCourt(number + 1) ? text(lang, '明天安排高強度球局，這次未在前一天加主要肌力。', 'Hard court play is scheduled tomorrow; no main strength work is added on the preceding day.')
             : tired ? text(lang, '恢復資訊觸發減量，保留低量活動與其他允許部位的舒適活動。', 'Recovery information calls for reduced work, with gentle activity in other permitted regions.')
               : text(lang, '本週肌力名額與前後課表間隔已納入，這天安排恢復。', 'Weekly strength capacity and neighboring-session spacing are accounted for; this day uses recovery.');
-    const reason = cause + text(lang, ' 輕活動採可完整說話的速度；若疲勞或不適，改完整休息，不補強度。', ' Use a conversational pace. If tired or uncomfortable, rest rather than making up intensity.');
+    const recoveryAvailable = taper && !profile.warmupFamiliar ? Object.fromEntries(Object.entries(available).filter(([id, exercise]) => !exercise.sequenceMinutes || familiar.has(id))) : available;
+    const familiarAvailable = taper ? Object.fromEntries(Object.entries(available).filter(([id, exercise]) => familiar.has(id) || profile.warmupFamiliar && exercise.sequenceMinutes)) : available;
+    const reason = cause + text(lang, ' 拉伸採舒適幅度、自然呼吸；若明顯疲勞或不適，改完整休息，不補強度。', ' Use comfortable ranges and natural breathing. If markedly tired or uncomfortable, rest rather than making up intensity.');
     if (recentMobility.recentSymptoms) return { ...day, coachAdvice: text(lang, '近期訓練或狀態回報有症狀惡化；先停止額外體能與針對性拉伸，確認狀態和可用活動後再排課。', 'Recent training or readiness records report worsening symptoms. Pause extra conditioning and targeted stretching; confirm your status and permitted activity before replanning.') };
     if (!permitted(number) || mode === 'rest' || immediate || (post && away >= -2)) return day;
-    if (mode === 'shoulder') {
-      makeRecovery(day, available, lang, text(lang, '治療限制尚未確認；僅在治療端允許走路時採這份輕活動，否則休息。無痛不代表已放行。', 'Treatment limits are unclear. Use this easy activity only if walking is permitted by your clinician; otherwise rest. Lack of pain is not clearance.'), true);
-    } else if (post || onCourt(number) || (taper && !familiar.size)) makeRecovery(day, available, lang, reason);
+    if (mode === 'shoulder') return { ...day, coachAdvice: text(lang, '肩部／治療限制未確認，不自動安排含抬手或支撐的拉伸；先確認目前允許活動，無痛不代表已放行。', 'Shoulder/treatment limits remain unclear. Do not automatically prescribe arm-raising or supported stretches; confirm permitted activity first. Lack of pain is not clearance.') };
+    else if (post || recoveryOnly || minutes < 15 || onCourt(number) || (taper && !familiar.size)) makeRecovery(day, recoveryAvailable, lang, reason, minutes, recovery.limited || post || taper && !familiarWarmup);
     else if (strengthDays.includes(number)) {
-      addTraining(day, available, lang, focus, 'strength', tired || taper || longCourt || onCourt(number - 1) ? 1 : 2, taper ? familiar : null, upperOrdinal++, !tired && !taper ? profile : {}, !tired && !taper ? minutes : 0);
-      day.coachAdvice = text(lang, '正式組保留約 2–3 次姿勢良好的餘力；若睡眠、精神或隔天反應變差，少做一組或改恢復。', 'Keep about 2–3 good-form repetitions in reserve. Reduce a set or switch to recovery if sleep, readiness or next-day symptoms worsen.');
-    } else if (!skillUsed && !tired && !highLoad && !consecutive && (!taper || familiar.size)) {
-      addTraining(day, available, lang, focus, 'skill', 1, taper ? familiar : null, 0, !taper ? profile : {}, !taper ? minutes : 0); skillUsed = true;
+      addTraining(day, familiarAvailable, lang, focus, 'strength', tired || taper || longCourt || onCourt(number - 1) ? 1 : 2, taper ? new Set(Object.keys(familiarAvailable)) : null, weekVariant + sessionOrdinal++, !tired && !taper ? profile : {}, minutes, tired);
+      day.coachAdvice = text(lang, tired ? '恢復狀態採低量課：保留拉伸，減少正式主項並取消額外步序。' : longCourt ? '本週球局較長，保留低量肌力；時間不用填滿。' : '今天是非球日，以互補的下肢與上肢模式累積肌力。', tired ? 'Recovery calls for reduced work: keep stretching, reduce main lifts and omit extra step practice.' : longCourt ? 'Long court sessions call for low-volume strength; there is no need to fill the time limit.' : 'This non-court day uses complementary lower- and upper-body strength patterns.') + ' ' + text(lang, '正式組保留約 2–3 次姿勢良好的餘力；若睡眠、精神或隔天反應變差，少做一組或改恢復。', 'Keep about 2–3 good-form repetitions in reserve. Reduce a set or switch to recovery if sleep, readiness or next-day symptoms worsen.');
+    } else if (!skillUsed && !tired && !highLoad && !longCourt && (!consecutive || shortLightCourt || focus === 'coordination') && (!taper || familiar.size)) {
+      addTraining(day, familiarAvailable, lang, focus, 'skill', 1, taper ? new Set(Object.keys(familiarAvailable)) : null, 0, !taper ? profile : {}, minutes); skillUsed = true;
       day.coachAdvice = text(lang, '每次步序重置、依動作提示充分休息；獨自預設方向是協調練習，不稱作未知訊號反應。', 'Reset between trials and take the prescribed pauses. Predetermined solo directions train coordination, not reaction to an unknown cue.');
-    } else makeRecovery(day, available, lang, reason);
+    } else makeRecovery(day, recoveryAvailable, lang, reason, minutes, recovery.limited || post || taper && !familiarWarmup);
     if (mode === 'normal' && !taper && !post && !tired) {
       day = applyWeeklyChoices(day, available, profile.weeklyExerciseIds, usedChoices, lang);
       prepareMain(day, available, lang);
@@ -256,8 +270,8 @@ export function generateTemplatePlan(exercises, context, dailyTime, lang = 'zh',
     }
     const flow = day.routine.map(id => available[id]).find(exercise => exercise?.sequenceMinutes);
     if (flow) day.warmupNote = text(lang,
-      `先做列出的 2 分鐘快走／踏步，再完成 ${flow.sequenceMinutes} 分鐘八段動態暖身。長按暖身查看每段做法；已含左右側與換姿勢，不另外加一輪。接著做列出的步序與主項輕量準備組（有列出時）。`,
-      `Begin with the listed 2-minute walk/march, then the ${flow.sequenceMinutes}-minute eight-part dynamic flow. Hold the warm-up to see each step, including both sides and transitions; do not add another round. Continue with listed step practice and light lift preparation, when present.`);
+      `依序完成 ${flow.sequenceMinutes} 分鐘八段動態拉伸，不另加跑步或快走。長按暖身查看每段做法；已含左右側與換姿勢，不另外加一輪。接著做列出的步序與主項輕量準備組（有列出時）。`,
+      `Begin with the listed ${flow.sequenceMinutes}-minute eight-part dynamic stretching flow, without running or walking. Hold the warm-up to see each step, including both sides and transitions; do not add another round. Continue with listed step practice and light lift preparation, when present.`);
     if (mobilityIntent) day.warmupNote += mobilityDayNote(day, available, mobilityIntent, lang);
     mobilitySessions.push({ ...day, date: dateForWeekDay(week, number) });
     for (const id of day.routine) usedChoices.add(id);
@@ -266,7 +280,7 @@ export function generateTemplatePlan(exercises, context, dailyTime, lang = 'zh',
   });
   const actualStrength = schedule.filter(day => day.prescriptions.some(dose => dose.phase === 'strength')).length;
   const assumption = !court.size ? text(lang, '未提供球日，先用一般週安排；補上球日後請重新排課。', 'Court days are missing; this is a general weekly example. Regenerate after adding court days.') : text(lang, `已把每週球日 ${profile.badmintonDays.join('、')}（含週末）納入；球日午休以恢復為主。`, `Court weekdays ${profile.badmintonDays.join(', ')} including weekends are counted; court-day lunch sessions emphasize recovery.`);
-  const clinical = mode === 'rest' ? text(lang, '健康資訊包含模板無法安全解讀的限制，本週不開立體能動作；先確認允許的活動。', 'The health notes contain restrictions this template cannot safely interpret. No conditioning exercises are prescribed; confirm permitted activities first.') : mode === 'shoulder' ? text(lang, '肩部／治療限制未確認，暫不排正式肌力、揮拍、跳躍或肩部負重；走路也以治療端允許為前提。', 'Unclear shoulder/treatment restrictions mean no formal strength, swings, jumps or shoulder loading. Even walking requires clinician permission.') : text(lang, '這是固定規則起步課表，不能判斷傷勢或取代教練觀察。', 'This is a rules-based starting plan; it cannot assess injuries or replace coaching observation.');
+  const clinical = mode === 'rest' ? text(lang, '健康資訊包含模板無法安全解讀的限制，本週不開立體能動作；先確認允許的活動。', 'The health notes contain restrictions this template cannot safely interpret. No conditioning exercises are prescribed; confirm permitted activities first.') : mode === 'shoulder' ? text(lang, '肩部／治療限制未確認，暫不排正式肌力、揮拍、跳躍或肩部負重；請先確認治療端允許的活動，未確認前保持休息。', 'Unclear shoulder/treatment restrictions mean no formal strength, swings, jumps or shoulder loading. Confirm permitted activity before prescribing stretches; walking is not substituted.') : text(lang, '這是固定規則起步課表，不能判斷傷勢或取代教練觀察。', 'This is a rules-based starting plan; it cannot assess injuries or replace coaching observation.');
   const competition = profile.competitionDate ? text(lang, '以本課表每一天到比賽的實際日期安排：前 10 天減量、前 2 天休息、賽後先恢復；沒有先前動作紀錄時，賽前只排恢復，不新增訓練。', 'Competition timing is calculated for each planned date: reduce extra work in the final 10 days, rest in the final 2, and recover afterward. Without prior movement history, taper days use recovery rather than new training.') : text(lang, '尚未提供比賽日期，不假設賽前週期。', 'No competition date was provided; no taper period is assumed.');
   const selectedAway = calendarDays.filter(inRange).map(proximity).filter(value => value !== null);
   const competitionStatus = profile.competitionDate ? text(lang,
@@ -277,9 +291,16 @@ export function generateTemplatePlan(exercises, context, dailyTime, lang = 'zh',
     `No main strength work is scheduled. ${mode !== 'normal' ? 'Health or treatment limits take priority.' : recentMobility.recentSymptoms ? 'Recent records report worsening symptoms.' : schedule.find(day => day.routine.length && !court.has(day.day))?.coachAdvice || 'Availability, court load, competition or time leaves no strength session; check preferences and daily reasons.'}`) : '';
   const conclusion = text(lang, `本週免金鑰模板：${focus === 'balanced' ? '整體肌力、協調與穩定' : { strength: '肌力', stability: '穩定', coordination: '協調' }[focus]}。安排 ${actualStrength} 堂主要肌力，不要求每天練滿 ${minutes} 分鐘。`, `No-key weekly template: ${focus} focus with ${actualStrength} main strength sessions. Filling all ${minutes} minutes every day is not required.`)
     + `\n\n${noStrength ? noStrength + '\n\n' : ''}${assumption}\n\n${competitionStatus} ${competition}\n\n${clinical}\n\n` + text(lang, '每天先檢查睡眠、精神和症狀；疲勞先減量。完成品質穩定、保有餘力且翌日無惡化兩次後，才考慮增加最小阻力；本模板不會因「太簡單」自動加重。每週回報難度與疲勞再排課；每 4–8 週回顧同版本動作表現。', 'Check sleep, readiness and symptoms daily; reduce work when fatigued. Only consider the smallest resistance increase after two quality sessions with reserve and no next-day worsening. “Too easy” does not automatically increase load. Report difficulty and fatigue weekly; review consistent movement measures every 4–8 weeks.');
-  const weeklyView = text(lang, '\n\n一般無限制、非賽前／恢復優先週，保留主肌力的目的性重複，以全身動態開場及短活動槽維護八個區域，參考當日主項、近兩天訓練／球日及滾動七天的活動間隔；球日走路後採一至兩項短動態活動。時間、器材、恢復與治療限制優先；安排不等於實做或實測活動度，缺少資料不推定失衡或要求補課。', '\n\nIn unrestricted weeks outside taper or recovery priority, main lifts repeat for a purpose. The dynamic opening and short mobility slots maintain eight regions using today’s main movements, the prior two days of training/court context and rolling seven-day gaps. Court days use easy walking plus one or two short dynamic drills. Time, equipment, recovery and treatment limits take priority. Scheduled work is not actual completion or measured range; missing data does not diagnose imbalance or require catch-up work.');
+  const weeklyView = text(lang, '\n\n一般無限制、非賽前／恢復優先週，保留主肌力的目的性重複，以全身動態開場及短活動槽維護八個區域，參考當日主項、近兩天訓練／球日及滾動七天的活動間隔；球日以同套舒適動態拉伸恢復，受限或短課才採精簡活動。時間、器材、恢復與治療限制優先；安排不等於實做或實測活動度，缺少資料不推定失衡或要求補課。', '\n\nIn unrestricted weeks outside taper or recovery priority, main lifts repeat for a purpose. The dynamic opening and short mobility slots maintain eight regions using today’s main movements, the prior two days of training/court context and rolling seven-day gaps. Court days use the same comfortable stretching flow; restrictions or short sessions use selected gentle drills. Time, equipment, recovery and treatment limits take priority. Scheduled work is not actual completion or measured range; missing data does not diagnose imbalance or require catch-up work.');
   const warmupStrategy = text(lang,
-    '\n\n30 分鐘以上的一般訓練日優先以 2 分鐘快走／踏步接 10 分鐘全身動態暖身起手；20–29 分鐘採 6 分鐘精簡流程，再接當天步序與主項準備組；整套為一項流程、內含八段，時間全部計入。短課、停用此流程、疲勞、球日恢復、治療限制或賽前熟悉度優先時，依每天實際列出的精簡安排，不補做整套；休息日不另暖身。',
-    '\n\nOrdinary sessions of at least 30 minutes prioritize a 2-minute walk/march and the 10-minute full-body flow; 20–29 minute sessions use the 6-minute compact flow, then the listed step practice and lift preparation. The flow is one tracked item containing eight parts, with all time included. Short sessions, disabled flows, fatigue, court-day recovery, treatment limits and taper familiarity take priority: follow each day’s actual shorter list without adding the full flow. Rest days need no extra warm-up.');
-  return validateGeneratedPlan({ conclusion: conclusion + weeklyView + warmupStrategy, schedule, weeklyIntent: createWeeklyIntent(profile, focus, minutes) }, eligible, minutes, { calendarDays });
+    '\n\n暖身使用指定的八段動態拉伸：嬰兒式、偉大拉伸、貓牛式、Y/T、前鋸肌 push-up、胸椎、90/90 髖、大小腿。30 分鐘以上優先完整 10 分鐘，10–29 分鐘採完整 6 分鐘精簡流程；不安排跑步、快走或側移暖身。輕疲勞先減正式工作，不只砍暖身；各主項模式的輕準備組與其後休息全部計時。時間、治療、症狀與賽前熟悉度優先，純休息不補拉伸。',
+    '\n\nWarm-ups use the eight-part dynamic stretching flow: child’s pose, world’s greatest stretch, cat–cow, Y/T, serratus push-up, thoracic mobility, 90/90 hips and thighs/calves. Use 10 minutes when at least 30 are available, or the full 6-minute compact flow for 10–29-minute sessions. No running, walking or side-step warm-up. Mild fatigue reduces formal work while preserving preparation. Light preparation and subsequent rest for each main movement pattern count toward the limit. Time, treatment, symptoms and taper familiarity take priority; rest days stay empty.');
+  const goalLimits = text(lang,
+    '\n\n這是可恢復的起步／維持劑量；正常週保留推拉與互補下肢，少數下肢槽跨週 A/B 輪替，避免一堂週永遠漏練。每 2–4 週用實做品質、餘力與翌日反應檢查是否適合回量，不因排滿日期自動加重。',
+    '\n\nThis is recoverable introductory/maintenance volume. Normal weeks include available push/pull and complementary lower-body patterns; selected lower slots use calendar-based A/B weeks so one-session weeks do not repeat the same omissions. Review quality, reserve and next-day response every 2–4 weeks before considering more volume; filling dates does not trigger automatic progression.');
+  const conflict = mode === 'normal' && !actualStrength && highLoad && !tired && !recoveryOnly && candidates.length && candidates.every(day => onCourt(day + 1)) ? text(lang,
+    '\n\n目前高強度球日與可用時段沒有留下合適肌力日；若每週固定如此，無法同時提供肌力進步計畫。請調整球量／可用時段或與教練協調，不自動在高強度球前塞課。',
+    '\n\nHard court days and availability leave no suitable strength day. If this repeats weekly, these conditions cannot support a strength-development plan. Reconsider court load or availability with a coach rather than automatically adding work before hard play.') : '';
+  const notesNotice = recovery.notesUninterpreted ? text(lang, '\n\n恢復備註未自動判讀為疲勞，請用恢復狀態選項表達是否需要減量；疼痛與治療限制仍優先。', '\n\nThe recovery note was not automatically interpreted as fatigue. Use the recovery-status choice to request reduced work; pain and treatment limits still take priority.') : '';
+  return validateGeneratedPlan({ conclusion: conclusion + weeklyView + warmupStrategy + goalLimits + conflict + notesNotice, schedule, weeklyIntent: createWeeklyIntent(profile, focus, minutes) }, eligible, minutes, { calendarDays });
 }

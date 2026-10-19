@@ -76,15 +76,16 @@ test('normal template includes thoracic, hip and ankle days through existing sho
   const first = main.prescriptions.find(dose => dose.phase === 'strength');
   assert.equal(first.id, 'bf_B10');
   assert.deepEqual(first.preparation, { sets: 1, value: '4', unit: 'reps', restSeconds: 30, perSide: false,
-    instruction: '使用此動作已選器材的最輕可控阻力，保留餘力，不做到疲勞。' });
+    instruction: '使用同一動作最輕可控阻力，不做到疲勞；完成後休息 30 秒再進正式組。' });
   assert.ok(main.routine.includes('bf_A13'));
   assert.ok(main.routine.includes('bf_B11'));
   assert.ok(main.routine.length <= 8);
   for (const day of plan.schedule.filter(item => context.badmintonDays.includes(item.day))) {
     assert.equal(day.sessionType, 'recovery');
-    assert.equal(day.routine.length, 3);
-    assert.equal(day.prescriptions.find(dose => dose.id === 'bf_I01').value, '5');
-    assert.ok(estimateSessionMinutes(day, catalog) <= 10);
+    assert.equal(day.routine[0], 'bf_A13');
+    assert.equal(day.prescriptions[0].value, '10');
+    assert.ok(!day.routine.includes('bf_I01'));
+    assert.ok(estimateSessionMinutes(day, catalog) <= 35);
   }
 });
 
@@ -92,10 +93,11 @@ test('template rotates existing eligible upper slots between push/pull without i
   const profile = { ...context, badmintonDays: [2, 5], badmintonMinutes: 60, equipment: ['dumbbell', 'platform'] };
   const plan = generateTemplatePlan(catalog, profile, 35, 'zh', options);
   const result = analysis(plan.schedule, profile);
-  assert.equal(byKey(result, 'patterns', 'push').count, 1);
-  assert.equal(byKey(result, 'patterns', 'pull').count, 1);
+  assert.equal(byKey(result, 'patterns', 'push').count, 2);
+  assert.equal(byKey(result, 'patterns', 'pull').count, 2);
   const upper = plan.schedule.flatMap(day => day.prescriptions.filter(dose => catalog[dose.id].category === 'upper'));
-  assert.deepEqual(upper.map(dose => dose.id), ['bf_C11', 'bf_C10']);
+  assert.equal(upper.length, 4);
+  assert.deepEqual([...new Set(upper.map(dose => dose.id))].sort(), ['bf_C10', 'bf_C11']);
   assert.ok(upper.every(dose => dose.sets === 1 && dose.value === '6'));
   const noSupport = generateTemplatePlan(catalog, { ...profile, equipment: ['dumbbell'] }, 35, 'zh', options);
   assert.equal(byKey(analysis(noSupport.schedule, { ...profile, equipment: ['dumbbell'] }), 'patterns', 'pull').status, 'unavailable');
@@ -105,16 +107,17 @@ test('template rotates existing eligible upper slots between push/pull without i
 
 test('restricted, unknown, fatigue and taper templates preserve their clinical/recovery priority instead of filling coverage', () => {
   const shoulder = generateTemplatePlan(catalog, { ...context, healthNotes: 'shoulder therapy' }, 35, 'zh', options);
-  assert.ok(shoulder.schedule.every(day => JSON.stringify(day.routine) === JSON.stringify(['bf_I01'])));
+  assert.ok(shoulder.schedule.every(day => day.routine.length === 0));
   const unknown = generateTemplatePlan(catalog, { ...context, healthStatus: 'unknown' }, 35, 'zh', options);
   assert.ok(unknown.schedule.every(day => day.routine.length === 0));
   const taperProfile = { ...context, competitionDate: '2026-10-26', badmintonDays: [] };
   const taper = generateTemplatePlan(catalog, taperProfile, 35, 'zh', options);
-  assert.ok(taper.schedule.every(day => JSON.stringify(day.routine) === JSON.stringify(['bf_I01', 'bf_A02'])));
+  assert.ok(taper.schedule.every(day => JSON.stringify(day.routine) === JSON.stringify(['bf_A02'])));
   assert.equal(byKey(analysis(taper.schedule, taperProfile), 'mobility', 'thoracic').count, 0);
   const fatigue = generateTemplatePlan(catalog, { ...context, recoveryNotes: 'poor sleep' }, 35, 'zh', options);
   assert.ok(byKey(analysis(fatigue.schedule), 'mobility', 'thoracic').count > 0);
-  assert.ok(fatigue.schedule.every(day => !day.routine.includes('bf_A13')));
+  assert.ok(fatigue.schedule.filter(day => day.routine.length).every(day => day.routine.includes('bf_A13')));
+  assert.ok(fatigue.schedule.every(day => day.prescriptions.every(dose => dose.phase !== 'skill')));
 });
 
 test('rotation never uses disabled/no-equipment thoracic moves, is deterministic and short sessions remain validated', () => {

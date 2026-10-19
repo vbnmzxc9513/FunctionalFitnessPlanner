@@ -86,7 +86,7 @@ try {
     await page.waitForFunction(() => !!localStorage.getItem('fitness_date_period_v1'));
     const applied = await draft(); assert.deepEqual(applied.profile.context.weeklyExerciseIds, selected.filter((_, index) => index !== 2));
     await click('今天'); await click('開始今天訓練');
-    const warmup = byCode('A01'); await clickSelector(`dialog[open] button[aria-label=${JSON.stringify(catalog[warmup].name)}][aria-pressed]`);
+    const warmup = byCode('A13'); await clickSelector(`dialog[open] button[aria-label=${JSON.stringify(catalog[warmup].name)}][aria-pressed]`);
     await page.waitForFunction(({ id, week }) => JSON.parse(localStorage.getItem('fitness_date_period_v1')).progressByWeek[week].completed[`day3_${id}`] === true, {}, { id: warmup, week });
     const beforeLibrary = await draft();
     await click('課表'); await click('動作庫'); await visible('.exercise-library');

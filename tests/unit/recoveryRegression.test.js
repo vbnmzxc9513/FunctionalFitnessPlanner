@@ -33,8 +33,9 @@ test('genuinely hard court play with fatigue can retain a recovery week while ro
   assert.ok(scheduledMobility(result.sessions).every(row => row.dates.length > 0));
   for (const day of result.sessions) {
     assert.ok(day.routine.length <= 3);
-    assert.ok(day.prescriptions.filter(dose => exercises[dose.id].type === 'mobility').every(dose => dose.sets === 1 && dose.value === '2'));
-    assert.ok(!day.routine.includes('bf_A13'));
+    assert.equal(day.routine[0], 'bf_A13');
+    assert.equal(day.prescriptions[0].value, '10');
+    assert.ok(!day.routine.some(id => ['bf_A01', 'bf_I01'].includes(id)));
   }
   assert.match(result.conclusion, /本段未排主要肌力/);
   assert.match(result.sessions[0].coachAdvice, /明天安排高強度球局/);
@@ -45,7 +46,7 @@ test('gentle recovery does not target the reported sore regions and never bypass
   for (const day of result.sessions) for (const id of day.routine) assert.ok(!mobilityAreas(id).some(area => ['hip_rotation', 'hamstrings', 'ankle'].includes(area)));
   assert.ok(scheduledMobility(result.sessions).find(row => row.area === 'thoracic').dates.length > 0);
   const restricted = make({ healthNotes: 'shoulder shockwave' });
-  assert.ok(restricted.sessions.every(day => day.routine.every(id => id === 'bf_I01')));
+  assert.ok(restricted.sessions.every(day => day.routine.length === 0));
   assert.ok(make({ healthNotes: 'new knee pain' }).sessions.every(day => day.routine.length === 0));
 });
 

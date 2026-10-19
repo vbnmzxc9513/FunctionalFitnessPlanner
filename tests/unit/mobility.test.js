@@ -16,7 +16,7 @@ const intent = patch => createMobilityContext({ date: today, today, exercises, c
 const plan = (patch = {}, profile = context, time = 30) => generatePeriodPlan(exercises, { context: profile, time }, { from: today, to: '2026-11-01' }, { today, ...patch });
 
 test('eight regions track mobility without counting lifting, scapular activation, rolling or forged codes', () => {
-  assert.deepEqual(mobilityAreas('bf_A13'), ['thoracic', 'hip_front', 'hip_rotation', 'adductors', 'quads', 'hamstrings', 'ankle']);
+  assert.deepEqual(mobilityAreas('bf_A13'), ['thoracic', 'shoulder', 'hip_front', 'hip_rotation', 'adductors', 'quads', 'hamstrings', 'ankle']);
   assert.deepEqual(mobilityAreas('bf_A15'), ['hip_rotation']);
   assert.deepEqual(mobilityAreas('bf_A14'), ['quads']);
   for (const id of ['bf_B10', 'bf_A07', 'bf_H09', 'bf_D09']) assert.deepEqual(mobilityAreas(id), []);
@@ -82,7 +82,7 @@ test('prospective coverage crosses ISO weeks, ignores future neighbors and prese
 
 test('clinical limits, worsening logs and unavailable drills cannot become aggressive stretching', () => {
   const restricted = plan({ logs: [log('bf_B11')] }, { ...context, healthNotes: 'shoulder shockwave' });
-  assert.ok(restricted.sessions.every(day => day.routine.every(id => id === 'bf_I01')));
+  assert.ok(restricted.sessions.every(day => day.routine.length === 0));
   const tired = generateTemplatePlan(exercises, context, 30, 'zh', { currentDate: today, currentWeek: '2026-W43', logs: [log('bf_B11', '2026-10-18', { symptoms: 'worse' })] });
   assert.ok(tired.schedule.every(day => day.sessionType === 'rest' && day.routine.length === 0));
   const disabled = Object.fromEntries(Object.entries(exercises).map(([id, e]) => [id, ['A14', 'A15', 'A09'].includes(e.catalogCode) ? { ...e, active: false } : e]));
@@ -101,9 +101,10 @@ test('same-day readiness symptoms and fatigue keep their existing rest and recov
   const stopped = plan({ readiness: [ready] });
   assert.ok(stopped.sessions.every(day => !day.routine.length));
   const fatigued = plan({ readiness: [{ ...ready, symptoms: 'none', fatigue: 4 }] });
-  assert.ok(fatigued.sessions.every(day => !day.routine.includes('bf_A13')));
+  assert.ok(fatigued.sessions.filter(day => day.sessionType !== 'rest').every(day => day.routine.includes('bf_A13')));
+  assert.ok(fatigued.sessions.every(day => day.sessionType !== 'training'));
   assert.ok(fatigued.sessions.some(day => day.warmupNote.includes('活動度重點')));
-  assert.ok(fatigued.sessions.filter(day => day.sessionType === 'recovery').flatMap(day => day.prescriptions).filter(dose => exercises[dose.id].type === 'mobility').every(dose => dose.sets === 1 && dose.value === '2'));
+  assert.ok(fatigued.sessions.filter(day => day.sessionType === 'recovery').flatMap(day => day.prescriptions).filter(dose => exercises[dose.id].sequenceMinutes).every(dose => dose.sets === 1 && dose.value === '10'));
 });
 
 test('regional history during whole-week replanning does not reserve replaced future strength sessions', () => {

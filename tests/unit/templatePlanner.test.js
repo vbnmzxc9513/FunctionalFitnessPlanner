@@ -77,8 +77,7 @@ test('unclear clinical notes do not invent clearance, diagnosis or alternatives'
   for (const healthNotes of ['肩部剛做震波，感覺鬆', 'shoulder pain after therapy']) {
     const profile = { ...context, healthNotes };
     const plan = generateTemplatePlan(catalog, profile, 35, 'zh', options);
-    assert.ok(plan.schedule.every(day => day.sessionType === 'recovery' && day.routine.length === 1));
-    for (const day of plan.schedule) assert.deepEqual(day.routine, ['bf_I01']);
+    assert.ok(plan.schedule.every(day => day.sessionType === 'rest' && day.routine.length === 0));
     assert.match(plan.conclusion, /治療端允許/);
     assert.doesNotThrow(() => validateGeneratedPlan(plan, planningExercises(catalog, profile), 35));
   }

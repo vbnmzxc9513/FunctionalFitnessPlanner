@@ -19,3 +19,5 @@ await run(['scripts/period-smoke.mjs']);
 
 await run(['scripts/compact-smoke.mjs']);
 await run(['scripts/recovery-smoke.mjs']);
+
+await run(['scripts/coach-review-smoke.mjs']);

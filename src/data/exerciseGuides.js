@@ -9,7 +9,7 @@ export const EXERCISE_GUIDES = {
     { start: '坐姿屈膝，雙腳舒適分開，可用雙手在身後輕扶。', steps: ['雙膝緩慢向一側轉，讓髖內外旋；停在能控制且膝蓋舒服的角度。', '回到中間，再向另一側轉；不壓膝、不要求雙腿貼地，也不是靠牆呼吸。'], mistake: '為了湊成直角而扳膝、快速甩腿或憋氣硬轉。', easier: '雙手扶地、縮小換側幅度；膝或髖疼痛時停止。' },
     { start: 'Sit with bent knees and comfortably spaced feet; lightly support yourself with hands behind you.', steps: ['Slowly turn both knees to one side, rotating at the hips within a controlled, comfortable range.', 'Return to the middle and switch sides without pressing the knees or forcing the legs flat. This is not wall-supported breathing.'], mistake: 'Forcing right angles through the knees, throwing the legs or holding the breath.', easier: 'Use hand support and smaller switches. Stop for knee or hip pain.' }),
   A13: entry('bf_A13',
-    { start: '先完成列出的 2 分鐘快走／踏步，再依序做八段，合計約 10 分鐘，含左右側與換姿勢。秒數是時間分配，不是持續拉住；次數是參考，不必做滿、不趕動作。完成整套才勾選一次，之後仍做列出的主項準備組。',
+    { start: '直接依序做以下八段動態拉伸，合計約 10 分鐘，含左右側與換姿勢。秒數是時間分配，不是持續拉住；次數是參考，不必做滿、不趕動作。完成整套才勾選一次，之後仍做列出的主項準備組。',
       steps: [
         '嬰兒式動態後坐（約 50 秒）：四足跪姿，臀部輕往腳跟坐再回來約 4–6 次；手臂可放身側。自然呼吸，不壓肩、不硬坐到底，準備背部與髖活動。',
         '偉大拉伸＋側向移重（約 120 秒）：前腳跨到手旁、後膝著地，骨盆穩定，小幅前移再回來各約 3 次／側，準備髖前側；胸口輕轉，不強迫抬手。再站寬扶穩，左右移重各約 3 次，準備內收肌。',
@@ -21,7 +21,7 @@ export const EXERCISE_GUIDES = {
         '大小腿動態活動（約 130 秒）：扶穩交替屈膝，腳跟靠近臀部各約 4 次，準備股四頭肌；再做約 5 次徒手髖鉸鏈，膝微彎、背部穩定，準備腿後側。最後腳跟貼地，直膝與微彎膝踝前移各約 3 次／側，分別活動腓腸肌與比目魚肌。不硬拉腳踝、不彈震、不久停。',
       ], mistake: '每段長時間拉住、拉到疼痛、趕次數或重複整套到疲勞。這是活動度與啟動，不保證解除沾黏、治療疼痛或預防所有傷害，也不取代球場上的漸進步伐暖身。',
       easier: '縮小幅度、減少次數，Y/T 徒手、前鋸肌用牆推、髖轉換可扶地。肩部治療、抬手或撐地限制未確認時不使用整套；任一段疼痛、麻木或症狀加劇就停止，另選合適活動，不把整套標成完成。' },
-    { start: 'Finish the listed 2-minute walk/march, then follow these eight parts for about 10 minutes including both sides and transitions. Times allocate movement, not continuous holds; reps are guides, not quotas. Do not rush. Mark once after the full flow, then do any listed lift preparation.',
+    { start: 'Start directly with these eight dynamic stretching parts for about 10 minutes including both sides and transitions. Times allocate movement, not continuous holds; reps are guides, not quotas. Do not rush. Mark once after the full flow, then do any listed lift preparation.',
       steps: [
         'Dynamic child’s-pose rock-back (about 50 seconds): from hands and knees, move hips gently toward heels and return about 4–6 times. Arms may rest beside you. Breathe without forcing shoulders or depth; prepare back and hips.',
         'World’s greatest stretch plus lateral shifts (about 120 seconds): step a foot beside the hand, rear knee down. Keep the pelvis steady and glide gently forward and back about 3 times per side for hip flexors; turn the chest without forcing an arm overhead. Then stand wide with support and shift sideways about 3 times each way for the adductors.',
@@ -34,7 +34,7 @@ export const EXERCISE_GUIDES = {
       ], mistake: 'Long static holds, stretching into pain, rushing reps or repeating to fatigue. Mobility and activation cannot guarantee adhesion release, pain treatment or injury prevention, and do not replace progressive court-specific warm-up.',
       easier: 'Use smaller ranges, fewer reps, unloaded Y/T, wall pushes and supported hip switches. Do not use the full flow while shoulder treatment, arm-raising or support restrictions remain unclear. Stop for pain, numbness or worsening symptoms; choose suitable activity without marking the whole flow complete.' }),
   A12: entry('bf_A12',
-    { start: '先完成課表列出的快走／踏步。以下八段合計約 6 分鐘，已含左右側與換姿勢；每段的秒數是時間分配，次數是輕鬆參考，不必做滿或反覆填滿時間。整套完成才勾選一次；不趕動作、不憋氣。',
+    { start: '直接從以下八段動態拉伸開始，合計約 6 分鐘，已含左右側與換姿勢；每段的秒數是時間分配，次數是輕鬆參考，不必做滿或反覆填滿時間。整套完成才勾選一次；不趕動作、不憋氣。',
       steps: [
         '嬰兒式（約 40 秒）：臀部輕往腳跟坐，手臂放舒適位置，做 2–3 次自然呼吸，再回起始；不強壓膝或肩。',
         '偉大拉伸（約 50 秒）：前腳跨至手旁、後膝著地，每側 1–2 次小幅前後移並輕轉胸口；不強迫手肘碰地或手臂上舉。',
@@ -46,7 +46,7 @@ export const EXERCISE_GUIDES = {
         '大腿與小腿動態活動（約 80 秒）：扶牆交替屈膝、腳跟靠近臀部各約 3 次，再做約 4 次徒手髖鉸鏈；最後腳跟貼地，直膝與微彎膝的踝前移各約 3 次／側。不彈震、不久停；長時間靜態拉伸留到收操。',
       ], mistake: '把秒數當作持續拉住的時間、重複整套到疲勞，或為了在六分鐘內完成而趕動作。這套不取代課表列出的主項輕量準備組，也不等同完整上場暖身。',
       easier: '每段採更小幅度與較少次數。肩部治療或撐地／抬手限制未確認時，不使用整套；任一段疼痛、麻木或無法舒適完成就停止，另選合適暖身，不把整套標成完成。' },
-    { start: 'First finish the listed walking or marching. All eight parts take about 6 minutes including both sides and position changes. Seconds allocate time, not continuous holds; reps are easy guides, not quotas. Mark the flow once after finishing. Do not rush or hold your breath.',
+    { start: 'Start directly with all eight dynamic stretching parts for about 6 minutes including both sides and position changes. Seconds allocate time, not continuous holds; reps are easy guides, not quotas. Mark the flow once after finishing. Do not rush or hold your breath.',
       steps: [
         'Child’s pose (about 40 sec): ease the hips toward the heels with arms comfortable. Take 2–3 natural breaths and return; do not force the knees or shoulders.',
         'World’s greatest stretch (about 50 sec): step one foot beside the hand and rest the rear knee down. Gently rock and turn the chest 1–2 times per side; do not force the elbow down or arm overhead.',

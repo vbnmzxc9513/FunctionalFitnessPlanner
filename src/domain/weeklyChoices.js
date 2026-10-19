@@ -1,3 +1,4 @@
+import { recoveryDecision } from './recovery.js';
 import { catalogExercises, equipmentChoices } from './exerciseCatalog.js';
 import { classifyBalanceExercise } from './weeklyBalance.js';
 import { libraryGroups, suggestedUses } from './library.js';
@@ -60,11 +61,14 @@ export function buildWeeklyChoiceReport(plan, exercises, context = {}, available
       const away = competitionDaysAway(context.competitionDate, dateForWeekDay(week, day));
       return away !== null && away <= 10 && away >= -5;
     });
+    const fixedOpening = weeklyChoicePhase(id, exercises[id]) === 'warmup' && (plan.schedule || []).some(day => day.routine.some(item => exercises[item]?.sequenceMinutes)) && !(plan.schedule || []).some(day => day.sessionType === 'training' && !day.routine.some(item => exercises[item]?.sequenceMinutes));
     const noStrength = weeklyChoicePhase(id, exercises[id]) === 'strength' && !(plan.schedule || []).some(day => day.prescriptions?.some(dose => dose.phase === 'strength'));
-    return { id, days, reason: blocked || (source !== 'template' ? 'omitted' : protectedWeek ? 'competition' : noStrength ? 'no_strength' : !conditionsKnown ? 'conditions_unknown'
-      : context.sorenessRegions?.length || context.recoveryNotes?.trim() && !/^(?:無|沒有|沒有疼痛|沒有受傷|正常|none|no pain|no injuries|no restrictions)[。.!\s]*$/i.test(context.recoveryNotes.trim()) ? 'recovery' : 'capacity') };
+    return { id, days, reason: blocked || (source !== 'template' ? 'omitted' : protectedWeek ? 'competition' : noStrength ? 'no_strength' : fixedOpening ? 'warmup_flow' : !conditionsKnown ? 'conditions_unknown'
+      : recoveryDecision(context).action !== 'normal' ? 'recovery' : 'capacity') };
   });
 }
+
+const phaseIsWarmup = exercise => exercise.category === 'warmup';
 
 // Substitute an existing compatible slot; never add work or let a preference open a protected day.
 export function applyWeeklyChoices(day, available, ids, used, lang = 'zh') {
@@ -75,11 +79,12 @@ export function applyWeeklyChoices(day, available, ids, used, lang = 'zh') {
     .sort((a, b) => Number(used.has(a)) - Number(used.has(b)));
   for (const id of pending) {
     const exercise = available[id];
-    if (exercise.sequenceMinutes && !day.routine.some(item => available[item]?.catalogCode === 'A01')) continue;
+    // Keep the user's eight-part opening intact; preferences cannot replace it with running.
+    if (phaseIsWarmup(exercise) && day.routine.some(item => available[item]?.sequenceMinutes)) continue;
     const phase = weeklyChoicePhase(id, exercise);
     const patterns = classifyBalanceExercise(id, exercise).patterns;
     const index = day.prescriptions.findIndex(dose => {
-      if (locked.has(dose.id) || available[dose.id]?.catalogCode === 'A01') return false;
+      if (locked.has(dose.id) || available[dose.id]?.sequenceMinutes || available[dose.id]?.catalogCode === 'A01') return false;
       if (['warmup', 'cooldown'].includes(phase)) return dose.phase === phase;
       if (phase === 'recovery' || !phase) return false;
       if (phase === 'accessory' && !['accessory', 'strength'].includes(dose.phase) || phase !== 'accessory' && dose.phase !== phase) return false;
@@ -93,8 +98,8 @@ export function applyWeeklyChoices(day, available, ids, used, lang = 'zh') {
     day.prescriptions[index] = { id, ...base, phase: old.phase, sets: Math.min(old.sets, base.sets), value, restSeconds: exercise.sequenceMinutes ? base.restSeconds : Math.max(old.restSeconds, base.restSeconds) };
     day.routine = day.routine.map(item => item === old.id ? id : item);
     if (old.phase === 'warmup') day.warmupNote = lang === 'en'
-      ? 'Raise body temperature, then follow the listed mobility and any listed main-lift preparation. No extra movements are added.'
-      : '先提高體溫，再依序做列出的活動與主項準備組（有列出時）；不另加動作。';
+      ? 'Follow the listed dynamic stretches and any listed light lift preparation. No extra movements are added.'
+      : '依序做列出的動態拉伸與主項輕準備組（有列出時）；不另加動作。';
     if (old.phase === 'cooldown') day.cooldownNote = lang === 'en'
       ? `Finish with ${exercise.nameEn || exercise.name} at an easy range; it may be omitted. No additional cooldown is required.`
       : `本次收尾安排「${exercise.name}」，保持舒適、可依感受省略；不需另補收操。`;

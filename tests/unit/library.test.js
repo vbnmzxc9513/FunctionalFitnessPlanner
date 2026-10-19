@@ -66,7 +66,7 @@ test('normal templates expose their actual cool-down and recovery mobility in th
   const options = { currentDate: '2026-10-12', currentWeek: '2026-W42' };
   const seen = new Set();
   // Exercise unavailable alternatives too: rotation must stay discoverable after choosing a fallback.
-  for (const weeklyExerciseIds of [[], ['bf_D09']]) for (const excluded of [[], ['bf_A06'], ['bf_A11'], ['bf_A11', 'bf_A06', 'bf_H12'], ['bf_A05']]) {
+  for (const weeklyExerciseIds of [[], ['bf_D09']]) for (const excluded of [[], ['bf_A12', 'bf_A13'], ['bf_A12', 'bf_A13', 'bf_A06'], ['bf_A12', 'bf_A13', 'bf_A11', 'bf_A06', 'bf_H12'], ['bf_A12', 'bf_A13', 'bf_A05']]) {
     const available = Object.fromEntries(Object.entries(catalog).filter(([id]) => !excluded.includes(id)));
     const plan = generateTemplatePlan(available, { ...profile, weeklyExerciseIds }, 35, 'zh', options);
     const coolDowns = plan.schedule.flatMap(day => day.prescriptions.filter(dose => dose.phase === 'cooldown'));

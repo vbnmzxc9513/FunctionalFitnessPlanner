@@ -128,8 +128,6 @@ try {
     await click('今天'); await page.waitForSelector('[data-testid="session-start"]', { visible: true });
     await click('開始今天訓練'); await page.screenshot({ path: `/tmp/fitness-ux-${layout}-today.png`, fullPage: false }); await page.waitForSelector('[data-testid="current-exercise"]', { visible: true });
     const initialCompletion = (await draft()).completed;
-    await click('查看下一個動作');
-    assert.deepEqual((await draft()).completed, initialCompletion, `${layout}: next does not complete warm-up`);
     const flow = '[data-testid="current-exercise"] [data-testid="exercise-guide-bf_A13"]';
     await page.waitForSelector(flow, { visible: true });
     assert.equal(await page.$eval(flow, item => item.open), true, `${layout}: eight-part flow starts expanded`);
@@ -138,6 +136,8 @@ try {
     await page.screenshot({ path: `/tmp/fitness-ux-${layout}-daily-warmup.png`, fullPage: true });
     await page.$eval(`${flow} summary`, item => item.click());
     assert.equal(await page.$eval(flow, item => item.open), false, `${layout}: flow details can still be collapsed`);
+    await click('查看下一個動作');
+    assert.deepEqual((await draft()).completed, initialCompletion, `${layout}: next does not complete warm-up`);
     for (let index = 0; index < 8 && !await page.$('dialog[open] [data-preparation-for]'); index++) await click('查看下一個動作');
     await page.waitForFunction(() => {
       const prep = [...document.querySelectorAll('[data-preparation-for]')].find(item => item.getClientRects().length && !item.closest('[hidden]'));

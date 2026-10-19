@@ -212,3 +212,11 @@ form[data-guided="true"] .setup-actions { position: sticky; bottom: calc(82px + 
   .exercise-details-footer { padding: 12px 20px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--color-slate-100); display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; flex-shrink: 0; }
 }
 @media (min-width: 640px) { .exercise-details { inset: 0; margin: auto; border-radius: 22px; height: min(86dvh, 900px); } }
+
+@media (max-width: 639px) {
+  .preview-actions { flex-wrap: nowrap; gap: 8px; padding: 10px; }
+  .preview-actions .button-secondary { flex: 0 1 32%; padding: 8px; font-size: 12px; }
+  .preview-actions .button-primary { flex: 1 1 68%; padding: 8px; font-size: 12px; }
+  .preview-actions button { min-width: 0; }
+  .preview-actions button svg { display: none; }
+}
