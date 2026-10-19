@@ -1,0 +1,45 @@
+{
+  "flows": [
+    "warmup context and eight-part batch selection",
+    "selections persist across body filters and global search",
+    "search aliases, actual result count and empty state",
+    "favorites, cart review, remove and add",
+    "exact day/phase insertion and undo",
+    "copy only into empty phases, independent copies, existing content protected"
+  ],
+  "viewports": [
+    320,
+    390,
+    1440
+  ],
+  "errors": [],
+  "copied": [
+    {
+      "date": "10/19",
+      "warm": 8,
+      "main": [
+        "分腿蹲",
+        "側弓步",
+        "彈力繩前鋸肌前伸"
+      ]
+    },
+    {
+      "date": "10/21",
+      "warm": 8,
+      "main": [
+        "分腿蹲",
+        "側弓步",
+        "彈力繩前鋸肌前伸"
+      ]
+    },
+    {
+      "date": "10/23",
+      "warm": 8,
+      "main": [
+        "分腿蹲",
+        "側弓步",
+        "彈力繩前鋸肌前伸"
+      ]
+    }
+  ]
+}

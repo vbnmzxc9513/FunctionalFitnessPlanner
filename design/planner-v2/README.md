@@ -10,6 +10,8 @@
 
 ## 先看這幾份
 
+**新增：[點「加入動作」之後的完整流程與九張圖](add-exercises/README.md)**：分類、搜尋、跨部位多選、收藏、加入確認與複用到其他日期；由同一條實際操作擷取。
+
 - [頁面架構總覽 PNG](overview.png)
 - [手動排課完整流程 PNG](flow-manual.png)
 - [自動排課完整流程 PNG](flow-auto.png)
