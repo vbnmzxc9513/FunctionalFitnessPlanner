@@ -229,7 +229,10 @@ test('saved weekly intent survives editing and restore while rules bound its fie
   const maximum = ['bf_B03', 'dead_bug', 'bf_A06', 'bf_H03', 'bf_B05', 'bf_A01', 'bf_F01', 'bf_D09'];
   await persist({ ...original, weeklyIntent: { ...weeklyIntent, weeklyExerciseIds: maximum } }, false, 3);
   assert.deepEqual((await getDoc(userDoc(owner, 'plans', week))).data().weeklyIntent.weeklyExerciseIds, maximum);
-  for (const change of [{ targetRegions: ['fake'] }, { targetRegions: ['core', 'core'] }, { stiffnessRegions: ['hip', 'ankle', 'thoracic'] },
+  const detailedTargets = ['serratus', 'rotator_cuff', 'glutes', 'calves'];
+  await persist({ ...original, weeklyIntent: { ...weeklyIntent, targetRegions: detailedTargets } }, false, 4);
+  assert.deepEqual((await getDoc(userDoc(owner, 'plans', week))).data().weeklyIntent.targetRegions, detailedTargets);
+  for (const change of [{ targetRegions: ['serratus', 'rotator_cuff', 'glutes', 'calves', 'core'] }, { targetRegions: ['fake'] }, { targetRegions: ['core', 'core'] }, { stiffnessRegions: ['hip', 'ankle', 'thoracic'] },
     { badmintonDays: [8] }, { dailyTime: 1000 }, { focus: 'medical' }, { healthNotes: 'not part of intent' },
     { weeklyExerciseIds: ['bad/id'] }, { weeklyExerciseIds: [8] }, { weeklyExerciseIds: ['bf_B03', 'bf_B03'] },
     { weeklyExerciseIds: Array.from({ length: 9 }, (_, n) => `move_${n}`) }, { sorenessRegions: ['hip'] }]) {

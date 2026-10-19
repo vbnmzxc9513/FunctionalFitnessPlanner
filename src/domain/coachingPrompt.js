@@ -1,3 +1,4 @@
+import { exerciseTrainingTargets } from './trainingTargets.js';
 import { competitionDaysAway, normalizePlanningContext } from './planning.js';
 import { createMobilityContext } from './mobility.js';
 
@@ -12,12 +13,13 @@ export function buildPlanningPrompt({ lastWeekData, currentLevel, lastWeekFeedba
   const history = Object.entries(allProgress || {}).filter(([week]) => /^\d{4}-W\d{2}$/.test(week)).sort(([a], [b]) => b.localeCompare(a)).slice(0, 8)
     .map(([week, record]) => ({ week, completed: Object.values(record.completed || {}).filter(Boolean).length,
       total: record.totalExercises ?? null, feedback: record.feedbackValue ?? null }));
+  const specificTargets = (id, exercise) => exerciseTrainingTargets(id, exercise).filter(region => profile.targetRegions.includes(region) && !['legs', 'posterior', 'upper', 'core'].includes(region));
   const exercises = Object.entries(availableExercises).map(([id, exercise]) => ({
     id, name: exercise.name, type: exercise.type, category: exercise.category || 'custom',
     equipmentOptions: exercise.equipmentOptions ?? '未分類；不得假設器材', advanced: !!exercise.advanced,
     priority: !!exercise.priority,
     requiresPartner: !!exercise.requiresPartner, shoulderLoaded: exercise.shoulderLoaded ?? '未分類',
-    starterDose: exercise.prescription || null, cue: exercise.tip,
+    starterDose: exercise.prescription || null, cue: exercise.tip, ...(specificTargets(id, exercise).length ? { trainingTargets: specificTargets(id, exercise) } : {}),
     regression: exercise.easier || null, progression: exercise.harder || null,
   }));
   return `你是一位羽球功能性體能教練，為使用者排出可恢復、可追蹤的本週午休／體能課。以到位、煞車、回位、協調和力量傳遞為目的，避免用汗量、痠痛或動作數量評價效果。
@@ -47,7 +49,7 @@ ${JSON.stringify({ goal: userGoal || '', message: userMessage || '', profile,
 profile.weeklyExerciseIds 是使用者本週想做的候選 ID，最多 8 個，與長期收藏分開。只在可用候選庫、健康、器材、熟悉度、球日與時間允許時，優先替換同目的既有槽位；不能為了全排入而增加動作數、負荷、縮短休息或繞過恢復／賽前限制。不得把尚未排入的選擇宣稱已安排，conclusion 如實說明未採用的原因。這次先產生預覽，確認後才成為正式課表。
 profile.recoveryState 是明確恢復狀態：unknown 未確認、normal 正常、reduce 輕疲勞減少正式工作、recover 僅舒適活動或休息。備註「沒有疲勞」「睡得很好」不是疲勞；不把不理解的自由文字自動判成疲勞。profile.sorenessImpact=mild 表示輕痠、無痛且不影響動作；limited 或 unknown 且有仍痠區域時，先採恢復並避開相關部位，不保留刺激該區的既有暖身或主項。
 profile.sorenessRegions 是使用者自述運動後仍痠的區域，最多兩項；與無痛僵硬分開，不是診斷或恢復放行。先採恢復優先與較少正式組，不安排針對痠處加量或強迫拉伸；疼痛、麻木、治療與活動限制仍優先。
-profile.targetRegions 最多兩項：legs=蹲／弓步、posterior=臀／腿後側髖伸展、upper=上肢推拉、core=核心控制。優先部位影響既有主項的先後與時間取捨，不代表只練該部位或新增組數。主要能力方向仍依 goal；維持可追蹤且可恢復的全週安排。
+profile.targetRegions 最多四項：legs=蹲／弓步、posterior=臀／腿後側髖伸展、upper=上肢推拉、core=核心控制。細分包括serratus前鋸肌、scapular肩胛穩定、rotator_cuff旋轉肌群、chest胸部推力、back背部拉力、forearm前臂控制、glutes臀肌、quadriceps股四頭、hamstrings腿後側、adductors內收肌、calves小腿。前鋸肌優先C07前伸，無阻力器材可用A07肩胛推牆控制，不能把一般推胸或A13暖身啟動宣稱成已排專項肌力。旋轉肌群C05、肩胛C06、前臂C08/C09、小腿B07/B08可用一個既有輔助槽，依近期實際安排輪替，多選不加槽、不保證每項每週都有專項；明說未排入及原因。固定八段暖身維持不變。優先部位影響既有主項的先後與時間取捨，不代表只練該部位或新增組數。主要能力方向仍依 goal；維持可追蹤且可恢復的全週安排。
 profile.stiffnessRegions 最多兩項：hip、ankle、thoracic、shoulder，僅代表使用者自述無痛僵硬，不是測試結果或治療放行。從候選庫按當天主訓練的動作需要選動態暖身，主項仍有輕量準備組，舒適拉伸／收尾放在既有短槽內輪替；不以僵硬推斷缺陷或強迫拉伸。健康、球量、時間與賽前熟悉度優先。
 conclusion 先用短段落說明這週實際主軸、肌力／協調／恢復日的分工，哪些偏好未實現及原因，以及週中與週末檢查什麼；不能把選擇的目標寫成已經達成的效果。每天 warmupNote / cooldownNote 解釋所列暖身與主項的關係，不能只給未列在 routine 的額外菜單。
 

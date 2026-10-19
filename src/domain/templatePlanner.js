@@ -1,9 +1,10 @@
+import { matchesTrainingTarget, TARGET_ACCESSORIES } from './trainingTargets.js';
 import { recoveryDecision } from './recovery.js';
 import { competitionDaysAway, normalizePlanningContext, planningExercises, validateGeneratedPlan } from './planning.js';
 import { dateForWeekDay, getWeekString, isCalendarDate, localDate } from './dates.js';
 import { estimateSessionMinutes } from './sessions.js';
 import { classifyBalanceExercise } from './weeklyBalance.js';
-import { createWeeklyIntent, TARGET_PATTERNS } from './trainingPreferences.js';
+import { createWeeklyIntent } from './trainingPreferences.js';
 import { catalogExercises } from './exerciseCatalog.js';
 import { applyWeeklyChoices } from './weeklyChoices.js';
 import { exercisePhase } from './phases.js';
@@ -83,7 +84,7 @@ function makeRecovery(day, available, lang, reason, minutes, compact = false) {
   day.cooldownNote = text(lang, '本次已是拉伸活動，不另加收操；不適就停止。', 'This session is already gentle stretching; no extra cooldown is needed. Stop if uncomfortable.');
 }
 
-function addTraining(day, available, lang, focus, kind, sets, familiar, variant = 0, preferences = {}, warmupMinutes = 0, reduced = false) {
+function addTraining(day, available, lang, focus, kind, sets, familiar, variant = 0, preferences = {}, warmupMinutes = 0, reduced = false, targetUse = {}) {
   day.sessionType = 'training';
   day.theme = kind === 'skill' ? text(lang, '短協調與步序', 'Short coordination and step sequencing') : text(lang, '全身肌力與穩定', 'Strength and stability');
   day.concept = text(lang, '先練清楚的步序與控制，再以可恢復的劑量累積力量；不追求疲勞。', 'Practice controlled movement, then build strength with recoverable doses rather than chasing fatigue.');
@@ -98,15 +99,21 @@ function addTraining(day, available, lang, focus, kind, sets, familiar, variant 
   if (kind === 'strength') {
     const pick = codes => codes.find(code => Object.values(available).some(exercise => exercise.catalogCode === code));
     // Stable A/B lower-body slots span calendar weeks, including one-session weeks.
-    const knee = pick(focus === 'stability' || variant % 2 ? ['B01', 'B10', 'B02'] : ['B10', 'B01', 'B02']);
-    const hinge = pick(focus === 'stability' ? ['B05', 'B11', 'B03', 'B06'] : ['B11', 'B03', 'B04', 'B06', 'B05']);
+    const kneeCodes = focus === 'stability' || variant % 2 ? ['B01', 'B10', 'B02'] : ['B10', 'B01', 'B02'];
+    const knee = pick(preferences.targetRegions?.includes('adductors') ? ['B02', ...kneeCodes] : kneeCodes);
+    const hingeCodes = focus === 'stability' ? ['B05', 'B11', 'B03', 'B06'] : ['B11', 'B03', 'B04', 'B06', 'B05'];
+    const hinge = pick(focus !== 'stability' && preferences.targetRegions?.includes('glutes') && !preferences.targetRegions.includes('hamstrings') ? ['B06', ...hingeCodes] : hingeCodes);
     const lower = reduced ? [variant % 2 ? hinge || knee : knee || hinge] : focus === 'stability' ? [hinge, knee] : [knee, hinge];
     for (const code of lower.filter(Boolean)) add(day, available, code, 'strength', { sets, value: '6', restSeconds: 90 });
     const upper = pattern => pick(['C01', 'C11', 'C10', 'C03', 'C02', 'C04'].filter(code => Object.entries(available).some(([id, exercise]) => exercise.catalogCode === code && classifyBalanceExercise(id, exercise).patterns.includes(pattern))));
     const pull = upper('pull'), push = upper('push');
     const uppers = variant % 2 ? [push, pull] : [pull, push];
     for (const code of uppers.filter(Boolean)) add(day, available, code, 'strength', { sets: 1, value: '6', restSeconds: 90 });
-    if (!reduced) add(day, available, 'D01', 'accessory', { sets: 1, value: '4', restSeconds: 45 });
+    if (!reduced) {
+      const priorities = (preferences.targetRegions || []).filter(region => TARGET_ACCESSORIES[region]).sort((a, b) => (targetUse[a] || 0) - (targetUse[b] || 0));
+      const accessory = priorities.map(region => pick(TARGET_ACCESSORIES[region])).find(Boolean) || 'D01';
+      add(day, available, accessory, 'accessory', { sets: 1, value: accessory === 'D01' ? '4' : '6', restSeconds: 45 });
+    }
   }
   add(day, available, 'D09', 'cooldown', { sets: 1, value: '4' });
   if (familiar) {
@@ -114,8 +121,7 @@ function addTraining(day, available, lang, focus, kind, sets, familiar, variant 
     day.prescriptions = day.prescriptions.filter(dose => familiar.has(dose.id));
   }
   if (!familiar && preferences.targetRegions?.length) {
-    const patterns = preferences.targetRegions.flatMap(region => TARGET_PATTERNS[region] || []);
-    const priority = id => classifyBalanceExercise(id, available[id]).patterns.some(pattern => patterns.includes(pattern));
+    const priority = id => preferences.targetRegions.some(region => matchesTrainingTarget(region, id, available[id]));
     if (preferences.targetRegions.includes('core')) for (const dose of day.prescriptions) {
       if (dose.phase === 'accessory' && priority(dose.id)) dose.phase = 'strength';
     }
@@ -146,8 +152,7 @@ function addTraining(day, available, lang, focus, kind, sets, familiar, variant 
 }
 
 function fitDay(day, available, minutes, lang, targets = [], selected = []) {
-  const patterns = targets.flatMap(region => TARGET_PATTERNS[region] || []);
-  const priority = dose => Number(selected.includes(dose.id)) * 2 + Number(classifyBalanceExercise(dose.id, available[dose.id]).patterns.some(pattern => patterns.includes(pattern)));
+  const priority = dose => Number(selected.includes(dose.id)) * 2 + Number(targets.some(region => matchesTrainingTarget(region, dose.id, available[dose.id])));
   // Remove lower-priority work instead of hiding time or shortening required rests.
   const removal = ['cooldown', 'accessory', 'skill', 'strength'];
   while ((estimateSessionMinutes(day, available) > minutes || day.routine.length > 8) && day.routine.length) {
@@ -157,9 +162,10 @@ function fitDay(day, available, minutes, lang, targets = [], selected = []) {
         const multi = day.prescriptions.find(dose => dose.phase === 'strength' && dose.sets > 1);
         if (multi) { multi.sets = 1; index = -2; break; }
       }
-      const matches = day.prescriptions.map((dose, i) => dose.phase === phase ? i : -1).filter(i => i >= 0);
+      const canReduceOther = day.prescriptions.some(dose => dose.phase === 'skill' || dose.phase === 'strength' && dose.sets > 1);
+      const matches = day.prescriptions.map((dose, i) => dose.phase === phase && !(phase === 'accessory' && priority(dose) > 0 && canReduceOther) ? i : -1).filter(i => i >= 0);
       matches.sort((a, b) => Number(priority(day.prescriptions[b])) - Number(priority(day.prescriptions[a])));
-      if (matches.length > 1 || ['accessory', 'cooldown'].includes(phase)) { index = matches.at(-1); if (index >= 0) break; }
+      if (matches.length > 1 || ['accessory', 'cooldown'].includes(phase) || phase === 'skill' && day.prescriptions.some(dose => dose.phase === 'accessory' && priority(dose) > 0)) { index = matches.at(-1); if (index >= 0) break; }
     }
     if (index === -2) continue;
     if (index < 0) {
@@ -229,6 +235,7 @@ export function generateTemplatePlan(exercises, context, dailyTime, lang = 'zh',
   let skillUsed = false;
   let sessionOrdinal = 0;
   const weekVariant = (Number(week.slice(-2)) + 1) % 2;
+  const targetUse = Object.fromEntries(profile.targetRegions.map(region => [region, (options.previousSessions || []).filter(session => session.date < dateForWeekDay(week, 1) && competitionDaysAway(session.date, dateForWeekDay(week, 1)) >= -14 && session.prescriptions?.some(dose => ['strength', 'accessory'].includes(dose.phase) && matchesTrainingTarget(region, dose.id, available[dose.id]))).length]));
   const usedChoices = new Set();
   const mobilitySessions = [...(options.mobilitySessions || options.previousSessions || [])];
   const schedule = [...calendarDays].sort((a, b) => a - b).map(number => {
@@ -251,7 +258,7 @@ export function generateTemplatePlan(exercises, context, dailyTime, lang = 'zh',
     if (mode === 'shoulder') return { ...day, coachAdvice: text(lang, '肩部／治療限制未確認，不自動安排含抬手或支撐的拉伸；先確認目前允許活動，無痛不代表已放行。', 'Shoulder/treatment limits remain unclear. Do not automatically prescribe arm-raising or supported stretches; confirm permitted activity first. Lack of pain is not clearance.') };
     else if (post || recoveryOnly || minutes < 15 || onCourt(number) || (taper && !familiar.size)) makeRecovery(day, recoveryAvailable, lang, reason, minutes, recovery.limited || post || taper && !familiarWarmup);
     else if (strengthDays.includes(number)) {
-      addTraining(day, familiarAvailable, lang, focus, 'strength', tired || taper || longCourt || onCourt(number - 1) ? 1 : 2, taper ? new Set(Object.keys(familiarAvailable)) : null, weekVariant + sessionOrdinal++, !tired && !taper ? profile : {}, minutes, tired);
+      addTraining(day, familiarAvailable, lang, focus, 'strength', tired || taper || longCourt || onCourt(number - 1) ? 1 : 2, taper ? new Set(Object.keys(familiarAvailable)) : null, weekVariant + sessionOrdinal++, !tired && !taper ? profile : {}, minutes, tired, targetUse);
       day.coachAdvice = text(lang, tired ? '恢復狀態採低量課：保留拉伸，減少正式主項並取消額外步序。' : longCourt ? '本週球局較長，保留低量肌力；時間不用填滿。' : '今天是非球日，以互補的下肢與上肢模式累積肌力。', tired ? 'Recovery calls for reduced work: keep stretching, reduce main lifts and omit extra step practice.' : longCourt ? 'Long court sessions call for low-volume strength; there is no need to fill the time limit.' : 'This non-court day uses complementary lower- and upper-body strength patterns.') + ' ' + text(lang, '正式組保留約 2–3 次姿勢良好的餘力；若睡眠、精神或隔天反應變差，少做一組或改恢復。', 'Keep about 2–3 good-form repetitions in reserve. Reduce a set or switch to recovery if sleep, readiness or next-day symptoms worsen.');
     } else if (!skillUsed && !tired && !highLoad && !longCourt && (!consecutive || shortLightCourt || focus === 'coordination') && (!taper || familiar.size)) {
       addTraining(day, familiarAvailable, lang, focus, 'skill', 1, taper ? new Set(Object.keys(familiarAvailable)) : null, 0, !taper ? profile : {}, minutes); skillUsed = true;
@@ -274,6 +281,7 @@ export function generateTemplatePlan(exercises, context, dailyTime, lang = 'zh',
       `Begin with the listed ${flow.sequenceMinutes}-minute eight-part dynamic stretching flow, without running or walking. Hold the warm-up to see each step, including both sides and transitions; do not add another round. Continue with listed step practice and light lift preparation, when present.`);
     if (mobilityIntent) day.warmupNote += mobilityDayNote(day, available, mobilityIntent, lang);
     mobilitySessions.push({ ...day, date: dateForWeekDay(week, number) });
+    for (const region of profile.targetRegions) if (day.prescriptions.some(dose => ['strength', 'accessory'].includes(dose.phase) && matchesTrainingTarget(region, dose.id, available[dose.id]))) targetUse[region] = (targetUse[region] || 0) + 1;
     for (const id of day.routine) usedChoices.add(id);
     if (day.routine.length) day.coachAdvice += text(lang, ` 預估 ${estimateSessionMinutes(day, available)} 分鐘，含左右側、休息及準備組。`, ` About ${estimateSessionMinutes(day, available)} minutes including both sides, rest and preparation.`);
     return day;

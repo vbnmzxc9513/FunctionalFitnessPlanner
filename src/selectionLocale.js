@@ -1,7 +1,7 @@
 export const SELECTION_TRANSLATIONS = {
   zh: {
     quizStepGoal: '目標與時間', quizStepBody: '身體感受', quizStepChoices: '挑選動作',
-    quizGoalTitle: '這週，想把什麼練得更好？', quizGoalHint: '選一個主要方向，再選最多兩個重點部位。',
+    quizGoalTitle: '這週，想把什麼練得更好？', quizGoalHint: '選一個主要方向，再選最多四個加強部位。',
     quizSchedule: '球日、時間與器材', quizBodyTitle: '開始前，身體感覺如何？',
     quizBodyHint: '無痛緊繃與肌肉痠分開填；沒有就留空。疼痛、治療與活動限制請填下方健康資訊。',
     warmupFamiliarLabel: '我平常已熟悉這套八段拉伸，且目前沒有相關動作限制（賽前可沿用）',
@@ -37,7 +37,7 @@ export const SELECTION_TRANSLATIONS = {
   },
   en: {
     quizStepGoal: 'Goal & time', quizStepBody: 'Body check', quizStepChoices: 'Choose moves',
-    quizGoalTitle: 'What would you like to improve this week?', quizGoalHint: 'Choose one main direction and up to two priority areas.',
+    quizGoalTitle: 'What would you like to improve this week?', quizGoalHint: 'Choose one main direction and up to four priority areas.',
     quizSchedule: 'Court days, time & equipment', quizBodyTitle: 'How does your body feel?',
     quizBodyHint: 'Record painless stiffness separately from post-exercise soreness. Leave blank if absent; record pain, treatment and restrictions below.',
     warmupFamiliarLabel: 'I already use this eight-part stretching flow and have no current movement restrictions (may retain during taper)',

@@ -1,11 +1,17 @@
 import { isCalendarDate } from './dates.js';
 
 export const WEEKLY_FOCUSES = ['balanced', 'strength', 'stability', 'coordination'];
-export const TARGET_REGIONS = ['legs', 'posterior', 'upper', 'core'];
+export const MAX_TARGET_REGIONS = 4;
+export const BASIC_TARGET_REGIONS = ['legs', 'posterior', 'upper', 'core'];
+export const TARGET_GROUPS = [
+  { key: 'upper', regions: ['serratus', 'scapular', 'rotator_cuff', 'chest', 'back', 'forearm'] },
+  { key: 'lower', regions: ['glutes', 'quadriceps', 'hamstrings', 'adductors', 'calves'] },
+];
+export const TARGET_REGIONS = [...BASIC_TARGET_REGIONS, ...TARGET_GROUPS.flatMap(group => group.regions)];
 export const STIFFNESS_REGIONS = ['hip', 'ankle', 'thoracic', 'shoulder'];
 export const SORENESS_REGIONS = ['legs', 'posterior', 'calf', 'upper', 'core'];
-export const selectedRegions = (value, allowed) => allowed.filter(item => Array.isArray(value) && value.includes(item)).slice(0, 2);
-export const TARGET_PATTERNS = { legs: ['squat_lunge'], posterior: ['hinge'], upper: ['push', 'pull'], core: ['core'] };
+export const selectedRegions = (value, allowed) => allowed.filter(item => Array.isArray(value) && value.includes(item)).slice(0, allowed === TARGET_REGIONS ? MAX_TARGET_REGIONS : 2);
+export const TARGET_PATTERNS = { legs: ['squat_lunge'], posterior: ['hinge'], upper: ['push', 'pull'], core: ['core'], serratus: ['push'], scapular: ['pull'], rotator_cuff: [], chest: ['push'], back: ['pull'], forearm: [], glutes: ['hinge', 'squat_lunge'], quadriceps: ['squat_lunge'], hamstrings: ['hinge'], adductors: ['squat_lunge'], calves: [] };
 export const MAX_WEEKLY_CHOICES = 8;
 export const weeklyChoiceIds = value => [...new Set((Array.isArray(value) ? value : []).filter(id => typeof id === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(id)))].slice(0, MAX_WEEKLY_CHOICES);
 
@@ -29,7 +35,7 @@ export function normalizeWeeklyIntent(value) {
     || !Array.isArray(value.badmintonDays) || value.badmintonDays.length > 7 || value.badmintonDays.some(day => !Number.isInteger(day) || day < 1 || day > 7)
     || (value.competitionDate !== '' && !isCalendarDate(value.competitionDate))) return null;
   for (const [key, allowed] of [['targetRegions', TARGET_REGIONS], ['stiffnessRegions', STIFFNESS_REGIONS]]) {
-    if (!Array.isArray(value[key]) || value[key].length > 2 || value[key].some(item => !allowed.includes(item)) || new Set(value[key]).size !== value[key].length) return null;
+    if (!Array.isArray(value[key]) || value[key].length > (key === 'targetRegions' ? MAX_TARGET_REGIONS : 2) || value[key].some(item => !allowed.includes(item)) || new Set(value[key]).size !== value[key].length) return null;
   }
   if (value.trainingDays !== undefined && (!Array.isArray(value.trainingDays) || value.trainingDays.length > 7 || value.trainingDays.some(day => !Number.isInteger(day) || day < 1 || day > 7) || new Set(value.trainingDays).size !== value.trainingDays.length)) return null;
   if (value.weeklyExerciseIds !== undefined && (!Array.isArray(value.weeklyExerciseIds) || value.weeklyExerciseIds.length > MAX_WEEKLY_CHOICES

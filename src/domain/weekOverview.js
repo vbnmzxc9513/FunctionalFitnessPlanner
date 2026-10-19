@@ -1,7 +1,8 @@
+import { matchesTrainingTarget } from './trainingTargets.js';
 import { dateForWeekDay } from './dates.js';
 import { sessionSections, estimateSessionMinutes } from './sessions.js';
 import { classifyBalanceExercise } from './weeklyBalance.js';
-import { normalizeWeeklyIntent, TARGET_PATTERNS } from './trainingPreferences.js';
+import { normalizeWeeklyIntent } from './trainingPreferences.js';
 
 // Derive the overview from saved work, never from unsaved controls or AI prose.
 export function buildWeekOverview(schedule, exercises, week, intent, level = 1) {
@@ -16,12 +17,12 @@ export function buildWeekOverview(schedule, exercises, week, intent, level = 1) 
     const skill = ids(['skill']);
     const type = !entry ? 'unplanned' : !entry.routine.length ? 'rest' : entry.sessionType === 'recovery' ? 'recovery' : strength.length ? 'strength' : skill.length ? 'skill' : 'training';
     return { day, date: dateForWeekDay(week, day), court: saved ? saved.badmintonDays.includes(day) : null,
-      type, minutes: entry ? estimateSessionMinutes(entry, exercises, level) : null, main, strength, skill,
+      type, minutes: entry ? estimateSessionMinutes(entry, exercises, level) : null, main, strength, skill, targetMain: ids(['strength', 'accessory']),
       warmup: ids(['warmup']), cooldown: ids(['cooldown']), recovery: ids(['recovery']),
       preparation: sections.flatMap(section => section.preparation.map(item => item.id)), entry };
   });
   const targetCoverage = (saved?.targetRegions || []).map(region => ({ region,
-    days: days.filter(day => day.main.some(id => classifyBalanceExercise(id, exercises[id]).patterns.some(pattern => TARGET_PATTERNS[region].includes(pattern)))).map(day => day.day) }));
+    days: days.filter(day => day.targetMain.some(id => matchesTrainingTarget(region, id, exercises[id]))).map(day => day.day) }));
   const stiffnessCoverage = (saved?.stiffnessRegions || []).map(region => ({ region,
     days: days.filter(day => [...day.warmup, ...day.cooldown, ...day.recovery].some(id => classifyBalanceExercise(id, exercises[id]).mobility.includes(region))).map(day => day.day) }));
   const counts = Object.fromEntries(['strength', 'skill', 'training', 'recovery', 'rest'].map(type => [type, days.filter(day => type === 'strength' ? day.strength.length > 0 : type === 'skill' ? day.skill.length > 0 : day.type === type).length]));

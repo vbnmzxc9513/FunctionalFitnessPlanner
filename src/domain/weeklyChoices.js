@@ -1,10 +1,11 @@
+import { matchesTrainingTarget } from './trainingTargets.js';
 import { recoveryDecision } from './recovery.js';
 import { catalogExercises, equipmentChoices } from './exerciseCatalog.js';
 import { classifyBalanceExercise } from './weeklyBalance.js';
 import { libraryGroups, suggestedUses } from './library.js';
 import { normalizePlanningContext, competitionDaysAway } from './planning.js';
 import { dateForWeekDay } from './dates.js';
-import { TARGET_PATTERNS, weeklyChoiceIds } from './trainingPreferences.js';
+import { weeklyChoiceIds } from './trainingPreferences.js';
 
 const CURATED = catalogExercises();
 
@@ -33,10 +34,10 @@ export function weeklyChoiceBlockReason(id, exercises, context, available) {
 }
 
 export function recommendWeeklyChoices(exercises, context, focus, available) {
-  const patterns = (context.targetRegions || []).flatMap(region => TARGET_PATTERNS[region] || []);
+  const targets = context.targetRegions || [];
   const score = ([id, exercise]) => {
     const purpose = classifyBalanceExercise(id, exercise);
-    return Number(purpose.patterns.some(pattern => patterns.includes(pattern))) * 8
+    return Number(targets.some(region => matchesTrainingTarget(region, id, exercise))) * 8
       + Number(libraryGroups(exercise).length > 0) * 3
       + Number(focus === 'coordination' && ['footwork', 'reaction'].includes(exercise.category)) * 4
       + Number(focus === 'stability' && ['B05', 'D01', 'D04', 'E01'].includes(exercise.catalogCode)) * 4

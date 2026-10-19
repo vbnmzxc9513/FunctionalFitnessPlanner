@@ -19,7 +19,7 @@ const options = { currentDate: '2026-10-14', currentWeek: '2026-W42', focus: 'co
 test('weekly preferences are bounded facts, not health clearance or arbitrary metadata', () => {
   const profile = normalizePlanningContext({ ...context, targetRegions: ['core', 'upper', 'core', 'legs', 'fake'], stiffnessRegions: ['thoracic', 'shoulder', 'fake'], healthNotes: '肩部震波' });
   assert.equal(profile.healthStatus, 'restricted');
-  assert.deepEqual(profile.targetRegions, ['legs', 'upper']);
+  assert.deepEqual(profile.targetRegions, ['legs', 'upper', 'core']);
   assert.deepEqual(profile.stiffnessRegions, ['thoracic', 'shoulder']);
   const intent = createWeeklyIntent(profile, 'stability', '35');
   assert.deepEqual(normalizeWeeklyIntent(intent), intent);

@@ -119,7 +119,7 @@ service cloud.firestore {
         && (!('weeklyExerciseIds' in intent) || validWeeklyChoices(intent.weeklyExerciseIds))
         && intent.focus in ['balanced', 'strength', 'stability', 'coordination']
         && time is number && time >= 5 && time <= 240
-        && targets is list && targets.size() <= 2 && targets.hasOnly(['legs', 'posterior', 'upper', 'core'])
+        && targets is list && targets.size() <= 4 && targets.hasOnly(['legs', 'posterior', 'upper', 'core', 'serratus', 'scapular', 'rotator_cuff', 'chest', 'back', 'forearm', 'glutes', 'quadriceps', 'hamstrings', 'adductors', 'calves'])
         && targets.toSet().size() == targets.size()
         && stiffness is list && stiffness.size() <= 2 && stiffness.hasOnly(['hip', 'ankle', 'thoracic', 'shoulder'])
         && stiffness.toSet().size() == stiffness.size()

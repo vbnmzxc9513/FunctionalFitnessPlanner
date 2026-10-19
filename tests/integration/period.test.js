@@ -56,6 +56,19 @@ test('28 dates and 224 independently validated doses apply atomically without le
   for (const progress of Object.values(state.progressByWeek)) assert.ok((progress.scheduleSnapshot || []).length <= 7);
 });
 
+test('four detailed targets persist in native date sessions and cloud period summaries without exposing private notes', async () => {
+  const range = rangeFor(2), sessions = sessionsFor(range), state = await loadPeriodState(uid, range);
+  const targetRegions = ['serratus', 'rotator_cuff', 'glutes', 'calves'];
+  const result = await applyPeriodPlan(uid, { range, sessions, profile: { ...profile, context: { ...profile.context, targetRegions } }, expectedState: state.expectedState, conclusion: 'Fine priorities' });
+  const period = (await getDoc(userDoc(uid, 'planningPeriods', result.periodId))).data();
+  assert.deepEqual(period.weeklyIntent.targetRegions, targetRegions);
+  const reloaded = await loadPeriodState(uid, range);
+  assert.deepEqual(reloaded.sessionsByDate[today].weeklyIntent.targetRegions, targetRegions);
+  assert.equal(JSON.stringify(period).includes('NEVER_STORE_THIS'), false);
+  const ref = userDoc(uid, 'dateSessions', today), saved = (await getDoc(ref)).data();
+  await assertFails(setDoc(ref, { ...saved, weeklyIntent: { ...saved.weeklyIntent, targetRegions: [...targetRegions, 'core'] } }));
+});
+
 test('malformed preparation rolls back the entire independent document batch; collections enforce owner and whitelists', async () => {
   const range = rangeFor(1); await apply(range);
   const session = (await getDoc(userDoc(uid, 'dateSessions', today))).data();

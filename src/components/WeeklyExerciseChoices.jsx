@@ -3,8 +3,8 @@ import { Check, Plus, RefreshCw, X } from 'lucide-react';
 import { MAX_WEEKLY_CHOICES } from '../domain/trainingPreferences.js';
 import { recommendWeeklyChoices, weeklyChoicePhase, weeklyChoiceCoverage, weeklyChoiceBlockReason } from '../domain/weeklyChoices.js';
 import { classifyBalanceExercise } from '../domain/weeklyBalance.js';
-import { libraryGroups } from '../domain/library.js';
-import { TARGET_PATTERNS } from '../domain/trainingPreferences.js';
+import { libraryGroups, suggestedUses } from '../domain/library.js';
+import { matchesTrainingTarget } from '../domain/trainingTargets.js';
 import { weeklyBalanceText } from '../weeklyBalanceLocale.js';
 import ExerciseGuide from './ExerciseGuide.jsx';
 
@@ -19,15 +19,15 @@ export default function WeeklyExerciseChoices({ t, lang, context, focus, exercis
   const matches = all.filter(id => {
     const phase = weeklyChoicePhase(id, exercises[id]);
     const group = ['strength', 'accessory', 'skill'].includes(phase) ? 'training' : phase;
-    return group === purpose && (!query.trim() || [exercises[id].name, ...(exercises[id].aliases || [])].join(' ').toLowerCase().includes(query.trim().toLowerCase()));
+    return (group === purpose || purpose === 'training' && suggestedUses(id, exercises[id]).includes('training')) && (!query.trim() || [exercises[id].name, ...(exercises[id].aliases || [])].join(' ').toLowerCase().includes(query.trim().toLowerCase()));
   });
   const rotated = matches.length ? [...matches.slice(offset % matches.length), ...matches.slice(0, offset % matches.length)] : [];
   const shown = searching ? matches.slice(0, limit) : rotated.slice(0, 4);
   const patterns = weeklyChoiceCoverage(selected, exercises);
-  const priority = (context.targetRegions || []).flatMap(region => TARGET_PATTERNS[region] || []);
+  const priority = context.targetRegions || [];
   const reason = id => {
     const exercise = exercises[id]; const classification = classifyBalanceExercise(id, exercise);
-    return libraryGroups(exercise).length ? 'choiceFavorite' : classification.patterns.some(pattern => priority.includes(pattern)) ? 'choiceGoal'
+    return libraryGroups(exercise).length ? 'choiceFavorite' : priority.some(region => matchesTrainingTarget(region, id, exercise)) ? 'choiceGoal'
       : classification.mobility.some(region => context.stiffnessRegions.includes(region)) ? 'choiceMobility'
         : focus === 'coordination' && ['footwork', 'reaction'].includes(exercise.category) ? 'choiceSkill' : 'choiceAvailable';
   };
