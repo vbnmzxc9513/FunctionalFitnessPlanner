@@ -1,0 +1,24 @@
+{
+  "flows": [
+    "empty plans cannot be saved; name required and trimmed",
+    "persisted named snapshot survives reload without dates/logs/weights/health notes",
+    "rename preserves ID; duplicate names do not overwrite",
+    "saved template uses common date mapping and preserves cancel context",
+    "named single-day sharing and receiver date review are consistent",
+    "later edits cannot mutate the shared snapshot; literal names are escaped"
+  ],
+  "viewports": [
+    320,
+    390,
+    1440
+  ],
+  "errors": [],
+  "storedPlanKeys": [
+    "title",
+    "kind",
+    "time",
+    "warm",
+    "main",
+    "cool"
+  ]
+}
