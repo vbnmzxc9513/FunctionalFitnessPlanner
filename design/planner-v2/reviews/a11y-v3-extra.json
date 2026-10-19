@@ -1,0 +1,147 @@
+{
+  "01-week": {
+    "buttons": [
+      {
+        "text": "‹",
+        "name": null,
+        "labelledby": null
+      },
+      {
+        "text": "›",
+        "name": null,
+        "labelledby": null
+      },
+      {
+        "text": "手動排課\n\n自己挑動作、組次與日期\n\n開始安排 ›",
+        "name": null,
+        "labelledby": null
+      },
+      {
+        "text": "自動排課\n\n回答問題，依條件搭配\n\n開始互動 ›",
+        "name": null,
+        "labelledby": null
+      },
+      {
+        "text": "一\n19\n全身肌力與穩定\n\n肌力 · 已安排\n\n38 分",
+        "name": null,
+        "labelledby": null
+      },
+      {
+        "text": "二\n20\n八段舒緩拉伸\n\n恢復 · 已安排\n\n12 分",
+        "name": null,
+        "labelledby": null
+      },
+      {
+        "text": "三\n21\n肩胛與上肢肌力\n\n肌力 · 已安排\n\n35 分",
+        "name": null,
+        "labelledby": null
+      },
+      {
+        "text": "四\n22\n八段舒緩拉伸\n\n恢復 · 已安排\n\n12 分",
+        "name": null,
+        "labelledby": null
+      },
+      {
+        "text": "五\n23\n球日舒緩拉伸\n\n恢復 · 已安排\n\n12 分",
+        "name": null,
+        "labelledby": null
+      },
+      {
+        "text": "六\n24\n休息\n\n休息 · 已安排\n\n—",
+        "name": null,
+        "labelledby": null
+      },
+      {
+        "text": "日\n25\n休息\n\n休息 · 已安排\n\n—",
+        "name": null,
+        "labelledby": null
+      },
+      {
+        "text": " 分享這週課表",
+        "name": null,
+        "labelledby": null
+      },
+      {
+        "text": " 動作庫",
+        "name": null,
+        "labelledby": null
+      },
+      {
+        "text": "查看本週重點與活動度安排",
+        "name": null,
+        "labelledby": null
+      }
+    ],
+    "liveRegions": []
+  },
+  "04-manual": {
+    "buttons": [
+      {
+        "text": "10/19 週一\n肌力 · 38分",
+        "name": null,
+        "labelledby": null
+      },
+      {
+        "text": "10/21 週三\n肌力 · 35分",
+        "name": null,
+        "labelledby": null
+      },
+      {
+        "text": "10/23 週五\n恢復 · 12分",
+        "name": null,
+        "labelledby": null
+      },
+      {
+        "text": "＋ 加入動作",
+        "name": null,
+        "labelledby": null
+      },
+      {
+        "text": "編輯",
+        "name": null,
+        "labelledby": null
+      },
+      {
+        "text": "＋ 加入動作",
+        "name": null,
+        "labelledby": null
+      },
+      {
+        "text": "編輯",
+        "name": null,
+        "labelledby": null
+      },
+      {
+        "text": "編輯",
+        "name": null,
+        "labelledby": null
+      },
+      {
+        "text": "編輯",
+        "name": null,
+        "labelledby": null
+      },
+      {
+        "text": "＋ 加入動作",
+        "name": null,
+        "labelledby": null
+      },
+      {
+        "text": "編輯",
+        "name": null,
+        "labelledby": null
+      },
+      {
+        "text": "保留草稿後離開",
+        "name": null,
+        "labelledby": null
+      },
+      {
+        "text": "複製這天",
+        "name": null,
+        "labelledby": null
+      }
+    ],
+    "liveRegions": []
+  }
+}

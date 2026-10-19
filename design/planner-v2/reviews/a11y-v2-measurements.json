@@ -1,0 +1,913 @@
+{
+  "date": "2026-10-19",
+  "layouts": [
+    {
+      "page": "01-week",
+      "width": 320,
+      "scrollWidth": 320,
+      "targetCount": 17,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "02-empty",
+      "width": 320,
+      "scrollWidth": 320,
+      "targetCount": 7,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "03-dates-manual",
+      "width": 320,
+      "scrollWidth": 320,
+      "targetCount": 36,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "03b-dates-auto",
+      "width": 320,
+      "scrollWidth": 320,
+      "targetCount": 4,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "04-manual",
+      "width": 320,
+      "scrollWidth": 320,
+      "targetCount": 15,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "04b-day-view",
+      "width": 320,
+      "scrollWidth": 320,
+      "targetCount": 8,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "05-pick-strength",
+      "width": 320,
+      "scrollWidth": 320,
+      "targetCount": 17,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "06-pick-stretch",
+      "width": 320,
+      "scrollWidth": 320,
+      "targetCount": 15,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "07-exercise-detail",
+      "width": 320,
+      "scrollWidth": 320,
+      "targetCount": 10,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "08-auto-goals",
+      "width": 320,
+      "scrollWidth": 320,
+      "targetCount": 22,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "09-auto-body",
+      "width": 320,
+      "scrollWidth": 320,
+      "targetCount": 18,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "10-plan-preview",
+      "width": 320,
+      "scrollWidth": 320,
+      "targetCount": 8,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "10a-auto-preview",
+      "width": 320,
+      "scrollWidth": 320,
+      "targetCount": 12,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "11-share",
+      "width": 320,
+      "scrollWidth": 320,
+      "targetCount": 6,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "11b-share-ready",
+      "width": 320,
+      "scrollWidth": 320,
+      "targetCount": 7,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "12-shared-view",
+      "width": 320,
+      "scrollWidth": 320,
+      "targetCount": 4,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "12b-shared-day",
+      "width": 320,
+      "scrollWidth": 320,
+      "targetCount": 7,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "13-import-dates",
+      "width": 320,
+      "scrollWidth": 320,
+      "targetCount": 6,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "14-import-conflict",
+      "width": 320,
+      "scrollWidth": 320,
+      "targetCount": 7,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "15-import-review",
+      "width": 320,
+      "scrollWidth": 320,
+      "targetCount": 4,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "15b-import-replace",
+      "width": 320,
+      "scrollWidth": 320,
+      "targetCount": 4,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "16-import-done",
+      "width": 320,
+      "scrollWidth": 320,
+      "targetCount": 3,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "17-import-adjust",
+      "width": 320,
+      "scrollWidth": 320,
+      "targetCount": 13,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "01-week",
+      "width": 390,
+      "scrollWidth": 390,
+      "targetCount": 17,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "02-empty",
+      "width": 390,
+      "scrollWidth": 390,
+      "targetCount": 7,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "03-dates-manual",
+      "width": 390,
+      "scrollWidth": 390,
+      "targetCount": 36,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "03b-dates-auto",
+      "width": 390,
+      "scrollWidth": 390,
+      "targetCount": 4,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "04-manual",
+      "width": 390,
+      "scrollWidth": 390,
+      "targetCount": 15,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "04b-day-view",
+      "width": 390,
+      "scrollWidth": 390,
+      "targetCount": 8,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "05-pick-strength",
+      "width": 390,
+      "scrollWidth": 390,
+      "targetCount": 17,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "06-pick-stretch",
+      "width": 390,
+      "scrollWidth": 390,
+      "targetCount": 15,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "07-exercise-detail",
+      "width": 390,
+      "scrollWidth": 390,
+      "targetCount": 10,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "08-auto-goals",
+      "width": 390,
+      "scrollWidth": 390,
+      "targetCount": 22,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "09-auto-body",
+      "width": 390,
+      "scrollWidth": 390,
+      "targetCount": 18,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "10-plan-preview",
+      "width": 390,
+      "scrollWidth": 390,
+      "targetCount": 8,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "10a-auto-preview",
+      "width": 390,
+      "scrollWidth": 390,
+      "targetCount": 12,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "11-share",
+      "width": 390,
+      "scrollWidth": 390,
+      "targetCount": 6,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "11b-share-ready",
+      "width": 390,
+      "scrollWidth": 390,
+      "targetCount": 7,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "12-shared-view",
+      "width": 390,
+      "scrollWidth": 390,
+      "targetCount": 4,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "12b-shared-day",
+      "width": 390,
+      "scrollWidth": 390,
+      "targetCount": 7,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "13-import-dates",
+      "width": 390,
+      "scrollWidth": 390,
+      "targetCount": 6,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "14-import-conflict",
+      "width": 390,
+      "scrollWidth": 390,
+      "targetCount": 7,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "15-import-review",
+      "width": 390,
+      "scrollWidth": 390,
+      "targetCount": 4,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "15b-import-replace",
+      "width": 390,
+      "scrollWidth": 390,
+      "targetCount": 4,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "16-import-done",
+      "width": 390,
+      "scrollWidth": 390,
+      "targetCount": 3,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "17-import-adjust",
+      "width": 390,
+      "scrollWidth": 390,
+      "targetCount": 13,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "01-week",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "targetCount": 17,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "02-empty",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "targetCount": 7,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "03-dates-manual",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "targetCount": 39,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "03b-dates-auto",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "targetCount": 7,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "04-manual",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "targetCount": 28,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "04b-day-view",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "targetCount": 11,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "05-pick-strength",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "targetCount": 20,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "06-pick-stretch",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "targetCount": 18,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "07-exercise-detail",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "targetCount": 13,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "08-auto-goals",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "targetCount": 25,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "09-auto-body",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "targetCount": 21,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "10-plan-preview",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "targetCount": 11,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "10a-auto-preview",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "targetCount": 15,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "11-share",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "targetCount": 9,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "11b-share-ready",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "targetCount": 10,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "12-shared-view",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "targetCount": 7,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "12b-shared-day",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "targetCount": 10,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "13-import-dates",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "targetCount": 9,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "14-import-conflict",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "targetCount": 10,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "15-import-review",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "targetCount": 7,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "15b-import-replace",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "targetCount": 7,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "16-import-done",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "targetCount": 6,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    },
+    {
+      "page": "17-import-adjust",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "targetCount": 16,
+      "smallTargets": [],
+      "brokenHandlers": [],
+      "focusObscured": []
+    }
+  ],
+  "scenarios": {
+    "defaultConflict": {
+      "replaceFor": null,
+      "pressed": [
+        {
+          "text": "換日期，保留原課表",
+          "pressed": "true"
+        },
+        {
+          "text": "改為替換「上肢肌力」\n\n只有按最後確認才會更動",
+          "pressed": "false"
+        }
+      ],
+      "labels": [
+        {
+          "id": "conflict-1",
+          "labels": [
+            "第 2 天的新日期"
+          ]
+        },
+        {
+          "id": "conflict-2",
+          "labels": [
+            "第 3 天的新日期"
+          ]
+        }
+      ]
+    },
+    "protectedDateGate": {
+      "page": "14-import-conflict",
+      "bottom": {
+        "text": "1 天仍需處理\n\n不會自動合併或覆蓋紀錄\n\n請先處理日期",
+        "disabled": true
+      },
+      "text": "有 1 天需要先處理\n\n先選處理方式，再查看最後確認。\n\n第 2 天 · 日期已有課表\n10/28 已有「上肢肌力」\n\n尚未開始，沒有訓練紀錄。\n\n換日期，保留原課表\n改為替換「上肢肌力」\n\n只有按最後確認才會更動\n\n第 2 天的新日期\n\n✓ 10/29 已確認\n\n第 3 天 · 已有訓練紀錄\n10/30 的紀錄會保留\n\n不能覆蓋，請替這天改日期。\n\n第 3 天的新日期\n\n已有訓練紀錄，必須換日期"
+    },
+    "correctReview": {
+      "page": "15-import-review",
+      "text": "1 選日期\n2 檢查並匯入\n最後確認，才會匯入\n\n羽球基礎・3 天課表\n\n第 1 天\n新增\n全身肌力與穩定\n\n→ 10/26 · 38 分鐘\n\n第 2 天\n新增\n肩胛與上肢肌力\n\n→ 10/29 · 35 分鐘\n\n第 3 天\n新增\n球日舒緩拉伸\n\n→ 10/31 · 12 分鐘\n\n✓ 不覆蓋任何既有課表或訓練紀錄。\n器材已確認\n✓\n\n啞鈴、彈力繩、滑輪符合範例設定。\n\n匯入前調整這份副本\n\n未登入：這份副本將儲存在目前裝置。可稍後登入同步；匯入不會把動作標成完成。"
+    },
+    "correctDone": {
+      "page": "16-import-done",
+      "text": "已匯入 3 天課表\n\n你的新日期都已安排好。\n\n✓\n\n10/26 · 全身肌力與穩定\n\n38 分鐘 · 尚未完成訓練\n\n10/29 · 肩胛與上肢肌力\n\n35 分鐘 · 尚未完成訓練\n\n10/31 · 球日舒緩拉伸\n\n12 分鐘 · 尚未完成訓練\n\n✓ 分享者的原課表不受影響\n✓ 10/30 的訓練紀錄已保留\n撤銷這次匯入\n\n開始訓練後有新紀錄的日期，不會被撤銷覆蓋。\n\n需要跨裝置使用？\n\n可稍後登入並同步，不影響這次匯入。\n\n登入並同步 ›",
+      "storage": []
+    },
+    "explicitReplacement": {
+      "page": "15-import-review",
+      "bottom": {
+        "text": "新增 2 天 · 替換 1 天\n\n確認後才更新我的課表\n\n確認匯入 3 天課表",
+        "disabled": false
+      },
+      "text": "1 選日期\n2 檢查並匯入\n最後確認，才會匯入\n\n羽球基礎・3 天課表\n\n第 1 天\n新增\n全身肌力與穩定\n\n→ 10/26 · 38 分鐘\n\n第 2 天\n替換原課表\n肩胛與上肢肌力\n\n→ 10/28 · 35 分鐘\n\n原課表：「上肢肌力」（未有紀錄）\n\n第 3 天\n新增\n球日舒緩拉伸\n\n→ 10/31 · 12 分鐘\n\n只替換 10/28 尚未開始的「上肢肌力」。\n10/30 已有紀錄，會保留不變。\n器材已確認\n✓\n\n啞鈴、彈力繩、滑輪符合範例設定。\n\n匯入前調整這份副本\n\n未登入：這份副本將儲存在目前裝置。可稍後登入同步；匯入不會把動作標成完成。"
+    },
+    "footerActions": [
+      {
+        "page": "07-exercise-detail",
+        "label": "儲存修改",
+        "pageAfter": "04-manual",
+        "errors": [],
+        "bottom": {
+          "text": "目前為草稿\n\n尚未套用到日期\n\n檢查 3 天課表",
+          "disabled": false
+        }
+      },
+      {
+        "page": "09-auto-body",
+        "label": "條件已確認\n\n產生課表預覽",
+        "pageAfter": "10a-auto-preview",
+        "errors": [],
+        "bottom": {
+          "text": "7 天 · 尚未套用\n\n確認後才更新日期安排\n\n套用到課表",
+          "disabled": false
+        }
+      },
+      {
+        "page": "10-plan-preview",
+        "label": "3 天 · 尚未套用\n\n確認後才更新日期安排\n\n套用到課表",
+        "pageAfter": "01-week",
+        "errors": [],
+        "bottom": {
+          "text": "今天\n課表\n紀錄",
+          "disabled": false
+        }
+      },
+      {
+        "page": "11-share",
+        "label": "分享 3 天\n\n接收者可自行選擇套用日期\n\n建立分享連結",
+        "pageAfter": "11-share",
+        "errors": [],
+        "bottom": {
+          "text": "分享 3 天\n\n分享的是課表副本\n\n複製分享連結",
+          "disabled": false
+        }
+      }
+    ],
+    "secondEdit": {
+      "before": "1 日期\n2 加入動作\n3 檢查\n手動排課\n\n點「加入動作」挑選；點編輯或長按可改組次。\n\n10/19 週一\n肌力 · 38分\n10/21 週三\n肌力 · 35分\n10/23 週五\n恢復 · 12分\n全身肌力與穩定\n38 / 40 分鐘\n暖身\n＋ 加入動作\n1\n八段動態拉伸\n\n1輪 · 10分鐘\n\n編輯\n訓練\n＋ 加入動作\n1\n啞鈴羅馬尼亞硬舉\n\n2組 × 6下\n\n編輯\n2\n啞鈴高腳杯深蹲\n\n2組 × 6下\n\n編輯\n3\n單臂滑輪划船\n\n2組 × 6下／側\n\n編輯\n收操\n＋ 加入動作\n1\n90/90 靠牆呼吸\n\n1組 × 4次呼吸\n\n編輯\n保留草稿後離開\n複製這天\n\n草稿會保留在這台裝置，套用前不更動正式課表。",
+      "opened": "編輯動作\n\n10/19 · 訓練\n\n計畫劑量\n啞鈴高腳杯深蹲\n\n設定計畫組次；實際重量與完成紀錄在「今天」填寫。\n\n組數\n每組次數\n組間休息（秒）\n安排階段\n暖身\n訓練\n收操\n動作教學與準備組\n調整順序\n↑ 往前\n↓ 往後\n移除這個動作",
+      "after": "1 日期\n2 加入動作\n3 檢查\n手動排課\n\n點「加入動作」挑選；點編輯或長按可改組次。\n\n10/19 週一\n肌力 · 38分\n10/21 週三\n肌力 · 35分\n10/23 週五\n恢復 · 12分\n全身肌力與穩定\n38 / 40 分鐘\n暖身\n＋ 加入動作\n1\n八段動態拉伸\n\n1輪 · 10分鐘\n\n編輯\n訓練\n＋ 加入動作\n1\n啞鈴羅馬尼亞硬舉\n\n2組 × 6下\n\n編輯\n2\n啞鈴高腳杯深蹲\n\n3組 × 6下\n\n編輯\n3\n單臂滑輪划船\n\n2組 × 6下／側\n\n編輯\n收操\n＋ 加入動作\n1\n90/90 靠牆呼吸\n\n1組 × 4次呼吸\n\n編輯\n保留草稿後離開\n複製這天\n\n草稿會保留在這台裝置，套用前不更動正式課表。"
+    },
+    "draftReload": {
+      "before": "本週課表\n\n先看這週安排，再選一天查看。\n\n‹\n10/19 — 10/25\n›\n手動排課\n\n自己挑動作、組次與日期\n\n開始安排 ›\n自動排課\n\n回答問題，依條件搭配\n\n開始互動 ›\n繼續手動排課草稿\n\n3 天 · 尚未套用\n\n這週的安排\n2 肌力 · 3 恢復\n一\n19\n全身肌力與穩定\n\n肌力 · 已安排\n\n38 分\n二\n20\n八段舒緩拉伸\n\n恢復 · 已安排\n\n12 分\n三\n21\n肩胛與上肢肌力\n\n肌力 · 已安排\n\n35 分\n四\n22\n八段舒緩拉伸\n\n恢復 · 已安排\n\n12 分\n五\n23\n球日舒緩拉伸\n\n恢復 · 已安排\n\n12 分\n六\n24\n休息\n\n休息 · 已安排\n\n—\n日\n25\n休息\n\n休息 · 已安排\n\n—\n 分享這週課表\n 動作庫\n查看本週重點與活動度安排",
+      "storedBefore": [
+        "fitness_planner_design_draft"
+      ],
+      "after": "本週課表\n\n先看這週安排，再選一天查看。\n\n‹\n10/19 — 10/25\n›\n手動排課\n\n自己挑動作、組次與日期\n\n開始安排 ›\n自動排課\n\n回答問題，依條件搭配\n\n開始互動 ›\n繼續手動排課草稿\n\n3 天 · 尚未套用\n\n這週的安排\n2 肌力 · 3 恢復\n一\n19\n全身肌力與穩定\n\n肌力 · 已安排\n\n38 分\n二\n20\n八段舒緩拉伸\n\n恢復 · 已安排\n\n12 分\n三\n21\n肩胛與上肢肌力\n\n肌力 · 已安排\n\n35 分\n四\n22\n八段舒緩拉伸\n\n恢復 · 已安排\n\n12 分\n五\n23\n球日舒緩拉伸\n\n恢復 · 已安排\n\n12 分\n六\n24\n休息\n\n休息 · 已安排\n\n—\n日\n25\n休息\n\n休息 · 已安排\n\n—\n 分享這週課表\n 動作庫\n查看本週重點與活動度安排",
+      "storedAfter": [
+        "fitness_planner_design_draft"
+      ]
+    },
+    "conditionRerender": [
+      {
+        "id": "available-minutes",
+        "value": "25"
+      },
+      {
+        "id": "court-minutes",
+        "value": "60"
+      }
+    ],
+    "focusAfterSelection": "BODY",
+    "conditionsAX": [
+      {
+        "role": "button",
+        "name": "返回",
+        "states": []
+      },
+      {
+        "role": "button",
+        "name": "✓ 均衡體能",
+        "states": []
+      },
+      {
+        "role": "button",
+        "name": "整體肌力",
+        "states": []
+      },
+      {
+        "role": "button",
+        "name": "協調與反應",
+        "states": []
+      },
+      {
+        "role": "button",
+        "name": "穩定與控制",
+        "states": []
+      },
+      {
+        "role": "spinbutton",
+        "name": "每日可用分鐘",
+        "states": []
+      },
+      {
+        "role": "button",
+        "name": "一",
+        "states": []
+      },
+      {
+        "role": "button",
+        "name": "二",
+        "states": []
+      },
+      {
+        "role": "button",
+        "name": "三",
+        "states": []
+      },
+      {
+        "role": "button",
+        "name": "四",
+        "states": []
+      },
+      {
+        "role": "button",
+        "name": "五",
+        "states": []
+      },
+      {
+        "role": "button",
+        "name": "六",
+        "states": []
+      },
+      {
+        "role": "button",
+        "name": "日",
+        "states": []
+      },
+      {
+        "role": "spinbutton",
+        "name": "每次羽球分鐘",
+        "states": []
+      },
+      {
+        "role": "combobox",
+        "name": "球局強度",
+        "states": []
+      },
+      {
+        "role": "button",
+        "name": "✓ 啞鈴",
+        "states": [
+          {
+            "name": "pressed",
+            "value": {
+              "type": "tristate",
+              "value": "true"
+            }
+          }
+        ]
+      },
+      {
+        "role": "button",
+        "name": "✓ 彈力繩",
+        "states": [
+          {
+            "name": "pressed",
+            "value": {
+              "type": "tristate",
+              "value": "true"
+            }
+          }
+        ]
+      },
+      {
+        "role": "button",
+        "name": "✓ 滑輪",
+        "states": [
+          {
+            "name": "pressed",
+            "value": {
+              "type": "tristate",
+              "value": "true"
+            }
+          }
+        ]
+      },
+      {
+        "role": "button",
+        "name": "滾筒",
+        "states": [
+          {
+            "name": "pressed",
+            "value": {
+              "type": "tristate",
+              "value": "false"
+            }
+          }
+        ]
+      },
+      {
+        "role": "button",
+        "name": "跳繩",
+        "states": [
+          {
+            "name": "pressed",
+            "value": {
+              "type": "tristate",
+              "value": "false"
+            }
+          }
+        ]
+      },
+      {
+        "role": "button",
+        "name": "體能可用日與比賽日期",
+        "states": []
+      },
+      {
+        "role": "button",
+        "name": "下一步：身體感受",
+        "states": []
+      }
+    ],
+    "subsetAdjust": {
+      "shared": "朋友分享的課表\n羽球基礎・1 天課表\n\n0 天肌力 · 1 天恢復\n\n1\n天課表\n12–12\n分鐘／天\n3\n種器材\n先看看內容\n1\n第 1 天 · 球日舒緩拉伸\n\n恢復 · 12 分鐘 · 暖身\n\n需要準備\n啞鈴\n彈力繩\n滑輪\n\n匯入前可以更換不適合的動作。\n\n日期由你決定\n\n這是課表副本，不會自動加入行事曆。\n下一步可逐天選日期；修改不影響分享者。\n\n免登入即可預覽。匯入後可保存在這台裝置。",
+      "review": "1 選日期\n2 檢查並匯入\n最後確認，才會匯入\n\n羽球基礎・1 天課表\n\n第 1 天\n新增\n球日舒緩拉伸\n\n→ 11/02 · 12 分鐘\n\n✓ 不覆蓋任何既有課表或訓練紀錄。\n器材已確認\n✓\n\n啞鈴、彈力繩、滑輪符合範例設定。\n\n匯入前調整這份副本\n\n未登入：這份副本將儲存在目前裝置。可稍後登入同步；匯入不會把動作標成完成。",
+      "adjust": "調整匯入副本\n\n只調整你的副本，不改分享者的原課表。\n\n第 1 天\n11/02\n球日舒緩拉伸\n暖身\n＋ 加入動作\n1\n八段動態拉伸\n\n1輪 · 10分鐘\n\n編輯\n訓練\n＋ 加入動作\n收操\n＋ 加入動作\n修改後會回到同一份匯入確認，不會跳去手動排課草稿。"
+    },
+    "changeImportedExercise": {
+      "before": "調整匯入副本\n\n只調整你的副本，不改分享者的原課表。\n\n第 1 天\n10/26\n第 2 天\n10/29\n第 3 天\n10/31\n全身肌力與穩定\n暖身\n＋ 加入動作\n1\n八段動態拉伸\n\n1輪 · 10分鐘\n\n編輯\n訓練\n＋ 加入動作\n1\n啞鈴羅馬尼亞硬舉\n\n2組 × 6下\n\n編輯\n2\n啞鈴高腳杯深蹲\n\n2組 × 6下\n\n編輯\n3\n單臂滑輪划船\n\n2組 × 6下／側\n\n編輯\n收操\n＋ 加入動作\n1\n90/90 靠牆呼吸\n\n1組 × 4次呼吸\n\n編輯\n修改後會回到同一份匯入確認，不會跳去手動排課草稿。",
+      "review": "調整匯入副本\n\n只調整你的副本，不改分享者的原課表。\n\n第 1 天\n10/26\n第 2 天\n10/29\n第 3 天\n10/31\n全身肌力與穩定\n暖身\n＋ 加入動作\n1\n八段動態拉伸\n\n1輪 · 10分鐘\n\n編輯\n訓練\n＋ 加入動作\n1\n啞鈴羅馬尼亞硬舉\n\n2組 × 6下\n\n編輯\n2\n啞鈴高腳杯深蹲\n\n2組 × 6下\n\n編輯\n3\n單臂滑輪划船\n\n2組 × 6下／側\n\n編輯\n4\n分腿蹲\n\n1組 × 6下\n\n編輯\n收操\n＋ 加入動作\n1\n90/90 靠牆呼吸\n\n1組 × 4次呼吸\n\n編輯\n修改後會回到同一份匯入確認，不會跳去手動排課草稿。"
+    }
+  },
+  "sourceHashBefore": "93fc666b0cbe3624d1e6d452c8be713b25bfe09e47fee4ddf9447e1d1db9abea",
+  "errors": [],
+  "sourceHashAfter": "93fc666b0cbe3624d1e6d452c8be713b25bfe09e47fee4ddf9447e1d1db9abea",
+  "stableSourceDuringCheck": true
+}

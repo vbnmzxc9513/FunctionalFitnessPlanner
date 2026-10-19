@@ -1,0 +1,24 @@
+import assert from 'node:assert/strict';
+import puppeteer from '../../node_modules/puppeteer/lib/esm/puppeteer/puppeteer.js';
+import { pathToFileURL } from 'node:url';
+import { resolve } from 'node:path';
+import { writeFile } from 'node:fs/promises';
+const root=resolve('design/planner-v2'),url=pathToFileURL(`${root}/prototype.html`).href;
+const b=await puppeteer.launch({headless:true,args:['--no-sandbox']});
+const results=[];
+try{
+const p=await b.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message));
+const open=async name=>{await p.goto(url+'?page='+name);await p.evaluate(()=>document.fonts.ready);};
+const click=async label=>{const el=await p.evaluateHandle(label=>[...document.querySelectorAll('button')].find(x=>x.innerText.trim()===label&&x.getClientRects().length&&!x.disabled),label);assert.ok(el.asElement(),`visible enabled ${label}`);await el.evaluate(x=>x.scrollIntoView({block:'center',behavior:'instant'}));await el.click();await el.dispose();};
+const fill=async(selector,value)=>{await p.$eval(selector,(el,value)=>{el.value=value;el.dispatchEvent(new Event('change',{bubbles:true}));},value);};
+await p.setViewport({width:390,height:844});await open('01-week');const pages=await p.evaluate(()=>window.prototypePages);
+for(const width of [320,390,1440]){await p.setViewport({width,height:900});for(const name of pages){await open(name);const m=await p.evaluate(()=>({page:document.body.dataset.page,width:innerWidth,scroll:document.documentElement.scrollWidth,broken:[...document.querySelectorAll('[onclick]')].filter(x=>{try{new Function(x.getAttribute('onclick'));return false;}catch{return true;}}).length}));assert.equal(m.scroll<=m.width,true,`overflow ${name}/${width}`);assert.equal(m.broken,0,`broken handlers ${name}`);results.push({...m});}}
+await p.setViewport({width:390,height:844});
+await open('03b-dates-auto');assert.ok((await p.$eval('.bottom',el=>el.innerText)).includes('7'));await click('下一步：訓練條件');await fill('#available-minutes','40');await click('下一步：身體感受');assert.ok(await p.$eval('.bottom .btn',el=>el.disabled));await click('沒有');await p.evaluate(()=>{state.recovery=0;render()});await click('產生課表預覽');assert.equal(await p.$eval('body',el=>el.dataset.page),'10a-auto-preview');assert.equal(await p.$$eval('.plan-day',els=>els.length),7);assert.ok((await p.$eval('#app',el=>el.innerText)).includes('未指定動作'));await click('套用到課表');assert.equal(await p.$eval('body',el=>el.dataset.page),'01-week');
+await open('03-dates-manual');await click('開始排 3 天');assert.equal(await p.$$eval('.exercise',els=>els.length),0);await click('＋ 加入每日八段動態拉伸');await p.evaluate(()=>openManualPicker('main'));assert.equal(await p.$eval('.bottom .btn',x=>x.disabled),true);await p.locator('[data-id="split"]').map(x=>{x.scrollIntoView({block:'center'});return x;}).click();await p.evaluate(()=>toggleExercise('lateral'));await click('加入 2 個動作');assert.equal(await p.$$eval('.exercise',els=>els.length),3);await click('保留草稿後離開');assert.ok(await p.evaluate(()=>!!localStorage.getItem('fitness_planner_design_draft')));assert.ok((await p.$eval('#app',x=>x.innerText)).includes('繼續手動排課草稿'));
+await open('13-import-dates');await click('逐天指定日期');await fill('input[aria-label="第 2 天套用日期"]','2026-10-29');await fill('input[aria-label="第 3 天套用日期"]','2026-10-31');await click('下一步：檢查日期');assert.equal(await p.$eval('body',el=>el.dataset.page),'15-import-review');assert.ok((await p.$eval('#app',x=>x.innerText)).includes('10/29'));await click('確認匯入 3 天課表');assert.ok((await p.$eval('#app',x=>x.innerText)).includes('10/31'));
+await open('14-import-conflict');assert.ok(await p.$eval('.bottom .btn',x=>x.disabled));assert.equal(await p.evaluate(()=>state.replaceFor),null);await fill('#conflict-1','2026-10-29');await fill('#conflict-2','2026-10-31');assert.equal(await p.$eval('.bottom .btn',x=>x.disabled),false);await click('查看匯入確認');assert.ok((await p.$eval('.bottom',x=>x.innerText)).includes('新增 3 天'));
+await open('15b-import-replace');assert.ok((await p.$eval('#app',x=>x.innerText)).includes('原課表：「上肢肌力」'));await click('取消匯入');assert.equal(await p.$eval('body',x=>x.dataset.page),'12-shared-view');
+await open('15-import-review');await click('匯入前調整這份副本');assert.equal(await p.$eval('body',x=>x.dataset.page),'17-import-adjust');await click('儲存並回到匯入確認');assert.equal(await p.$eval('body',x=>x.dataset.page),'15-import-review');
+assert.deepEqual(errors,[]);await writeFile(root+'/prototype-checks.json',JSON.stringify({checks:results,flows:['automatic: seven dates, explicit health, preview, apply','manual: empty draft, add flow, select 2, keep draft','import: exact date mapping, conflict gate, protected date, cancel, review, confirmation','replacement: original name visible; adjusting copy keeps import context'],errors},null,2));console.log(`${results.length} viewport checks and four core journey checks passed; no page errors.`);
+}finally{await b.close();}

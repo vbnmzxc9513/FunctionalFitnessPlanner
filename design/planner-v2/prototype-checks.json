@@ -1,0 +1,425 @@
+{
+  "checks": [
+    {
+      "page": "01-week",
+      "width": 320,
+      "scroll": 320,
+      "broken": 0
+    },
+    {
+      "page": "02-empty",
+      "width": 320,
+      "scroll": 320,
+      "broken": 0
+    },
+    {
+      "page": "03-dates-manual",
+      "width": 320,
+      "scroll": 320,
+      "broken": 0
+    },
+    {
+      "page": "03b-dates-auto",
+      "width": 320,
+      "scroll": 320,
+      "broken": 0
+    },
+    {
+      "page": "04-manual",
+      "width": 320,
+      "scroll": 320,
+      "broken": 0
+    },
+    {
+      "page": "04b-day-view",
+      "width": 320,
+      "scroll": 320,
+      "broken": 0
+    },
+    {
+      "page": "05-pick-strength",
+      "width": 320,
+      "scroll": 320,
+      "broken": 0
+    },
+    {
+      "page": "06-pick-stretch",
+      "width": 320,
+      "scroll": 320,
+      "broken": 0
+    },
+    {
+      "page": "07-exercise-detail",
+      "width": 320,
+      "scroll": 320,
+      "broken": 0
+    },
+    {
+      "page": "08-auto-goals",
+      "width": 320,
+      "scroll": 320,
+      "broken": 0
+    },
+    {
+      "page": "09-auto-body",
+      "width": 320,
+      "scroll": 320,
+      "broken": 0
+    },
+    {
+      "page": "10-plan-preview",
+      "width": 320,
+      "scroll": 320,
+      "broken": 0
+    },
+    {
+      "page": "10a-auto-preview",
+      "width": 320,
+      "scroll": 320,
+      "broken": 0
+    },
+    {
+      "page": "11-share",
+      "width": 320,
+      "scroll": 320,
+      "broken": 0
+    },
+    {
+      "page": "11b-share-ready",
+      "width": 320,
+      "scroll": 320,
+      "broken": 0
+    },
+    {
+      "page": "12-shared-view",
+      "width": 320,
+      "scroll": 320,
+      "broken": 0
+    },
+    {
+      "page": "12b-shared-day",
+      "width": 320,
+      "scroll": 320,
+      "broken": 0
+    },
+    {
+      "page": "13-import-dates",
+      "width": 320,
+      "scroll": 320,
+      "broken": 0
+    },
+    {
+      "page": "14-import-conflict",
+      "width": 320,
+      "scroll": 320,
+      "broken": 0
+    },
+    {
+      "page": "15-import-review",
+      "width": 320,
+      "scroll": 320,
+      "broken": 0
+    },
+    {
+      "page": "15b-import-replace",
+      "width": 320,
+      "scroll": 320,
+      "broken": 0
+    },
+    {
+      "page": "16-import-done",
+      "width": 320,
+      "scroll": 320,
+      "broken": 0
+    },
+    {
+      "page": "17-import-adjust",
+      "width": 320,
+      "scroll": 320,
+      "broken": 0
+    },
+    {
+      "page": "01-week",
+      "width": 390,
+      "scroll": 390,
+      "broken": 0
+    },
+    {
+      "page": "02-empty",
+      "width": 390,
+      "scroll": 390,
+      "broken": 0
+    },
+    {
+      "page": "03-dates-manual",
+      "width": 390,
+      "scroll": 390,
+      "broken": 0
+    },
+    {
+      "page": "03b-dates-auto",
+      "width": 390,
+      "scroll": 390,
+      "broken": 0
+    },
+    {
+      "page": "04-manual",
+      "width": 390,
+      "scroll": 390,
+      "broken": 0
+    },
+    {
+      "page": "04b-day-view",
+      "width": 390,
+      "scroll": 390,
+      "broken": 0
+    },
+    {
+      "page": "05-pick-strength",
+      "width": 390,
+      "scroll": 390,
+      "broken": 0
+    },
+    {
+      "page": "06-pick-stretch",
+      "width": 390,
+      "scroll": 390,
+      "broken": 0
+    },
+    {
+      "page": "07-exercise-detail",
+      "width": 390,
+      "scroll": 390,
+      "broken": 0
+    },
+    {
+      "page": "08-auto-goals",
+      "width": 390,
+      "scroll": 390,
+      "broken": 0
+    },
+    {
+      "page": "09-auto-body",
+      "width": 390,
+      "scroll": 390,
+      "broken": 0
+    },
+    {
+      "page": "10-plan-preview",
+      "width": 390,
+      "scroll": 390,
+      "broken": 0
+    },
+    {
+      "page": "10a-auto-preview",
+      "width": 390,
+      "scroll": 390,
+      "broken": 0
+    },
+    {
+      "page": "11-share",
+      "width": 390,
+      "scroll": 390,
+      "broken": 0
+    },
+    {
+      "page": "11b-share-ready",
+      "width": 390,
+      "scroll": 390,
+      "broken": 0
+    },
+    {
+      "page": "12-shared-view",
+      "width": 390,
+      "scroll": 390,
+      "broken": 0
+    },
+    {
+      "page": "12b-shared-day",
+      "width": 390,
+      "scroll": 390,
+      "broken": 0
+    },
+    {
+      "page": "13-import-dates",
+      "width": 390,
+      "scroll": 390,
+      "broken": 0
+    },
+    {
+      "page": "14-import-conflict",
+      "width": 390,
+      "scroll": 390,
+      "broken": 0
+    },
+    {
+      "page": "15-import-review",
+      "width": 390,
+      "scroll": 390,
+      "broken": 0
+    },
+    {
+      "page": "15b-import-replace",
+      "width": 390,
+      "scroll": 390,
+      "broken": 0
+    },
+    {
+      "page": "16-import-done",
+      "width": 390,
+      "scroll": 390,
+      "broken": 0
+    },
+    {
+      "page": "17-import-adjust",
+      "width": 390,
+      "scroll": 390,
+      "broken": 0
+    },
+    {
+      "page": "01-week",
+      "width": 1440,
+      "scroll": 1440,
+      "broken": 0
+    },
+    {
+      "page": "02-empty",
+      "width": 1440,
+      "scroll": 1440,
+      "broken": 0
+    },
+    {
+      "page": "03-dates-manual",
+      "width": 1440,
+      "scroll": 1440,
+      "broken": 0
+    },
+    {
+      "page": "03b-dates-auto",
+      "width": 1440,
+      "scroll": 1440,
+      "broken": 0
+    },
+    {
+      "page": "04-manual",
+      "width": 1440,
+      "scroll": 1440,
+      "broken": 0
+    },
+    {
+      "page": "04b-day-view",
+      "width": 1440,
+      "scroll": 1440,
+      "broken": 0
+    },
+    {
+      "page": "05-pick-strength",
+      "width": 1440,
+      "scroll": 1440,
+      "broken": 0
+    },
+    {
+      "page": "06-pick-stretch",
+      "width": 1440,
+      "scroll": 1440,
+      "broken": 0
+    },
+    {
+      "page": "07-exercise-detail",
+      "width": 1440,
+      "scroll": 1440,
+      "broken": 0
+    },
+    {
+      "page": "08-auto-goals",
+      "width": 1440,
+      "scroll": 1440,
+      "broken": 0
+    },
+    {
+      "page": "09-auto-body",
+      "width": 1440,
+      "scroll": 1440,
+      "broken": 0
+    },
+    {
+      "page": "10-plan-preview",
+      "width": 1440,
+      "scroll": 1440,
+      "broken": 0
+    },
+    {
+      "page": "10a-auto-preview",
+      "width": 1440,
+      "scroll": 1440,
+      "broken": 0
+    },
+    {
+      "page": "11-share",
+      "width": 1440,
+      "scroll": 1440,
+      "broken": 0
+    },
+    {
+      "page": "11b-share-ready",
+      "width": 1440,
+      "scroll": 1440,
+      "broken": 0
+    },
+    {
+      "page": "12-shared-view",
+      "width": 1440,
+      "scroll": 1440,
+      "broken": 0
+    },
+    {
+      "page": "12b-shared-day",
+      "width": 1440,
+      "scroll": 1440,
+      "broken": 0
+    },
+    {
+      "page": "13-import-dates",
+      "width": 1440,
+      "scroll": 1440,
+      "broken": 0
+    },
+    {
+      "page": "14-import-conflict",
+      "width": 1440,
+      "scroll": 1440,
+      "broken": 0
+    },
+    {
+      "page": "15-import-review",
+      "width": 1440,
+      "scroll": 1440,
+      "broken": 0
+    },
+    {
+      "page": "15b-import-replace",
+      "width": 1440,
+      "scroll": 1440,
+      "broken": 0
+    },
+    {
+      "page": "16-import-done",
+      "width": 1440,
+      "scroll": 1440,
+      "broken": 0
+    },
+    {
+      "page": "17-import-adjust",
+      "width": 1440,
+      "scroll": 1440,
+      "broken": 0
+    }
+  ],
+  "flows": [
+    "automatic: seven dates, explicit health, preview, apply",
+    "manual: empty draft, add flow, select 2, keep draft",
+    "import: exact date mapping, conflict gate, protected date, cancel, review, confirmation",
+    "replacement: original name visible; adjusting copy keeps import context"
+  ],
+  "errors": []
+}

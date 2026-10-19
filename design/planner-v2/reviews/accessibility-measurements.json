@@ -1,0 +1,2936 @@
+{
+  "date": "2026-10-19",
+  "method": "DOM geometry, Chrome accessibility tree and keyboard interaction; no human performance measurements",
+  "layouts": [
+    {
+      "page": "01-week",
+      "width": 320,
+      "scrollWidth": 320,
+      "viewportWidth": 320,
+      "overflowElements": [],
+      "smallTargets": [
+        {
+          "text": "‹",
+          "x": 14,
+          "y": 173,
+          "width": 8.875,
+          "height": 44
+        },
+        {
+          "text": "›",
+          "x": 297.125,
+          "y": 173,
+          "width": 8.875,
+          "height": 44
+        }
+      ],
+      "inputLabels": [],
+      "footer": {
+        "x": 0,
+        "y": 777.40625,
+        "width": 320,
+        "height": 66.59375
+      },
+      "targetCount": 17,
+      "axControls": [
+        {
+          "role": "button",
+          "name": "‹",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "›",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "手動排課 自己挑動作、組次與日期 開始安排 ›",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "自動排課 回答問題，依條件搭配 開始互動 ›",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "一 19 全身肌力與穩定 肌力 · 已安排 38 分",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "二 20 八段舒緩拉伸 羽球日 · 恢復 12 分",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "三 21 肩胛與上肢肌力 肌力 · 已安排 35 分",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "四 22 八段舒緩拉伸 羽球日 · 恢復 12 分",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "五 23 球日舒緩拉伸 羽球日 · 恢復 12 分",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "六 24 休息 不另排體能 —",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "日 25 休息 不另排體能 —",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": " 分享這週課表",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": " 動作庫",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "查看本週重點與活動度安排",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "今天",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "課表",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "紀錄",
+          "states": []
+        }
+      ],
+      "focusObscured": [
+        {
+          "text": "五23球日舒緩拉伸羽球日 · 恢復12 分",
+          "top": 764.984375,
+          "bottom": 842.984375,
+          "footerTop": 777.40625,
+          "headerBottom": 64
+        },
+        {
+          "text": "六24休息不另排體能—",
+          "top": 765.984375,
+          "bottom": 843.984375,
+          "footerTop": 777.40625,
+          "headerBottom": 64
+        },
+        {
+          "text": "日25休息不另排體能—",
+          "top": 765.984375,
+          "bottom": 843.984375,
+          "footerTop": 777.40625,
+          "headerBottom": 64
+        }
+      ],
+      "tabStops": 17,
+      "bottomAtEnd": {
+        "lastControl": "查看本週重點與活動度安排",
+        "top": 665.984375,
+        "bottom": 713.984375,
+        "footerTop": 777.40625,
+        "clear": true
+      }
+    },
+    {
+      "page": "04-manual",
+      "width": 320,
+      "scrollWidth": 320,
+      "viewportWidth": 320,
+      "overflowElements": [],
+      "smallTargets": [],
+      "inputLabels": [],
+      "footer": {
+        "x": 0,
+        "y": 767,
+        "width": 320,
+        "height": 77
+      },
+      "targetCount": 14,
+      "axControls": [
+        {
+          "role": "button",
+          "name": "課表",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "10/19 週一 肌力 · 38分",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "10/21 週三 肌力 · 35分",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "10/23 週五 恢復 · 12分",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "＋ 加入動作",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "編輯",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "＋ 加入動作",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "編輯",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "編輯",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "編輯",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "＋ 加入動作",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "編輯",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "複製這天的安排",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "檢查 3 天課表",
+          "states": []
+        }
+      ],
+      "focusObscured": [
+        {
+          "text": "編輯",
+          "top": 743.953125,
+          "bottom": 787.953125,
+          "footerTop": 767,
+          "headerBottom": 64
+        }
+      ],
+      "tabStops": 14,
+      "bottomAtEnd": {
+        "lastControl": "複製這天的安排",
+        "top": 669.734375,
+        "bottom": 713.734375,
+        "footerTop": 767,
+        "clear": true
+      }
+    },
+    {
+      "page": "05-pick-strength",
+      "width": 320,
+      "scrollWidth": 320,
+      "viewportWidth": 320,
+      "overflowElements": [],
+      "smallTargets": [
+        {
+          "text": "腿",
+          "x": 74.015625,
+          "y": 337.796875,
+          "width": 39.015625,
+          "height": 44
+        },
+        {
+          "text": "胸",
+          "x": 121.03125,
+          "y": 337.796875,
+          "width": 39.015625,
+          "height": 44
+        },
+        {
+          "text": "背",
+          "x": 168.046875,
+          "y": 337.796875,
+          "width": 39.015625,
+          "height": 44
+        }
+      ],
+      "inputLabels": [
+        {
+          "type": "text",
+          "ariaLabel": null,
+          "labels": [],
+          "placeholder": "搜尋動作、腿拉伸、前鋸肌…",
+          "x": 14,
+          "y": 173,
+          "width": 292,
+          "height": 48
+        }
+      ],
+      "footer": {
+        "x": 0,
+        "y": 767,
+        "width": 320,
+        "height": 77
+      },
+      "targetCount": 17,
+      "axControls": [
+        {
+          "role": "button",
+          "name": "回到排課",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "肌力訓練",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "動態拉伸",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "收操放鬆",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "全部",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "腿",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "胸",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "背",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "肩胛",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "核心",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "細分肌群：前鋸肌、旋轉肌群…",
+          "states": []
+        },
+        {
+          "role": "textbox",
+          "name": "搜尋動作、腿拉伸、前鋸肌…",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "✓ 分腿蹲 腿 · 臀 · 徒手／啞鈴 ›",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "✓ 啞鈴高腳杯深蹲 腿 · 臀 · 啞鈴 ›",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "啞鈴羅馬尼亞硬舉 腿後側 · 臀 · 啞鈴 ›",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "側弓步 腿 · 內收肌 · 徒手／啞鈴 ›",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "加入 2 個動作",
+          "states": []
+        }
+      ],
+      "focusObscured": [
+        {
+          "text": "啞鈴羅馬尼亞硬舉腿後側 · 臀 · 啞鈴›",
+          "top": 701.796875,
+          "bottom": 783.796875,
+          "footerTop": 767,
+          "headerBottom": 64
+        },
+        {
+          "text": "側弓步腿 · 內收肌 · 徒手／啞鈴›",
+          "top": 761.796875,
+          "bottom": 843.796875,
+          "footerTop": 767,
+          "headerBottom": 64
+        }
+      ],
+      "tabStops": 17,
+      "bottomAtEnd": {
+        "lastControl": "側弓步腿 · 內收肌 · 徒手／啞鈴›",
+        "top": 593.796875,
+        "bottom": 675.796875,
+        "footerTop": 767,
+        "clear": true
+      }
+    },
+    {
+      "page": "08-auto-goals",
+      "width": 320,
+      "scrollWidth": 320,
+      "viewportWidth": 320,
+      "overflowElements": [],
+      "smallTargets": [
+        {
+          "text": "一",
+          "x": 14,
+          "y": 531.34375,
+          "width": 37.421875,
+          "height": 44
+        },
+        {
+          "text": "二",
+          "x": 56.421875,
+          "y": 531.34375,
+          "width": 37.4375,
+          "height": 44
+        },
+        {
+          "text": "三",
+          "x": 98.859375,
+          "y": 531.34375,
+          "width": 37.421875,
+          "height": 44
+        },
+        {
+          "text": "四",
+          "x": 141.28125,
+          "y": 531.34375,
+          "width": 37.4375,
+          "height": 44
+        },
+        {
+          "text": "五",
+          "x": 183.71875,
+          "y": 531.34375,
+          "width": 37.421875,
+          "height": 44
+        },
+        {
+          "text": "六",
+          "x": 226.140625,
+          "y": 531.34375,
+          "width": 37.4375,
+          "height": 44
+        },
+        {
+          "text": "日",
+          "x": 268.578125,
+          "y": 531.34375,
+          "width": 37.421875,
+          "height": 44
+        }
+      ],
+      "inputLabels": [
+        {
+          "type": "number",
+          "ariaLabel": "每日可用分鐘",
+          "labels": [],
+          "placeholder": "",
+          "x": 193.984375,
+          "y": 407.359375,
+          "width": 78,
+          "height": 48
+        },
+        {
+          "type": "number",
+          "ariaLabel": null,
+          "labels": [],
+          "placeholder": "",
+          "x": 60.015625,
+          "y": 585.34375,
+          "width": 80,
+          "height": 48
+        },
+        {
+          "type": "select-one",
+          "ariaLabel": "球局強度",
+          "labels": [],
+          "placeholder": "",
+          "x": 184.03125,
+          "y": 585.34375,
+          "width": 121.96875,
+          "height": 48
+        }
+      ],
+      "footer": {
+        "x": 0,
+        "y": 767,
+        "width": 320,
+        "height": 77
+      },
+      "targetCount": 22,
+      "axControls": [
+        {
+          "role": "button",
+          "name": "返回",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "✓ 均衡體能",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "整體肌力",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "協調與反應",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "穩定與控制",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "每日可用分鐘",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "一",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "二",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "三",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "四",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "五",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "六",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "日",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "",
+          "states": []
+        },
+        {
+          "role": "combobox",
+          "name": "球局強度",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "啞鈴",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "彈力繩",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "滑輪",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "滾筒",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "跳繩",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "體能可用日與比賽日期",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "下一步：身體感受",
+          "states": []
+        }
+      ],
+      "focusObscured": [
+        {
+          "text": "跳繩",
+          "top": 732.140625,
+          "bottom": 776.140625,
+          "footerTop": 767,
+          "headerBottom": 64
+        },
+        {
+          "text": "體能可用日與比賽日期",
+          "top": 786.140625,
+          "bottom": 834.140625,
+          "footerTop": 767,
+          "headerBottom": 64
+        }
+      ],
+      "tabStops": 44,
+      "bottomAtEnd": {
+        "lastControl": "體能可用日與比賽日期",
+        "top": 666.140625,
+        "bottom": 714.140625,
+        "footerTop": 767,
+        "clear": true
+      }
+    },
+    {
+      "page": "13-import-dates",
+      "width": 320,
+      "scrollWidth": 320,
+      "viewportWidth": 320,
+      "overflowElements": [],
+      "smallTargets": [],
+      "inputLabels": [
+        {
+          "type": "date",
+          "ariaLabel": "第 1 天套用日期",
+          "labels": [],
+          "placeholder": "",
+          "x": 27,
+          "y": 398.953125,
+          "width": 266,
+          "height": 49.59375
+        },
+        {
+          "type": "date",
+          "ariaLabel": "第 2 天套用日期",
+          "labels": [],
+          "placeholder": "",
+          "x": 27,
+          "y": 561.515625,
+          "width": 266,
+          "height": 49.59375
+        },
+        {
+          "type": "date",
+          "ariaLabel": "第 3 天套用日期",
+          "labels": [],
+          "placeholder": "",
+          "x": 27,
+          "y": 749.265625,
+          "width": 266,
+          "height": 49.59375
+        }
+      ],
+      "footer": {
+        "x": 0,
+        "y": 767,
+        "width": 320,
+        "height": 77
+      },
+      "targetCount": 7,
+      "axControls": [
+        {
+          "role": "button",
+          "name": "返回預覽",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "保留原本間隔",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "逐天指定日期",
+          "states": []
+        },
+        {
+          "role": "Date",
+          "name": "第 2 天套用日期",
+          "states": []
+        },
+        {
+          "role": "Date",
+          "name": "第 3 天套用日期",
+          "states": []
+        },
+        {
+          "role": "Date",
+          "name": "第 1 天套用日期",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "Show date picker",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "Show date picker",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "下一步：檢查日期",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "Show date picker",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "Month Month",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "Day Day",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "Year Year",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "Month Month",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "Day Day",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "Year Year",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "Month Month",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "Day Day",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "Year Year",
+          "states": []
+        }
+      ],
+      "focusObscured": [
+        {
+          "text": "第 3 天套用日期",
+          "top": 749.265625,
+          "bottom": 798.859375,
+          "footerTop": 767,
+          "headerBottom": 64
+        }
+      ],
+      "tabStops": 16,
+      "bottomAtEnd": {
+        "lastControl": "第 3 天套用日期",
+        "top": 589.265625,
+        "bottom": 638.859375,
+        "footerTop": 767,
+        "clear": true
+      }
+    },
+    {
+      "page": "14-import-conflict",
+      "width": 320,
+      "scrollWidth": 320,
+      "viewportWidth": 320,
+      "overflowElements": [],
+      "smallTargets": [],
+      "inputLabels": [
+        {
+          "type": "date",
+          "ariaLabel": null,
+          "labels": [],
+          "placeholder": "",
+          "x": 33,
+          "y": 679.109375,
+          "width": 254,
+          "height": 49.59375
+        }
+      ],
+      "footer": {
+        "x": 0,
+        "y": 767,
+        "width": 320,
+        "height": 77
+      },
+      "targetCount": 5,
+      "axControls": [
+        {
+          "role": "button",
+          "name": "返回日期",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "換一個日期 保留原本的課表",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "替換這天的原課表 改成分享的第 2 天：肩胛與上肢肌力",
+          "states": []
+        },
+        {
+          "role": "Date",
+          "name": "",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "Show date picker",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "重新檢查日期",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "Month",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "Day",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "Year",
+          "states": []
+        }
+      ],
+      "focusObscured": [],
+      "tabStops": 8,
+      "bottomAtEnd": {
+        "lastControl": null,
+        "top": 616.109375,
+        "bottom": 665.703125,
+        "footerTop": 767,
+        "clear": true
+      }
+    },
+    {
+      "page": "15-import-review",
+      "width": 320,
+      "scrollWidth": 320,
+      "viewportWidth": 320,
+      "overflowElements": [],
+      "smallTargets": [],
+      "inputLabels": [],
+      "footer": {
+        "x": 0,
+        "y": 767,
+        "width": 320,
+        "height": 77
+      },
+      "targetCount": 3,
+      "axControls": [
+        {
+          "role": "button",
+          "name": "修改日期",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "匯入前更換某個動作",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "確認匯入 3 天課表",
+          "states": []
+        }
+      ],
+      "focusObscured": [
+        {
+          "text": "匯入前更換某個動作",
+          "top": 795.875,
+          "bottom": 843.875,
+          "footerTop": 767,
+          "headerBottom": 64
+        }
+      ],
+      "tabStops": 6,
+      "bottomAtEnd": {
+        "lastControl": "匯入前更換某個動作",
+        "top": 595.875,
+        "bottom": 643.875,
+        "footerTop": 767,
+        "clear": true
+      }
+    },
+    {
+      "page": "01-week",
+      "width": 390,
+      "scrollWidth": 390,
+      "viewportWidth": 390,
+      "overflowElements": [],
+      "smallTargets": [
+        {
+          "text": "‹",
+          "x": 20,
+          "y": 175.796875,
+          "width": 8.875,
+          "height": 44
+        },
+        {
+          "text": "›",
+          "x": 361.125,
+          "y": 175.796875,
+          "width": 8.875,
+          "height": 44
+        }
+      ],
+      "inputLabels": [],
+      "footer": {
+        "x": 0,
+        "y": 777.40625,
+        "width": 390,
+        "height": 66.59375
+      },
+      "targetCount": 17,
+      "axControls": [
+        {
+          "role": "button",
+          "name": "‹",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "›",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "手動排課 自己挑動作、組次與日期 開始安排 ›",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "自動排課 回答問題，依條件搭配 開始互動 ›",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "一 19 全身肌力與穩定 肌力 · 已安排 38 分",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "二 20 八段舒緩拉伸 羽球日 · 恢復 12 分",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "三 21 肩胛與上肢肌力 肌力 · 已安排 35 分",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "四 22 八段舒緩拉伸 羽球日 · 恢復 12 分",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "五 23 球日舒緩拉伸 羽球日 · 恢復 12 分",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "六 24 休息 不另排體能 —",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "日 25 休息 不另排體能 —",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": " 分享這週課表",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": " 動作庫",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "查看本週重點與活動度安排",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "今天",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "課表",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "紀錄",
+          "states": []
+        }
+      ],
+      "focusObscured": [
+        {
+          "text": "五23球日舒緩拉伸羽球日 · 恢復12 分",
+          "top": 759.28125,
+          "bottom": 837.28125,
+          "footerTop": 777.40625,
+          "headerBottom": 64
+        },
+        {
+          "text": "六24休息不另排體能—",
+          "top": 766.28125,
+          "bottom": 844.28125,
+          "footerTop": 777.40625,
+          "headerBottom": 64
+        }
+      ],
+      "tabStops": 17,
+      "bottomAtEnd": {
+        "lastControl": "查看本週重點與活動度安排",
+        "top": 666.28125,
+        "bottom": 714.28125,
+        "footerTop": 777.40625,
+        "clear": true
+      }
+    },
+    {
+      "page": "04-manual",
+      "width": 390,
+      "scrollWidth": 390,
+      "viewportWidth": 390,
+      "overflowElements": [],
+      "smallTargets": [],
+      "inputLabels": [],
+      "footer": {
+        "x": 0,
+        "y": 767,
+        "width": 390,
+        "height": 77
+      },
+      "targetCount": 14,
+      "axControls": [
+        {
+          "role": "button",
+          "name": "課表",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "10/19 週一 肌力 · 38分",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "10/21 週三 肌力 · 35分",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "10/23 週五 恢復 · 12分",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "＋ 加入動作",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "編輯",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "＋ 加入動作",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "編輯",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "編輯",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "編輯",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "＋ 加入動作",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "編輯",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "複製這天的安排",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "檢查 3 天課表",
+          "states": []
+        }
+      ],
+      "focusObscured": [
+        {
+          "text": "＋ 加入動作",
+          "top": 800.34375,
+          "bottom": 844.34375,
+          "footerTop": 767,
+          "headerBottom": 64
+        }
+      ],
+      "tabStops": 14,
+      "bottomAtEnd": {
+        "lastControl": "複製這天的安排",
+        "top": 669.53125,
+        "bottom": 713.53125,
+        "footerTop": 767,
+        "clear": true
+      }
+    },
+    {
+      "page": "05-pick-strength",
+      "width": 390,
+      "scrollWidth": 390,
+      "viewportWidth": 390,
+      "overflowElements": [],
+      "smallTargets": [
+        {
+          "text": "腿",
+          "x": 80.015625,
+          "y": 340.59375,
+          "width": 39.015625,
+          "height": 44
+        },
+        {
+          "text": "胸",
+          "x": 127.03125,
+          "y": 340.59375,
+          "width": 39.015625,
+          "height": 44
+        },
+        {
+          "text": "背",
+          "x": 174.046875,
+          "y": 340.59375,
+          "width": 39.015625,
+          "height": 44
+        }
+      ],
+      "inputLabels": [
+        {
+          "type": "text",
+          "ariaLabel": null,
+          "labels": [],
+          "placeholder": "搜尋動作、腿拉伸、前鋸肌…",
+          "x": 20,
+          "y": 175.796875,
+          "width": 350,
+          "height": 48
+        }
+      ],
+      "footer": {
+        "x": 0,
+        "y": 767,
+        "width": 390,
+        "height": 77
+      },
+      "targetCount": 17,
+      "axControls": [
+        {
+          "role": "button",
+          "name": "回到排課",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "肌力訓練",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "動態拉伸",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "收操放鬆",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "全部",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "腿",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "胸",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "背",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "肩胛",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "核心",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "細分肌群：前鋸肌、旋轉肌群…",
+          "states": []
+        },
+        {
+          "role": "textbox",
+          "name": "搜尋動作、腿拉伸、前鋸肌…",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "✓ 分腿蹲 腿 · 臀 · 徒手／啞鈴 ›",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "✓ 啞鈴高腳杯深蹲 腿 · 臀 · 啞鈴 ›",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "啞鈴羅馬尼亞硬舉 腿後側 · 臀 · 啞鈴 ›",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "側弓步 腿 · 內收肌 · 徒手／啞鈴 ›",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "加入 2 個動作",
+          "states": []
+        }
+      ],
+      "focusObscured": [
+        {
+          "text": "側弓步腿 · 內收肌 · 徒手／啞鈴›",
+          "top": 734.59375,
+          "bottom": 816.59375,
+          "footerTop": 767,
+          "headerBottom": 64
+        }
+      ],
+      "tabStops": 34,
+      "bottomAtEnd": {
+        "lastControl": "側弓步腿 · 內收肌 · 徒手／啞鈴›",
+        "top": 592.59375,
+        "bottom": 674.59375,
+        "footerTop": 767,
+        "clear": true
+      }
+    },
+    {
+      "page": "08-auto-goals",
+      "width": 390,
+      "scrollWidth": 390,
+      "viewportWidth": 390,
+      "overflowElements": [],
+      "smallTargets": [],
+      "inputLabels": [
+        {
+          "type": "number",
+          "ariaLabel": "每日可用分鐘",
+          "labels": [],
+          "placeholder": "",
+          "x": 255.984375,
+          "y": 389.359375,
+          "width": 78,
+          "height": 48
+        },
+        {
+          "type": "number",
+          "ariaLabel": null,
+          "labels": [],
+          "placeholder": "",
+          "x": 69.015625,
+          "y": 567.34375,
+          "width": 80,
+          "height": 48
+        },
+        {
+          "type": "select-one",
+          "ariaLabel": "球局強度",
+          "labels": [],
+          "placeholder": "",
+          "x": 195.03125,
+          "y": 567.34375,
+          "width": 174.96875,
+          "height": 48
+        }
+      ],
+      "footer": {
+        "x": 0,
+        "y": 767,
+        "width": 390,
+        "height": 77
+      },
+      "targetCount": 22,
+      "axControls": [
+        {
+          "role": "button",
+          "name": "返回",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "✓ 均衡體能",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "整體肌力",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "協調與反應",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "穩定與控制",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "每日可用分鐘",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "一",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "二",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "三",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "四",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "五",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "六",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "日",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "",
+          "states": []
+        },
+        {
+          "role": "combobox",
+          "name": "球局強度",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "啞鈴",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "彈力繩",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "滑輪",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "滾筒",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "跳繩",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "體能可用日與比賽日期",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "下一步：身體感受",
+          "states": []
+        }
+      ],
+      "focusObscured": [],
+      "tabStops": 22,
+      "bottomAtEnd": {
+        "lastControl": "體能可用日與比賽日期",
+        "top": 666.140625,
+        "bottom": 714.140625,
+        "footerTop": 767,
+        "clear": true
+      }
+    },
+    {
+      "page": "13-import-dates",
+      "width": 390,
+      "scrollWidth": 390,
+      "viewportWidth": 390,
+      "overflowElements": [],
+      "smallTargets": [],
+      "inputLabels": [
+        {
+          "type": "date",
+          "ariaLabel": "第 1 天套用日期",
+          "labels": [],
+          "placeholder": "",
+          "x": 36,
+          "y": 407.96875,
+          "width": 318,
+          "height": 49.59375
+        },
+        {
+          "type": "date",
+          "ariaLabel": "第 2 天套用日期",
+          "labels": [],
+          "placeholder": "",
+          "x": 36,
+          "y": 578.140625,
+          "width": 318,
+          "height": 49.59375
+        },
+        {
+          "type": "date",
+          "ariaLabel": "第 3 天套用日期",
+          "labels": [],
+          "placeholder": "",
+          "x": 36,
+          "y": 773.5,
+          "width": 318,
+          "height": 49.59375
+        }
+      ],
+      "footer": {
+        "x": 0,
+        "y": 767,
+        "width": 390,
+        "height": 77
+      },
+      "targetCount": 7,
+      "axControls": [
+        {
+          "role": "button",
+          "name": "返回預覽",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "保留原本間隔",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "逐天指定日期",
+          "states": []
+        },
+        {
+          "role": "Date",
+          "name": "第 2 天套用日期",
+          "states": []
+        },
+        {
+          "role": "Date",
+          "name": "第 3 天套用日期",
+          "states": []
+        },
+        {
+          "role": "Date",
+          "name": "第 1 天套用日期",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "Show date picker",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "Show date picker",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "下一步：檢查日期",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "Show date picker",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "Month Month",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "Day Day",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "Year Year",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "Month Month",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "Day Day",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "Year Year",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "Month Month",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "Day Day",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "Year Year",
+          "states": []
+        }
+      ],
+      "focusObscured": [
+        {
+          "text": "第 3 天套用日期",
+          "top": 773.5,
+          "bottom": 823.09375,
+          "footerTop": 767,
+          "headerBottom": 64
+        }
+      ],
+      "tabStops": 16,
+      "bottomAtEnd": {
+        "lastControl": "第 3 天套用日期",
+        "top": 584.5,
+        "bottom": 634.09375,
+        "footerTop": 767,
+        "clear": true
+      }
+    },
+    {
+      "page": "14-import-conflict",
+      "width": 390,
+      "scrollWidth": 390,
+      "viewportWidth": 390,
+      "overflowElements": [],
+      "smallTargets": [],
+      "inputLabels": [
+        {
+          "type": "date",
+          "ariaLabel": null,
+          "labels": [],
+          "placeholder": "",
+          "x": 39,
+          "y": 686.734375,
+          "width": 312,
+          "height": 49.59375
+        }
+      ],
+      "footer": {
+        "x": 0,
+        "y": 767,
+        "width": 390,
+        "height": 77
+      },
+      "targetCount": 5,
+      "axControls": [
+        {
+          "role": "button",
+          "name": "返回日期",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "換一個日期 保留原本的課表",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "替換這天的原課表 改成分享的第 2 天：肩胛與上肢肌力",
+          "states": []
+        },
+        {
+          "role": "Date",
+          "name": "",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "Show date picker",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "重新檢查日期",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "Month",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "Day",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "Year",
+          "states": []
+        }
+      ],
+      "focusObscured": [],
+      "tabStops": 16,
+      "bottomAtEnd": {
+        "lastControl": null,
+        "top": 615.734375,
+        "bottom": 665.328125,
+        "footerTop": 767,
+        "clear": true
+      }
+    },
+    {
+      "page": "15-import-review",
+      "width": 390,
+      "scrollWidth": 390,
+      "viewportWidth": 390,
+      "overflowElements": [],
+      "smallTargets": [],
+      "inputLabels": [],
+      "footer": {
+        "x": 0,
+        "y": 767,
+        "width": 390,
+        "height": 77
+      },
+      "targetCount": 3,
+      "axControls": [
+        {
+          "role": "button",
+          "name": "修改日期",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "匯入前更換某個動作",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "確認匯入 3 天課表",
+          "states": []
+        }
+      ],
+      "focusObscured": [
+        {
+          "text": "匯入前更換某個動作",
+          "top": 795.3125,
+          "bottom": 843.3125,
+          "footerTop": 767,
+          "headerBottom": 64
+        }
+      ],
+      "tabStops": 3,
+      "bottomAtEnd": {
+        "lastControl": "匯入前更換某個動作",
+        "top": 592.3125,
+        "bottom": 640.3125,
+        "footerTop": 767,
+        "clear": true
+      }
+    },
+    {
+      "page": "01-week",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "viewportWidth": 1440,
+      "overflowElements": [],
+      "smallTargets": [
+        {
+          "text": "‹",
+          "x": 330,
+          "y": 199.796875,
+          "width": 8.875,
+          "height": 44
+        },
+        {
+          "text": "›",
+          "x": 1321.125,
+          "y": 199.796875,
+          "width": 8.875,
+          "height": 44
+        }
+      ],
+      "inputLabels": [],
+      "footer": null,
+      "targetCount": 17,
+      "axControls": [
+        {
+          "role": "button",
+          "name": "◷　今天",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "▦　課表",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "▤　紀錄",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "‹",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "›",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "手動排課 自己挑動作、組次與日期 開始安排 ›",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "自動排課 回答問題，依條件搭配 開始互動 ›",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "一 19 全身肌力與穩定 肌力 · 已安排 38 分",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "二 20 八段舒緩拉伸 羽球日 · 恢復 12 分",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "三 21 肩胛與上肢肌力 肌力 · 已安排 35 分",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "四 22 八段舒緩拉伸 羽球日 · 恢復 12 分",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "五 23 球日舒緩拉伸 羽球日 · 恢復 12 分",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "六 24 休息 不另排體能 —",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "日 25 休息 不另排體能 —",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": " 分享這週課表",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": " 動作庫",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "查看本週重點與活動度安排",
+          "states": []
+        }
+      ],
+      "focusObscured": [],
+      "tabStops": 17,
+      "bottomAtEnd": {
+        "lastControl": "查看本週重點與活動度安排",
+        "top": 732.484375,
+        "bottom": 780.484375,
+        "footerTop": 900,
+        "clear": true
+      }
+    },
+    {
+      "page": "04-manual",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "viewportWidth": 1440,
+      "overflowElements": [],
+      "smallTargets": [
+        {
+          "text": "腿",
+          "x": 905.8125,
+          "y": 462.390625,
+          "width": 39.015625,
+          "height": 44
+        },
+        {
+          "text": "胸",
+          "x": 952.828125,
+          "y": 462.390625,
+          "width": 39.015625,
+          "height": 44
+        },
+        {
+          "text": "背",
+          "x": 999.84375,
+          "y": 462.390625,
+          "width": 39.015625,
+          "height": 44
+        }
+      ],
+      "inputLabels": [
+        {
+          "type": "text",
+          "ariaLabel": null,
+          "labels": [],
+          "placeholder": "搜尋動作或部位",
+          "x": 905.8125,
+          "y": 404.390625,
+          "width": 405.1875,
+          "height": 48
+        }
+      ],
+      "footer": {
+        "x": 220,
+        "y": 819,
+        "width": 1220,
+        "height": 81
+      },
+      "targetCount": 27,
+      "axControls": [
+        {
+          "role": "button",
+          "name": "◷　今天",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "▦　課表",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "▤　紀錄",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "課表",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "10/19 週一 肌力 · 38分",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "10/21 週三 肌力 · 35分",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "10/23 週五 恢復 · 12分",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "＋ 加入動作",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "編輯",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "＋ 加入動作",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "編輯",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "編輯",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "編輯",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "＋ 加入動作",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "編輯",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "複製這天的安排",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "腿",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "胸",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "背",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "前鋸肌",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "✓ 分腿蹲 腿 · 臀 · 徒手／啞鈴 ›",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "✓ 啞鈴高腳杯深蹲 腿 · 臀 · 啞鈴 ›",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "啞鈴羅馬尼亞硬舉 腿後側 · 臀 · 啞鈴 ›",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "側弓步 腿 · 內收肌 · 徒手／啞鈴 ›",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "加入 2 個動作",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "檢查 3 天課表",
+          "states": []
+        },
+        {
+          "role": "textbox",
+          "name": "搜尋動作或部位",
+          "states": []
+        }
+      ],
+      "focusObscured": [
+        {
+          "text": "＋ 加入動作",
+          "top": 851.34375,
+          "bottom": 895.34375,
+          "footerTop": 819,
+          "headerBottom": 72
+        },
+        {
+          "text": "10/19 週一肌力 · 38分",
+          "top": -0.40625,
+          "bottom": 60.59375,
+          "footerTop": 819,
+          "headerBottom": 72
+        },
+        {
+          "text": "10/21 週三肌力 · 35分",
+          "top": -0.40625,
+          "bottom": 60.59375,
+          "footerTop": 819,
+          "headerBottom": 72
+        },
+        {
+          "text": "10/23 週五恢復 · 12分",
+          "top": -0.40625,
+          "bottom": 60.59375,
+          "footerTop": 819,
+          "headerBottom": 72
+        }
+      ],
+      "tabStops": 54,
+      "bottomAtEnd": {
+        "lastControl": "加入 2 個動作",
+        "top": 569.390625,
+        "bottom": 617.390625,
+        "footerTop": 819,
+        "clear": true
+      }
+    },
+    {
+      "page": "05-pick-strength",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "viewportWidth": 1440,
+      "overflowElements": [],
+      "smallTargets": [
+        {
+          "text": "腿",
+          "x": 550.015625,
+          "y": 364.59375,
+          "width": 39.015625,
+          "height": 44
+        },
+        {
+          "text": "胸",
+          "x": 597.03125,
+          "y": 364.59375,
+          "width": 39.015625,
+          "height": 44
+        },
+        {
+          "text": "背",
+          "x": 644.046875,
+          "y": 364.59375,
+          "width": 39.015625,
+          "height": 44
+        }
+      ],
+      "inputLabels": [
+        {
+          "type": "text",
+          "ariaLabel": null,
+          "labels": [],
+          "placeholder": "搜尋動作、腿拉伸、前鋸肌…",
+          "x": 490,
+          "y": 199.796875,
+          "width": 680,
+          "height": 48
+        }
+      ],
+      "footer": {
+        "x": 220,
+        "y": 819,
+        "width": 1220,
+        "height": 81
+      },
+      "targetCount": 20,
+      "axControls": [
+        {
+          "role": "button",
+          "name": "◷　今天",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "▦　課表",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "▤　紀錄",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "回到排課",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "肌力訓練",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "動態拉伸",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "收操放鬆",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "全部",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "腿",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "胸",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "背",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "肩胛",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "核心",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "細分肌群：前鋸肌、旋轉肌群…",
+          "states": []
+        },
+        {
+          "role": "textbox",
+          "name": "搜尋動作、腿拉伸、前鋸肌…",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "✓ 分腿蹲 腿 · 臀 · 徒手／啞鈴 ›",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "✓ 啞鈴高腳杯深蹲 腿 · 臀 · 啞鈴 ›",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "啞鈴羅馬尼亞硬舉 腿後側 · 臀 · 啞鈴 ›",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "側弓步 腿 · 內收肌 · 徒手／啞鈴 ›",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "加入 2 個動作",
+          "states": []
+        }
+      ],
+      "focusObscured": [
+        {
+          "text": "側弓步腿 · 內收肌 · 徒手／啞鈴›",
+          "top": 758.59375,
+          "bottom": 840.59375,
+          "footerTop": 819,
+          "headerBottom": 72
+        }
+      ],
+      "tabStops": 20,
+      "bottomAtEnd": {
+        "lastControl": "側弓步腿 · 內收肌 · 徒手／啞鈴›",
+        "top": 658.59375,
+        "bottom": 740.59375,
+        "footerTop": 819,
+        "clear": true
+      }
+    },
+    {
+      "page": "08-auto-goals",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "viewportWidth": 1440,
+      "overflowElements": [],
+      "smallTargets": [],
+      "inputLabels": [
+        {
+          "type": "number",
+          "ariaLabel": "每日可用分鐘",
+          "labels": [],
+          "placeholder": "",
+          "x": 1055.984375,
+          "y": 413.359375,
+          "width": 78,
+          "height": 48
+        },
+        {
+          "type": "number",
+          "ariaLabel": null,
+          "labels": [],
+          "placeholder": "",
+          "x": 539.015625,
+          "y": 591.34375,
+          "width": 80,
+          "height": 48
+        },
+        {
+          "type": "select-one",
+          "ariaLabel": "球局強度",
+          "labels": [],
+          "placeholder": "",
+          "x": 665.03125,
+          "y": 591.34375,
+          "width": 504.96875,
+          "height": 48
+        }
+      ],
+      "footer": {
+        "x": 220,
+        "y": 819,
+        "width": 1220,
+        "height": 81
+      },
+      "targetCount": 25,
+      "axControls": [
+        {
+          "role": "button",
+          "name": "◷　今天",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "▦　課表",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "▤　紀錄",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "返回",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "✓ 均衡體能",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "整體肌力",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "協調與反應",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "穩定與控制",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "每日可用分鐘",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "一",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "二",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "三",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "四",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "五",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "六",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "日",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "",
+          "states": []
+        },
+        {
+          "role": "combobox",
+          "name": "球局強度",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "啞鈴",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "彈力繩",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "滑輪",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "滾筒",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "跳繩",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "體能可用日與比賽日期",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "下一步：身體感受",
+          "states": []
+        }
+      ],
+      "focusObscured": [],
+      "tabStops": 25,
+      "bottomAtEnd": {
+        "lastControl": "體能可用日與比賽日期",
+        "top": 732.140625,
+        "bottom": 780.140625,
+        "footerTop": 819,
+        "clear": true
+      }
+    },
+    {
+      "page": "13-import-dates",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "viewportWidth": 1440,
+      "overflowElements": [],
+      "smallTargets": [],
+      "inputLabels": [
+        {
+          "type": "date",
+          "ariaLabel": "第 1 天套用日期",
+          "labels": [],
+          "placeholder": "",
+          "x": 914,
+          "y": 355.390625,
+          "width": 240,
+          "height": 49.59375
+        },
+        {
+          "type": "date",
+          "ariaLabel": "第 2 天套用日期",
+          "labels": [],
+          "placeholder": "",
+          "x": 914,
+          "y": 448.984375,
+          "width": 240,
+          "height": 49.59375
+        },
+        {
+          "type": "date",
+          "ariaLabel": "第 3 天套用日期",
+          "labels": [],
+          "placeholder": "",
+          "x": 914,
+          "y": 567.765625,
+          "width": 240,
+          "height": 49.59375
+        }
+      ],
+      "footer": {
+        "x": 220,
+        "y": 819,
+        "width": 1220,
+        "height": 81
+      },
+      "targetCount": 10,
+      "axControls": [
+        {
+          "role": "button",
+          "name": "◷　今天",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "▦　課表",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "▤　紀錄",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "返回預覽",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "保留原本間隔",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "逐天指定日期",
+          "states": []
+        },
+        {
+          "role": "Date",
+          "name": "第 2 天套用日期",
+          "states": []
+        },
+        {
+          "role": "Date",
+          "name": "第 3 天套用日期",
+          "states": []
+        },
+        {
+          "role": "Date",
+          "name": "第 1 天套用日期",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "Show date picker",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "Show date picker",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "下一步：檢查日期",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "Show date picker",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "Month Month",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "Day Day",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "Year Year",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "Month Month",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "Day Day",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "Year Year",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "Month Month",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "Day Day",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "Year Year",
+          "states": []
+        }
+      ],
+      "focusObscured": [],
+      "tabStops": 38,
+      "bottomAtEnd": {
+        "lastControl": "第 3 天套用日期",
+        "top": 567.765625,
+        "bottom": 617.359375,
+        "footerTop": 819,
+        "clear": true
+      }
+    },
+    {
+      "page": "14-import-conflict",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "viewportWidth": 1440,
+      "overflowElements": [],
+      "smallTargets": [],
+      "inputLabels": [
+        {
+          "type": "date",
+          "ariaLabel": null,
+          "labels": [],
+          "placeholder": "",
+          "x": 509,
+          "y": 710.734375,
+          "width": 642,
+          "height": 49.59375
+        }
+      ],
+      "footer": {
+        "x": 220,
+        "y": 819,
+        "width": 1220,
+        "height": 81
+      },
+      "targetCount": 8,
+      "axControls": [
+        {
+          "role": "button",
+          "name": "◷　今天",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "▦　課表",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "▤　紀錄",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "返回日期",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "換一個日期 保留原本的課表",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "替換這天的原課表 改成分享的第 2 天：肩胛與上肢肌力",
+          "states": []
+        },
+        {
+          "role": "Date",
+          "name": "",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "Show date picker",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "重新檢查日期",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "Month",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "Day",
+          "states": []
+        },
+        {
+          "role": "spinbutton",
+          "name": "Year",
+          "states": []
+        }
+      ],
+      "focusObscured": [],
+      "tabStops": 11,
+      "bottomAtEnd": {
+        "lastControl": null,
+        "top": 681.734375,
+        "bottom": 731.328125,
+        "footerTop": 819,
+        "clear": true
+      }
+    },
+    {
+      "page": "15-import-review",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "viewportWidth": 1440,
+      "overflowElements": [],
+      "smallTargets": [],
+      "inputLabels": [],
+      "footer": {
+        "x": 220,
+        "y": 819,
+        "width": 1220,
+        "height": 81
+      },
+      "targetCount": 6,
+      "axControls": [
+        {
+          "role": "button",
+          "name": "◷　今天",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "▦　課表",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "▤　紀錄",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "修改日期",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "匯入前更換某個動作",
+          "states": []
+        },
+        {
+          "role": "button",
+          "name": "確認匯入 3 天課表",
+          "states": []
+        }
+      ],
+      "focusObscured": [
+        {
+          "text": "匯入前更換某個動作",
+          "top": 819.3125,
+          "bottom": 867.3125,
+          "footerTop": 819,
+          "headerBottom": 72
+        }
+      ],
+      "tabStops": 6,
+      "bottomAtEnd": {
+        "lastControl": "匯入前更換某個動作",
+        "top": 679.3125,
+        "bottom": 727.3125,
+        "footerTop": 819,
+        "clear": true
+      }
+    }
+  ],
+  "scenarios": {
+    "focusAfterSelection": {
+      "before": {
+        "active": "✓ 均衡體能",
+        "outline": "rgb(3, 105, 161) solid 3px"
+      },
+      "after": {
+        "activeTag": "BODY",
+        "activeText": "BODY"
+      }
+    },
+    "autoInputsAfterSelection": [
+      "40",
+      "90"
+    ],
+    "changedDatesConflict": "有 2 天需要先處理\n\n不會自動合併，也不會覆蓋你的訓練紀錄。\n\n第 2 天 · 日期已有課表\n10/28 已有「上肢肌力」\n\n尚未開始，沒有訓練紀錄。\n\n換一個日期\n\n保留原本的課表\n\n替換這天的原課表\n\n改成分享的第 2 天：肩胛與上肢肌力\n\n第 3 天 · 已有訓練紀錄\n10/30 不能覆蓋\n\n請替分享的第 3 天選另一個日期。\n原本的課表與紀錄會保留。\n\n第 3 天的新日期\n\n✓ 10/31 可安排，沒有日期衝突",
+    "recheckHandler": "state.resolved=true;go(",
+    "conflictingDateRecheckResult": {
+      "page": "14-import-conflict",
+      "text": "有 2 天需要先處理\n\n不會自動合併，也不會覆蓋你的訓練紀錄。\n\n第 2 天 · 日期已有課表\n10/28 已有「上肢肌力」\n\n尚未開始，沒有訓練紀錄。\n\n換一個日期\n\n保留原本的課表\n\n替換這天的原課表\n\n改成分享的第 2 天：肩胛與上肢肌力\n\n第 3 天 · 已有訓練紀錄\n10/30 不能覆蓋\n\n請替分享的第 3 天選另一個日期。\n原本的課表與紀錄會保留。\n\n第 3 天的新日期\n\n✓ 10/31 可安排，沒有日期衝突"
+    },
+    "changeDateOptionInputs": [
+      {
+        "value": "2026-10-31",
+        "label": null,
+        "labels": []
+      }
+    ],
+    "noReplacementRecheckPage": "14-import-conflict",
+    "noReplacementReview": "1 選日期\n2 檢查並匯入\n最後確認，才會匯入\n\n羽球基礎・3 天課表\n\n第 1 天\n新增\n全身肌力與穩定\n\n→ 10/26 週一 · 38 分鐘\n\n第 2 天\n新增\n肩胛與上肢肌力\n\n→ 10/29 週四 · 35 分鐘\n\n第 3 天\n新增\n球日舒緩拉伸\n\n→ 10/31 週六 · 12 分鐘\n\n器材已確認\n✓\n\n啞鈴、彈力繩、滑輪符合目前設定。\n\n匯入前更換某個動作\n\n未登入：這份副本將儲存在目前裝置。登入後可另行同步，匯入不會把動作標成完成。",
+    "noReplacementDone": "已匯入 3 天課表\n\n你的新日期都已安排好。\n\n✓\n\n10/26 · 全身肌力與穩定\n\n38 分鐘 · 尚未完成訓練\n\n10/28 · 肩胛與上肢肌力\n\n35 分鐘 · 尚未完成訓練\n\n10/31 · 球日舒緩拉伸\n\n12 分鐘 · 尚未完成訓練\n\n✓ 分享者的原課表不受影響\n✓ 10/30 的訓練紀錄已保留\n撤銷這次匯入\n\n開始訓練後有新紀錄的日期，不會被撤銷覆蓋。\n\n需要跨裝置使用？\n\n可稍後登入並同步，不影響這次匯入。\n\n登入並同步 ›",
+    "storageAfterDone": {
+      "localStorageKeys": [],
+      "sessionStorageKeys": []
+    },
+    "importChangeExerciseDestination": "加入動作\n\n加入到 10/19 週一 · 訓練\n\n肌力訓練\n動態拉伸\n收操放鬆\n想練哪個部位？\n全部\n腿\n胸\n背\n肩胛\n核心\n細分肌群：前鋸肌、旋轉肌群…\n腿部肌力\n4 個動作\n✓\n分腿蹲\n\n腿 · 臀 · 徒手／啞鈴\n\n›\n✓\n啞鈴高腳杯深蹲\n\n腿 · 臀 · 啞鈴\n\n›\n啞鈴羅馬尼亞硬舉\n\n腿後側 · 臀 · 啞鈴\n\n›\n側弓步\n\n腿 · 內收肌 · 徒手／啞鈴\n\n›\n\n勾選後按「加入」才會放入草稿；加入後仍可改組次。",
+    "emptySelectionFooter": "已選 1 個\n\n10/19 · 訓練\n\n加入 1 個動作",
+    "brokenFooterActions": [
+      {
+        "page": "07-exercise-detail",
+        "label": "儲存修改",
+        "handler": "go(",
+        "html": "<button class=\"btn primary full\" onclick=\"go(\" 04-manual\");toast(\"已更新這個動作的組次\")\"=\"\">儲存修改</button>",
+        "pageAfter": "07-exercise-detail",
+        "errors": [
+          "Unexpected end of input"
+        ]
+      },
+      {
+        "page": "09-auto-body",
+        "label": "產生課表預覽",
+        "handler": "state.mode=",
+        "html": "<button class=\"btn primary full\" onclick=\"state.mode=\" auto\";go(\"10-plan-preview\")\"=\"\">產生課表預覽</button>",
+        "pageAfter": "09-auto-body",
+        "errors": [
+          "Unexpected end of input"
+        ]
+      },
+      {
+        "page": "10-plan-preview",
+        "label": "套用到課表",
+        "handler": "state.autoApplied=true;go(",
+        "html": "<button class=\"btn primary \" onclick=\"state.autoApplied=true;go(\" 01-week\")\"=\"\">套用到課表</button>",
+        "pageAfter": "10-plan-preview",
+        "errors": [
+          "Unexpected end of input"
+        ]
+      },
+      {
+        "page": "11-share",
+        "label": "複製分享連結",
+        "handler": "state.linkCopied=true;toast(",
+        "html": "<button class=\"btn primary \" onclick=\"state.linkCopied=true;toast(\" 原型示意：連結已複製，可查看接收畫面\")\"=\"\">複製分享連結</button>",
+        "pageAfter": "11-share",
+        "errors": [
+          "Unexpected end of input"
+        ]
+      },
+      {
+        "page": "14-import-conflict",
+        "label": "重新檢查日期",
+        "handler": "state.resolved=true;go(",
+        "html": "<button class=\"btn primary \" onclick=\"state.resolved=true;go(\" 15-import-review\")\"=\"\">重新檢查日期</button>",
+        "pageAfter": "14-import-conflict",
+        "errors": [
+          "Unexpected end of input"
+        ]
+      }
+    ]
+  },
+  "pageErrors": [
+    "Failed to execute 'click' on 'HTMLElement': Unexpected end of input",
+    "Failed to execute 'click' on 'HTMLElement': Unexpected end of input",
+    "Unexpected end of input",
+    "Unexpected end of input",
+    "Unexpected end of input",
+    "Unexpected end of input",
+    "Unexpected end of input"
+  ]
+}

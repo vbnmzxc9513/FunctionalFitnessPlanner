@@ -1,0 +1,19 @@
+{
+  "hashBefore": "74fb1a49470fdaf07e81c973a80a08047cd5a9cc05a8649c76e36fc6b8e29bee",
+  "afterToggle": {
+    "text": "啞鈴",
+    "pressed": "false"
+  },
+  "afterGoal": {
+    "text": "啞鈴",
+    "pressed": "false"
+  },
+  "afterReturn": {
+    "text": "啞鈴",
+    "pressed": "false"
+  },
+  "focusAfterSelection": "BODY",
+  "sharedStretchOnly": "設計原型：以下課表、分享與匯入為流程示例，不會更新正式帳號資料。\n\n朋友分享的課表\n羽球基礎・1 天課表\n\n0 天肌力 · 1 天恢復\n\n1\n天課表\n12–12\n分鐘／天\n0\n種器材\n先看看內容\n1\n第 1 天 · 球日舒緩拉伸\n\n恢復 · 12 分鐘 · 暖身\n\n需要準備\n徒手\n\n匯入前可以更換不適合的動作。\n\n日期由你決定\n\n這是課表副本，不會自動加入行事曆。\n下一步可逐天選日期；修改不影響分享者。\n\n免登入即可預覽。匯入後可保存在這台裝置。",
+  "hashAfter": "74fb1a49470fdaf07e81c973a80a08047cd5a9cc05a8649c76e36fc6b8e29bee",
+  "stable": true
+}

@@ -1,0 +1,140 @@
+[
+  {
+    "name": "01-week",
+    "width": 390,
+    "scrollWidth": 390,
+    "cta": null
+  },
+  {
+    "name": "02-empty",
+    "width": 390,
+    "scrollWidth": 390,
+    "cta": null
+  },
+  {
+    "name": "03-dates-manual",
+    "width": 390,
+    "scrollWidth": 390,
+    "cta": "開始排 3 天"
+  },
+  {
+    "name": "03b-dates-auto",
+    "width": 390,
+    "scrollWidth": 390,
+    "cta": "下一步：訓練條件"
+  },
+  {
+    "name": "04-manual",
+    "width": 390,
+    "scrollWidth": 390,
+    "cta": "檢查 3 天課表"
+  },
+  {
+    "name": "04b-day-view",
+    "width": 390,
+    "scrollWidth": 390,
+    "cta": "開始這天的訓練"
+  },
+  {
+    "name": "05-pick-strength",
+    "width": 390,
+    "scrollWidth": 390,
+    "cta": "加入 2 個動作"
+  },
+  {
+    "name": "06-pick-stretch",
+    "width": 390,
+    "scrollWidth": 390,
+    "cta": "加入 1 個動作"
+  },
+  {
+    "name": "07-exercise-detail",
+    "width": 390,
+    "scrollWidth": 390,
+    "cta": "儲存修改"
+  },
+  {
+    "name": "08-auto-goals",
+    "width": 390,
+    "scrollWidth": 390,
+    "cta": "下一步：身體感受"
+  },
+  {
+    "name": "09-auto-body",
+    "width": 390,
+    "scrollWidth": 390,
+    "cta": "產生課表預覽"
+  },
+  {
+    "name": "10-plan-preview",
+    "width": 390,
+    "scrollWidth": 390,
+    "cta": "套用到課表"
+  },
+  {
+    "name": "10a-auto-preview",
+    "width": 390,
+    "scrollWidth": 390,
+    "cta": "套用到課表"
+  },
+  {
+    "name": "11-share",
+    "width": 390,
+    "scrollWidth": 390,
+    "cta": "建立分享連結"
+  },
+  {
+    "name": "11b-share-ready",
+    "width": 390,
+    "scrollWidth": 390,
+    "cta": "複製分享連結"
+  },
+  {
+    "name": "12-shared-view",
+    "width": 390,
+    "scrollWidth": 390,
+    "cta": "選日期，匯入我的課表"
+  },
+  {
+    "name": "12b-shared-day",
+    "width": 390,
+    "scrollWidth": 390,
+    "cta": "選日期，匯入這份課表"
+  },
+  {
+    "name": "13-import-dates",
+    "width": 390,
+    "scrollWidth": 390,
+    "cta": "下一步：檢查日期"
+  },
+  {
+    "name": "14-import-conflict",
+    "width": 390,
+    "scrollWidth": 390,
+    "cta": "請先處理日期"
+  },
+  {
+    "name": "15-import-review",
+    "width": 390,
+    "scrollWidth": 390,
+    "cta": "確認匯入 3 天課表"
+  },
+  {
+    "name": "15b-import-replace",
+    "width": 390,
+    "scrollWidth": 390,
+    "cta": "確認匯入 3 天課表"
+  },
+  {
+    "name": "16-import-done",
+    "width": 390,
+    "scrollWidth": 390,
+    "cta": "查看我的課表"
+  },
+  {
+    "name": "17-import-adjust",
+    "width": 390,
+    "scrollWidth": 390,
+    "cta": "儲存並回到匯入確認"
+  }
+]
