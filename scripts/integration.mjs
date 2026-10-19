@@ -23,3 +23,5 @@ await run(['scripts/recovery-smoke.mjs']);
 await run(['scripts/coach-review-smoke.mjs']);
 
 await run(['scripts/targets-smoke.mjs']);
+
+await run(['scripts/planner-requests-smoke.mjs']);

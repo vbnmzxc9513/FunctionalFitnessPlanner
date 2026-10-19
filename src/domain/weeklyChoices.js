@@ -6,12 +6,15 @@ import { libraryGroups, suggestedUses } from './library.js';
 import { normalizePlanningContext, competitionDaysAway } from './planning.js';
 import { dateForWeekDay } from './dates.js';
 import { weeklyChoiceIds } from './trainingPreferences.js';
+import { estimateSessionMinutes } from './sessions.js';
+import { SESSION_PHASES } from './phases.js';
 
 const CURATED = catalogExercises();
 
 export function weeklyChoicePhase(id, exercise) {
   if (!exercise || CURATED[id]?.catalogCode !== exercise.catalogCode || !exercise.prescription) return null;
   if (exercise.catalogCode === 'D09') return 'cooldown';
+  if (['A07', 'A08', 'B07', 'B08', 'C05', 'C06', 'C07', 'C08', 'C09'].includes(exercise.catalogCode)) return 'accessory';
   if (['power', 'footwork', 'reaction'].includes(exercise.category)) return 'skill';
   if (['lower', 'upper'].includes(exercise.category)) return 'strength';
   if (exercise.category === 'core') return exercise.type === 'mobility' ? 'cooldown' : 'accessory';
@@ -25,6 +28,7 @@ export function weeklyChoiceBlockReason(id, exercises, context, available) {
   const exercise = exercises[id];
   const profile = normalizePlanningContext(context);
   if (!exercise || exercise.deleted || exercise.active === false) return 'unavailable';
+  if (['A01', 'I01'].includes(exercise.catalogCode)) return 'stretch_opening';
   if (!weeklyChoicePhase(id, exercise)) return 'metadata';
   if (exercise.advanced && profile.experience === 'beginner') return 'experience';
   if (exercise.requiresPartner && !profile.partnerAvailable) return 'partner';
@@ -58,8 +62,8 @@ export function buildWeeklyChoiceReport(plan, exercises, context = {}, available
     if (!week) return { id, days, reason: 'omitted' };
     const conditionsKnown = Array.isArray(context.equipment);
     const blocked = conditionsKnown ? weeklyChoiceBlockReason(id, exercises, context, available) : null;
-    const protectedWeek = [1, 2, 3, 4, 5].some(day => {
-      const away = competitionDaysAway(context.competitionDate, dateForWeekDay(week, day));
+    const protectedWeek = (plan.schedule || []).length > 0 && plan.schedule.every(day => {
+      const away = competitionDaysAway(context.competitionDate, day.date || dateForWeekDay(week, day.day));
       return away !== null && away <= 10 && away >= -5;
     });
     const fixedOpening = weeklyChoicePhase(id, exercises[id]) === 'warmup' && (plan.schedule || []).some(day => day.routine.some(item => exercises[item]?.sequenceMinutes)) && !(plan.schedule || []).some(day => day.sessionType === 'training' && !day.routine.some(item => exercises[item]?.sequenceMinutes));
@@ -69,39 +73,58 @@ export function buildWeeklyChoiceReport(plan, exercises, context = {}, available
   });
 }
 
-const phaseIsWarmup = exercise => exercise.category === 'warmup';
-
-// Substitute an existing compatible slot; never add work or let a preference open a protected day.
-export function applyWeeklyChoices(day, available, ids, used, lang = 'zh') {
-  if (day.sessionType !== 'training') return day;
+// Schedule fresh choices before repeating selected defaults. Main patterns remain
+// complementary; a spare accessory slot can take one selected assistance lift.
+// Recovery days only accept comfortable mobility, never strength or skill work.
+export function applyWeeklyChoices(day, available, ids, used, lang = 'zh', minutes = Infinity) {
+  if (day.sessionType === 'rest') return day;
   const selected = weeklyChoiceIds(ids);
-  const locked = new Set(day.prescriptions.filter(dose => selected.includes(dose.id)).map(dose => dose.id));
-  const pending = selected.filter(id => !day.routine.includes(id) && available[id])
-    .sort((a, b) => Number(used.has(a)) - Number(used.has(b)));
+  const recovery = day.sessionType === 'recovery';
+  const locked = new Set(day.prescriptions.filter(dose => selected.includes(dose.id) && !used.has(dose.id)).map(dose => dose.id));
+  const pending = selected.filter(id => !day.routine.includes(id) && !used.has(id) && available[id]);
   for (const id of pending) {
     const exercise = available[id];
-    // Keep the user's eight-part opening intact; preferences cannot replace it with running.
-    if (phaseIsWarmup(exercise) && day.routine.some(item => available[item]?.sequenceMinutes)) continue;
     const phase = weeklyChoicePhase(id, exercise);
+    if (!phase || phase === 'recovery' || ['A01', 'I01'].includes(exercise.catalogCode)) continue;
+    if (recovery && (!['warmup', 'cooldown'].includes(phase) || !['warmup', 'recovery', 'core'].includes(exercise.category))) continue;
     const patterns = classifyBalanceExercise(id, exercise).patterns;
-    const index = day.prescriptions.findIndex(dose => {
+    let index = exercise.sequenceMinutes ? day.prescriptions.findIndex(dose => available[dose.id]?.sequenceMinutes && !locked.has(dose.id)) : -1;
+    if (index < 0) index = day.prescriptions.findIndex(dose => {
       if (locked.has(dose.id) || available[dose.id]?.sequenceMinutes || available[dose.id]?.catalogCode === 'A01') return false;
-      if (['warmup', 'cooldown'].includes(phase)) return dose.phase === phase;
-      if (phase === 'recovery' || !phase) return false;
-      if (phase === 'accessory' && !['accessory', 'strength'].includes(dose.phase) || phase !== 'accessory' && dose.phase !== phase) return false;
+      if (['warmup', 'cooldown'].includes(phase)) return dose.phase === phase || recovery && dose.phase === 'recovery';
+      if (phase === 'accessory') return dose.phase === 'accessory';
+      if (dose.phase !== phase) return false;
       const existing = available[dose.id];
       return patterns.length ? classifyBalanceExercise(dose.id, existing).patterns.some(pattern => patterns.includes(pattern)) : existing?.category === exercise.category;
     });
-    if (index < 0) continue;
-    const old = day.prescriptions[index];
+    if (index < 0 && !recovery && phase === 'strength') index = day.prescriptions.findIndex(dose => dose.phase === 'accessory' && !selected.includes(dose.id));
+    // The fixed flow stays intact. Explicit single stretches can use a spare
+    // mobility/finish slot rather than being silently ignored by the flow.
+    if (index < 0 && !recovery && phase === 'warmup' && !exercise.sequenceMinutes) index = day.prescriptions.findIndex(dose => dose.phase === 'cooldown' && available[dose.id]?.catalogCode === 'D09' && !selected.includes(dose.id));
+    const extraMobility = index < 0 && recovery && day.routine.length < 3;
+    if (index < 0 && !extraMobility) continue;
+    const old = index >= 0 ? day.prescriptions[index] : null;
     const base = exercise.prescription;
-    const value = !exercise.sequenceMinutes && old.unit === base.unit ? String(Math.min(...old.value.split(/[–-]/).map(Number), ...base.value.split(/[–-]/).map(Number))) : base.value;
-    day.prescriptions[index] = { id, ...base, phase: old.phase, sets: Math.min(old.sets, base.sets), value, restSeconds: exercise.sequenceMinutes ? base.restSeconds : Math.max(old.restSeconds, base.restSeconds) };
-    day.routine = day.routine.map(item => item === old.id ? id : item);
-    if (old.phase === 'warmup') day.warmupNote = lang === 'en'
+    const value = !exercise.sequenceMinutes && old?.unit === base.unit ? String(Math.min(...String(old.value).split(/[–-]/).map(Number), ...String(base.value).split(/[–-]/).map(Number))) : base.value;
+    const targetPhase = recovery ? 'recovery' : phase === 'warmup' ? 'warmup' : old.phase;
+    const replacement = { id, ...base, phase: targetPhase, sets: Math.min(old?.sets || 1, base.sets), value, restSeconds: exercise.sequenceMinutes ? base.restSeconds : Math.max(old?.restSeconds || 0, base.restSeconds) };
+    const prescriptions = [...day.prescriptions];
+    if (old) prescriptions[index] = replacement; else prescriptions.push(replacement);
+    prescriptions.sort((a, b) => SESSION_PHASES.indexOf(a.phase) - SESSION_PHASES.indexOf(b.phase));
+    const candidate = { ...day, prescriptions, routine: prescriptions.map(dose => dose.id) };
+    const budget = Math.max(minutes, estimateSessionMinutes(day, available));
+    while (!recovery && estimateSessionMinutes(candidate, available) > budget) {
+      const optional = candidate.prescriptions.findIndex(dose => ['skill', 'cooldown'].includes(dose.phase) && !selected.includes(dose.id));
+      if (optional < 0) break;
+      const [removed] = candidate.prescriptions.splice(optional, 1);
+      candidate.routine = candidate.routine.filter(item => item !== removed.id);
+    }
+    if (candidate.routine.length > 8 || estimateSessionMinutes(candidate, available) > budget) continue;
+    day.prescriptions = candidate.prescriptions; day.routine = candidate.routine;
+    if (targetPhase === 'warmup') day.warmupNote = lang === 'en'
       ? 'Follow the listed dynamic stretches and any listed light lift preparation. No extra movements are added.'
       : '依序做列出的動態拉伸與主項輕準備組（有列出時）；不另加動作。';
-    if (old.phase === 'cooldown') day.cooldownNote = lang === 'en'
+    if (targetPhase === 'cooldown') day.cooldownNote = lang === 'en'
       ? `Finish with ${exercise.nameEn || exercise.name} at an easy range; it may be omitted. No additional cooldown is required.`
       : `本次收尾安排「${exercise.name}」，保持舒適、可依感受省略；不需另補收操。`;
     locked.add(id);

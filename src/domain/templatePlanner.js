@@ -34,7 +34,7 @@ export function manualPlanningExercises(exercises, context) {
   const mode = clinicalMode(profile);
   if (mode === 'rest') return {};
   const available = planningExercises(exercises, mode === 'normal' ? profile : { ...profile, healthStatus: 'restricted' });
-  return mode === 'normal' ? available : Object.fromEntries(Object.entries(available).filter(([id, exercise]) => CURATED[id]?.catalogCode === 'I01' && exercise.catalogCode === 'I01'));
+  return mode === 'normal' ? Object.fromEntries(Object.entries(available).filter(([, exercise]) => !['A01', 'I01'].includes(exercise.catalogCode))) : Object.fromEntries(Object.entries(available).filter(([id, exercise]) => CURATED[id]?.catalogCode === 'I01' && exercise.catalogCode === 'I01'));
 }
 
 function emptyDay(day, lang) {
@@ -71,7 +71,10 @@ function prepareMain(day, available, lang) {
 function addStretchOpening(day, available, minutes, phase = 'warmup', compact = false) {
   if (!compact && minutes >= 30 && Object.values(available).some(exercise => exercise.catalogCode === 'A13')) add(day, available, 'A13', phase);
   else if (!compact && minutes >= 10 && Object.values(available).some(exercise => exercise.catalogCode === 'A12')) add(day, available, 'A12', phase);
-  else add(day, available, 'A02', phase, { sets: 1, value: '4' });
+  else {
+    const code = ['A02', 'A10', 'A06', 'A04', 'A03', 'A09', 'A05', 'A14', 'A15'].find(code => Object.values(available).some(exercise => exercise.catalogCode === code));
+    if (code) add(day, available, code, phase, { sets: 1, value: '4' });
+  }
 }
 
 function makeRecovery(day, available, lang, reason, minutes, compact = false) {
@@ -108,7 +111,7 @@ function addTraining(day, available, lang, focus, kind, sets, familiar, variant 
     const upper = pattern => pick(['C01', 'C11', 'C10', 'C03', 'C02', 'C04'].filter(code => Object.entries(available).some(([id, exercise]) => exercise.catalogCode === code && classifyBalanceExercise(id, exercise).patterns.includes(pattern))));
     const pull = upper('pull'), push = upper('push');
     const uppers = variant % 2 ? [push, pull] : [pull, push];
-    for (const code of uppers.filter(Boolean)) add(day, available, code, 'strength', { sets: 1, value: '6', restSeconds: 90 });
+    for (const code of uppers.filter(Boolean)) add(day, available, code, 'strength', { sets: !reduced && !familiar && sets > 1 && warmupMinutes >= 40 ? 2 : 1, value: '6', restSeconds: 90 });
     if (!reduced) {
       const priorities = (preferences.targetRegions || []).filter(region => TARGET_ACCESSORIES[region]).sort((a, b) => (targetUse[a] || 0) - (targetUse[b] || 0));
       const accessory = priorities.map(region => pick(TARGET_ACCESSORIES[region])).find(Boolean) || 'D01';
@@ -215,8 +218,9 @@ export function generateTemplatePlan(exercises, context, dailyTime, lang = 'zh',
   const highLoad = profile.badmintonIntensity === 'hard';
   const longCourt = Number(profile.badmintonMinutes) >= 120;
   const consecutive = profile.badmintonDays.some(day => onCourt(day + 1));
+  const threeConsecutive = profile.badmintonDays.some(day => onCourt(day + 1) && onCourt(day + 2));
   const shortLightCourt = profile.badmintonIntensity === 'light' && Number(profile.badmintonMinutes) > 0 && Number(profile.badmintonMinutes) <= 60;
-  const strengthLimit = recoveryOnly ? 0 : tired || (court.size >= 3 && (highLoad || longCourt || (consecutive && !shortLightCourt))) ? 1 : 2;
+  const strengthLimit = recoveryOnly ? 0 : tired || (court.size >= 3 && (highLoad || longCourt || threeConsecutive && !shortLightCourt)) ? 1 : 2;
   const familiar = new Set((options.previousPlan?.schedule || []).flatMap(day => day.routine || []));
   const familiarWarmup = profile.warmupFamiliar || Object.entries(available).some(([id, exercise]) => exercise.sequenceMinutes && familiar.has(id));
   const proximity = day => competitionDaysAway(profile.competitionDate, dateForWeekDay(week, day));
@@ -259,13 +263,13 @@ export function generateTemplatePlan(exercises, context, dailyTime, lang = 'zh',
     else if (post || recoveryOnly || minutes < 15 || onCourt(number) || (taper && !familiar.size)) makeRecovery(day, recoveryAvailable, lang, reason, minutes, recovery.limited || post || taper && !familiarWarmup);
     else if (strengthDays.includes(number)) {
       addTraining(day, familiarAvailable, lang, focus, 'strength', tired || taper || longCourt || onCourt(number - 1) ? 1 : 2, taper ? new Set(Object.keys(familiarAvailable)) : null, weekVariant + sessionOrdinal++, !tired && !taper ? profile : {}, minutes, tired, targetUse);
-      day.coachAdvice = text(lang, tired ? '恢復狀態採低量課：保留拉伸，減少正式主項並取消額外步序。' : longCourt ? '本週球局較長，保留低量肌力；時間不用填滿。' : '今天是非球日，以互補的下肢與上肢模式累積肌力。', tired ? 'Recovery calls for reduced work: keep stretching, reduce main lifts and omit extra step practice.' : longCourt ? 'Long court sessions call for low-volume strength; there is no need to fill the time limit.' : 'This non-court day uses complementary lower- and upper-body strength patterns.') + ' ' + text(lang, '正式組保留約 2–3 次姿勢良好的餘力；若睡眠、精神或隔天反應變差，少做一組或改恢復。', 'Keep about 2–3 good-form repetitions in reserve. Reduce a set or switch to recovery if sleep, readiness or next-day symptoms worsen.');
+      day.coachAdvice = text(lang, tired ? '恢復狀態採低量課：保留拉伸，減少正式主項並取消額外步序。' : longCourt ? '本週球局較長，保留低量肌力；時間不用填滿。' : onCourt(number - 1) ? '昨天有球局，今天保留下肢低量正式組，不為了用滿時間加量。' : '今天是非球日，以互補的下肢與上肢模式累積肌力。', tired ? 'Recovery calls for reduced work: keep stretching, reduce main lifts and omit extra step practice.' : longCourt ? 'Long court sessions call for low-volume strength; there is no need to fill the time limit.' : onCourt(number - 1) ? 'Court play was scheduled yesterday; keep lower-body work low rather than adding volume to fill time.' : 'This non-court day uses complementary lower- and upper-body strength patterns.') + ' ' + text(lang, '正式組保留約 2–3 次姿勢良好的餘力；若睡眠、精神或隔天反應變差，少做一組或改恢復。', 'Keep about 2–3 good-form repetitions in reserve. Reduce a set or switch to recovery if sleep, readiness or next-day symptoms worsen.');
     } else if (!skillUsed && !tired && !highLoad && !longCourt && (!consecutive || shortLightCourt || focus === 'coordination') && (!taper || familiar.size)) {
       addTraining(day, familiarAvailable, lang, focus, 'skill', 1, taper ? new Set(Object.keys(familiarAvailable)) : null, 0, !taper ? profile : {}, minutes); skillUsed = true;
       day.coachAdvice = text(lang, '每次步序重置、依動作提示充分休息；獨自預設方向是協調練習，不稱作未知訊號反應。', 'Reset between trials and take the prescribed pauses. Predetermined solo directions train coordination, not reaction to an unknown cue.');
     } else makeRecovery(day, recoveryAvailable, lang, reason, minutes, recovery.limited || post || taper && !familiarWarmup);
     if (mode === 'normal' && !taper && !post && !tired) {
-      day = applyWeeklyChoices(day, available, profile.weeklyExerciseIds, usedChoices, lang);
+      day = applyWeeklyChoices(day, available, profile.weeklyExerciseIds, usedChoices, lang, minutes);
       prepareMain(day, available, lang);
     }
     day = fitDay(day, available, minutes, lang, !taper && !tired ? profile.targetRegions : [], mode === 'normal' && !taper && !post && !tired ? profile.weeklyExerciseIds : []);

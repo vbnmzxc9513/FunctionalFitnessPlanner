@@ -60,14 +60,14 @@ test('fine targets match curated contributing exercises, not any push/pull, stre
 test('warm-up activation and dedicated work are reported separately, including guarded recovery weeks and legacy phases', () => {
   const normal = make(['serratus']);
   const row = trainingTargetReport(normal.sessions, exercises, ['serratus'])[0];
-  assert.equal(row.dates.length, 1); assert.equal(row.activationDates.length, 5);
+  assert.equal(row.dates.length, 2); assert.equal(row.activationDates.length, 5);
   const recover = make(['serratus'], { recoveryState: 'recover' });
   const recovered = trainingTargetReport(recover.sessions, exercises, ['serratus'])[0];
   assert.equal(recovered.dates.length, 0); assert.equal(recovered.activationDates.length, 5);
   const legacy = { day: 1, routine: ['bf_C07'], prescriptions: [] };
   assert.deepEqual(trainingTargetReport([legacy], exercises, ['serratus'])[0].dates, [1]);
   const week = buildWeekOverview(normal.sessions, exercises, '2026-W43', createWeeklyIntent({ targetRegions: ['serratus'] }));
-  assert.deepEqual(week.targetCoverage[0].days, [1]);
+  assert.deepEqual(week.targetCoverage[0].days, [1, 4]);
 });
 
 test('multiple specialty priorities rotate through the existing accessory slot across weeks', () => {
@@ -77,7 +77,7 @@ test('multiple specialty priorities rotate through the existing accessory slot a
   assert.ok(rows.every(row => row.dates.length > 0));
   assert.ok(plan.sessions.filter(day => day.sessionType === 'training').every(day => day.prescriptions.filter(dose => dose.phase === 'accessory').length <= 1));
   const firstWeek = trainingTargetReport(plan.sessions.slice(0, 5), exercises, targets);
-  assert.equal(firstWeek.find(row => row.region === 'rotator_cuff').dates.length, 0, 'selection is not falsely labeled as scheduled');
+  assert.equal(firstWeek.find(row => row.region === 'calves').dates.length, 0, 'selection is not falsely labeled as scheduled');
 });
 
 test('target choices never open clinical, recovery or unfamiliar taper work and cannot change a logged date', () => {

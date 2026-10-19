@@ -84,7 +84,7 @@ test('unclear clinical notes do not invent clearance, diagnosis or alternatives'
   assert.ok(strengthDays(generateTemplatePlan(catalog, { ...context, healthNotes: '沒有疼痛' }, 35, 'zh', options)).length);
 });
 
-test('fatigue and heavy/consecutive court load reduce strength rather than adding catch-up work', () => {
+test('fatigue and genuinely heavy court load reduce strength while moderate consecutive play retains spaced sessions', () => {
   const profile = { ...context, badmintonDays: [2, 5], badmintonMinutes: 60 };
   const normal = generateTemplatePlan(catalog, profile, 35, 'zh', options);
   assert.equal(strengthDays(normal).length, 2);
@@ -96,7 +96,7 @@ test('fatigue and heavy/consecutive court load reduce strength rather than addin
   const hard = generateTemplatePlan(catalog, { ...context, badmintonIntensity: 'hard' }, 35, 'zh', options);
   assert.ok(strengthDays(hard).length <= 1);
   const weekends = generateTemplatePlan(catalog, { ...context, badmintonDays: [2, 5, 6] }, 35, 'zh', options);
-  assert.ok(strengthDays(weekends).length <= 1);
+  assert.equal(strengthDays(weekends).length, 2);
   assert.equal(weekends.schedule[4].sessionType, 'recovery');
   assert.equal(volume(generateTemplatePlan(catalog, profile, 35, 'zh', { ...options, lastWeekFeedback: 1 })), volume(normal));
 });

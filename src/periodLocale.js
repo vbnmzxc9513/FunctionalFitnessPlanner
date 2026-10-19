@@ -26,7 +26,7 @@ const questionnaireCopy = {
     choiceGoal: '符合重點部位', choiceCoverageHint: '這是候選方向，實際日期分配請看預覽；系統仍會搭配其他需要的動作。',
     choicePreview: '預覽日期課表', choiceOpenQuiz: '檢視候選並規劃日期', choiceLibraryHint: '候選動作用來規劃所選日期；常用收藏另行保留。',
     choice_reason_competition: '這段期間含賽前或賽後恢復，優先維持熟悉動作與恢復安排。', choice_reason_recovery: '這段期間採恢復優先，沒有為候選再加訓練。',
-    choice_reason_capacity: '時間、體能可用日、球日與相同目的的槽位未能容納；沒有額外加課。', choice_reason_omitted: '這份安排沒有採用；可返回換動作，或查看規劃說明。',
+    choice_reason_capacity: '可用日期、時間或同類動作工作量無法容納；可減少同類選擇或調整日期。', choice_reason_omitted: '這份安排沒有採用；可返回換動作，或查看規劃說明。',
     choiceDraftNotice: '尚未套用的選擇保存在此瀏覽器；常用收藏不會因此改變。',
     plannerStorageNotice: '未登入的日期課表與實際紀錄保存在此瀏覽器，不會自動跨裝置同步。登入後需重新預覽並套用；本機實際紀錄會保留，可另外匯出。',
   },

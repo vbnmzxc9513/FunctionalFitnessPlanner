@@ -46,7 +46,7 @@ try {
     await click('[data-testid="training-target-overview"] > summary');
     assert.equal(await page.$$eval('[data-testid="training-target-overview"] [data-target]', items => items.length), 4);
     assert.ok(await page.$eval('[data-target="serratus"]', item => item.innerText.includes('10/19')));
-    assert.ok(await page.$eval('[data-target="rotator_cuff"]', (item, lang) => item.innerText.includes(lang === 'en' ? 'No dedicated work' : '未排專項'), lang));
+    assert.ok(await page.$eval('[data-target="calves"]', (item, lang) => item.innerText.includes(lang === 'en' ? 'No dedicated work' : '未排專項'), lang));
     await click('[data-testid="period-day-2026-10-19"]'); assert.ok(await page.$('[data-testid="exercise-open-bf_C07"]'));
     assert.ok(await page.$('[data-testid="exercise-open-bf_A13"]'));
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);

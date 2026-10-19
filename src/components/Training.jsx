@@ -1,3 +1,4 @@
+import SessionTimeSummary from './SessionTimeSummary.jsx';
 import { useState } from 'react';
 import { ArrowDown, ArrowRight, ArrowUp, Brain, CheckCircle2, Circle, Edit2, Feather, Loader2, Save, Trash2, X } from 'lucide-react';
 import { journeyText } from '../journeyLocale.js';
@@ -18,7 +19,7 @@ function CourtMark() {
 }
 
 export default function Training({ t, lang = 'zh', schedule, draft, activeDay, setActiveDay, currentWeek, exercises, progress, level,
-  editing, selected, setSelected, onEdit, onCancel, onSave, onAdd, onRemove, onMove, onPhase, onToggle, onFeedback, feedback, busy, saving, canEdit, canRestore, onRestore, exerciseLogs = [], readiness = null, readinessPreview = null, onSaveExerciseLog, onUpdateNextDay: _onUpdateNextDay, onSaveReadiness, onPreviewReadiness, onApplyReadiness, loggingBusy = false, readinessBusy = false, coachingContext = {}, readinessDisabled = false, loggingDisabled = false, mode = 'plan', onViewRecords, eligibleExercises = exercises }) {
+  editing, selected, setSelected, onEdit, onCancel, onSave, onAdd, onRemove, onMove, onPhase, onToggle, onFeedback, feedback, busy, saving, canEdit, canRestore, onRestore, exerciseLogs = [], readiness = null, readinessPreview = null, onSaveExerciseLog, onUpdateNextDay: _onUpdateNextDay, onSaveReadiness, onPreviewReadiness, onApplyReadiness, loggingBusy = false, readinessBusy = false, coachingContext = {}, readinessDisabled = false, loggingDisabled = false, mode = 'plan', onViewRecords, eligibleExercises = exercises, plannedTime }) {
   const j = (key, values) => journeyText(lang, key, values);
   const isToday = mode === 'today' && !editing;
   const [details, setDetails] = useState({ scope: '', id: null, visited: [] });
@@ -49,6 +50,7 @@ export default function Training({ t, lang = 'zh', schedule, draft, activeDay, s
   return <div className="session-body">
     {!isToday && <div className="flex bg-white rounded-2xl p-2 mb-6 gap-1 border border-slate-200 overflow-x-auto">{display.map(day => <button key={day.day} onClick={() => { closeDetails(); setActiveDay(day.day); }} className={`flex-1 min-w-12 rounded-xl p-3 text-sm ${active.day === day.day ? 'bg-sky-700 text-white' : 'text-slate-500'}`}><span className="block font-semibold">{t('dayShort')[day.day - 1]}</span><span className="block mt-1 text-xs">{getDateForWeekDay(currentWeek, day.day)}</span></button>)}</div>}
     {isToday ? <section className="session-hero" data-running={doneCount > 0} data-testid="session-hero"><CourtMark /><p className="eyebrow">{date} · {rest ? t('restSessionTitle') : j('progress', { done: doneCount, total: active.routine.length })}</p><h2>{active.theme || j('today')}</h2><div className="hero-metadata"><span><strong>{minutes}</strong>{t('minutes')}</span><span><strong>{active.routine.length}</strong>{j('movementCount')}</span></div>
+      <SessionTimeSummary day={active} exercises={exercises} availableTime={plannedTime} context={coachingContext} lang={lang} />
       {!rest && !complete && <button type="button" data-testid="session-start" disabled={busy || !firstPending} onClick={event => openDetails(firstPending.id, event.currentTarget)} className="button-primary">{j(doneCount ? 'resume' : 'start')}<ArrowRight size={18} /></button>}
       {rest && <p className="text-sm text-sky-700">{j('rest')}</p>}
     </section> : <div className="flex flex-wrap items-start justify-between gap-4 mb-5"><div><p className="eyebrow">{date} · {minutes} {t('minutes')}</p><h2 className="text-2xl font-bold text-slate-800">{active.theme || j('week')}</h2></div><div className="flex gap-2 text-sm">{!editing ? <button disabled={!canEdit || saving || busy} onClick={onEdit} className="button-secondary disabled:opacity-50"><Edit2 size={15} />{t('editSchedule')}</button> : <><button disabled={saving} onClick={onCancel} className="button-secondary"><X size={15} />{t('cancelEdits')}</button><button disabled={saving || !canEdit} onClick={onSave} className="button-primary">{saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}{t('saveEdits')}</button></>}{canRestore && !editing && <button disabled={saving} onClick={onRestore} className="text-link">{t('aiRestoreBtn')}</button>}</div></div>}

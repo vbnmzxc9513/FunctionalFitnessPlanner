@@ -1,5 +1,5 @@
 import { catalogExercises } from './exerciseCatalog.js';
-import { dateForWeekDay, isCalendarDate } from './dates.js';
+import { dateForWeekDay, getWeekString, isCalendarDate } from './dates.js';
 import { classifyBalanceExercise } from './weeklyBalance.js';
 import { resolveExerciseId } from './training.js';
 import { validateTrainingLog, validateReadiness, evaluateReadiness } from './coaching.js';
@@ -87,6 +87,8 @@ export function createMobilityContext({ date, today, sessions = [], logs = [], p
   }).filter(item => item.present);
   const current = (day?.prescriptions || []).filter(dose => ['skill', 'strength', 'accessory'].includes(dose.phase)).flatMap(dose => classifyBalanceExercise(dose.id, exercises[dose.id]).patterns.flatMap(pattern => PATTERNS[pattern] || []));
   const preferences = (context.stiffnessRegions || []).flatMap(region => STIFFNESS[region] || []);
+  const weekStart = dateForWeekDay(getWeekString(new Date(`${date}T12:00:00Z`)), 1);
+  const plannedThisWeek = values(sessions).filter(session => session.date >= weekStart && session.date < date);
   const ranked = MOBILITY_AREAS.map(area => {
     const dates = [...new Set(evidence.rows.filter(row => row.coverage && mobilityAreas(row.id, exercises).includes(area)).map(row => row.date))].sort();
     const recent = evidence.rows.filter(row => daysApart(date, row.date) <= 2 && classifyBalanceExercise(row.id, exercises[row.id]).patterns.some(pattern => PATTERNS[pattern]?.includes(area)));
@@ -101,32 +103,46 @@ export function createMobilityContext({ date, today, sessions = [], logs = [], p
     const gapDays = dates.length ? daysApart(date, dates.at(-1)) : null;
     const score = Math.max(0, 2 - dates.length) * 20 + Math.min(gapDays ?? 7, 7) * 2
       + (recent.length ? 8 : 0) + (court.length ? 8 : 0) + (current.includes(area) ? 10 : 0) + (preferences.includes(area) ? 6 : 0);
-    return { area, dates, gapDays, reasons, score };
-  }).sort((a, b) => b.score - a.score || MOBILITY_AREAS.indexOf(a.area) - MOBILITY_AREAS.indexOf(b.area));
+    const weekScheduled = plannedThisWeek.some(session => (session.routine || []).some(id => mobilityAreas(id, exercises).includes(area)));
+    return { area, dates, gapDays, reasons, score, weekScheduled };
+  }).sort((a, b) => Number(a.weekScheduled) - Number(b.weekScheduled) || b.score - a.score || MOBILITY_AREAS.indexOf(a.area) - MOBILITY_AREAS.indexOf(b.area));
   return { ranked, recentSymptoms: evidence.recentSymptoms, recoveryPriority, recoveryOnly,
     excludedAreas: [...new Set((context.sorenessRegions || []).flatMap(region => SORE_AREAS[region] || []))] };
 }
 
-// Reuse an easy slot. Short recovery may use two gentle dynamic drills;
-// training retains its full opening flow and uses the old optional finish slot.
+// Reserve a real stretching block if the complete flow is unavailable. This
+// uses optional skill/accessory space, never hides movements in a note.
 export function adaptMobilityDay(day, available, minutes, intent, selected = [], { gentle = false } = {}) {
   if (!day.routine.length || intent.recentSymptoms) return day;
   let next = { ...day, routine: [...day.routine], prescriptions: day.prescriptions.map(dose => ({ ...dose })) };
   const recovery = day.sessionType === 'recovery';
+  const flow = next.routine.some(id => available[id]?.sequenceMinutes);
+  const separateOpening = !flow && !recovery;
+  if (separateOpening) {
+    next.prescriptions = next.prescriptions.filter(dose => !(dose.phase === 'warmup' || dose.phase === 'cooldown' && available[dose.id]?.catalogCode === 'D09') || selected.includes(dose.id));
+    next.routine = next.prescriptions.map(dose => dose.id);
+  }
   const slot = next.prescriptions.findIndex(dose => !selected.includes(dose.id) && (recovery ? available[dose.id]?.catalogCode === 'A02' : dose.phase === 'cooldown' && available[dose.id]?.catalogCode === 'D09'));
-  if (slot < 0 && !(recovery && next.routine.some(id => available[id]?.sequenceMinutes))) return day;
+  if (slot < 0 && !separateOpening && !(recovery && flow)) return day;
   const removed = slot >= 0 ? next.prescriptions[slot].id : null;
   if (removed) { next.prescriptions.splice(slot, 1); next.routine = next.routine.filter(id => id !== removed); }
   let added = 0;
+  const limit = gentle ? 2 : separateOpening || recovery && !flow ? minutes >= 10 ? 4 : 2 : recovery ? 2 : 1;
   for (const { area } of intent.ranked) {
     if (intent.excludedAreas?.includes(area)) continue;
     if (next.routine.some(id => mobilityAreas(id, available).includes(area))) continue;
     const id = DYNAMIC[area].map(code => Object.keys(available).find(id => available[id].catalogCode === code && !next.routine.includes(id))).find(Boolean);
     if (!id) continue;
+    if (separateOpening && next.routine.length >= 8) {
+      const optional = next.prescriptions.findIndex(dose => ['accessory', 'skill'].includes(dose.phase) && !selected.includes(dose.id));
+      if (optional < 0) break;
+      const [removedDose] = next.prescriptions.splice(optional, 1);
+      next.routine = next.routine.filter(item => item !== removedDose.id);
+    }
     const candidate = { ...next, routine: [...next.routine, id], prescriptions: [...next.prescriptions, { id, ...available[id].prescription, sets: 1, value: gentle ? '2' : '4', phase: recovery ? 'recovery' : 'warmup' }] };
     if (recovery && estimateSessionMinutes(candidate, available) > minutes) continue;
     next = candidate; added++;
-    if (added >= (recovery ? 2 : 1) || next.routine.length >= (recovery ? 3 : 8)) break;
+    if (added >= limit || recovery && next.routine.length >= (flow ? 3 : limit)) break;
   }
   if (!added) return mobilityAreas(removed, available).some(area => intent.excludedAreas?.includes(area)) ? next : day;
   next.prescriptions.sort((a, b) => SESSION_PHASES.indexOf(a.phase) - SESSION_PHASES.indexOf(b.phase));
