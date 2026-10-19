@@ -9,6 +9,9 @@ export async function openExerciseDetails(page, id) {
   await closeExerciseDetails(page);
   const selector = `[data-testid="daily-exercise-list"] [data-testid="exercise-open-${id}"]`;
   // Restore can replace the row between lookup and click; resolve it afresh on retries.
-  await page.locator(selector).click();
+  await page.locator(selector).map(item => {
+    item.scrollIntoView({ block: 'center', behavior: 'instant' });
+    return item;
+  }).click();
   await page.waitForSelector(`dialog[open] [data-testid="current-exercise"]`, { visible: true });
 }
