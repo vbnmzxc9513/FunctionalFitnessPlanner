@@ -135,6 +135,7 @@ try {
       await clickSelector('[data-testid="period-plan-apply"]'); await page.waitForFunction(() => !document.querySelector('[data-testid="period-plan-apply"]'));
       await page.evaluate(() => { for (const key of Object.keys(localStorage).filter(key => key.startsWith('fitness_saved_period_'))) { const saved = JSON.parse(localStorage.getItem(key)); if (saved?.periodId) { saved.createdAt = 1; localStorage.setItem(key, JSON.stringify(saved)); } } });
       await page.reload({ waitUntil: 'networkidle2' }); await click('Plan'); await visible('[data-testid="period-plan-preview"]');
+      await clickSelector('[data-testid="period-plan-conditions"] > summary');
       assert.ok(await page.$eval('[data-testid="period-equipment-summary"]', item => item.innerText.includes('Dumbbell')), `${layout}: a newer cloud timestamp cannot discard the matching equipment snapshot`);
       assert.deepEqual(await draft(), beforeStale, `${layout}: applying an account plan never overwrites device actuals`);
       await click('Records');
