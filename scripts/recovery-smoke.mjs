@@ -28,6 +28,8 @@ try {
     await page.goto(site, { waitUntil: 'networkidle2' });
     const nav = await page.evaluateHandle(label => [...document.querySelectorAll('nav button')].find(item => item.innerText.trim() === label), lang === 'en' ? 'Plan' : '課表'); await nav.asElement().click(); await nav.dispose();
     await page.waitForSelector('[data-testid="period-plan-preview"]');
+    const conditions = await page.waitForSelector('[data-testid="period-plan-conditions"] > summary');
+    await conditions.evaluate(item => item.scrollIntoView({ block: 'center', behavior: 'instant' })); await conditions.click(); await conditions.dispose();
     assert.ok(await page.$eval('[data-testid="period-equipment-summary"]', item => /Dumbbell|啞鈴/.test(item.innerText)));
     assert.equal(!!await page.$('[data-testid="period-recovery-explanation"]'), intensity === 'hard');
     assert.equal(await page.$$eval('[data-choice-status="equipment"]', rows => rows.length), 0);
