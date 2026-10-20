@@ -100,7 +100,7 @@ try {
       const handle = await visibleElement('summary', text, true);
       if (!await handle.evaluate(summary => summary.parentElement.open)) await clickElement(handle); else await handle.dispose();
     };
-    const weekPlan = async () => { await click('課表'); await click('本週課表'); await visibleElement('[data-testid="week-overview"]'); };
+    const weekPlan = async () => { await click('課表'); await click('課表總覽'); await visibleElement('[data-testid="week-overview"]'); };
     const selectMonday = async () => { await clickElement(await visibleElement('main button', TRANSLATIONS.zh.dayShort[0], true)); };
     const monday = async () => { await weekPlan(); await selectMonday(); };
     const completion = name => `button[aria-label=${JSON.stringify(name)}][aria-pressed]`;
@@ -152,7 +152,7 @@ try {
     const publicLink = await page.evaluate(() => window.__workoutLink); assert.ok(publicLink.includes('#workout='));
     await page.goto(publicLink, { waitUntil: 'networkidle2' }); await waitText('分享的羽球體能課表');
     assert.equal(await visibleCount('button[aria-pressed]'), 0, `${layout} share is read-only`); await waitText('準備組');
-    await click('建立我的課表'); await waitText('本分頁暫存'); await monday();
+    await click('返回我的課表'); await waitText('本分頁暫存'); await monday();
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${layout} free preview fits viewport`);
     await openDetails('本分頁暫存 · 儲存到帳號'); await click('免註冊，儲存至匿名帳號');
     await page.waitForFunction(() => {
@@ -285,7 +285,8 @@ try {
       window.dispatchEvent(new Event('focus'));
     });
     await page.waitForFunction(week => !document.body.innerText.includes(week), {}, oldWeek);
-    await visibleElement('[data-testid="first-plan"]');
+    await visibleElement('[data-testid="planner-actions"]');
+    await click('今天'); await visibleElement('[data-testid="first-plan"]');
     assert.equal(await visibleCount('section[data-phase] button[aria-pressed="true"]'), 0, `${layout} a new week begins without inherited completions or a default plan`);
     await click('設定'); await click('登出'); await visibleElement('[data-testid="first-plan"]'); await click('設定'); await waitText('登入');
     assert.equal(await visibleCount('section[data-phase] button[aria-pressed="true"]'), 0, `${layout} logout clears progress`);

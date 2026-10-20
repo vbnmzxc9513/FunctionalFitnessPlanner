@@ -1,6 +1,16 @@
+import { useEffect, useState } from 'react';
 import { catalogExercises } from '../domain/exerciseCatalog.js';
 import { createSharePayload, shareDay } from '../domain/sharing.js';
+import { rebuildPlanDays, validatePlanPayload } from '../domain/sharedPlans.js';
 import { sessionSections, estimateSessionMinutes } from '../domain/sessions.js';
+import { localDate } from '../domain/dates.js';
+import { DEFAULT_PLANNING_CONTEXT, normalizePlanningContext } from '../domain/planning.js';
+import { manualPlanningExercises } from '../domain/templatePlanner.js';
+import { loadSharedPlan } from '../services/sharedPlanRepository.js';
+import { TRANSLATIONS } from '../locale.js';
+import ApplyWorkoutPlan from './ApplyWorkoutPlan.jsx';
+import ManualPlanner from './ManualPlanner.jsx';
+import WorkoutPlanSummary from './WorkoutPlanSummary.jsx';
 
 const TEXT = {
   zh: {
@@ -10,6 +20,13 @@ const TEXT = {
     sets: '組', units: { reps: '次', seconds: '秒', minutes: '分鐘', breaths: '次呼吸' }, perSide: '每側', rest: '休息',
     prep: '準備組', prepHint: '準備組不算另一個完成動作。', empty: '這份課表安排休息，無需額外暖身或收操。',
     noFinish: '這份分享沒有另外列出收操動作。',
+    import: '匯入我的課表', back: '返回我的課表', loading: '正在讀取分享課表…', retry: '重試讀取',
+    loadFailed: '暫時無法讀取分享課表，請檢查連線後重試。', notFound: '找不到這份分享課表，請確認連結是否完整。',
+    tooLong: '這個免登入連結超出長度限制，請向分享者索取短連結。',
+    signingIn: '正在確認登入狀態，稍後即可匯入。', device: '未登入時可匯入這台裝置；選日期、檢查並確認後才會儲存。',
+    account: '選日期、檢查並確認後，才會匯入目前登入帳號。', signIn: '登入帳號後匯入',
+    done: '課表已匯入', doneHint: '已儲存到你確認的日期；分享來源與既有訓練紀錄保持完整。', view: '查看我的課表',
+    day: '第', daySuffix: '天', offset: '距第 1 天',
   },
   en: {
     title: 'Shared badminton workout', intro: 'This is a reference workout with exercises and doses only. Adapt it to your ability, equipment and professional advice.',
@@ -18,26 +35,69 @@ const TEXT = {
     sets: 'sets', units: { reps: 'reps', seconds: 'seconds', minutes: 'minutes', breaths: 'breaths' }, perSide: 'each side', rest: 'Rest',
     prep: 'Preparation sets', prepHint: 'Preparation is not a separate completion item.', empty: 'This is a rest day. No extra warm-up or cool-down is planned.',
     noFinish: 'No separate cool-down exercises are listed in this shared workout.',
+    import: 'Import into my plans', back: 'Back to my plans', loading: 'Loading shared plan…', retry: 'Retry loading',
+    loadFailed: 'The shared plan could not be loaded. Check your connection and retry.', notFound: 'This shared plan could not be found. Check that the link is complete.',
+    tooLong: 'This embedded link exceeds the length limit. Ask its author for a short link.',
+    signingIn: 'Checking your sign-in status. Import will be available shortly.', device: 'While signed out, you can import on this device. Choose dates, review and confirm before anything is saved.',
+    account: 'Choose dates, review and confirm before importing into your signed-in account.', signIn: 'Sign in before importing',
+    done: 'Plan imported', doneHint: 'Saved to your confirmed dates. The shared source and existing training records are unchanged.', view: 'View my plans',
+    day: 'Day', daySuffix: '', offset: 'Days after day 1:',
   },
 };
 
-export default function SharedWorkout({ payload, exercises: _exercises, lang = 'zh', onExit }) {
+export default function SharedWorkout(props) {
+  // An account or link change cannot leave a previous local/account preview
+  // available to confirm under the new identity.
+  return <SharedWorkoutContent key={JSON.stringify([props.payload, props.lang, props.uid, props.authLoading])} {...props} />;
+}
+
+function SharedWorkoutContent({ payload, lang = 'zh', onExit, uid, today = localDate(), localPeriod, onLocalPeriod, authLoading = false, onSignIn }) {
   const t = TEXT[lang] || TEXT.zh;
   const exercises = catalogExercises(lang);
-  let day;
-  try { if (!payload?.error && payload?.day) day = shareDay(createSharePayload(payload.day), lang); }
+  const [remote, setRemote] = useState(null), [loadError, setLoadError] = useState(null), [attempt, setAttempt] = useState(0);
+  const [applying, setApplying] = useState(false), [applied, setApplied] = useState(false);
+  const [editing, setEditing] = useState(null), [editedDays, setEditedDays] = useState(null);
+  const [editProfile, setEditProfile] = useState(() => ({ context: normalizePlanningContext(DEFAULT_PLANNING_CONTEXT), focus: 'balanced', time: 240 }));
+  const id = payload?.id;
+  useEffect(() => {
+    if (!id) return;
+    let current = true;
+    loadSharedPlan(id).then(value => { if (current) setRemote(value); }).catch(error => { if (current) setLoadError(error.message); });
+    return () => { current = false; };
+  }, [id, attempt]);
+  let days = [], name = t.title, invalid = !!payload?.error;
+  const legacy = !!payload?.day && !id && !payload?.payload;
+  try {
+    if (!invalid && legacy) days = [{ ...shareDay(createSharePayload(payload.day), lang), offset: 0, theme: t.title }];
+    else if (!invalid && (remote || payload?.payload)) {
+      const clean = validatePlanPayload(remote || payload.payload);
+      days = rebuildPlanDays(clean, lang); name = clean.name;
+    }
+  }
   catch { /* Render an invalid link instead of putting untrusted data in the app. */ }
+  if (editedDays) days = editedDays;
+  const loading = !!id && !remote && !loadError && !invalid;
+  const day = legacy ? days[0] : null;
   const sections = day ? sessionSections(day, exercises) : [];
   const doseText = dose => `${dose.sets} ${t.sets} × ${dose.value} ${t.units[dose.unit]}${dose.perSide ? ` · ${t.perSide}` : ''}${dose.restSeconds ? ` · ${t.rest} ${dose.restSeconds} ${t.units.seconds}` : ''}`;
   let number = 0;
+  if (editing) return <main className="max-w-3xl mx-auto px-4 py-8" aria-label={t.title}><ManualPlanner uid={uid} {...{ today, lang, exercises }} t={key => (TRANSLATIONS[lang] || TRANSLATIONS.zh)[key] || key} profile={editProfile} eligibleExercises={manualPlanningExercises(exercises, editProfile.context)} initialSessions={editing}
+    onProfileChange={setEditProfile}
+    onContextChange={context => setEditProfile(value => ({ ...value, context: normalizePlanningContext(context) }))}
+    onPreview={sessions => { setEditedDays(sessions); setEditing(null); setApplying(true); }} onCancel={() => { setEditing(null); setApplying(true); }} /></main>;
+  if (applying && days.length && !authLoading) return <main className="max-w-3xl mx-auto px-4 py-8" aria-label={t.title}><ApplyWorkoutPlan {...{ days, name, uid, today, exercises, lang, localPeriod, onLocalPeriod }} initialDates={editedDays?.map(day => day.date)} onEdit={sessions => { setApplying(false); setEditing(sessions); }} onApplied={() => { setApplying(false); setApplied(true); }} onCancel={() => setApplying(false)} /></main>;
+  if (applied) return <main className="max-w-2xl mx-auto px-4 py-8 space-y-5" aria-label={t.title}><section className="panel space-y-4"><h1 className="screen-title">{t.done}</h1><p role="status">{t.doneHint}</p><button type="button" className="button-primary min-h-11" onClick={onExit}>{t.view}</button></section></main>;
   return <main className="max-w-2xl mx-auto px-4 py-8 space-y-5" aria-label={t.title}>
     <header className="bg-white rounded-2xl border border-sky-100 p-5 space-y-3">
       <p className="text-sky-600 font-semibold text-sm">Fitness Planner</p>
-      <h1 className="font-bold text-xl text-slate-800">{t.title}</h1>
-      <p className="text-sm text-slate-600">{day ? t.intro : t.invalid}</p>
+      <h1 className="font-bold text-xl text-slate-800">{name}</h1>
+      {loading ? <p role="status">{t.loading}</p> : <p role={days.length ? undefined : 'alert'} className="text-sm text-slate-600">{days.length ? t.intro : payload?.error === 'PLAN_SHARE_TOO_LONG' ? t.tooLong : loadError === 'SHARED_PLAN_NOT_FOUND' ? t.notFound : loadError ? t.loadFailed : t.invalid}</p>}
+      {!!id && !!loadError && <button type="button" className="button-secondary min-h-11" onClick={() => { setRemote(null); setLoadError(null); setAttempt(value => value + 1); }}>{t.retry}</button>}
       {day && day.routine.length > 0 && <p className="text-sm font-semibold text-sky-800">~ {estimateSessionMinutes(day, exercises)} {t.minutes}</p>}
-      <button onClick={onExit} className="rounded-xl bg-sky-600 text-white px-5 py-3 font-semibold">{t.create}</button>
+      {!!days.length && <><p role={authLoading ? 'status' : undefined} className="text-sm text-slate-600">{authLoading ? t.signingIn : uid ? t.account : t.device}</p><button type="button" disabled={authLoading} onClick={() => setApplying(true)} className="min-h-11 rounded-xl bg-sky-700 text-white px-5 py-3 font-semibold disabled:opacity-50">{t.import}</button>{!uid && onSignIn && <button type="button" disabled={authLoading} onClick={onSignIn} className="button-secondary min-h-11">{t.signIn}</button>}</>}
+      <button type="button" onClick={onExit} className="min-h-11 rounded-xl border border-slate-200 px-5 py-3 font-semibold">{t.back}</button>
     </header>
+    {!legacy && days.map((value, index) => <section key={index} className="panel space-y-3" aria-label={`${t.day} ${index + 1} ${t.daySuffix}`}><h2 className="text-lg font-bold text-slate-800">{t.day} {index + 1} {t.daySuffix}{value.theme && ![`第${index + 1}天`, `Day${index + 1}`].includes(value.theme.replace(/\s/g, '')) ? ` · ${value.theme}` : ''}</h2><p className="text-sm text-slate-500">{t.offset} {value.offset} {lang === 'en' ? '' : '天'}</p><WorkoutPlanSummary day={value} exercises={exercises} lang={lang} /></section>)}
     {day && !day.routine.length && <p className="bg-white rounded-xl p-5 text-slate-600">{t.empty}</p>}
     {sections.filter(section => section.items.length || section.preparation.length).map(section => <section key={section.phase} data-phase={section.phase} className="space-y-3" aria-label={t.phases[section.phase]}>
       <h2 className="font-bold text-sky-800">{t.phases[section.phase]}</h2>
