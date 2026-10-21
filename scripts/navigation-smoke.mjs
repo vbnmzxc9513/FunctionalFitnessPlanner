@@ -121,6 +121,15 @@ try {
   await back(); assert.equal(await page.$('[data-testid="period-day-detail"]'), null, 'day Back returns to weekly overview');
   await back(); await page.waitForFunction(() => document.querySelector('.app-nav button[aria-current="page"]')?.textContent.trim() === '今天');
   assert.equal(await page.evaluate(() => localStorage.getItem('fitness_date_period_v1')), applied, 'Back never completes or modifies applied plan');
+  // Editing the date range hides the questionnaire. Its previous step must not
+  // consume Back presses while the calendar is visible.
+  await clickText('課表'); await click('[data-testid="open-auto-planner"]');
+  await click('[data-testid="planning-range-continue"]'); await click('[data-testid="setup-next"]');
+  await clickText('修改日期'); await page.waitForSelector('[data-testid="planning-range"]');
+  await back();
+  assert.equal(await page.$('[data-testid="planning-range"]'), null, 'hidden questionnaire step cannot intercept calendar Back');
+  assert.ok(await page.$('[data-testid="planner-actions"]'), 'calendar Back returns to planner overview');
+  assert.equal(await page.evaluate(() => localStorage.getItem('fitness_date_period_v1')), applied, 'canceling date changes preserves the applied plan');
   await page.screenshot({ path: '/tmp/android-web-navigation-proof.png' });
   assert.deepEqual(errors, []);
   console.log('Navigation browser smoke passed: cold/warm #plan/#program/#workout, share exit, import cancellation, modal/picker/draft/week/root Back.');
