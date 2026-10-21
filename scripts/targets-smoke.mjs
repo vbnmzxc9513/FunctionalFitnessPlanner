@@ -42,6 +42,7 @@ try {
     await page.reload({ waitUntil: 'networkidle2' }); await click('[data-testid="planning-range-continue"]');
     for (const region of targets) assert.equal(await page.$eval(`input[data-target-region="${region}"]`, item => item.checked), true, 'four targets survive questionnaire reload');
     await click('[data-testid="setup-next"]'); await click('[data-testid="setup-next"]'); await click('[data-testid="plan-preview-create"]');
+    await click('[data-testid="period-plan-conditions"] > summary');
     await page.waitForSelector('[data-testid="training-target-overview"]');
     await click('[data-testid="training-target-overview"] > summary');
     assert.equal(await page.$$eval('[data-testid="training-target-overview"] [data-target]', items => items.length), 4);
@@ -52,6 +53,7 @@ try {
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     await page.screenshot({ path: `/tmp/fitness-targets-${layout}.png`, fullPage: true });
     if (layout === 'mobile') { await page.setViewport({ width: 320, height: 844, isMobile: true, hasTouch: true }); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false); }
+    await click('[data-testid="period-day-detail"] > button');
     await click('[data-testid="period-plan-apply"]'); await page.waitForFunction(() => !!localStorage.getItem('fitness_date_period_v1'));
     const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('fitness_date_period_v1')));
     assert.deepEqual(saved.profile.context.targetRegions, targets);

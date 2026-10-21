@@ -4,6 +4,7 @@ import { applyFeedback, exerciseKey } from '../domain/training.js';
 import { dateForWeekDay, getWeekString, localDate } from '../domain/dates.js';
 import { prepareTrainingPreview, writeTrainingPreview } from './trainingRepository.js';
 import { userDoc, userCollection } from './userPaths.js';
+import { captureWorkoutTemplate, importSavedWorkoutTemplates } from './workoutRepository.js';
 export { userDoc, userCollection } from './userPaths.js';
 
 export function weekHistoryStart(week, weeks) {
@@ -123,18 +124,22 @@ export async function saveMeasurement(uid, values) {
 
 export async function captureGuestData(uid) {
   assertUser(uid);
-  const groups = ['profile', 'progress', 'plans', 'metrics', 'exercises', 'trainingLogs', 'readiness', 'dateSessions', 'dateDoses', 'planningPeriods'];
+  const groups = ['profile', 'progress', 'plans', 'metrics', 'exercises', 'trainingLogs', 'readiness', 'dateSessions', 'dateDoses', 'planningPeriods', 'workoutTemplates'];
   const snapshots = await Promise.all(groups.map(group => getDocs(userCollection(uid, group))));
-  return snapshots.flatMap((snapshot, index) => snapshot.docs.map(item => ({ group: groups[index], id: item.id, data: item.data() })));
+  assertUser(uid);
+  return snapshots.flatMap((snapshot, index) => snapshot.docs.map(item => groups[index] === 'workoutTemplates'
+    ? captureWorkoutTemplate(uid, item.id, item.data()) : ({ group: groups[index], id: item.id, data: item.data() })));
 }
 
 export async function importGuestData(uid, records) {
   assertUser(uid);
   // Transactions allow retry and preserve existing account data on collisions.
-  const allowedGroups = new Set(['profile', 'progress', 'plans', 'metrics', 'exercises', 'trainingLogs', 'readiness', 'dateSessions', 'dateDoses', 'planningPeriods']);
+  const allowedGroups = new Set(['profile', 'progress', 'plans', 'metrics', 'exercises', 'trainingLogs', 'readiness', 'dateSessions', 'dateDoses', 'planningPeriods', 'workoutTemplates']);
   if (!Array.isArray(records) || records.some(record => !allowedGroups.has(record?.group) || typeof record.id !== 'string' || record.id.includes('/'))) throw new Error('INVALID_IMPORT');
+  const workouts = await importSavedWorkoutTemplates(uid, records.filter(record => record.group === 'workoutTemplates'));
   const dateDoses = new Map(records.filter(record => record.group === 'dateDoses').map(record => [record.id, record.data]));
   for (const record of records) {
+    if (record.group === 'workoutTemplates') continue;
     // Date metadata and its active doses are one migration unit. Collisions
     // preserve the destination's entire session; stale unreferenced source
     // doses have no effect on the active plan and do not need to be copied.
@@ -171,4 +176,5 @@ export async function importGuestData(uid, records) {
       }
     });
   }
+  return { workouts };
 }

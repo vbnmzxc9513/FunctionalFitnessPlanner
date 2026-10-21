@@ -12,6 +12,7 @@ dist
 dist-ssr
 *.local
 functions/shared
+artifacts/
 
 # Editor directories and files
 .vscode/*

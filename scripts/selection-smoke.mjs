@@ -1,4 +1,5 @@
 import { closeExerciseDetails } from './exercise-details-helpers.mjs';
+import { closePlanningFlow } from './planner-flow-helpers.mjs';
 import assert from 'node:assert/strict';
 import { writeFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
@@ -40,10 +41,10 @@ try {
     await page.setRequestInterception(true);
     page.on('request', request => { const url = new URL(request.url()); if (['127.0.0.1', 'localhost'].includes(url.hostname) || ['data:', 'blob:'].includes(url.protocol)) request.continue(); else request.abort(); });
     const visible = selector => page.waitForSelector(selector, { visible: true });
-    const physicalClick = async handle => { await handle.evaluate(element => element.scrollIntoView({ block: 'center', behavior: 'instant' })); await handle.asLocator().click(); await handle.dispose(); };
+    const physicalClick = async handle => { await page.waitForFunction(element => element.isConnected && !element.matches(':disabled'), {}, handle); await handle.evaluate(element => element.scrollIntoView({ block: 'center', behavior: 'instant' })); await handle.click(); await handle.dispose(); };
     const clickSelector = async selector => physicalClick(await visible(selector));
     const click = async text => {
-      if (['課表', '今天', '紀錄', '設定', 'Plan', 'Today', 'Records', 'Settings'].includes(text)) await closeExerciseDetails(page);
+      if (['課表', '今天', '紀錄', '設定', 'Plan', 'Today', 'Records', 'Settings'].includes(text)) { await closeExerciseDetails(page); await closePlanningFlow(page); }
       await page.waitForFunction(label => [...document.querySelectorAll('button')].some(element => element.innerText.trim() === label && element.getClientRects().length && !element.closest('[hidden]') && !element.matches(':disabled')), {}, text);
       const handle = await page.evaluateHandle(label => [...document.querySelectorAll('button')].find(element => element.innerText.trim() === label && element.getClientRects().length && !element.closest('[hidden]') && !element.matches(':disabled')), text);
       await physicalClick(handle.asElement());
@@ -61,7 +62,11 @@ try {
       const id = byCode(code); await click(purpose); await open('[data-testid="weekly-choice-search"]');
       await fill('[aria-label="輸入動作名稱"]', catalog[id].name); await clickSelector(`[data-testid="weekly-choice-toggle-${id}"]`); await waitChoice(id, true); return id;
     };
-    const preview = async () => { await clickSelector('[data-testid="plan-preview-create"]'); await visible('[data-testid="period-plan-preview"]'); };
+    const preview = async () => {
+      await clickSelector('[data-testid="plan-preview-create"]'); await visible('[data-testid="period-plan-preview"]');
+      assert.equal(await page.$eval('[data-testid="weekly-choice-report"]', item => item.open), false, `${layout}: selected-movement detail starts collapsed`);
+      await open('[data-testid="weekly-choice-report"]');
+    };
     await page.goto(site, { waitUntil: 'networkidle2' }); await visible('[data-testid="first-plan"]');
     await click('課表'); await click('動作庫'); await visible('.exercise-library'); await clickSelector('.exercise-library .button-primary'); await clickSelector('[data-testid="planning-range-continue"]');
     await visible('[data-testid="planner-form"] fieldset:not([hidden]) [data-regions="targetRegions"]');
@@ -81,7 +86,7 @@ try {
     assert.equal(await page.$$eval('[data-testid="period-plan-preview"] [data-testid^="exercise-log-"]', elements => elements.length), 0, `${layout}: preview has no factual logging controls`);
     assert.equal(await page.$$eval('[data-testid="weekly-choice-report"] li', items => items.length), 4);
     await clickSelector(`[data-testid="period-day-${today}"]`); await visible('[data-testid="period-day-detail"]');
-    await click('返回修改條件'); await clickSelector(`[data-testid="weekly-exercise-choices"] section button[aria-label$=${JSON.stringify(catalog[selected[2]].name)}]`); await waitChoice(selected[2], false);
+    await click('返回課表'); await click('返回修改條件'); await clickSelector(`[data-testid="weekly-exercise-choices"] section button[aria-label$=${JSON.stringify(catalog[selected[2]].name)}]`); await waitChoice(selected[2], false);
     await preview(); await clickSelector('[data-testid="period-plan-apply"]');
     await page.waitForFunction(() => !!localStorage.getItem('fitness_date_period_v1'));
     const applied = await draft(); assert.deepEqual(applied.profile.context.weeklyExerciseIds, selected.filter((_, index) => index !== 2));
@@ -114,9 +119,23 @@ try {
     await click('設定'); await click('🌐 English'); await click('Plan'); await click('Plan another date range'); await clickSelector('[data-testid="planning-range-continue"]'); await click('Next'); await click('Next');
     await visible('[data-testid="weekly-exercise-choices"]');
     assert.equal(await page.$eval('[data-testid="planner-form"]', form => /[\u4e00-\u9fff]/.test(form.innerText)), false, `${layout}: visible questionnaire content is localized in English`);
+    const expiredRange = await page.evaluate(() => JSON.parse(localStorage.getItem('fitness_period_questionnaire_signed-out')).range);
+    const factsBeforeRollover = await draft();
     await page.evaluate(() => { sessionStorage.setItem('__selectionNow', String(Date.now() + 7 * 86400000)); window.dispatchEvent(new Event('focus')); });
-    await click('Change dates'); await visible('[data-testid="planning-range"]');
+    // A new week remounts the date-scoped workspace at the weekly overview.
+    // Reopen through its visible entry and verify the exact former range is now blocked.
+    await visible('[data-testid="planner-actions"]');
+    assert.equal(await page.$('[data-testid="period-plan-apply"]'), null, `${layout}: rollover removes the expired unapplied preview`);
+    await click('Plan another date range'); await visible('[data-testid="planning-range"]');
+    for (const [index, value] of [expiredRange.from, expiredRange.to].entries()) {
+      await page.$$eval('[data-testid="planning-range"] input', (inputs, { index, value }) => {
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(inputs[index], value);
+        inputs[index].dispatchEvent(new Event('input', { bubbles: true })); inputs[index].dispatchEvent(new Event('change', { bubbles: true }));
+      }, { index, value });
+    }
+    assert.deepEqual(await page.$$eval('[data-testid="planning-range"] input', inputs => inputs.map(input => input.value)), [expiredRange.from, expiredRange.to], `${layout}: rollover validation uses the exact previous range`);
     assert.equal(await page.$eval('[data-testid="planning-range-continue"]', button => button.disabled), true, `${layout}: rollover blocks a now-past range`);
+    assert.deepEqual(await draft(), factsBeforeRollover, `${layout}: rollover and reopening an expired range preserve applied training facts`);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${layout}: questionnaire fits viewport`);
     assert.deepEqual(errors, []);
     console.log(`${layout}: weekly selection, draft reload, preview/back/apply, library/favorite separation, eight-choice limit, clinical priority, English and week rollover passed`);

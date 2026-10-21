@@ -12,9 +12,10 @@ export function usePlanningPeriods(uid) {
       const periods = snapshot.docs.flatMap(doc => {
         const value = doc.data();
         try {
-          enumeratePeriodDates({ from: value.from, to: value.to });
+          const bounds = enumeratePeriodDates({ from: value.from, to: value.to });
+          const dates = Array.isArray(value.dates) && value.dates.length && value.dates.length <= 28 && new Set(value.dates).size === value.dates.length && value.dates.every(date => bounds.includes(date)) ? [...value.dates].sort() : bounds;
           const intent = normalizeWeeklyIntent(value.weeklyIntent);
-          return [{ periodId: doc.id, range: { from: value.from, to: value.to }, conclusion: typeof value.conclusion === 'string' ? value.conclusion : '',
+          return [{ periodId: doc.id, range: { from: value.from, to: value.to }, dates, conclusion: typeof value.conclusion === 'string' ? value.conclusion : '',
             profile: intent ? { focus: intent.focus, time: String(intent.dailyTime), context: intent } : undefined, createdAt: value.createdAt?.toMillis?.() || 0 }];
         } catch { return []; }
       });

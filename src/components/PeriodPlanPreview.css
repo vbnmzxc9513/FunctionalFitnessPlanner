@@ -1,0 +1,60 @@
+.period-preview { min-width: 0; color: #183047; }
+.period-preview-heading { margin-bottom: 26px; }
+.period-preview-heading h2, .period-day-heading h2 { font-size: clamp(25px, 4vw, 34px); line-height: 1.35; font-weight: 750; letter-spacing: -.025em; outline-offset: 6px; }
+.period-preview-heading > p, .period-day-heading > p { margin-top: 10px; color: #63778c; font-size: 16px; }
+.period-preview-meta, .period-day-status, .period-day-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.period-preview-meta { margin-top: 24px; }
+.period-status { display: inline-block; background: #ecf8ff; color: #0376a5; border-radius: 8px; padding: 6px 10px; font-size: 13px; font-weight: 650; }
+.period-status-draft { background: #f0edff; color: #5142ce; }
+.period-text-action { display: inline-flex; min-height: 44px; align-items: center; gap: 7px; color: #0076aa; font-size: 14px; font-weight: 650; text-align: left; }
+.period-text-action:disabled { opacity: .45; }
+.period-preview-issues { padding: 16px 18px; margin-bottom: 22px; background: #fffbeb; border: 1px solid #f4deb0; border-radius: 16px; color: #875a17; font-size: 13px; line-height: 1.7; }
+.period-preview-issues > * + *, .period-preview-issues section p { margin-top: 7px; }
+.period-preview-issues h3 { font-weight: 700; }
+.period-agenda-week + .period-agenda-week { margin-top: 26px; }
+.period-agenda-heading { display: flex; align-items: baseline; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin-bottom: 14px; }
+.period-agenda-heading h3 { font-size: 19px; font-weight: 750; }
+.period-agenda-heading > span { color: #63778c; font-size: 13px; }
+.period-agenda-card { border: 1px solid #d8e5ee; background: white; border-radius: 21px; overflow: hidden; }
+.period-agenda-row { width: 100%; display: grid; grid-template-columns: 36px minmax(0, 1fr) auto 20px; gap: 12px; align-items: center; padding: 13px 18px; min-height: 78px; text-align: left; }
+.period-agenda-row + .period-agenda-row { border-top: 1px solid #e0e9f1; }
+.period-agenda-row:hover { background: #f8fcff; }
+.period-agenda-row:focus-visible { outline: 3px solid #38a8d5; outline-offset: -3px; }
+.period-agenda-date { display: grid; justify-items: center; color: #63778c; line-height: 1.25; }
+.period-agenda-date > span { font-size: 12px; }
+.period-agenda-date strong { font-size: 27px; font-weight: 750; color: #183047; margin-top: 4px; }
+.period-agenda-content { min-width: 0; display: grid; gap: 7px; }
+.period-agenda-content > strong { font-size: 16px; line-height: 1.4; font-weight: 700; overflow-wrap: anywhere; }
+.period-agenda-content > span { color: #63778c; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.period-agenda-content .period-agenda-event { color: #956614; }
+.period-agenda-minutes { color: #0076aa; font-size: 14px; font-weight: 700; white-space: nowrap; }
+.period-agenda-arrow { color: #183047; }
+.period-plan-extras { display: grid; gap: 12px; margin-top: 25px; }
+.period-secondary { border: 1px solid #dce7ef; border-radius: 16px; background: white; padding: 0 18px; }
+.period-secondary > summary { min-height: 56px; padding: 17px 0; cursor: pointer; font-size: 14px; font-weight: 600; color: #536c83; }
+.period-secondary-content { display: grid; gap: 18px; padding: 3px 0 20px; }
+.period-readonly-hint { color: #718297; font-size: 12px; line-height: 1.8; margin-top: 22px; }
+.period-preview-actions { margin-top: 22px; }
+.period-day-heading { margin: 22px 0 25px; }
+.period-day-status { margin-bottom: 14px; }
+.period-day-tools { margin-bottom: 24px; }
+.period-phase-cards { display: grid; gap: 16px; }
+.period-phase-card { background: white; border: 1px solid #d8e5ee; border-radius: 21px; padding: 22px 20px 10px; }
+.period-phase-card > h3 { font-size: 19px; font-weight: 750; margin-bottom: 12px; }
+.period-phase-card .exercise-row { border: 0; border-radius: 0; padding: 17px 0; gap: 12px; }
+.period-phase-card .exercise-row + .exercise-row, .period-phase-card [data-phase] + [data-phase] { border-top: 1px solid #e0e9f1; }
+.period-phase-card .exercise-row-number { background: #f0f6fb; border-radius: 8px; width: 29px; min-height: 30px; display: grid; place-items: center; }
+.period-phase-card .exercise-row-open { min-height: 44px; }
+.period-empty-phase { padding: 2px 0 14px; font-size: 13px; color: #718297; }
+.period-day-view > .period-secondary { margin-top: 18px; }
+.period-share-plan { margin-top:16px; }
+@media (max-width: 400px) {
+  .period-agenda-row { grid-template-columns: 32px minmax(0, 1fr) auto 15px; gap: 9px; padding: 13px; }
+  .period-agenda-date strong { font-size: 24px; }
+  .period-agenda-content > strong { font-size: 14px; }
+  .period-agenda-content > span { font-size: 11px; }
+  .period-agenda-minutes { font-size: 12px; }
+  .period-phase-card { padding: 18px 14px 7px; }
+  .period-day-heading h2 { font-size: 24px; }
+  .period-day-tools .period-text-action { font-size: 13px; }
+}

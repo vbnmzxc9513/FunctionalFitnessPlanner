@@ -47,7 +47,8 @@ export function normalizePeriodDraft(value) {
     const counts = Object.fromEntries(['strengthSessions', 'trainingSessions', 'recoverySessions', 'restDays', 'minutes'].map(key => [key, Math.max(0, Math.min(key === 'minutes' ? 6720 : 28, Number.isFinite(summary[key]) ? Math.round(summary[key]) : 0))]));
     return [{ week: summary.week, from: summary.from, to: summary.to, focus: periodProfile(summary).focus, conclusion: String(summary.conclusion || '').slice(0, 4000), ...counts }];
   });
-  return { version: 1, range, sessionsByDate, progressByWeek, logs, readiness, profile: periodProfile(value.profile),
+  const dates = Array.isArray(value.dates) && value.dates.length && value.dates.length <= 28 && new Set(value.dates).size === value.dates.length && value.dates.every(date => isCalendarDate(date) && date >= range.from && date <= range.to) ? [...value.dates].sort() : enumeratePeriodDates(range);
+  return { version: 1, range, dates, sessionsByDate, progressByWeek, logs, readiness, profile: periodProfile(value.profile),
     conclusion: String(value.conclusion || '').slice(0, 12000), weeklySummaries, periodId: /^[A-Za-z0-9_-]{1,120}$/.test(value.periodId || '') ? value.periodId : 'local' };
 }
 export function readPeriodDraft() {
@@ -70,7 +71,7 @@ export function applyLocalPeriod(draft, preview, today) {
     if (session.date < preview.range.from || session.date > preview.range.to || state.protectedDates.includes(session.date)) continue;
     sessionsByDate[session.date] = { ...sanitizePeriodSession(session), date: session.date, week: session.week, revision: (sessionsByDate[session.date]?.revision || 0) + 1 };
   }
-  return { version: 1, ...draft, range: preview.range, sessionsByDate, profile: preview.profile, conclusion: preview.conclusion, weeklySummaries: preview.weeklySummaries,
+  return { version: 1, ...draft, range: preview.range, dates: preview.selectedDates || enumeratePeriodDates(preview.range), sessionsByDate, profile: preview.profile, conclusion: preview.conclusion, weeklySummaries: preview.weeklySummaries,
     periodId: `local_${Date.now()}`, progressByWeek: draft?.progressByWeek || {}, logs: draft?.logs || [], readiness: draft?.readiness || [] };
 }
 export function upsertLocalPeriodLog(draft, log, complete = false, today = localDate()) {

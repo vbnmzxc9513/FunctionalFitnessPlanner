@@ -1,0 +1,51 @@
+export const SAVED_WORKOUTS_TEXT = {
+  zh: {
+    title: '我的收藏課表', saveTitle: '命名並收藏這天課表', close: '關閉', cancel: '取消', name: '課表名稱',
+    nameHint: '1–40 個字；同名不會覆寫既有收藏。', save: '確認收藏', saving: '正在儲存…', rename: '重新命名', renameSave: '儲存名稱',
+    delete: '刪除', deleteTitle: '刪除這份收藏？', deleteHint: '只刪除這份收藏，不影響已安排的課表或訓練紀錄。', deleteConfirm: '確認刪除收藏',
+    use: '選日期套用', share: '分享', preview: '查看內容', hide: '收起內容', empty: '還沒有收藏課表。可從某一天的課表命名收藏，之後再選日期使用。',
+    loading: '正在讀取收藏…', retry: '重新讀取', device: '保存在這個瀏覽器；清除網站資料會移除收藏。登入後不會自動加入帳號。',
+    account: '保存在目前帳號，只有你能存取。', privacy: '保存計畫動作、順序、階段、組次與準備組；不保存原日期、實際重量、完成紀錄、健康資料或私人筆記。',
+    custom: '含自訂動作：會保留必要的動作名稱與類型。公開分享會另外檢查支援範圍。', motions: '個動作', restDay: '休息日，沒有動作。',
+    deleted: '已刪除收藏。', renamed: '已更新收藏名稱。', preparation: '準備組', sets: '組', side: '每側', rest: '休息',
+    units: { reps: '下', seconds: '秒', minutes: '分鐘', breaths: '次呼吸' },
+    phases: { warmup: '暖身', skill: '協調與步伐', strength: '主要肌力', accessory: '輔助訓練', recovery: '恢復', cooldown: '收操' },
+    errors: {
+      INVALID_WORKOUT_NAME: '請輸入 1–40 個字的名稱。', DUPLICATE_WORKOUT_NAME: '已有同名收藏，請換個名稱；原收藏不會被覆寫。',
+      UNKNOWN_WORKOUT_EXERCISE: '有動作已不存在，或缺少必要名稱與類型。請先修正來源課表；沒有省略任何動作或儲存部分課表。',
+      INVALID_SAVED_WORKOUT: '收藏資料或計畫組次格式不完整，無法讀取或儲存。原有資料沒有被清除，請檢查後再試。',
+      SAVED_WORKOUT_TOO_LARGE: '這份課表超過收藏大小限制，請減少內容後再試。',
+      WORKOUT_STORAGE_FAILED: '瀏覽器無法儲存或讀取收藏，可能空間不足或儲存被封鎖。這次沒有顯示為儲存成功。',
+      WORKOUT_AUTH_CHANGED: '帳號已變更，請在目前帳號重新開啟收藏。', WORKOUT_NOT_FOUND: '這份收藏已被移除，請重新讀取。',
+      WORKOUT_CHANGED: '這份收藏已在其他地方變更，請重新讀取後再操作。',
+      fallback: '無法完成操作。請檢查網路或存取權限後重試；不會顯示為儲存成功。',
+    },
+  },
+  en: {
+    title: 'My saved workouts', saveTitle: 'Name and save this workout', close: 'Close', cancel: 'Cancel', name: 'Workout name',
+    nameHint: '1–40 characters. An existing name will never be overwritten.', save: 'Save workout', saving: 'Saving…', rename: 'Rename', renameSave: 'Save name',
+    delete: 'Delete', deleteTitle: 'Delete this saved workout?', deleteHint: 'Only this saved copy is removed. Scheduled workouts and training records remain unchanged.', deleteConfirm: 'Delete saved workout',
+    use: 'Choose dates to use', share: 'Share', preview: 'View contents', hide: 'Hide contents', empty: 'No saved workouts yet. Name and save a scheduled day, then choose a new date to use it.',
+    loading: 'Loading saved workouts…', retry: 'Reload', device: 'Saved in this browser. Clearing site data removes these workouts. Signing in does not automatically add them to an account.',
+    account: 'Saved privately in the current account. Only you can access them.', privacy: 'Saves planned exercises, order, phases, doses and preparation sets. Excludes original dates, actual weights, completion, health details and private notes.',
+    custom: 'Includes custom exercises: only necessary names and types are retained. Public sharing checks support separately.', motions: 'exercises', restDay: 'Rest day with no exercises.',
+    deleted: 'Saved workout deleted.', renamed: 'Workout name updated.', preparation: 'Preparation', sets: 'sets', side: 'each side', rest: 'Rest',
+    units: { reps: 'reps', seconds: 'seconds', minutes: 'minutes', breaths: 'breaths' },
+    phases: { warmup: 'Warm-up', skill: 'Coordination and footwork', strength: 'Main strength', accessory: 'Accessory', recovery: 'Recovery', cooldown: 'Cool-down' },
+    errors: {
+      INVALID_WORKOUT_NAME: 'Enter a name with 1–40 characters.', DUPLICATE_WORKOUT_NAME: 'That name already exists. Choose another; the saved workout will not be overwritten.',
+      UNKNOWN_WORKOUT_EXERCISE: 'An exercise is missing or lacks its necessary name and type. Fix the source workout first; no exercises were silently omitted or partially saved.',
+      INVALID_SAVED_WORKOUT: 'Saved data or planned doses are incomplete. Existing data has not been cleared. Check the workout and try again.',
+      SAVED_WORKOUT_TOO_LARGE: 'This workout exceeds the saved size limit. Reduce its contents and try again.',
+      WORKOUT_STORAGE_FAILED: 'Browser storage is unavailable, blocked or full. This operation has not been reported as saved.',
+      WORKOUT_AUTH_CHANGED: 'The account changed. Reopen saved workouts in the current account.', WORKOUT_NOT_FOUND: 'This saved workout was removed. Reload the list.',
+      WORKOUT_CHANGED: 'This workout changed elsewhere. Reload before editing it.',
+      fallback: 'The operation failed. Check your connection or access and retry; it has not been reported as saved.',
+    },
+  },
+};
+
+export const savedWorkoutError = (error, lang = 'zh') => {
+  const text = SAVED_WORKOUTS_TEXT[lang] || SAVED_WORKOUTS_TEXT.zh;
+  return text.errors[error?.message] || text.errors.fallback;
+};

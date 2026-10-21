@@ -5,7 +5,7 @@ import PeriodPlanPreview from './PeriodPlanPreview.jsx';
 import Onboarding from './Onboarding.jsx';
 import { defaultPlanningRange, generatePeriodPlan, normalizePlanningRange } from '../domain/periodPlanning.js';
 import { applyPeriodPlan, loadPeriodState } from '../services/periodRepository.js';
-import { applyLocalPeriod, localPeriodState, periodProfile } from '../domain/periodDraft.js';
+import { applyLocalPeriod, localPeriodState, periodProfile, writePeriodDraft, readPeriodDraft, normalizePeriodDraft } from '../domain/periodDraft.js';
 import { readStorage, writeStorage } from '../domain/storage.js';
 import { estimateSessionMinutes } from '../domain/sessions.js';
 import { buildWeeklyChoiceReport } from '../domain/weeklyChoices.js';
@@ -14,7 +14,7 @@ import { auth } from '../services/firebase.js';
 import { periodQuestionnaireText } from '../periodLocale.js';
 
 export default function PeriodWorkspace({ uid, today, lang, t, exercises, profile, setProfile, available, onToggleWeekly,
-  localPeriod, onLocalPeriod, onApplied, onClose, overview, refreshToken = 0, fallbackPlans = {}, onToday, preserveCurrentChoices = false, history = {} }) {
+  localPeriod, onLocalPeriod, onApplied, onClose, overview, refreshToken = 0, fallbackPlans = {}, onToday, preserveCurrentChoices = false, history = {}, onSaveWorkout, onShare, onEditWorkout }) {
   const scope = uid || 'signed-out';
   const questionnaireT = periodQuestionnaireText(lang, t);
   const storageKey = `fitness_period_questionnaire_${scope}`;
@@ -22,7 +22,8 @@ export default function PeriodWorkspace({ uid, today, lang, t, exercises, profil
   if (!restored.current) {
     try { restored.current = JSON.parse(readStorage(storageKey, '{}')); } catch { restored.current = {}; }
   }
-  const initialRange = overview?.range || restored.current.range || defaultPlanningRange(today);
+  let initialRange = overview?.range;
+  if (!initialRange) { try { initialRange = normalizePlanningRange(restored.current.range, today); } catch { initialRange = defaultPlanningRange(today); } }
   const [range, setRange] = useState(initialRange);
   const [stage, setStage] = useState(overview ? 'overview' : 'range');
   const [step, setStep] = useState(0);
@@ -48,7 +49,7 @@ export default function PeriodWorkspace({ uid, today, lang, t, exercises, profil
     let active = true;
     loadState(overview.range).then(state => {
       if (!active) return;
-      const sessions = Object.values(state.sessionsByDate).filter(session => session.date >= overview.range.from && session.date <= overview.range.to).sort((a, b) => a.date.localeCompare(b.date));
+      const sessions = Object.values(state.sessionsByDate).filter(session => session.date >= overview.range.from && session.date <= overview.range.to && (!overview.dates || overview.dates.includes(session.date))).sort((a, b) => a.date.localeCompare(b.date));
       const weeklySummaries = [...new Set(sessions.map(session => session.week))].map(week => {
         const days = sessions.filter(session => session.week === week);
         const saved = overview.weeklySummaries?.find(summary => summary.week === week);
@@ -100,7 +101,14 @@ export default function PeriodWorkspace({ uid, today, lang, t, exercises, profil
         const result = await applyPeriodPlan(uid, preview);
         applied = { ...preview, periodId: result.periodId };
         if (auth.currentUser?.uid !== uid) return;
-      } else onLocalPeriod(applyLocalPeriod(localPeriod, preview, today));
+      } else {
+        if (auth.currentUser) throw new Error('SESSION_CHANGED');
+        const stored = readPeriodDraft();
+        if (localPeriod?.periodId === 'legacy_public' ? stored !== null : JSON.stringify(stored) !== JSON.stringify(normalizePeriodDraft(localPeriod))) throw new Error('PERIOD_CHANGED');
+        const saved = applyLocalPeriod(localPeriod, preview, today);
+        if (!writePeriodDraft(saved)) throw new Error('LOCAL_STORAGE_FAILED');
+        onLocalPeriod(saved);
+      }
       onApplied(applied); setStage('overview');
     } catch (cause) {
       setPreview(previous => previous ? { ...previous, fingerprint: '' } : previous);
@@ -112,19 +120,19 @@ export default function PeriodWorkspace({ uid, today, lang, t, exercises, profil
   const choices = preview ? buildWeeklyChoiceReport({ schedule: preview.sessions, weeklyIntent: { weeklyExerciseIds: preview.profile?.context?.weeklyExerciseIds } }, exercises, preview.profile?.context, manualPlanningExercises(exercises, preview.profile?.context), preview.sessions?.[0]?.week) : [];
   const update = (key, value) => setProfile(previous => ({ ...previous, [key]: typeof value === 'function' ? value(previous[key]) : value }));
   const replan = () => { if (range.from < today) setRange(defaultPlanningRange(today)); setPreview(null); setStage('range'); setStep(0); };
-  return <section className="setup-card" data-testid="period-workspace">
-    {onClose && <button type="button" disabled={busy} className="screen-back" onClick={onClose}><ArrowLeft size={16} />{t('backToWeek')}</button>}
+  const choiceReport = choices.length > 0 ? <details data-testid="weekly-choice-report" className="period-secondary"><summary>{t('choiceReport')}</summary><p data-testid="choice-outcome-summary" role="status" className="text-sm mt-2">{lang === 'en' ? `Scheduled ${choices.filter(item => item.days.length).length} / ${choices.length}` : `已排入 ${choices.filter(item => item.days.length).length} / ${choices.length}`}{choices.some(item => !item.days.length) && <span className="block text-amber-800 mt-1">{lang === 'en' ? 'Some selected movements are missing. Review the reasons below or go back to adjust before applying.' : '有手選動作未安排。請查看下方原因，或返回調整後再套用。'}</span>}</p><p className="text-xs text-slate-500 mt-2">{t('choiceReportHint')}</p><ul className="space-y-4 mt-4">{choices.map(item => <li key={item.id} data-choice-status={item.reason}><p className="text-sm font-medium">{exercises[item.id]?.name || item.id}</p><p className="text-xs text-slate-500 mt-1">{item.days.length ? `${t('choicePlanned')} · ${preview.sessions.filter(session => session.routine.includes(item.id)).map(session => session.date).join('、')}` : `${t('choiceNotPlanned')} · ${questionnaireT(`choice_reason_${item.reason}`)}`}</p></li>)}</ul></details> : null;
+  const choiceSummary = choices.some(item => !item.days.length) ? <p role="status">{lang === 'en' ? `${choices.filter(item => !item.days.length).length} selected movements were not scheduled. Review the reasons below or go back to adjust.` : `有 ${choices.filter(item => !item.days.length).length} 個手選動作未安排。請查看列表後的明細，或返回調整後再套用。`}</p> : null;
+  return <section className={`period-workspace ${stage === 'overview' || stage === 'preview' ? 'max-w-3xl mx-auto' : 'setup-card'}`} data-stage={stage} data-testid="period-workspace">
+    {onClose && <button type="button" disabled={busy} className="period-flow-back" onClick={onClose}><ArrowLeft size={16} />{t('backToWeek')}</button>}
     {error && <p role="alert" className="rounded-xl bg-amber-50 p-4 text-amber-900 mb-4">{error}</p>}
     {storageFailed && <p role="status" className="text-sm text-amber-800 mb-4">{t('choiceDraftUnavailable')}</p>}
     {stage === 'range' && <PlanningRange range={range} onChange={changeRange} today={today} disabled={busy} onContinue={continueRange} lang={lang} />}
     {stage === 'questionnaire' && <>
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-5"><p className="text-sm font-medium text-indigo-800">{range.from} — {range.to}</p><button type="button" disabled={busy} className="text-link" onClick={() => setStage('range')}>{lang === 'zh' ? '修改日期' : 'Change dates'}</button></div>
-      <p className="text-xs text-slate-500 mb-4">{lang === 'zh' ? '日期課表使用免費範本規劃，依所選日期、訓練日與身體狀態安排。' : 'Date plans use the free template planner, guided by your selected dates, training days and current condition.'}</p>
+      <header className="period-auto-heading"><h2>{lang === 'zh' ? ['訓練條件', '身體狀態與偏好', '挑選偏好動作'][step] : ['Training conditions', 'Your current condition', 'Preferred exercises'][step]}</h2><div><p>{range.from} — {range.to}</p><button type="button" disabled={busy} className="text-link" onClick={() => setStage('range')}>{lang === 'zh' ? '修改日期' : 'Change dates'}</button></div><p>{lang === 'zh' ? '免費固定規則排課 · 檢查後才會套用' : 'Free template plan · review before applying'}</p></header>
       <Onboarding lang={lang} t={questionnaireT} exercises={exercises} available={available} onToggleWeekly={onToggleWeekly} step={step} onStepChange={setStep}
         context={profile.context} setContext={value => update('context', value)} focus={profile.focus} setFocus={value => update('focus', value)} time={profile.time} setTime={value => update('time', value)} goal={profile.goal} setGoal={value => update('goal', value)} message={message} setMessage={setMessage} generating={busy} onGenerate={generate} />
     </>}
-    {(stage === 'preview' || stage === 'overview') && choices.length > 0 && <section data-testid="weekly-choice-report" className="panel mb-5"><h3 className="aside-title">{t('choiceReport')}</h3><p data-testid="choice-outcome-summary" role="status" className="text-sm mt-2">{lang === 'en' ? `Scheduled ${choices.filter(item => item.days.length).length} / ${choices.length}` : `已排入 ${choices.filter(item => item.days.length).length} / ${choices.length}`}{choices.some(item => !item.days.length) && <span className="block text-amber-800 mt-1">{lang === 'en' ? 'Some selected movements are missing. Review the reasons below or go back to adjust before applying.' : '有手選動作未安排。請查看下方原因，或返回調整後再套用。'}</span>}</p><p className="text-xs text-slate-500 mt-2">{t('choiceReportHint')}</p><ul className="space-y-4 mt-4">{choices.map(item => <li key={item.id} data-choice-status={item.reason}><p className="text-sm font-medium">{exercises[item.id]?.name || item.id}</p><p className="text-xs text-slate-500 mt-1">{item.days.length ? `${t('choicePlanned')} · ${preview.sessions.filter(session => session.routine.includes(item.id)).map(session => session.date).join('、')}` : `${t('choiceNotPlanned')} · ${questionnaireT(`choice_reason_${item.reason}`)}`}</p></li>)}</ul></section>}
-    {(stage === 'preview' || stage === 'overview') && preview && <PeriodPlanPreview preview={preview} lang={lang} t={t} exercises={exercises} today={today} onBack={stage === 'preview' ? () => { setStage('questionnaire'); setStep(2); } : replan} onApply={stage === 'preview' ? apply : undefined} busy={busy} stale={stage === 'preview' && preview.fingerprint !== fingerprint} />}
+    {(stage === 'preview' || stage === 'overview') && preview && <PeriodPlanPreview preview={preview} choiceReport={choiceReport} choiceSummary={choiceSummary} lang={lang} t={t} exercises={exercises} today={today} onBack={stage === 'preview' ? () => { setStage('questionnaire'); setStep(2); } : undefined} onApply={stage === 'preview' ? apply : undefined} onSaveWorkout={onSaveWorkout} onShare={onShare} onEditWorkout={onEditWorkout} busy={busy} stale={stage === 'preview' && preview.fingerprint !== fingerprint} />}
     {stage === 'overview' && <div className="flex gap-3 mt-5"><button className="button-primary" onClick={replan}>{lang === 'zh' ? '規劃另一段日期' : 'Plan another date range'}</button>{onToday && <button className="button-secondary" onClick={onToday}>{lang === 'zh' ? '回到今日訓練' : 'Go to Today'}</button>}</div>}
   </section>;
 }

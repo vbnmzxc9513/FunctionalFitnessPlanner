@@ -11,6 +11,7 @@ export function useAuth() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [migrationPending, setMigrationPending] = useState(false);
+  const [migrationSummary, setMigrationSummary] = useState(null);
   useEffect(() => onAuthStateChanged(auth, current => {
     setUser(current);
     setMigrationPending(!!current && !!sessionStorage.getItem(migrationKey(current.uid)));
@@ -32,7 +33,8 @@ export function useAuth() {
     sessionStorage.setItem(migrationKey(uid), JSON.stringify(records));
     setMigrationPending(true);
     try {
-      await importGuestData(uid, records);
+      const result = await importGuestData(uid, records);
+      if (auth.currentUser?.uid === uid) setMigrationSummary({ uid, renamed: [...(result?.workouts?.imported || []), ...(result?.workouts?.skipped || [])].filter(item => item.renamed || item.previousName !== item.name) });
       sessionStorage.removeItem(migrationKey(uid));
       setMigrationPending(false);
     } catch {
@@ -63,6 +65,6 @@ export function useAuth() {
     const records = JSON.parse(sessionStorage.getItem(migrationKey(current.uid)) || '[]');
     await finishMigration(current.uid, records);
   });
-  return { user, loading, busy, error, migrationPending, googleLogin, retryMigration,
+  return { user, loading, busy, error, migrationPending, migrationRenames: migrationSummary && migrationSummary.uid === user?.uid ? migrationSummary.renamed : [], dismissMigrationSummary: () => setMigrationSummary(null), googleLogin, retryMigration,
     guestLogin: () => run(() => signInAnonymously(auth)), logout: () => run(() => signOut(auth)) };
 }

@@ -232,3 +232,24 @@ test('guest capture and idempotent import retain historical native sessions, dos
   assert.equal((await getDocs(userCollection(uid, 'planningPeriods'))).size, 1);
   await assert.rejects(applyPeriodPlan(uid, { range: { from: past, to: past }, sessions: [state.sessionsByDate[past]], expectedState: state.expectedState, profile }), /INVALID_PLANNING_RANGE/);
 });
+
+test('manual/import sparse assignments write only chosen dates, require replacement consent and reject recorded targets atomically', async () => {
+  const range = rangeFor(5), generated = sessionsFor(range), dates = [generated[0].date, generated[4].date];
+  let state = await loadPeriodState(uid, range);
+  const draft = { range, selectedDates: dates, sessions: [generated[0], generated[4]], profile, expectedState: state.expectedState };
+  const result = await applyPeriodPlan(uid, draft);
+  assert.deepEqual(result.appliedDates, dates);
+  assert.equal((await getDocs(userCollection(uid, 'dateSessions'))).size, 2);
+  const header = (await getDoc(userDoc(uid, 'planningPeriods', result.periodId))).data();
+  assert.deepEqual(header.dates, dates);
+  assert.equal((await getDoc(userDoc(uid, 'dateSessions', generated[2].date))).exists(), false);
+  state = await loadPeriodState(uid, range);
+  await assert.rejects(applyPeriodPlan(uid, { ...draft, expectedState: state.expectedState }), /DATE_CONFLICT/);
+  const changed = [generated[0], generated[4]].map(session => ({ ...session, theme: 'Replacement' }));
+  await applyPeriodPlan(uid, { ...draft, sessions: changed, replaceDates: dates, expectedState: state.expectedState });
+  const current = (await getDoc(userDoc(uid, 'dateSessions', dates[1]))).data();
+  await setCompletion(uid, generated[0].week, generated[0].day, generated[0].routine[0], true, EXERCISES_I18N.zh[generated[0].routine[0]], []);
+  state = await loadPeriodState(uid, range);
+  await assert.rejects(applyPeriodPlan(uid, { ...draft, sessions: changed, replaceDates: dates, expectedState: state.expectedState }), /DATE_PROTECTED/);
+  assert.deepEqual((await getDoc(userDoc(uid, 'dateSessions', dates[1]))).data(), current);
+});

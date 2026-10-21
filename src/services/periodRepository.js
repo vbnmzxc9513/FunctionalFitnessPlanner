@@ -4,6 +4,7 @@ import { userCollection, userDoc } from './userPaths.js';
 import { dateForWeekDay, getWeekString, localDate } from '../domain/dates.js';
 import { enumeratePeriodDates, normalizePlanningRange, sanitizePeriodSession } from '../domain/periodPlanning.js';
 import { createWeeklyIntent } from '../domain/trainingPreferences.js';
+import { validateAssignmentConsent } from '../domain/planAssignments.js';
 import { exerciseKey, resolveExerciseId } from '../domain/training.js';
 
 const dayFields = ['day', 'name', 'theme', 'concept', 'coachAdvice', 'routine', 'sessionType', 'warmupNote', 'cooldownNote'];
@@ -153,16 +154,19 @@ function writeSession(transaction, uid, session, revision, periodId, weeklyInten
   return metadata;
 }
 
-export async function applyPeriodPlan(uid, { range: requestedRange, sessions, profile = {}, expectedState, periodId, conclusion = '' }) {
+export async function applyPeriodPlan(uid, { range: requestedRange, sessions, profile = {}, expectedState, periodId, conclusion = '', selectedDates, replaceDates = [] }) {
   assertUser(uid);
   const range = normalizePlanningRange(requestedRange, localDate()), scope = scopeDates(range);
   if (!expectedState?.documents || expectedState.fingerprint !== stable(expectedState.documents)) throw new Error('PERIOD_CHANGED');
-  if (!Array.isArray(sessions) || sessions.length !== scope.dates.length) throw new Error('INVALID_PERIOD_PLAN');
+  const targets = selectedDates || scope.dates;
+  if (!Array.isArray(targets) || !targets.length || new Set(targets).size !== targets.length || targets.some(date => !scope.dates.includes(date))) throw new Error('INVALID_PERIOD_PLAN');
+  if (!Array.isArray(sessions) || sessions.length !== targets.length) throw new Error('INVALID_PERIOD_PLAN');
   const expectedProgress = Object.fromEntries(scope.weeks.map(week => [week, expectedState.documents[keyFor('progress', week)] || {}]));
   const expectedLogs = Object.fromEntries(Object.entries(expectedState.documents).filter(([key, value]) => key.startsWith('trainingLogs/') && value));
   const expectedProtected = protectedDays(scope, expectedProgress, expectedLogs);
+  if (selectedDates) validateAssignmentConsent({ protectedDates: expectedProtected, sessionsByDate: resolvedSessions(scope, expectedState.documents, expectedState.fallbackPlans) }, targets, replaceDates);
   const clean = sessions.map(session => expectedProtected.includes(session?.date) ? session : sanitizePeriodSession(session));
-  if (new Set(clean.map(session => session.date)).size !== scope.dates.length || clean.some(session => !scope.dates.includes(session.date))) throw new Error('INVALID_PERIOD_PLAN');
+  if (new Set(clean.map(session => session.date)).size !== targets.length || clean.some(session => !targets.includes(session.date))) throw new Error('INVALID_PERIOD_PLAN');
   const id = periodId || `${range.from}_${range.to}_${globalThis.crypto.randomUUID()}`;
   if (!/^[A-Za-z0-9_-]{1,120}$/.test(id)) throw new Error('INVALID_PERIOD_ID');
   const intent = createWeeklyIntent(profile.context || {}, profile.focus, profile.time || 30);
@@ -180,6 +184,7 @@ export async function applyPeriodPlan(uid, { range: requestedRange, sessions, pr
     const progress = Object.fromEntries(scope.weeks.map(week => [week, documents[keyFor('progress', week)] || {}]));
     const logs = Object.fromEntries(Object.entries(documents).filter(([key, value]) => key.startsWith('trainingLogs/') && value));
     const protectedDates = protectedDays(scope, progress, logs), replacements = {}, appliedDates = [];
+    if (selectedDates) validateAssignmentConsent({ protectedDates, sessionsByDate: resolvedSessions(scope, documents, expectedState.fallbackPlans) }, targets, replaceDates);
     for (const session of clean) if (!protectedDates.includes(session.date)) {
       const current = documents[keyFor('dateSessions', session.date)];
       replacements[session.date] = writeSession(transaction, uid, session, (current?.revision || 0) + 1, id, intent);
@@ -189,7 +194,7 @@ export async function applyPeriodPlan(uid, { range: requestedRange, sessions, pr
       appliedDates.push(session.date);
     }
     for (const week of scope.weeks) transaction.set(userDoc(uid, 'progress', week), weeklySnapshot(week, documents, replacements, expectedState.fallbackPlans), { merge: true });
-    transaction.set(userDoc(uid, 'planningPeriods', id), { from: range.from, to: range.to, createdAt: serverTimestamp(), weeklyIntent: intent, conclusion: String(conclusion).slice(0, 4000) });
+    transaction.set(userDoc(uid, 'planningPeriods', id), { from: range.from, to: range.to, ...(selectedDates ? { dates: [...targets].sort() } : {}), createdAt: serverTimestamp(), weeklyIntent: intent, conclusion: String(conclusion).slice(0, 4000) });
     return { periodId: id, appliedDates, protectedDates };
   });
 }

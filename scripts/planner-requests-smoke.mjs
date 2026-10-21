@@ -28,7 +28,11 @@ try {
     await page.$$eval('[data-testid="planning-range"] input', inputs => { const el = inputs[1]; Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, '2026-10-23'); el.dispatchEvent(new Event('input', { bubbles: true })); });
     await click('[data-testid="planning-range-continue"]'); await fill('[data-testid="planner-form"] input[type="number"]', '40');
     if (!await page.$eval('[data-testid="quiz-schedule"]', item => item.open)) await click('[data-testid="quiz-schedule"] > summary');
-    for (const day of [2, 3, 5]) await click(`[data-testid="quiz-schedule"] fieldset:first-of-type label:nth-of-type(${day})`);
+    for (const day of [2, 3, 5]) {
+      const selector = `[data-testid="quiz-schedule"] > div > fieldset:first-of-type label:nth-of-type(${day})`;
+      await click(selector);
+      await page.waitForFunction(selector => document.querySelector(`${selector} input`)?.checked, {}, selector);
+    }
     await fill('[data-testid="court-load-fields"] input', '90'); await page.select('[data-testid="court-load-fields"] select', 'mixed');
     await click('[data-testid="quiz-equipment"] > summary');
     for (const index of [1, 2, 3]) await click(`[data-testid="quiz-equipment"] label:nth-of-type(${index})`);
@@ -43,16 +47,23 @@ try {
     await group(lang === 'en' ? 'Warm-up' : '暖身'); await fill('[data-testid="weekly-choice-search"] input', exercises.bf_A01.name);
     assert.equal(await page.$('[data-testid="weekly-choice-bf_A01"]'), null, 'running is not a recommended warm-up');
     await click('[data-testid="plan-preview-create"]'); await page.waitForSelector('[data-testid="period-plan-preview"]');
+    await click('[data-testid="weekly-choice-report"] > summary');
     assert.ok(await page.$eval('[data-testid="choice-outcome-summary"]', item => item.innerText.includes('7 / 7')));
     assert.equal(await page.$$eval('[data-testid="weekly-choice-report"] [data-choice-status="planned"]', items => items.length), 7);
+    await click('[data-testid="period-plan-conditions"] > summary');
     await click('[data-testid="period-mobility-overview"] > summary');
     assert.ok(await page.$$eval('[data-testid="period-mobility-overview"] dd', items => items.length === 8 && items.every(item => item.innerText.includes('10/'))));
     await click('[data-testid="period-day-2026-10-19"]');
-    assert.ok(await page.$eval('[data-testid="session-time-summary"]', item => /40/.test(item.innerText) && /3[5-9]|40/.test(item.innerText)));
+    await click('[data-testid="period-day-detail"] > details > summary');
+    assert.ok(await page.$eval('[data-testid="period-day-detail"] [data-testid="session-time-summary"]', item => /40/.test(item.innerText) && /3[5-9]|40/.test(item.innerText)));
+    await click('[data-testid="period-day-detail"] > button');
     await click('[data-testid="period-day-2026-10-20"]');
-    assert.ok(await page.$eval('[data-testid="session-time-summary"]', (item, lang) => item.innerText.includes('40') && item.innerText.includes(lang === 'en' ? 'Court day' : '羽球日'), lang));
+    await click('[data-testid="period-day-detail"] > details > summary');
+    const courtSummary = await page.$eval('[data-testid="period-day-detail"] [data-testid="session-time-summary"]', item => item.innerText);
+    assert.ok(courtSummary.includes('40') && courtSummary.includes(lang === 'en' ? 'Court day' : '羽球日'), `${layout}: selected court day shows its available time and recovery reason: ${courtSummary}`);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     await page.screenshot({ path: `/tmp/fitness-planner-requests-${layout}.png`, fullPage: true });
+    await click('[data-testid="period-day-detail"] > button');
     await click('[data-testid="period-plan-apply"]'); await page.waitForFunction(() => !!localStorage.getItem('fitness_date_period_v1'));
     const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('fitness_date_period_v1'))), days = Object.values(saved.sessionsByDate);
     assert.ok(ids.every(id => days.some(day => day.routine.includes(id))));

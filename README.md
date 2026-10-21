@@ -209,3 +209,7 @@ Firestore 使用同一筆 transaction 保存週課表、每日兩份 `planDays/{
 本機驗證可執行 `npm ci --prefix functions`、`npm run build --prefix functions`，再以 `GCLOUD_PROJECT=demo-fitness-planner` 載入入口。單元測試使用假交易與假 Gemini，不接觸正式 AI。CI 驗證後端建置，但只自動發布前端；不會開啟計費資源。
 
 分階段的驗收標準見 [推廣功能計畫](docs/promotion-plan.md)。
+
+### 手動排課、命名收藏與分享匯入
+
+課表總覽提供手動／自動排課入口。手動按日期與部位多選動作；每天可命名收藏，再分享或套用到新日期。分享支援多日、保留間隔或逐日指定，套用前檢查既有課表與訓練紀錄。資料與部署方式見 [功能說明](docs/workout-planner.md)。
