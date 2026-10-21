@@ -1,3 +1,4 @@
+import { useBackNavigation } from '../hooks/useBackNavigation.js';
 import { useEffect, useState } from 'react';
 import { ChevronRight, Zap } from 'lucide-react';
 import './workout-sharing.css';
@@ -59,6 +60,8 @@ function SharedWorkoutContent({ payload, lang = 'zh', onExit, uid, today = local
   const [remote, setRemote] = useState(null), [loadError, setLoadError] = useState(null), [attempt, setAttempt] = useState(0);
   const [applying, setApplying] = useState(false), [applied, setApplied] = useState(false);
   const [editing, setEditing] = useState(null), [editedDays, setEditedDays] = useState(null);
+  useBackNavigation(!!editing, () => { setEditing(null); setApplying(true); }, 25);
+  useBackNavigation(applying, () => setApplying(false), 20);
   const [editProfile, setEditProfile] = useState(() => ({ context: normalizePlanningContext(DEFAULT_PLANNING_CONTEXT), focus: 'balanced', time: 240 }));
   const id = payload?.id;
   useEffect(() => {

@@ -1,0 +1,16 @@
+{
+  "generator": "@bubblewrap/cli@1.27.0",
+  "generatorCore": "@bubblewrap/core@1.27.0",
+  "jdk": "Eclipse Temurin 21.0.12.1+1 (Linux x64)",
+  "jdkArchiveSha256": "ce79869e1307ed8ee1e2baa86a412b1eb5b75d10a01006d788a6f968bcfaee94",
+  "androidCommandLineTools": "19.0 (13114758)",
+  "androidCommandLineToolsZipSha256": "7ec965280a073311c339e571cd5de778b9975026cfcbe79f2b1cdcb1e15317ee",
+  "androidPlatform": 36,
+  "androidBuildTools": "36.0.0",
+  "androidGradlePlugin": "8.13.2",
+  "gradle": "8.13",
+  "gradleDistributionSha256": "20f1b1176237254a6fc204d8434196fa11a4cfb387567519c61556e8710aed78",
+  "androidBrowserHelper": "2.7.4",
+  "minSdk": 24,
+  "targetSdk": 36
+}

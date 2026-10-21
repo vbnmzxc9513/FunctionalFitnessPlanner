@@ -1,3 +1,4 @@
+import { useBackNavigation } from '../hooks/useBackNavigation.js';
 import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import PlanningRange from './PlanningRange.jsx';
@@ -29,6 +30,12 @@ export default function PeriodWorkspace({ uid, today, lang, t, exercises, profil
   const [step, setStep] = useState(0);
   const [preview, setPreview] = useState(null);
   const [busy, setBusy] = useState(false);
+  useBackNavigation(stage === 'preview' || stage === 'questionnaire', () => {
+    if (busy) return;
+    if (stage === 'preview') { setStage('questionnaire'); return; }
+    if (step > 0) { setStep(step - 1); return; }
+    setStage('range');
+  }, 30);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [storageFailed, setStorageFailed] = useState(false);

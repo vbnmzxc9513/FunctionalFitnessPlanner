@@ -1,3 +1,4 @@
+import { useBackNavigation } from '../hooks/useBackNavigation.js';
 import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, Check, Loader2 } from 'lucide-react';
 import { assignmentConflicts, assignmentRange, assignmentSummary, materializeAssignments, planOffsets, shiftPlanDate, validateAssignmentConsent } from '../domain/planAssignments.js';
@@ -24,6 +25,7 @@ export default function ApplyWorkoutPlan({ days, name, initialDates, uid, today,
   const [conflictState, setConflictState] = useState(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  useBackNavigation(stage === 'review' || busy, () => { if (!busy) setStage('dates'); }, 35);
   const [expanded, setExpanded] = useState(null);
   const heading = useRef(null);
   const running = useRef(false);

@@ -1,3 +1,4 @@
+import { PUBLIC_APP_LOCATION } from './publicOrigin.js';
 import { catalogExercises as loadCatalog, validSequenceDose } from './exerciseCatalog.js';
 import { exercisePhase, SESSION_PHASES } from './phases.js';
 import { prescription } from './training.js';
@@ -102,7 +103,7 @@ export function shareDay(payload, lang = 'zh') {
   };
 }
 
-export function shareUrl(payload, location = window.location) {
+export function shareUrl(payload, location = PUBLIC_APP_LOCATION) {
   return `${location.origin}${location.pathname}#workout=${encodeSharePayload(payload)}`;
 }
 
