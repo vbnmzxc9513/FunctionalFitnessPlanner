@@ -55,7 +55,8 @@
     "webUnitTests": "passed: 235",
     "firebaseEmulatorIntegration": "passed: 56; includes interrupted guest migration and account isolation",
     "webBuildPaths": "passed: GitHub Pages subpath and Cloudflare root, manifest/icon relative paths verified",
-    "deviceLaunch": "first candidate crashed: missing ManageDataLauncherActivity; fixed manifest and reinstalled. Post-fix launch blocked during observation by system Digital Wellbeing ANR on unaccelerated emulator; browser handoff not yet accepted"
+    "deviceLaunch": "passed basic handoff after fix: Android activities show com.android.chrome/org.chromium.chrome.browser.firstrun.FirstRunActivity; original missing-component crash resolved. Full website/auth acceptance not performed",
+    "originalStartupFailure": "Missing ManageDataLauncherActivity in generated manifest; root verified actual ABH bytecode and added private default-disabled component"
   },
   "emulator": {
     "version": "37.2.12.0 (16428233)",
@@ -72,7 +73,7 @@
       "-cores 2",
       "-http-proxy (inherited HTTPS_PROXY)"
     ],
-    "state": "final fixed APK installed; unaccelerated Android system reports Digital Wellbeing ANR during foreground launch",
+    "state": "final fixed APK installed and handed off to Chrome FirstRunActivity; unaccelerated system Digital Wellbeing ANR encountered during startup",
     "tls": "verification preserved; no ignore-certificate-errors flag; guest CA trust not yet configured"
   },
   "nativeSourceSha256": {

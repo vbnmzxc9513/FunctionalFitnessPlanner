@@ -29,6 +29,7 @@
 | Auth／Firestore Emulator | 56 項通過，含中斷恢復、錯帳號隔離、碰撞保留與冪等重試 |
 | GitHub Pages 與 Cloudflare build | 兩種 base path 通過；Manifest、相對圖示路徑與空 DAL 確認正確 |
 | Chromium 操作回歸 | 返回／分享、手動排課、收藏／匯入、日期排課、紀錄、恢復、目標與暖身流程通過。整輪最後一項每日切換曾逾時；補診斷後單獨重跑桌機與手機皆通過，沒有放寬斷言，仍須觀察 CI |
+| Android 安裝與啟動交接 | 修正版已安裝至 API35 模擬器並交接到 Chrome `FirstRunActivity`；原本的缺元件閃退已修正。首次啟動另遇到無加速環境的系統 Digital Wellbeing ANR，不能用這台模擬器推論一般手機效能 |
 | 真實 Google 登入／實體 Android | 未執行，不能宣稱通過 |
 
 Emulator 測試不等同正式 Google 授權或實體 Android 驗收。Android 軟體模擬器無硬體加速，安裝／啟動結果另記 `android/test-fixtures/prototype-build-evidence.json`；不能只以 ADB 連線成功判定 App 已可操作。

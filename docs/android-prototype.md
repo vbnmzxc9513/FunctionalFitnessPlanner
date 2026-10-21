@@ -1,6 +1,6 @@
 # Android 第一階段原型
 
-2026-10-21。此階段新增可自行安裝的 debug 原型；未發布、未部署網站、未建立 Android CI，也不是正式交付候選。`docs/android-apk-plan.md` 的正式簽章、覆蓋升級、Google 登入及資料驗收門檻仍適用。
+2026-10-21。此階段新增可自行安裝的 debug 原型；未正式發布、未部署至正式主站、未建立 Android CI，也不是正式交付候選。`docs/android-apk-plan.md` 的正式簽章、覆蓋升級、Google 登入及資料驗收門檻仍適用。
 
 - 名稱：**羽球體能（測試）**。
 - package：`io.github.vbnmzxc9513.functionalfitnessplanner.prototype`，與未來正式 package 分離。
