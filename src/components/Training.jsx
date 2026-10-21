@@ -1,3 +1,4 @@
+import { useBackNavigation } from '../hooks/useBackNavigation.js';
 import SessionTimeSummary from './SessionTimeSummary.jsx';
 import { useState } from 'react';
 import { ArrowDown, ArrowRight, ArrowUp, Brain, CheckCircle2, Circle, Edit2, Feather, Loader2, Save, Trash2, X } from 'lucide-react';
@@ -43,6 +44,7 @@ export default function Training({ t, lang = 'zh', schedule, draft, activeDay, s
     setDetails(previous => ({ scope, id, visited: [...new Set([...(previous.scope === scope ? previous.visited : []), id])] }));
   };
   const closeDetails = () => setDetails(previous => ({ ...previous, id: null }));
+  useBackNavigation(!!currentDetails.id, closeDetails, 100);
   const description = params => `${params.sets} ${t('setsUnit')} × ${params.value} ${t(params.unit)}${params.perSide ? ` · ${t('eachSide')}` : ''}`;
   const doseGrid = (params, phase = params.phase) => <div className="dose-grid" role="group" aria-label={`${description(params)}${params.restSeconds > 0 ? ` · ${t('restLabel')} ${params.restSeconds} ${t('seconds')}` : ''}`}><div><strong>{params.sets}</strong>{t(['strength', 'accessory'].includes(phase) ? 'workingSetsLabel' : 'setsUnit')}</div><div><strong>{params.value}</strong>{t(params.unit)}{params.perSide && ` · ${t('eachSide')}`}</div><div><strong>{params.restSeconds || '—'}</strong>{t('restLabel')}{params.restSeconds > 0 && ` · ${t('seconds')}`}</div></div>;
   const preparation = (id, dose) => dose && <div data-preparation-for={id} className="rounded-2xl bg-amber-50 border border-amber-100 p-4 text-sm"><p className="font-semibold text-amber-800">{t('preparationSetsLabel')} · {exercises[id].name}</p><p className="text-sm text-slate-600 mt-2">{description(dose)}{dose.restSeconds > 0 && ` · ${t('restLabel')} ${dose.restSeconds} ${t('seconds')}`}</p><p className="text-sm text-slate-600 mt-2">{dose.instruction}</p><p className="text-xs text-amber-700 mt-2">{t('preparationTrackingHint')}</p></div>;

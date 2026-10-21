@@ -1,3 +1,4 @@
+import { PUBLIC_APP_LOCATION } from '../domain/publicOrigin.js';
 import { collection, doc, getDoc, getDocs, limit, orderBy, documentId, query, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { auth, db, appId } from './firebase.js';
 import { encodePlanPayload, rebuildPlanDays, validatePlanPayload } from '../domain/sharedPlans.js';
@@ -9,11 +10,11 @@ const assertUser = uid => { if (!uid || auth.currentUser?.uid !== uid) throw new
 const exact = (data, keys) => data && typeof data === 'object' && Object.keys(data).length === keys.length && Object.keys(data).every(key => keys.includes(key));
 const invalid = () => { throw new Error('INVALID_PLAN_SHARE'); };
 
-export function buildSharedPlanUrl(id, location = globalThis.location) {
+export function buildSharedPlanUrl(id, location = PUBLIC_APP_LOCATION) {
   if (!validId(id)) invalid();
   return `${location.origin}${location.pathname}#plan=${id}`;
 }
-export function buildEmbeddedPlanUrl(payload, location = globalThis.location) {
+export function buildEmbeddedPlanUrl(payload, location = PUBLIC_APP_LOCATION) {
   return `${location.origin}${location.pathname}#program=${encodePlanPayload(payload)}`;
 }
 

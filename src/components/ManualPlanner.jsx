@@ -1,3 +1,4 @@
+import { useBackNavigation } from '../hooks/useBackNavigation.js';
 import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ChevronLeft, ChevronRight, Copy } from 'lucide-react';
 import BatchExercisePicker from './BatchExercisePicker.jsx';
@@ -114,6 +115,8 @@ function ManualPlannerWorkspace({ uid, today = localDate(), lang = 'zh', t, exer
       target?.focus();
     });
   };
+  useBackNavigation(!!picker, closePicker, 60);
+  useBackNavigation(stage === 'edit', saveAndExit, 30);
   const addSelected = ids => {
     try {
       const next = addManualExercises(session, ids, { exercises, eligibleExercises, phase: picker, lang });

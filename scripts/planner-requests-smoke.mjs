@@ -21,7 +21,15 @@ try {
     }, lang);
     page.on('pageerror', error => errors.push(error.message)); await page.setRequestInterception(true);
     page.on('request', request => { const url = new URL(request.url()); if (['127.0.0.1', 'localhost'].includes(url.hostname) || ['data:', 'blob:'].includes(url.protocol)) request.continue(); else request.abort(); });
-    const click = selector => page.locator(selector).map(item => { item.scrollIntoView({ block: 'center', behavior: 'instant' }); return item; }).click();
+    const click = async selector => {
+      try { await page.locator(selector).map(item => { item.scrollIntoView({ block: 'center', behavior: 'instant' }); return item; }).click(); }
+      catch (error) {
+        console.error(`${layout}: failed to click ${selector}; URL: ${page.url()}`);
+        console.error((await page.evaluate(() => document.body.innerText)).slice(-5000));
+        await page.screenshot({ path: `/tmp/fitness-planner-requests-failure-${layout}.png`, fullPage: true });
+        throw error;
+      }
+    };
     const fill = async (selector, value) => { const el = await page.waitForSelector(selector, { visible: true }); await el.evaluate((item, value) => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(item, value); item.dispatchEvent(new Event('input', { bubbles: true })); }, value); await el.dispose(); };
     const group = async label => { const button = await page.evaluateHandle(label => [...document.querySelectorAll('[data-testid="weekly-exercise-choices"] button')].find(item => item.innerText.trim() === label), label); await button.evaluate(item => item.scrollIntoView({ block: 'center', behavior: 'instant' })); await button.click(); await button.dispose(); };
     await page.goto(site, { waitUntil: 'networkidle2' }); await fill('[data-testid="planning-range"] input:first-of-type', '2026-10-19');

@@ -1,3 +1,4 @@
+import { useBackNavigation } from '../hooks/useBackNavigation.js';
 import SessionTimeSummary from './SessionTimeSummary.jsx';
 import TrainingTargetOverview from './TrainingTargetOverview.jsx';
 import PlanningConditions from './PlanningConditions.jsx';
@@ -18,6 +19,8 @@ import './PeriodPlanPreview.css';
 export default function PeriodPlanPreview({ preview, lang = 'zh', t = key => key, exercises = {}, today, onBack, onApply, busy = false, stale = false, onSaveWorkout, onShare, onEditWorkout, choiceReport, choiceSummary }) {
   const [selected, setSelected] = useState(null);
   const [opened, setOpened] = useState(null);
+  useBackNavigation(!!opened, () => setOpened(null), 100);
+  useBackNavigation(!!selected, () => setSelected(null), 40);
   const heading = useRef(null);
   const container = useRef(null);
   const listOpener = useRef(null);

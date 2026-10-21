@@ -1,3 +1,4 @@
+import { useBackNavigation } from '../hooks/useBackNavigation.js';
 import { useId, useState } from 'react';
 import { ArrowLeft, ChevronRight, Share2, Trash2 } from 'lucide-react';
 import ExerciseDetails from './ExerciseDetails.jsx';
@@ -45,6 +46,9 @@ function SavedWorkoutList({ store, exercises, lang = 'zh', onUse, onShare, onClo
   const selected = store.items.find(item => item.id === selectedId);
   const selectedDelete = store.items.find(item => item.id === deleting);
   const busy = pending || store.busy;
+  useBackNavigation(!!selected, () => { if (!busy) { setSelectedId(null); setError(null); } }, 40);
+  useBackNavigation(!!renaming, () => { if (!busy) { setRenaming(null); setError(null); } }, 50);
+  useBackNavigation(!!deleting, () => { if (!busy) { setDeleting(null); setError(null); } }, 100);
   const minutes = item => estimateSessionMinutes(savedWorkoutDay(item, lang), { ...Object.fromEntries(item.snapshot.exercises.map(exercise => [exercise.id, exercise])), ...exercises });
   const rename = async (event, item) => {
     event.preventDefault(); if (busy) return;

@@ -191,7 +191,8 @@ try {
     recipient.on('request', request => { const url = new URL(request.url()); if (['127.0.0.1', 'localhost'].includes(url.hostname) || ['data:', 'blob:'].includes(url.protocol)) request.continue(); else request.abort(); });
     recipient.on('pageerror', error => errors.push(error.message));
     await recipient.evaluateOnNewDocument(() => localStorage.setItem('app_lang', 'zh'));
-    await recipient.goto(link, { waitUntil: 'networkidle2' });
+    assert.equal(new URL(link).origin, 'https://badminton-functional-fitness-planner.pages.dev');
+    await recipient.goto(`${site}${new URL(link).hash}`, { waitUntil: 'networkidle2' });
     await recipient.waitForSelector('[data-testid="workout-plan-summary"]');
     assert.equal(await recipient.evaluate(() => localStorage.getItem('fitness_date_period_v1')), null, `${layout}: opening a share never imports automatically`);
     await recipient.screenshot({ path: `/tmp/planner-import-${layout}.png`, fullPage: false });

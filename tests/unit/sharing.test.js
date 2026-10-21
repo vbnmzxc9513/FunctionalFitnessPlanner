@@ -117,3 +117,7 @@ test('share URLs remove query strings and dates and expose only validated public
   const read = readShareFromLocation({ hash: new URL(url).hash });
   assert.deepEqual(read.day.routine, monday().routine);
 });
+
+test('new legacy workout shares use the canonical Cloudflare origin by default', () => {
+  assert.ok(shareUrl(payload()).startsWith('https://badminton-functional-fitness-planner.pages.dev/#workout='));
+});

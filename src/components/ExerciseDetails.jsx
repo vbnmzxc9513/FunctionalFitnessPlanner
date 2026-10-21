@@ -1,7 +1,9 @@
+import { useBackNavigation } from '../hooks/useBackNavigation.js';
 import { useEffect, useId, useRef } from 'react';
 import { X } from 'lucide-react';
 
 export default function ExerciseDetails({ open, title, subtitle, closeLabel, onClose, children, footer }) {
+  useBackNavigation(open, onClose, 110);
   const dialog = useRef(null);
   const titleId = useId();
   const content = useRef(null);

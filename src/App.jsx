@@ -5,6 +5,7 @@ import { TRANSLATIONS, EXERCISES_I18N, DEFAULT_SCHEDULE_I18N, LEGACY_DEFAULT_SCH
 import { auth } from './services/firebase.js';
 import { savePlan, saveFeedback, setCompletion, saveMeasurement, userDoc } from './services/repository.js';
 import { checkAvailableModels, generateAIPlan, generateExerciseDetails } from './services/gemini.js';
+import { replaceNavigationLocation, useBackNavigation } from './hooks/useBackNavigation.js';
 import { useAuth } from './hooks/useAuth.js';
 import { useCalendar } from './hooks/useCalendar.js';
 import { useUserData } from './hooks/useUserData.js';
@@ -93,7 +94,8 @@ export default function App() {
     await account.logout();
     if (!auth.currentUser) { writePromotionDrafts(null, null); setPendingDraft(null); setPublicDraft(null); }
   };
-  const exitShare = () => { window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`); setShared(null); };
+  const exitShare = () => { replaceNavigationLocation(`${window.location.pathname}${window.location.search}`); setShared(null); };
+  useBackNavigation(!!shared, exitShare, 10);
   if (shared) return <Suspense fallback={<p role="status" className="p-8">{readLanguage() === 'zh' ? '讀取分享課表…' : 'Loading shared plan…'}</p>}><SharedWorkout key={account.user?.uid || 'signed-out'} uid={account.user?.uid} authLoading={account.loading} today={calendar.today} localPeriod={localPeriod || (!account.user ? periodFromWeeklyDraft(publicDraft) : null)} onLocalPeriod={setLocalPeriod} onSignIn={account.googleLogin} payload={shared} exercises={EXERCISES_I18N[readLanguage()]} lang={readLanguage()} onExit={exitShare} /></Suspense>;
   if (account.loading) return <div className="min-h-screen flex items-center justify-center gap-2"><Loader2 className="animate-spin" />{readLanguage() === 'zh' ? '載入中…' : 'Loading…'}</div>;
   const sessionAccount = { ...account, logout, googleLogin: () => loginWithPreview('googleLogin'), guestLogin: () => loginWithPreview('guestLogin') };
@@ -598,6 +600,19 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
     if (editing && value !== 'week') { showToast(t('finishEditing')); return; }
     setPlanView(value); setPlanScreen('overview');
   };
+  useBackNavigation(activeTab !== 'train', () => {
+    if (editing || savingPlan) { showToast(t('finishEditing')); return; }
+    navigate('train');
+  }, 10);
+  useBackNavigation(activeTab === 'plan' && (planView !== 'week' || planScreen !== 'overview' || periodCreating), () => {
+    if (editing || savingPlan || generating) { showToast(t('finishEditing')); return; }
+    if (planScreen === 'assign' && assignment) { setPlanScreen(assignment.returnScreen); return; }
+    setPlanScreen('overview'); setPlanView('week'); setPeriodCreating(false);
+  }, 20);
+  // Preserve the existing explicit Save/Cancel behavior of weekly edits.
+  useBackNavigation(editing, () => showToast(t('finishEditing')), 40);
+  useBackNavigation(!!saveWorkoutDay, () => setSaveWorkoutDay(null), 100);
+  useBackNavigation(!!shareRequest, () => setShareRequest(null), 100);
   const subnav = (items, value, change, label) => <div aria-label={label} role="group" className="segmented-control">{items.map(([id, key]) => <button key={id} type="button" aria-pressed={value === id} onClick={() => change(id)}>{t(key)}</button>)}</div>;
 
 

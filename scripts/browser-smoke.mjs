@@ -150,7 +150,8 @@ try {
     });
     await openDetails('分享與本週回饋'); await click('複製連結'); await waitText('課表連結已複製。');
     const publicLink = await page.evaluate(() => window.__workoutLink); assert.ok(publicLink.includes('#workout='));
-    await page.goto(publicLink, { waitUntil: 'networkidle2' }); await waitText('分享的羽球體能課表'); await clickSelector('[data-testid="shared-plan-day-toggle"]');
+    assert.equal(new URL(publicLink).origin, 'https://badminton-functional-fitness-planner.pages.dev');
+    await page.goto(`${siteUrl}${new URL(publicLink).hash}`, { waitUntil: 'networkidle2' }); await waitText('分享的羽球體能課表'); await clickSelector('[data-testid="shared-plan-day-toggle"]');
     assert.equal(await visibleCount('button[aria-pressed]'), 0, `${layout} share is read-only`); await waitText('準備組');
     await click('返回我的課表'); await waitText('本分頁暫存'); await monday();
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${layout} free preview fits viewport`);

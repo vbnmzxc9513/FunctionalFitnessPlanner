@@ -1,0 +1,99 @@
+{
+  "recordedAtUtc": "2026-10-21T05:02:28.709745+00:00",
+  "stage": "local debug prototype, unpublished",
+  "sourceBaseCommit": "6ab8aeb27322c3f0e2b0b342e4f4102fce5eb5e1",
+  "sourceState": "working tree; source hashes below identify native inputs",
+  "apkPath": "artifacts/android/fitness-planner-prototype-0.1.0.apk (ignored, not committed)",
+  "apkBytes": 8648155,
+  "apkSha256": "e3e429779b94b72c2b25649f81cf27c78c1c014d50fff27df997721659e274f2",
+  "certificateSha256": "A3:4B:5B:CA:6E:F2:8E:FA:3B:05:3D:DD:FC:9C:B0:B6:0E:D6:9E:9B:F0:26:AE:97:78:C3:F6:38:26:E0:23:E1",
+  "package": "io.github.vbnmzxc9513.functionalfitnessplanner.prototype",
+  "versionCode": 1,
+  "versionName": "0.1.0-prototype",
+  "minSdk": 24,
+  "targetSdk": 36,
+  "defaultOrigin": "https://badminton-functional-fitness-planner.pages.dev",
+  "compiledAssetStatements": [
+    {
+      "relation": [
+        "delegate_permission/common.handle_all_urls"
+      ],
+      "target": {
+        "namespace": "web",
+        "site": "https://badminton-functional-fitness-planner.pages.dev"
+      }
+    }
+  ],
+  "compiledManifest": {
+    "launchMode": "standard",
+    "autoVerify": true,
+    "appLinksHost": "badminton-functional-fitness-planner.pages.dev",
+    "fallback": "customtabs",
+    "webViewActivity": false,
+    "debuggable": true,
+    "allowBackup": false,
+    "usesCleartextTraffic": false,
+    "requestedPermissions": [
+      "io.github.vbnmzxc9513.functionalfitnessplanner.prototype.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+    ],
+    "manageDataActivityDeclared": true
+  },
+  "checks": {
+    "assembleDebug": "passed using scripts/android-build.sh --write-locks",
+    "apksigner": "passed; one private test signer; APK Signature Scheme v2",
+    "wrapperJarOfficialChecksum": "passed; Gradle 8.13 wrapper jar SHA256 matches upstream",
+    "compiledAssetStatementsJson": "passed; parsed twice from aapt dump --values resources to verify escaped JSON survives AAPT",
+    "scriptsEslintAndBashSyntax": "passed",
+    "productionManifestHttp": "not deployed: HTTP 200 text/html; scripts/android-check-site.mjs correctly rejected content type",
+    "deviceInstall": "passed: final fixed APK installed with adb install -r on API35 Google Play software emulator",
+    "googleLogin": "not run",
+    "twaDomainVerification": "not run; production DAL intentionally empty",
+    "androidAppLinksVerification": "not run",
+    "independentRootRebuild": "passed; independent rebuild and signature check; final APK includes reviewed startup crash fix",
+    "androidLintDebug": "passed: 0 errors, 16 warnings (pinned tooling update notice, generated resources/icons and backup descriptor)",
+    "associationFixtureMatchesActualApk": "passed; independently regenerated from verified APK",
+    "webUnitTests": "passed: 235",
+    "firebaseEmulatorIntegration": "passed: 56; includes interrupted guest migration and account isolation",
+    "webBuildPaths": "passed: GitHub Pages subpath and Cloudflare root, manifest/icon relative paths verified",
+    "deviceLaunch": "first candidate crashed: missing ManageDataLauncherActivity; fixed manifest and reinstalled. Post-fix launch blocked during observation by system Digital Wellbeing ANR on unaccelerated emulator; browser handoff not yet accepted"
+  },
+  "emulator": {
+    "version": "37.2.12.0 (16428233)",
+    "image": "system-images;android-35;google_apis_playstore;x86_64, revision 9",
+    "hardwareAcceleration": "unavailable: no /dev/kvm; accel-check reports CPU lacks vmx or svm",
+    "commandFlags": [
+      "-no-window",
+      "-no-audio",
+      "-no-boot-anim",
+      "-no-snapshot",
+      "-accel off",
+      "-gpu swiftshader",
+      "-memory 2048",
+      "-cores 2",
+      "-http-proxy (inherited HTTPS_PROXY)"
+    ],
+    "state": "final fixed APK installed; unaccelerated Android system reports Digital Wellbeing ANR during foreground launch",
+    "tls": "verification preserved; no ignore-certificate-errors flag; guest CA trust not yet configured"
+  },
+  "nativeSourceSha256": {
+    "android/app/build.gradle": "817813ea5020708e59803292a51b1c50dc8b3ed960706b97718458e6d1000c5b",
+    "android/build.gradle": "c418a1af00486f8975fdb8427c1acb7568e0692029e9391de062971f45656fbd",
+    "android/app/src/main/AndroidManifest.xml": "773d4e32ec2067017eb3af0cbb26e56c77129b227fd89f7c16c1d2bb40027ad8",
+    "android/app/src/main/java/io/github/vbnmzxc9513/functionalfitnessplanner/prototype/LauncherActivity.java": "1713a44a32c418c4456e83760c99a712d4c599896b07955f770ba14abf21fd47",
+    "android/twa-manifest.json": "e07b3d3fb6579541b121b7e23003d643676846992b38a4d11d9a242e8a7f748d",
+    "android/app/gradle.lockfile": "93eb7ba608a777f659c1d6db4c7d322812189d0885fdbf59ee9509ae4f6811f0",
+    "android/gradle/wrapper/gradle-wrapper.jar": "81a82aaea5abcc8ff68b3dfcb58b3c3c429378efd98e7433460610fecd7ae45f",
+    "android/gradle/wrapper/gradle-wrapper.properties": "c040b6ef2fb893ff5beea5a281614f2848f1c3996a7886f650b713f8240656a2",
+    "android/prototype-tooling.json": "d7270376fc7c497cb447c1397bacb7c134302a71094ad2f179171592855a0d20",
+    "scripts/android-build.sh": "125c68525b6de0da076ded90f481eadd2e25b97748c7a73c46322255cb5ba916",
+    "scripts/android-association.mjs": "f86f74ab837e4c82f71e170fa707c6118bd82cc0826207fe566731cb2c98eb94",
+    "android/app/src/main/java/io/github/vbnmzxc9513/functionalfitnessplanner/prototype/DelegationService.java": "4b239680933d1872943a6cbed2501fd0a38301a231e705b507ee0f3c5d7f8b1a"
+  },
+  "limitations": [
+    "No deployment or official-domain trust association performed",
+    "No real Google account authorization",
+    "Device login, cloud sync, valid share import, back navigation, export and upgrade acceptance remain unverified",
+    "Debug prototype and its private test key do not replace final signed release acceptance"
+  ],
+  "reviewedAtUtc": "2026-10-21T14:15:02.915544+00:00"
+}

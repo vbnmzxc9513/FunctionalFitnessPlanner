@@ -1,3 +1,4 @@
+import { useBackNavigation } from '../hooks/useBackNavigation.js';
 import { useId, useRef, useState } from 'react';
 import { ArrowLeft, Check, Loader2, Search, Star, X } from 'lucide-react';
 import { defaultManualPhaseType, filterManualExercises, manualExerciseRegions } from '../domain/manualPlanner.js';
@@ -42,6 +43,7 @@ export default function BatchExercisePicker({ exercises = {}, eligibleExercises 
   const [query, setQuery] = useState('');
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [reviewing, setReviewing] = useState(false);
+  useBackNavigation(reviewing, () => setReviewing(false), 70);
   const [limit, setLimit] = useState(24);
   const [pendingId, setPendingId] = useState(null);
   const [organizeError, setOrganizeError] = useState('');

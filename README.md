@@ -111,6 +111,14 @@
 
 預設開發路徑為 `http://localhost:5173/FunctionalFitnessPlanner/`。Firebase Web 設定可透過 `.env.local` 覆寫，參考 [.env.example](.env.example)。未覆寫時會連到原本的 Firebase 專案；測試使用 demo 專案與本機模擬器。
 
+## Android 測試原型與維護
+
+Android 使用 TWA 開啟既有網站，課表與介面只有一套 React 程式。一般網站修改沿用原本的網站建置／部署；登入同一帳號的雲端資料可共用，不需要為每次網站更新重建 APK。
+
+外殼名稱、網址與版本集中在 [twa-manifest.json](android/twa-manifest.json)，Android SDK 與依賴版本集中在 [prototype-tooling.json](android/prototype-tooling.json)。本機以 `scripts/android-build.sh` 建置。此階段只有測試包，尚未提供正式簽章、Actions 發布或全螢幕網域驗收。
+
+建置方法、哪些改動需要新 APK、回歸測試與未驗收事項見 [Android 原型與維護說明](docs/android-prototype.md)，審核結論見 [Android 原型審查](docs/android-prototype-review.md)。
+
 ## 資料與操作行為
 
 - 登出或換帳號會重新載入該帳號資料，不沿用前一帳號的畫面狀態。裝置本機日期課表與紀錄另行保留；問卷依帳號及日期範圍暫存。跨週時 Today 讀取新一週的實際日期安排，已排的未來日期不會因此遺失。

@@ -52,6 +52,7 @@ try {
   await click('建立分享連結'); await page.waitForSelector('input[readonly]');
   const url = await page.$eval('input[readonly]', el => el.value);
   assert.match(url, /#program=[\w-]+$/);
+  assert.equal(new URL(url).origin, 'https://badminton-functional-fitness-planner.pages.dev');
   await page.evaluate(() => { window.sourceDays[0].routine = []; window.renderPlan(); });
   assert.equal(await page.$eval('input[readonly]', el => el.value), url, 'source edits cannot alter the captured share');
   await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async () => { throw new Error('Denied'); } } }));
