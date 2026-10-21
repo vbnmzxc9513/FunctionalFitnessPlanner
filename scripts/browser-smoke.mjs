@@ -100,8 +100,8 @@ try {
       const handle = await visibleElement('summary', text, true);
       if (!await handle.evaluate(summary => summary.parentElement.open)) await clickElement(handle); else await handle.dispose();
     };
-    const weekPlan = async () => { await click('課表'); await click('課表總覽'); await visibleElement('[data-testid="week-overview"]'); };
-    const selectMonday = async () => { await clickElement(await visibleElement('main button', TRANSLATIONS.zh.dayShort[0], true)); };
+    const weekPlan = async () => { await click('課表'); await visibleElement('[data-testid="week-overview"]'); await openDetails('規劃重點與部位平衡'); };
+    const selectMonday = async () => { await clickSelector('[data-testid="week-role-1"]'); };
     const monday = async () => { await weekPlan(); await selectMonday(); };
     const completion = name => `button[aria-label=${JSON.stringify(name)}][aria-pressed]`;
     const waitCompletion = (name, done) => page.waitForFunction((selector, value) => [...document.querySelectorAll(selector)].some(element => window.__smokeVisible(element) && element.getAttribute('aria-pressed') === String(value)), {}, completion(name), done);
@@ -150,7 +150,7 @@ try {
     });
     await openDetails('分享與本週回饋'); await click('複製連結'); await waitText('課表連結已複製。');
     const publicLink = await page.evaluate(() => window.__workoutLink); assert.ok(publicLink.includes('#workout='));
-    await page.goto(publicLink, { waitUntil: 'networkidle2' }); await waitText('分享的羽球體能課表');
+    await page.goto(publicLink, { waitUntil: 'networkidle2' }); await waitText('分享的羽球體能課表'); await clickSelector('[data-testid="shared-plan-day-toggle"]');
     assert.equal(await visibleCount('button[aria-pressed]'), 0, `${layout} share is read-only`); await waitText('準備組');
     await click('返回我的課表'); await waitText('本分頁暫存'); await monday();
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${layout} free preview fits viewport`);
@@ -278,13 +278,13 @@ try {
     await page.waitForFunction(() => document.querySelector('input[name="bodyFat"]')?.value === '18');
     assert.equal(await read('input[name="weight"]', input => input.value), '72');
     await weekPlan();
-    const oldWeek = (await read('[data-testid="week-overview"] .eyebrow', element => element.textContent)).split(' · ')[0];
+    const oldWeek = await read('[data-testid="week-overview"]', element => element.dataset.week);
     await page.evaluate(() => {
       const NativeDate = Date; const timestamp = Date.now() + 7 * 86400000;
       window.Date = class extends NativeDate { constructor(...args) { super(...(args.length ? args : [timestamp])); } static now() { return timestamp; } };
       window.dispatchEvent(new Event('focus'));
     });
-    await page.waitForFunction(week => !document.body.innerText.includes(week), {}, oldWeek);
+    await page.waitForFunction(week => !document.querySelector(`[data-testid="week-overview"][data-week="${week}"]`), {}, oldWeek);
     await visibleElement('[data-testid="planner-actions"]');
     await click('今天'); await visibleElement('[data-testid="first-plan"]');
     assert.equal(await visibleCount('section[data-phase] button[aria-pressed="true"]'), 0, `${layout} a new week begins without inherited completions or a default plan`);

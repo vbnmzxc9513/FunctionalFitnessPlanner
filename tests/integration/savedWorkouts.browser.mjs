@@ -42,6 +42,7 @@ try {
   const fill = async (selector, value) => {
     await page.$eval(selector, item => { item.focus(); item.select(); }); await page.keyboard.type(value);
   };
+  const openSaved = async name => { await page.waitForFunction(name => [...document.querySelectorAll('[data-testid="saved-workout-open"]')].some(item => item.innerText.includes(name)), {}, name); const item = (await page.evaluateHandle(name => [...document.querySelectorAll('[data-testid="saved-workout-open"]')].find(item => item.innerText.includes(name)), name)).asElement(); await item.click(); await item.dispose(); await page.waitForSelector('[data-testid="saved-workout-detail"]'); };
   const rows = () => page.evaluate(key => JSON.parse(localStorage.getItem(key) || '{"items":[]}').items, key);
   const open = async () => { await click('Open save'); await page.waitForSelector('dialog[open]'); };
   await page.goto(`http://127.0.0.1:${server.httpServer.address().port}/__saved-workouts-test.html`);
@@ -54,34 +55,34 @@ try {
     assert.ok(metrics.width <= width, `no overflow at ${width}`);
     assert.ok(metrics.buttons.every(([w, h]) => w >= 44 && h >= 44), `44px dialog controls at ${width}`);
   }
-  await fill('dialog[open] input', 'Shoulders'); await click('確認收藏'); await page.waitForFunction(() => !document.querySelector('dialog[open]'));
+  await fill('dialog[open] input', 'Shoulders'); await click('儲存到我的課表'); await page.waitForFunction(() => !document.querySelector('dialog[open]'));
   assert.equal((await rows()).length, 1);
   await page.reload(); await page.waitForSelector('article'); assert.match(await page.$eval('article', item => item.innerText), /Shoulders/);
-  await open(); await fill('dialog[open] input', ' shoulders '); await click('確認收藏');
+  await open(); await fill('dialog[open] input', ' shoulders '); await click('儲存到我的課表');
   await page.waitForFunction(() => document.querySelector('dialog[open] [role="alert"]')?.innerText.includes('已有同名收藏'));
   assert.equal((await rows()).length, 1);
-  await fill('dialog[open] input', 'Second workout'); await click('確認收藏'); await page.waitForFunction(() => !document.querySelector('dialog[open]'));
+  await fill('dialog[open] input', 'Second workout'); await click('儲存到我的課表'); await page.waitForFunction(() => !document.querySelector('dialog[open]'));
   const originalId = (await rows()).find(item => item.name === 'Second workout').id;
-  await click('重新命名 Second workout'); await fill('article form input', 'Renamed'); await click('儲存名稱');
-  await page.waitForFunction(() => [...document.querySelectorAll('article h3')].some(item => item.innerText === 'Renamed'));
+  await openSaved('Second workout'); await click('重新命名 Second workout'); await fill('article form input', 'Renamed'); await click('儲存名稱');
+  await page.waitForFunction(() => [...document.querySelectorAll('[data-testid="saved-workouts"] h2')].some(item => item.innerText === 'Renamed'));
   assert.equal((await rows()).find(item => item.name === 'Renamed').id, originalId);
 
   await open(); await fill('dialog[open] input', 'Storage must fail');
   await page.evaluate(key => { window.originalSetItem = Storage.prototype.setItem; Storage.prototype.setItem = function(name, value) { if (name === key) throw Error('quota'); return window.originalSetItem.call(this, name, value); }; }, key);
-  await click('確認收藏'); await page.waitForFunction(() => document.querySelector('dialog[open] [role="alert"]')?.innerText.includes('瀏覽器無法儲存'));
+  await click('儲存到我的課表'); await page.waitForFunction(() => document.querySelector('dialog[open] [role="alert"]')?.innerText.includes('瀏覽器無法儲存'));
   assert.equal((await rows()).length, 2); assert.equal(await page.$eval('[data-testid="saved-count"]', item => item.innerText), '1', 'failed save does not call onSaved');
-  await page.evaluate(() => { Storage.prototype.setItem = window.originalSetItem; }); await click('取消', 'dialog[open] footer button');
+  await page.evaluate(() => { Storage.prototype.setItem = window.originalSetItem; }); await page.click('dialog[open] [data-detail-close]');
   await click('刪除 Renamed'); await click('取消', 'dialog[open] footer button'); assert.equal((await rows()).length, 2, 'cancelled delete preserves collection');
   await click('刪除 Renamed'); await click('確認刪除收藏'); await page.waitForFunction(() => !document.querySelector('dialog[open]'));
   assert.deepEqual((await rows()).map(item => item.name), ['Shoulders']);
-  await click('選日期套用'); await click('分享 Shoulders');
+  await openSaved('Shoulders'); await click('選日期套用'); await click('分享 Shoulders');
   assert.equal(await page.evaluate(() => window.used), 'Shoulders'); assert.equal(await page.evaluate(() => window.shared), 'Shoulders');
   await click('Switch scope'); await page.waitForFunction(() => document.querySelector('[data-testid="scope"]').innerText === 'account');
   assert.equal(await page.$$eval('article', items => items.length), 0, 'old device items disappear on uid scope change');
   await click('Switch scope'); await page.waitForSelector('article');
-  await click('Language'); await page.waitForFunction(() => document.body.innerText.includes('My saved workouts')); await click('View contents');
-  assert.ok((await page.$eval('article ol', item => item.innerText)).includes('Warm-up'));
-  assert.ok((await page.$eval('article ol', item => item.innerText)).includes('Split squat'));
+  await click('Language'); await page.waitForFunction(() => document.body.innerText.includes('My saved workouts')); await openSaved('Shoulders');
+  assert.ok((await page.$eval('[data-testid="saved-workout-detail"]', item => item.innerText)).includes('Warm-up'));
+  assert.ok((await page.$eval('[data-testid="saved-workout-detail"]', item => item.innerText)).includes('Split squat'));
   assert.deepEqual(errors, []);
   console.log('Saved workouts browser checks passed: persistence/reload, duplicate retry, stable rename, quota failure, confirmed deletion, external callbacks, scope masking, bilingual content and 44px controls at 320/390/1440.');
 } finally { await browser.close(); await server.close(); }

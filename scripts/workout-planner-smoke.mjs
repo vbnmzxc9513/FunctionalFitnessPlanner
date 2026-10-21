@@ -79,10 +79,13 @@ try {
     step = `${layout}: open manual and select date`;
     await page.goto(site, { waitUntil: 'networkidle2' });
     await click('課表'); await clickSelector('[data-testid="open-manual-planner"]');
+    await clickSelector('[data-testid="manual-range-options"]');
     await visible('[data-testid="manual-range-from"]');
     const today = await page.$eval('[data-testid="manual-range-from"]', input => input.value);
     const firstDate = shiftManualDate(today, 2), secondDate = shiftManualDate(today, 9);
+    await clickSelector('[data-testid="manual-range-options"]');
     await fits('dates');
+    for (let attempt = 0; !await page.$(`[data-testid="manual-date-${firstDate}"]`) && attempt < 3; attempt++) await clickSelector('button[aria-label="下一個月"]');
     await clickSelector(`[data-testid="manual-date-${firstDate}"]`); await clickSelector('[data-testid="manual-start"]');
     assert.equal(await page.$$eval('[data-testid="session-plan-editor"] [data-exercise-id]', items => items.length), 0, `${layout}: a manual plan starts empty`);
     await fits('empty editor');
@@ -105,7 +108,9 @@ try {
     await page.screenshot({ path: `/tmp/planner-manual-${layout}.png`, fullPage: false });
     await clickSelector('[data-testid="batch-picker-add"]');
     await page.waitForFunction(() => document.activeElement?.dataset.testid === 'manual-add-strength');
-    assert.ok((await page.$eval('[data-testid="session-plan-editor"]', item => item.innerText)).includes('輕量準備組'), `${layout}: first lift preparation is visible`);
+    await clickSelector('[data-testid="session-plan-editor"] > .manual-secondary-details > summary');
+    assert.ok((await page.$eval('[data-testid="session-plan-editor"]', item => item.innerText)).includes('輕量準備組'), `${layout}: first lift preparation is available in expanded timing details`);
+    await clickSelector('[data-testid="session-plan-editor"] > .manual-secondary-details > summary');
     await clickSelector('[data-testid="manual-add-strength"]');
     await click('腿');
     assert.equal(await page.$eval('[data-testid="batch-option-bf_B01"]', item => item.disabled), true, `${layout}: existing exercise cannot be duplicated`);
@@ -115,7 +120,7 @@ try {
     await fill('[data-testid="manual-session-name"]', `腿部 A 課 ${layout}`);
     const edit = await page.evaluateHandle(() => document.querySelector('[data-exercise-id="bf_C11"] button[aria-label^="編輯"]'));
     await tap(edit.asElement());
-    const form = '[data-exercise-id="bf_C11"] form';
+    const form = 'dialog[open] form';
     await fill(`${form} input[type="number"]`, '3');
     await fill(`${form} input:not([type])`, '8');
     await fill(`${form} input[type="number"]:not([max="5"])`, '45');
@@ -146,10 +151,12 @@ try {
 
     step = `${layout}: save a named workout and reuse it on another day`;
     await visible('[data-testid="period-plan-preview"]'); await page.screenshot({ path: `/tmp/planner-overview-${layout}.png`, fullPage: false }); await clickSelector(`[data-testid="period-day-${firstDate}"]`); await clickSelector('[data-testid="save-period-day"]');
-    await fill('dialog[open] form input', `手動排課煙霧測試 ${layout}`); await click('確認收藏');
+    await fill('dialog[open] form input', `手動排課煙霧測試 ${layout}`); await clickSelector('[data-testid="save-workout-confirm"]');
     await page.waitForFunction(() => !document.querySelector('dialog[open]'));
-    await clickSelector('[data-testid="open-saved-workouts"]'); await visible('article');
-    assert.ok((await page.$eval('article', item => item.innerText)).includes(`手動排課煙霧測試 ${layout}`));
+    await click('返回課表');
+    await clickSelector('[data-testid="open-saved-workouts"]'); await visible('[data-testid="saved-workout-open"]'); await clickSelector('[data-testid="saved-workout-open"]');
+    await visible('[data-testid="saved-workout-detail"]');
+    assert.equal(await page.$eval('[data-testid="saved-workouts"] h2', item => item.innerText), `手動排課煙霧測試 ${layout}`);
     await click('選日期套用'); await click('逐天指定日期'); await fill('input[aria-label="第 1 天套用日期"]', secondDate);
     await clickSelector('[data-testid="assignment-preview"]'); await clickSelector('[data-testid="assignment-apply"]');
     await page.waitForFunction(date => JSON.parse(localStorage.getItem('fitness_date_period_v1')).sessionsByDate[date], {}, secondDate);
@@ -159,6 +166,7 @@ try {
     assert.deepEqual(plannedValues(reused.sessionsByDate[secondDate].prescriptions), plannedValues(before.prescriptions), `${layout}: reuse preserves phases, rest and preparation`);
 
     step = `${layout}: find the original scheduled week without changing data`;
+    await clickSelector('.planner-browse-details > summary');
     await visible('[data-testid="local-plan-view"]');
     await page.select('[data-testid="local-plan-view"]', applied.week);
     await visible(`[data-testid="period-day-${firstDate}"]`);
@@ -168,7 +176,7 @@ try {
     await visible(`[data-testid="period-day-${secondDate}"]`);
 
     step = `${layout}: share a copy from saved workouts`;
-    await clickSelector('[data-testid="open-saved-workouts"]'); await clickSelector(`article button[aria-label="分享 手動排課煙霧測試 ${layout}"]`);
+    await clickSelector('[data-testid="open-saved-workouts"]'); await clickSelector('[data-testid="saved-workout-open"]'); await clickSelector(`article button[aria-label="分享 手動排課煙霧測試 ${layout}"]`);
     await click('建立分享連結'); await visible('[role="dialog"] input[readonly]');
     const link = await page.$eval('[role="dialog"] input[readonly]', item => item.value);
     const payload = decodePlanPayload(new URL(link).hash.slice('#program='.length));
@@ -192,7 +200,7 @@ try {
       const handle = (await recipient.evaluateHandle(label => [...document.querySelectorAll('button')].find(item => item.innerText === label), label)).asElement();
       await handle.evaluate(item => item.scrollIntoView({ block: 'center', behavior: 'instant' })); await handle.click(); await handle.dispose();
     };
-    await recipientClick('匯入我的課表');
+    await recipientClick('選日期，匯入我的課表');
     await recipient.waitForSelector('[data-testid="assignment-preview"]');
     await recipientClick('檢查日期並預覽');
     await recipient.waitForSelector('[data-testid="assignment-apply"]');

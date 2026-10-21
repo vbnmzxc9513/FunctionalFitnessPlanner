@@ -39,11 +39,15 @@ try {
     await click('[data-testid="warmup-familiar"]'); await click('[data-testid="setup-next"]');
     assert.ok(await page.$eval('[data-testid="review-planning-conditions"]', item => item.innerText.includes('90')));
     await click('[data-testid="plan-preview-create"]'); await page.waitForSelector('[data-testid="period-plan-preview"]');
+    await click('[data-testid="period-plan-conditions"] > summary');
     assert.ok(await page.$eval('[data-testid="planning-conditions"]', item => item.innerText.includes('90')));
     await click('[data-testid="period-day-2026-10-19"]');
+    await click('[data-testid="period-day-detail"] > details > summary');
     assert.ok(await page.$eval('[data-testid="period-day-reason"]', item => item.innerText.trim().length > 0));
     assert.ok(await page.$('[data-testid="exercise-open-bf_A13"]'));
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+    await click('[data-testid="period-day-detail"] > button');
+    await page.waitForSelector('[data-testid="period-plan-apply"]', { visible: true });
     if (layout === 'mobile') {
       assert.ok(await page.$eval('.preview-actions', item => item.getBoundingClientRect().height < 110), 'mobile actions remain compact');
       await page.setViewport({ width: 320, height: 844, isMobile: true, hasTouch: true });

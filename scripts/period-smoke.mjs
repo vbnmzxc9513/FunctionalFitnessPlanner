@@ -1,4 +1,5 @@
 import { closeExerciseDetails } from './exercise-details-helpers.mjs';
+import { closePlanningFlow } from './planner-flow-helpers.mjs';
 import assert from 'node:assert/strict';
 import { writeFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
@@ -35,15 +36,18 @@ try {
     const visible = selector => page.waitForSelector(selector, { visible: true });
     const clickSelector = async selector => { const element = await visible(selector); await element.evaluate(item => item.scrollIntoView({ block: 'center', behavior: 'instant' })); await element.click(); await element.dispose(); };
     const click = async text => {
-      if (['課表', '今天', '紀錄', '設定', 'Plan', 'Today', 'Records', 'Settings'].includes(text)) await closeExerciseDetails(page);
+      if (['課表', '今天', '紀錄', '設定', 'Plan', 'Today', 'Records', 'Settings'].includes(text)) { await closeExerciseDetails(page); await closePlanningFlow(page); }
       await page.waitForFunction(label => [...document.querySelectorAll('button')].some(item => item.innerText.trim() === label && item.getClientRects().length && !item.closest('[hidden]') && !item.matches(':disabled')), {}, text);
       const handle = await page.evaluateHandle(label => [...document.querySelectorAll('button')].find(item => item.innerText.trim() === label && item.getClientRects().length && !item.closest('[hidden]') && !item.matches(':disabled')), text);
       await handle.asElement().evaluate(item => item.scrollIntoView({ block: 'center', behavior: 'instant' })); await handle.asElement().click(); await handle.dispose();
     };
+    const open = async selector => { const details = await visible(selector); if (!await details.evaluate(element => element.open)) await clickSelector(`${selector} > summary`); await details.dispose(); };
     const fill = async (selector, value) => { const input = await visible(selector); await input.evaluate((item, value) => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(item, value); item.dispatchEvent(new Event('input', { bubbles: true })); item.dispatchEvent(new Event('change', { bubbles: true })); }, value); await input.dispose(); };
     const draft = () => page.evaluate(() => JSON.parse(localStorage.getItem('fitness_date_period_v1') || 'null'));
     const preview = async () => {
       await clickSelector('[data-testid="plan-preview-create"]'); await visible('[data-testid="period-plan-preview"]');
+      assert.equal(await page.$eval('[data-testid="period-plan-conditions"]', item => item.open), false, `${layout}: planning conditions start collapsed`);
+      await open('[data-testid="period-plan-conditions"]');
       assert.equal(await page.$$eval('[data-testid="period-mobility-overview"] [data-mobility-area]', items => items.length), 8, `${layout}: preview lists all eight mobility regions`);
       assert.equal(await page.$eval('[data-testid="period-mobility-overview"]', item => item.open), false, `${layout}: regional detail stays collapsed`);
       await clickSelector('[data-testid="period-mobility-overview"] summary');
@@ -70,7 +74,7 @@ try {
     assert.equal(await page.$$eval('[data-week]', items => items.length), 2);
     await clickSelector(`[data-testid="period-day-${shift(3)}"]`); await visible('[data-testid="period-day-detail"]');
     assert.equal(await page.$$eval('[data-testid="period-plan-preview"] [data-testid^="exercise-log-"]', items => items.length), 0, `${layout}: preview offers no private logging`);
-    await click('返回修改條件'); await click('上一步'); await click('上一步');
+    await click('返回課表'); await click('返回修改條件'); await click('上一步'); await click('上一步');
     assert.equal(await page.$eval('[data-testid="planner-form"] select', item => item.value), 'strength');
     await click('下一步'); await click('下一步'); await preview(); await clickSelector('[data-testid="period-plan-apply"]');
     await page.waitForFunction(() => !!localStorage.getItem('fitness_date_period_v1'));
@@ -100,7 +104,12 @@ try {
     await click('課表'); await visible('[data-testid="period-plan-preview"]');
     assert.ok((await draft()).sessionsByDate[shift(7)], `${layout}: next week retains already planned dates`);
     await click('設定'); await click('🌐 English'); await click('Plan'); await visible('[data-testid="period-plan-preview"]');
-    assert.equal(await page.$eval('[data-testid="period-plan-preview"] h2', item => item.innerText), 'Saved plan by date', `${layout}: saved overview controls are localized`);
+    assert.equal(await page.$eval('[data-testid="planner-actions"] h2', item => item.innerText), 'Weekly plan', `${layout}: saved weekly overview title is localized`);
+    const displayedWeek = getWeekString(new Date(`${shift(5)}T12:00:00`));
+    const displayedDates = Array.from({ length: 7 }, (_, index) => dateForWeekDay(displayedWeek, index + 1));
+    assert.deepEqual(await page.$$eval('[data-testid="period-plan-preview"] .period-agenda-row', items => items.map(item => item.dataset.testid.slice('period-day-'.length))), displayedDates, `${layout}: saved agenda shows the real current-week date range`);
+    assert.equal(await page.$eval('[data-testid="planner-actions"] .planner-week-nav strong', item => item.innerText), `${displayedDates[0].slice(5).replace('-', '/')} — ${displayedDates[6].slice(5).replace('-', '/')}`, `${layout}: localized overview range matches its agenda`);
+    assert.equal(await page.$eval('.period-agenda-heading h3', item => item.innerText), 'This week’s plan', `${layout}: agenda heading is localized`);
     await click('Plan another date range');
     await fill('[data-testid="planning-range"] input', shift(5));
     await clickSelector('[data-testid="planning-range-continue"]'); await click('Next'); await click('Next'); await preview();

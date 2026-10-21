@@ -41,9 +41,14 @@ try {
   for (const width of [320, 390, 1440]) {
     await page.setViewport({ width, height: 844 });
     const layout = await page.evaluate(() => ({ width: innerWidth, scroll: document.documentElement.scrollWidth,
-      targets: [...document.querySelectorAll('button,input')].filter(el => !el.disabled).map(el => { const r = el.getBoundingClientRect(); return [r.width, r.height]; }) }));
+      targets: [...document.querySelectorAll('button,input')].filter(el => !el.disabled).map(el => { const target = el.type === 'checkbox' ? el.closest('label') || el : el; const r = target.getBoundingClientRect(); return [r.width, r.height]; }) }));
     assert.ok(layout.scroll <= width); assert.ok(layout.targets.every(([w, h]) => w >= 44 && h >= 44));
   }
+  const firstDay = '[data-testid="plan-share-day-0"]';
+  await page.$eval(firstDay, el => el.closest('label').click());
+  assert.equal(await page.$eval(firstDay, el => el.checked), false, 'the whole share-day label toggles its checkbox');
+  await page.$eval(firstDay, el => el.closest('label').click());
+  assert.equal(await page.$eval(firstDay, el => el.checked), true);
   await click('建立分享連結'); await page.waitForSelector('input[readonly]');
   const url = await page.$eval('input[readonly]', el => el.value);
   assert.match(url, /#program=[\w-]+$/);
@@ -63,15 +68,15 @@ try {
   await click('登入建立短連結'); assert.equal(await page.evaluate(() => window.signInClicked), true);
   await page.evaluate(() => window.renderPlan({ key: 'english', lang: 'en', days: [{ routine: ['custom-private'] }] }));
   await page.waitForFunction(() => document.querySelector('[role="alert"]')?.innerText.includes('Custom'));
-  assert.equal(await page.$eval('button.bg-sky-700', el => el.disabled), true);
+  assert.equal(await page.$eval('[data-testid="plan-share-create"]', el => el.disabled), true);
   await page.evaluate(() => window.renderShared(true, true));
   await page.waitForSelector('main[aria-label="分享的羽球體能課表"]');
   assert.ok(await page.$('section[data-phase="strength"]'), 'legacy phase selectors remain available');
-  assert.equal(await page.$$eval('button', els => els.find(el => el.innerText === '匯入我的課表').disabled), true, 'auth loading gates local import');
+  assert.equal(await page.$$eval('button', els => els.find(el => el.dataset.testid === 'shared-plan-import').disabled), true, 'auth loading gates local import');
   await page.evaluate(() => window.renderShared());
   await page.waitForFunction(() => [...document.querySelectorAll('h1')].some(el => el.innerText === 'Imported plan'));
   assert.equal(await page.$$eval('[data-testid="workout-plan-summary"]', els => els.length), 2);
-  await click('匯入我的課表'); await page.waitForSelector('[data-testid="apply-workout-plan"]');
+  await click('選日期，匯入我的課表'); await page.waitForSelector('[data-testid="apply-workout-plan"]');
   assert.equal(await page.evaluate(() => window.exits || 0), 0, 'import opens date mapping instead of exiting');
   await click('逐天指定日期');
   await page.$eval('input[aria-label="第 2 天套用日期"]', el => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, '2026-10-27'); el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); });
@@ -88,7 +93,7 @@ try {
   await click('查看我的課表'); assert.equal(await page.evaluate(() => window.exits), 1);
   await page.evaluate(() => window.renderOldShared());
   await page.waitForFunction(() => [...document.querySelectorAll('h1')].some(el => el.innerText === '分享的羽球體能課表'));
-  await click('匯入我的課表'); await page.waitForSelector('[data-testid="assignment-preview"]');
+  await click('選日期，匯入我的課表'); await page.waitForSelector('[data-testid="assignment-preview"]');
   await page.click('[data-testid="assignment-preview"]');
   await page.waitForFunction(() => [...document.querySelectorAll('button')].some(el => el.innerText === '先編輯這份副本'));
   await click('先編輯這份副本'); await page.waitForSelector('[data-testid="manual-planner"]');

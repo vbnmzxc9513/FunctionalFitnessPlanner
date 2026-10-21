@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { ChevronRight, Zap } from 'lucide-react';
+import './workout-sharing.css';
 import { catalogExercises } from '../domain/exerciseCatalog.js';
 import { createSharePayload, shareDay } from '../domain/sharing.js';
 import { rebuildPlanDays, validatePlanPayload } from '../domain/sharedPlans.js';
@@ -87,31 +89,27 @@ function SharedWorkoutContent({ payload, lang = 'zh', onExit, uid, today = local
     onPreview={sessions => { setEditedDays(sessions); setEditing(null); setApplying(true); }} onCancel={() => { setEditing(null); setApplying(true); }} /></main>;
   if (applying && days.length && !authLoading) return <main className="max-w-3xl mx-auto px-4 py-8" aria-label={t.title}><ApplyWorkoutPlan {...{ days, name, uid, today, exercises, lang, localPeriod, onLocalPeriod }} initialDates={editedDays?.map(day => day.date)} onEdit={sessions => { setApplying(false); setEditing(sessions); }} onApplied={() => { setApplying(false); setApplied(true); }} onCancel={() => setApplying(false)} /></main>;
   if (applied) return <main className="max-w-2xl mx-auto px-4 py-8 space-y-5" aria-label={t.title}><section className="panel space-y-4"><h1 className="screen-title">{t.done}</h1><p role="status">{t.doneHint}</p><button type="button" className="button-primary min-h-11" onClick={onExit}>{t.view}</button></section></main>;
-  return <main className="max-w-2xl mx-auto px-4 py-8 space-y-5" aria-label={t.title}>
-    <header className="bg-white rounded-2xl border border-sky-100 p-5 space-y-3">
-      <p className="text-sky-600 font-semibold text-sm">Fitness Planner</p>
-      <h1 className="font-bold text-xl text-slate-800">{name}</h1>
-      {loading ? <p role="status">{t.loading}</p> : <p role={days.length ? undefined : 'alert'} className="text-sm text-slate-600">{days.length ? t.intro : payload?.error === 'PLAN_SHARE_TOO_LONG' ? t.tooLong : loadError === 'SHARED_PLAN_NOT_FOUND' ? t.notFound : loadError ? t.loadFailed : t.invalid}</p>}
-      {!!id && !!loadError && <button type="button" className="button-secondary min-h-11" onClick={() => { setRemote(null); setLoadError(null); setAttempt(value => value + 1); }}>{t.retry}</button>}
-      {day && day.routine.length > 0 && <p className="text-sm font-semibold text-sky-800">~ {estimateSessionMinutes(day, exercises)} {t.minutes}</p>}
-      {!!days.length && <><p role={authLoading ? 'status' : undefined} className="text-sm text-slate-600">{authLoading ? t.signingIn : uid ? t.account : t.device}</p><button type="button" disabled={authLoading} onClick={() => setApplying(true)} className="min-h-11 rounded-xl bg-sky-700 text-white px-5 py-3 font-semibold disabled:opacity-50">{t.import}</button>{!uid && onSignIn && <button type="button" disabled={authLoading} onClick={onSignIn} className="button-secondary min-h-11">{t.signIn}</button>}</>}
-      <button type="button" onClick={onExit} className="min-h-11 rounded-xl border border-slate-200 px-5 py-3 font-semibold">{t.back}</button>
-    </header>
-    {!legacy && days.map((value, index) => <section key={index} className="panel space-y-3" aria-label={`${t.day} ${index + 1} ${t.daySuffix}`}><h2 className="text-lg font-bold text-slate-800">{t.day} {index + 1} {t.daySuffix}{value.theme && ![`第${index + 1}天`, `Day${index + 1}`].includes(value.theme.replace(/\s/g, '')) ? ` · ${value.theme}` : ''}</h2><p className="text-sm text-slate-500">{t.offset} {value.offset} {lang === 'en' ? '' : '天'}</p><WorkoutPlanSummary day={value} exercises={exercises} lang={lang} /></section>)}
-    {day && !day.routine.length && <p className="bg-white rounded-xl p-5 text-slate-600">{t.empty}</p>}
-    {sections.filter(section => section.items.length || section.preparation.length).map(section => <section key={section.phase} data-phase={section.phase} className="space-y-3" aria-label={t.phases[section.phase]}>
-      <h2 className="font-bold text-sky-800">{t.phases[section.phase]}</h2>
-      {section.items.map(({ id, dose }) => <article key={id} className="bg-white rounded-xl border border-sky-100 p-4 space-y-2">
-        <h3 className="font-semibold text-slate-800">{++number}. {exercises[id].name}</h3>
-        <p className="text-sm text-slate-600">{doseText(dose)}</p>
-        <p className="text-xs text-slate-500">{exercises[id].tip}</p>
-      </article>)}
-      {section.preparation.map(({ id, dose }) => <article key={`prep_${id}`} className="rounded-xl bg-amber-50 border border-amber-100 p-4 space-y-2">
-        <h3 className="font-semibold text-amber-800">{t.prep} · {exercises[id].name}</h3>
-        <p className="text-sm text-slate-600">{doseText(dose)}</p>
-        <p className="text-xs text-slate-600">{dose.instruction} {t.prepHint}</p>
-      </article>)}
-    </section>)}
-    {day?.routine.length > 0 && !sections.find(section => section.phase === 'cooldown')?.items.length && <p className="text-sm text-slate-500">{t.noFinish}</p>}
-  </main>;
+  const en = lang === 'en';
+  const duration = days.map(value => estimateSessionMinutes(value, exercises));
+  const durationLabel = duration.length ? Math.min(...duration) === Math.max(...duration) ? String(duration[0]) : `${Math.min(...duration)}–${Math.max(...duration)}` : '—';
+  // Catalog equipment alternatives are displayed as alternatives, not requirements from the author's profile.
+  const equipment = [...new Set(days.flatMap(value => value.routine.flatMap(id => (exercises[id]?.equipmentOptions?.[0] || []))))];
+  const labels = TRANSLATIONS[lang] || TRANSLATIONS.zh;
+  const stages = value => [...new Set(value.prescriptions.map(dose => ['skill', 'strength', 'accessory'].includes(dose.phase) ? en ? 'Training' : '訓練' : { warmup: en ? 'Warm-up' : '暖身', recovery: en ? 'Recovery' : '恢復', cooldown: en ? 'Cool-down' : '收操' }[dose.phase]))].join(' → ');
+  const legacyContents = <>{day && !day.routine.length && <p>{t.empty}</p>}{sections.filter(section => section.items.length || section.preparation.length).map(section => <section key={section.phase} data-phase={section.phase} className="shared-plan-phase" aria-label={t.phases[section.phase]}><h3>{t.phases[section.phase]}</h3>{section.items.map(({ id, dose }) => <article key={id}><h4>{++number}. {exercises[id].name}</h4><p>{doseText(dose)}</p><p className="workout-ui-muted">{exercises[id].tip}</p></article>)}{section.preparation.map(({ id, dose }) => <article key={`prep_${id}`}><h4>{t.prep} · {exercises[id].name}</h4><p>{doseText(dose)}</p><p className="workout-ui-muted">{dose.instruction} {t.prepHint}</p></article>)}</section>)}{day?.routine.length > 0 && !sections.find(section => section.phase === 'cooldown')?.items.length && <p className="workout-ui-muted">{t.noFinish}</p>}</>;
+  return <div className="shared-plan-page workout-ui">
+    <header className="shared-plan-brand"><span><Zap size={22} /></span><strong>{en ? 'Badminton Functional Fitness' : '羽球功能性健身'}</strong></header>
+    <main className="shared-plan-ui" aria-label={t.title}>
+      {days.length ? <>
+        <header className="workout-ui-card shared-plan-hero"><p className="shared-plan-eyebrow">{en ? 'A workout shared with you' : '朋友分享的課表'}</p><h1>{name}</h1><p className="workout-ui-muted">{days.length} {en ? 'planned days' : '天安排'} · {en ? 'Exercises and planned doses' : '動作與計畫組次'}</p><div className="shared-plan-stats"><div><strong>{days.length}</strong><span>{en ? 'days' : '天課表'}</span></div><div><strong>{durationLabel}</strong><span>{en ? 'min / day' : '分鐘／天'}</span></div><div><strong>{equipment.length}</strong><span>{en ? 'equipment types' : '種器材'}</span></div></div></header>
+        <section aria-labelledby="shared-plan-contents"><h2 id="shared-plan-contents">{en ? 'Preview the contents' : '先看看內容'}</h2><div className="workout-ui-card shared-plan-days">{days.map((value, index) => <details key={index} aria-label={`${t.day} ${index + 1} ${t.daySuffix}`} data-testid={`shared-plan-day-${index}`}><summary data-testid="shared-plan-day-toggle"><span className="workout-ui-number">{index + 1}</span><div><h3>{en ? `Day ${index + 1}` : `第 ${index + 1} 天`}{days.length === 1 ? ` · ${name}` : ''}</h3><p>{value.sessionType === 'training' ? en ? 'Training' : '訓練' : value.routine.length ? en ? 'Recovery' : '恢復' : en ? 'Rest' : '休息'} · {duration[index]} {t.minutes}{stages(value) ? ` · ${stages(value)}` : ''}</p></div><ChevronRight size={21} /></summary><div className="shared-plan-day-content"><p className="workout-ui-muted">{t.offset} {value.offset} {en ? 'days' : '天'}</p>{legacy ? legacyContents : <WorkoutPlanSummary day={value} exercises={exercises} lang={lang} />}</div></details>)}</div></section>
+        <section className="workout-ui-card"><h2>{en ? 'What to prepare' : '需要準備'}</h2><div className="workout-ui-tags">{equipment.length ? equipment.map(key => <span key={key}>{labels[`equipment_${key}`] || key}</span>) : <span>{en ? 'Bodyweight' : '徒手'}</span>}</div><p className="workout-ui-muted">{en ? 'Listed using the catalog equipment option. Check alternatives and adapt the copy before importing.' : '依內建動作的基本器材列出。匯入前可編輯副本，確認替代器材或更換不適合的動作。'}</p></section>
+        <section className="workout-ui-info"><h2>{en ? 'You choose the dates' : '日期由你決定'}</h2><p>{en ? 'This is a copy; it will not be added to your calendar automatically. Choose each date next. Your edits do not change the shared source.' : '這是課表副本，不會自動加入行事曆。下一步可逐天選日期；修改不影響分享者。'}</p></section>
+        <p className="workout-ui-muted">{t.intro}</p><p role={authLoading ? 'status' : undefined} className="workout-ui-muted">{authLoading ? t.signingIn : uid ? t.account : t.device}</p>
+        {!uid && onSignIn && <button type="button" disabled={authLoading} onClick={onSignIn} className="workout-ui-link">{t.signIn}</button>}
+        <footer className="shared-plan-import"><button type="button" data-testid="shared-plan-import" disabled={authLoading} onClick={() => setApplying(true)} className="workout-ui-primary">{en ? 'Choose dates and import my copy' : '選日期，匯入我的課表'}</button></footer>
+      </> : <section className="workout-ui-card"><h1>{name}</h1>{loading ? <p role="status">{t.loading}</p> : <p role="alert">{payload?.error === 'PLAN_SHARE_TOO_LONG' ? t.tooLong : loadError === 'SHARED_PLAN_NOT_FOUND' ? t.notFound : loadError ? t.loadFailed : t.invalid}</p>}{!!id && !!loadError && <button type="button" className="workout-ui-secondary" onClick={() => { setRemote(null); setLoadError(null); setAttempt(value => value + 1); }}>{t.retry}</button>}</section>}
+      <button type="button" onClick={onExit} className="workout-ui-link">{t.back}</button>
+    </main>
+  </div>;
 }

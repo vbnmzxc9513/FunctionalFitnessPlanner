@@ -1,5 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { Copy, Share2, X } from 'lucide-react';
+import { estimateSessionMinutes } from '../domain/sessions.js';
+import './workout-sharing.css';
 import { createPlanPayload, MAX_PLAN_NAME_LENGTH } from '../domain/sharedPlans.js';
 import { buildEmbeddedPlanUrl, buildSharedPlanUrl, createSharedPlan } from '../services/sharedPlanRepository.js';
 
@@ -40,18 +42,22 @@ export default function PlanShareDialog({ days, name, exercises, level = 1, uid,
   const panel = useRef(null), input = useRef(null), pending = useRef(false);
   const [publicName, setPublicName] = useState((name || t.defaultName).slice(0, MAX_PLAN_NAME_LENGTH));
   const [created, setCreated] = useState(null);
+  const [selected, setSelected] = useState(() => days.map((_, index) => index));
+  const selectedDays = days.filter((_, index) => selected.includes(index));
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
   const message = code => code === 'UNSUPPORTED_SHARE' ? t.unsupported : code === 'PLAN_SHARE_TOO_LONG' ? t.tooLong
     : code === 'SESSION_CHANGED' ? t.sessionChanged : ['INVALID_PLAN_SHARE', 'INVALID_SHARE'].includes(code) ? t.invalid : t.createFailed;
   let preview, previewError;
-  try { preview = created?.payload || createPlanPayload(days, { name: publicName, exercises, level }); }
+  try { preview = created?.payload || createPlanPayload(selectedDays, { name: publicName, exercises, level }); }
   catch (value) { previewError = value.message; }
   useEffect(() => {
     const prior = document.activeElement;
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     input.current?.focus();
-    return () => { if (prior instanceof HTMLElement && prior.isConnected) prior.focus(); };
+    return () => { document.body.style.overflow = overflow; if (prior instanceof HTMLElement && prior.isConnected) prior.focus(); };
   }, []);
 
   const create = async () => {
@@ -60,7 +66,7 @@ export default function PlanShareDialog({ days, name, exercises, level = 1, uid,
     try {
       // Capture exactly once at the user's create action. Neither props changing
       // during the request nor later source edits can alter the published copy.
-      const payload = createPlanPayload(days, { name: publicName, exercises, level });
+      const payload = createPlanPayload(selectedDays, { name: publicName, exercises, level });
       const url = uid ? buildSharedPlanUrl(await createSharedPlan(uid, payload)) : buildEmbeddedPlanUrl(payload);
       setCreated({ payload, url }); setStatus(t.created);
     } catch (value) { setError(value.message || 'CREATE_FAILED'); }
@@ -79,25 +85,31 @@ export default function PlanShareDialog({ days, name, exercises, level = 1, uid,
   const keyDown = event => {
     if (event.key === 'Escape' && !busy) { event.preventDefault(); onClose?.(); }
     if (event.key !== 'Tab') return;
-    const controls = [...panel.current.querySelectorAll('button:not(:disabled),input:not(:disabled),a[href]')];
+    const controls = [...panel.current.querySelectorAll('button:not(:disabled),input:not(:disabled),a[href],summary')];
     if (!controls.length) return;
     const first = controls[0], last = controls.at(-1);
     if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
     else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
   };
-  return <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/40 p-3 sm:p-6">
-    <section ref={panel} role="dialog" aria-modal="true" aria-labelledby={headingId} aria-describedby={privacyId} onKeyDown={keyDown} className="mx-auto w-full max-w-xl space-y-4 rounded-2xl bg-white p-5 shadow-xl">
-      <div className="flex items-center justify-between gap-3"><h2 id={headingId} className="text-xl font-bold text-slate-900">{t.title}</h2><button type="button" aria-label={t.close} disabled={busy} onClick={onClose} className="flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-slate-200 disabled:opacity-50"><X size={20} /></button></div>
-      <p id={privacyId} className="text-sm text-slate-600">{t.privacy}</p>
-      <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">{t.permanent}</p>
-      <div><label htmlFor={nameId} className="mb-1 block text-sm font-semibold text-slate-700">{t.name}</label><input ref={input} id={nameId} maxLength={MAX_PLAN_NAME_LENGTH} disabled={busy || !!created} value={publicName} onChange={event => setPublicName(event.target.value)} className="min-h-11 w-full rounded-lg border border-slate-300 p-3 disabled:bg-slate-50" /></div>
-      {preview && <div className="rounded-xl border border-slate-200 p-3 text-sm"><p className="font-semibold">{preview.days.length} {t.days} · {preview.days.reduce((sum, day) => sum + day.items.length, 0)} {t.actions}</p><ol className="mt-2 space-y-1 text-slate-600">{preview.days.map((day, index) => <li key={index}>{lang === 'en' ? `Day ${index + 1}` : day.name} · {t.offset} {day.offset} {t.interval} · {day.items.length} {t.actions}</li>)}</ol></div>}
-      <p className="text-sm text-slate-600">{uid ? t.signed : t.guest}</p>
-      {(error || previewError) && <p role="alert" className="text-sm text-amber-900">{message(error || previewError)}</p>}
-      {!created && <button type="button" disabled={busy || !!previewError} onClick={create} className="min-h-11 w-full rounded-xl bg-sky-700 px-4 py-3 font-semibold text-white disabled:opacity-50">{busy ? t.creating : t.create}</button>}
-      {!uid && error === 'PLAN_SHARE_TOO_LONG' && onSignIn && <button type="button" onClick={onSignIn} className="min-h-11 w-full rounded-xl border border-sky-700 px-4 py-3 font-semibold text-sky-800">{t.signIn}</button>}
-      {created && <><div className="flex flex-wrap gap-2"><button type="button" onClick={() => action('copy')} className="flex min-h-11 items-center gap-2 rounded-lg bg-sky-50 px-4 py-3 font-semibold text-sky-800"><Copy size={16} />{t.copy}</button>{typeof navigator.share === 'function' && <button type="button" onClick={() => action('share')} className="flex min-h-11 items-center gap-2 rounded-lg bg-slate-100 px-4 py-3"><Share2 size={16} />{t.share}</button>}</div><label className="block text-sm text-slate-600">{t.manual}<input readOnly value={created.url} onFocus={event => event.target.select()} className="mt-1 min-h-11 w-full rounded-lg border border-slate-300 p-3 text-sm" /></label></>}
-      <p role="status" aria-live="polite" className="text-sm text-slate-700">{status}</p>
+  const en = lang === 'en';
+  const minutes = day => { try { return estimateSessionMinutes(day, exercises); } catch { return '—'; } };
+  return <div className="plan-share-overlay workout-ui">
+    <section ref={panel} role="dialog" aria-modal="true" aria-labelledby={headingId} aria-describedby={privacyId} onKeyDown={keyDown} className="plan-share-ui" data-testid="plan-share-dialog">
+      <div className="plan-share-top"><button type="button" aria-label={t.close} disabled={busy} onClick={onClose} className="workout-ui-back"><X size={18} />{en ? 'Close' : '返回課表'}</button></div>
+      <header className="workout-ui-heading"><h2 id={headingId}>{en ? 'Share a workout plan' : '分享課表'}</h2><p>{en ? 'Choose the days to share. You do not have to share the whole week.' : '挑選要分享的天數，不必分享整週。'}</p></header>
+      <div className="workout-ui-form"><label htmlFor={nameId}>{t.name}</label><input ref={input} id={nameId} maxLength={MAX_PLAN_NAME_LENGTH} disabled={busy || !!created} value={publicName} onChange={event => { setPublicName(event.target.value); setError(''); }} /></div>
+      <section className="workout-ui-card plan-share-days" aria-label={en ? 'Days to share' : '選擇分享日期'}>
+        {days.map((day, index) => <label key={index} className={selected.includes(index) ? 'is-selected' : ''}><input type="checkbox" data-testid={`plan-share-day-${index}`} checked={selected.includes(index)} disabled={busy || !!created} onChange={() => { setSelected(previous => previous.includes(index) ? previous.filter(value => value !== index) : [...previous, index]); setError(''); setStatus(''); }} /><span><strong>{day.date ? `${day.date.slice(5).replace('-', '/')} · ` : days.length === 1 ? en ? 'Single day · ' : '單日課表 · ' : en ? `Day ${index + 1} · ` : `第 ${index + 1} 天 · `}{day.theme || day.name || publicName}</strong><small>{minutes(day)} {en ? 'min' : '分鐘'} · {day.routine.length} {t.actions}</small></span></label>)}
+      </section>
+      <section className="workout-ui-info"><h3>{en ? 'Shared information' : '分享內容'}</h3><p id={privacyId}>{en ? t.privacy : '只包含公開名稱、動作、計畫組次、休息、順序與相對間隔。不含健康資訊、實際重量或完成紀錄。'}</p></section>
+      <p className="workout-ui-muted">{t.permanent}</p>
+      {preview && <p className="workout-ui-muted" data-testid="plan-share-selection-summary">{en ? `${preview.days.length} of ${days.length} days selected. Recipients choose their own dates; relative gaps are preserved.` : `已選 ${preview.days.length}／${days.length} 天。接收者自行選日期，保留所選日期之間的間隔。`}</p>}
+      {!selected.length ? <p role="alert" className="workout-ui-error">{en ? 'Select at least one day to share.' : '請至少選擇一天分享。'}</p> : (error || previewError) && <p role="alert" className="workout-ui-error">{message(error || previewError)}</p>}
+      {!uid && error === 'PLAN_SHARE_TOO_LONG' && onSignIn && <button type="button" onClick={onSignIn} className="workout-ui-secondary">{t.signIn}</button>}
+      {created && <section className="workout-ui-card plan-share-created"><span className="workout-ui-success">✓ {en ? 'Share link created' : '分享連結已建立'}</span><label className="workout-ui-form">{t.manual}<input readOnly value={created.url} onFocus={event => event.target.select()} /></label><p className="workout-ui-muted">{t.created}</p><a className="workout-ui-link" href={created.url} target="_blank" rel="noreferrer">{en ? 'See the recipient preview' : '查看接收者會看到的畫面'} ›</a><button type="button" className="workout-ui-link" onClick={() => { setCreated(null); setStatus(''); setError(''); }}>{en ? 'Adjust sharing contents' : '調整分享內容'}</button>{typeof navigator.share === 'function' && <button type="button" onClick={() => action('share')} className="workout-ui-secondary"><Share2 size={16} />{t.share}</button>}</section>}
+      <details className="workout-ui-fineprint"><summary>{en ? 'Public information and storage' : '完整公開範圍與連結儲存'}</summary><p>{t.privacy}</p><p>{uid ? t.signed : t.guest}</p></details>
+      <p role="status" className="workout-ui-muted">{status}</p>
+      <footer className="workout-ui-actionbar"><div><strong>{en ? `Share ${created?.payload.days.length ?? selected.length} days` : `分享 ${created?.payload.days.length ?? selected.length} 天`}</strong><p>{en ? 'An independent copy' : '分享的是固定副本'}</p></div>{created ? <button type="button" onClick={() => action('copy')} className="workout-ui-primary"><Copy size={17} />{t.copy}</button> : <button type="button" data-testid="plan-share-create" disabled={busy || !!previewError || !selected.length} onClick={create} className="workout-ui-primary">{busy ? t.creating : t.create}</button>}</footer>
     </section>
   </div>;
 }

@@ -32,6 +32,8 @@ try {
     await conditions.evaluate(item => item.scrollIntoView({ block: 'center', behavior: 'instant' })); await conditions.click(); await conditions.dispose();
     assert.ok(await page.$eval('[data-testid="period-equipment-summary"]', item => /Dumbbell|啞鈴/.test(item.innerText)));
     assert.equal(!!await page.$('[data-testid="period-recovery-explanation"]'), intensity === 'hard');
+    const choices = await page.waitForSelector('[data-testid="weekly-choice-report"] > summary');
+    await choices.evaluate(item => item.scrollIntoView({ block: 'center', behavior: 'instant' })); await choices.click(); await choices.dispose();
     assert.equal(await page.$$eval('[data-choice-status="equipment"]', rows => rows.length), 0);
     if (intensity === 'hard') assert.ok(await page.$$eval('[data-choice-status="no_strength"]', rows => rows.length > 0));
     await page.$eval('[data-testid="period-mobility-overview"] summary', item => item.click());
