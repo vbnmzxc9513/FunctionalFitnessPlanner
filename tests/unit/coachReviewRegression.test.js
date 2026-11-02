@@ -1,3 +1,4 @@
+import { DAILY_WARMUP_IDS, isDailyWarmupComplete } from '../../src/domain/quickWorkouts.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { catalogExercises } from '../../src/domain/exerciseCatalog.js';
@@ -55,8 +56,8 @@ test('all ordinary warm-ups and court-day recovery use the eight-part stretching
   for (const recoveryState of ['normal', 'reduce', 'recover']) {
     const result = make({ recoveryState, weeklyExerciseIds: ['bf_A01'] });
     for (const day of result.sessions.filter(day => day.routine.length)) {
-      assert.equal(day.routine[0], 'bf_A13');
-      assert.equal(day.prescriptions[0].value, '10');
+      assert.deepEqual(day.routine.slice(0, 8), DAILY_WARMUP_IDS);
+      assert.equal(day.prescriptions[0].value, '4');
       assert.ok(!day.routine.some(id => ['bf_A01', 'bf_I01'].includes(id)));
       assert.ok(estimateSessionMinutes(day, exercises) <= 35);
     }
@@ -68,7 +69,7 @@ test('fatigue reduces actual formal work and extra step practice while preservin
   const normal = make({ badmintonMinutes: 120 });
   const reduced = make({ badmintonMinutes: 120, recoveryState: 'reduce' });
   assert.ok(formal(reduced).length < formal(normal).length);
-  assert.ok(reduced.sessions.filter(day => day.sessionType === 'training').every(day => day.routine[0] === 'bf_A13' && day.prescriptions.every(dose => dose.phase !== 'skill')));
+  assert.ok(reduced.sessions.filter(day => day.sessionType === 'training').every(day => isDailyWarmupComplete(day) && day.prescriptions.every(dose => dose.phase !== 'skill')));
   assert.ok(reduced.sessions.every(day => estimateSessionMinutes(day, exercises) <= 35));
 });
 
@@ -78,7 +79,7 @@ test('movement-limiting or unclear soreness avoids existing loaded work and the 
     assert.equal(formal(plan).length, 0);
     assert.ok(plan.sessions.every(day => day.routine.every(id => !mobilityAreas(id).some(area => ['hamstrings', 'hip_rotation', 'ankle'].includes(area)))));
   }
-  assert.ok(make({ sorenessRegions: ['posterior'], sorenessImpact: 'mild' }).sessions.some(day => day.routine.includes('bf_A13')));
+  assert.ok(make({ sorenessRegions: ['posterior'], sorenessImpact: 'mild' }).sessions.some(day => isDailyWarmupComplete(day)));
   for (const patch of [{ healthNotes: '肩部震波' }, { healthStatus: 'unknown' }, { healthNotes: 'new knee pain' }, { recoveryNotes: 'new weakness and numbness' }]) assert.ok(make(patch).sessions.every(day => !day.routine.length));
 });
 
@@ -107,14 +108,14 @@ test('familiarity confirms stretching only, not new taper strength or treatment 
   const range = { from: '2026-11-09', to: '2026-11-13' };
   const input = { time: 35, context: { ...context, competitionDate: '2026-11-16', warmupFamiliar: true } };
   const taper = generatePeriodPlan(exercises, input, range, { today: range.from });
-  assert.ok(taper.sessions.some(day => day.routine.includes('bf_A13')));
+  assert.ok(taper.sessions.some(day => isDailyWarmupComplete(day)));
   assert.equal(formal(taper).length, 0);
   const restricted = generatePeriodPlan(exercises, { ...input, context: { ...input.context, healthNotes: 'shoulder shockwave' } }, range, { today: range.from });
   assert.ok(restricted.sessions.every(day => !day.routine.length));
-  const earlier = make({}, { time: 25 });
-  const onlyCompactHistory = generatePeriodPlan(exercises, { time: 35, context: { ...context, competitionDate: '2026-11-16' } }, range, { today: range.from, previousSessions: earlier.sessions });
-  assert.ok(onlyCompactHistory.sessions.every(day => !day.routine.includes('bf_A13')), 'a familiar six-minute flow does not authorize a new ten-minute taper flow');
-  assert.ok(onlyCompactHistory.sessions.some(day => day.routine.includes('bf_A12')));
+  const onlyLegacyHistory = generatePeriodPlan(exercises, { time: 35, context: { ...context, competitionDate: '2026-11-16' } }, range,
+    { today: range.from, previousSessions: [{ date: '2026-10-19', routine: ['bf_A12'], prescriptions: [{ id: 'bf_A12', ...exercises.bf_A12.prescription, phase: 'recovery' }], sessionType: 'recovery' }] });
+  assert.ok(onlyLegacyHistory.sessions.every(day => !isDailyWarmupComplete(day)), 'legacy flow history does not authorize eight unfamiliar independent movements');
+  assert.ok(onlyLegacyHistory.sessions.every(day => !day.routine.includes('bf_A12')), 'legacy sequence is readable but no longer recommended');
   const restored = periodProfile({ ...input, context: { ...input.context, recoveryState: 'reduce', sorenessImpact: 'mild' } });
   assert.equal(restored.context.recoveryState, 'reduce');
   assert.equal(restored.context.warmupFamiliar, true);
@@ -122,5 +123,5 @@ test('familiarity confirms stretching only, not new taper strength or treatment 
 
 test('AI strategy uses the same stretching, recovery interpretation and complementary pattern rules', () => {
   const prompt = buildPlanningPrompt({ availableExercises: exercises, context, dailyTime: 35 });
-  for (const term of ['直接 bf_A13', '暖身不安排 bf_A01', '不能只減暖身', 'profile.recoveryState', '每週重置而永久漏推', '單腳穩定不應同堂兩個髖鉸鏈']) assert.ok(prompt.includes(term), term);
+  for (const term of ['八筆獨立 routine ID', '暖身不安排 bf_A01', '時間不足先減正式工作', 'profile.recoveryState', '每週重置而永久漏推', '單腳穩定不應同堂兩個髖鉸鏈']) assert.ok(prompt.includes(term), term);
 });

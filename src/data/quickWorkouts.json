@@ -1,0 +1,266 @@
+{
+  "schemaVersion": 1,
+  "workouts": [
+    {
+      "id": "hip-internal-rotation",
+      "version": 1,
+      "name": "髖內旋活動與控制",
+      "nameEn": "Hip internal rotation and control",
+      "description": "有支撐的髖轉換與兩種主動內旋；在舒適範圍練控制，不用力壓膝。",
+      "descriptionEn": "Supported hip switches and two active internal-rotation positions; practise control without forcing the knees.",
+      "bodyRegions": [
+        "hip"
+      ],
+      "purposes": [
+        "mobility",
+        "control"
+      ],
+      "applicablePhases": [
+        "training"
+      ],
+      "scope": "segment",
+      "tags": [
+        "hip",
+        "mobility",
+        "control"
+      ],
+      "equipmentSummary": "徒手、穩固椅子",
+      "equipmentSummaryEn": "Bodyweight; stable chair",
+      "prescriptions": [
+        {
+          "id": "bf_A15",
+          "sets": 1,
+          "value": "4",
+          "unit": "reps",
+          "restSeconds": 0,
+          "perSide": false,
+          "phase": "accessory"
+        },
+        {
+          "id": "bf_B16",
+          "sets": 1,
+          "value": "5",
+          "unit": "reps",
+          "restSeconds": 10,
+          "perSide": true,
+          "phase": "accessory"
+        },
+        {
+          "id": "bf_B17",
+          "sets": 1,
+          "value": "5",
+          "unit": "reps",
+          "restSeconds": 10,
+          "perSide": true,
+          "phase": "accessory"
+        }
+      ]
+    },
+    {
+      "id": "foot-arch-control",
+      "version": 1,
+      "name": "足弓支撐與單腳控制",
+      "nameEn": "Foot tripod and single-leg control",
+      "description": "先坐姿練足底接觸與腳趾分離，再扶物練單腳平衡；腳趾保持放鬆。",
+      "descriptionEn": "Practise seated foot contact and toe separation, then supported single-leg balance with relaxed toes.",
+      "bodyRegions": [
+        "foot_ankle"
+      ],
+      "purposes": [
+        "control"
+      ],
+      "applicablePhases": [
+        "training"
+      ],
+      "scope": "segment",
+      "tags": [
+        "foot_ankle",
+        "control"
+      ],
+      "equipmentSummary": "徒手、穩固椅子或牆面",
+      "equipmentSummaryEn": "Bodyweight; stable chair or wall",
+      "prescriptions": [
+        {
+          "id": "bf_B13",
+          "sets": 1,
+          "value": "5",
+          "unit": "reps",
+          "restSeconds": 10,
+          "perSide": true,
+          "phase": "accessory"
+        },
+        {
+          "id": "bf_B14",
+          "sets": 1,
+          "value": "4",
+          "unit": "reps",
+          "restSeconds": 10,
+          "perSide": true,
+          "phase": "accessory"
+        },
+        {
+          "id": "bf_B15",
+          "sets": 1,
+          "value": "20",
+          "unit": "seconds",
+          "restSeconds": 10,
+          "perSide": true,
+          "phase": "accessory"
+        }
+      ]
+    },
+    {
+      "id": "scapular-upward-rotation",
+      "version": 1,
+      "name": "肩胛上旋與上舉控制",
+      "nameEn": "Scapular upward rotation and overhead control",
+      "description": "牆面前伸、前臂牆滑與徒手上舉；肩胛可自然上旋，不以夾背取代上舉控制。",
+      "descriptionEn": "Wall reaching, forearm slides and unloaded arm raises; allow natural upward rotation rather than pinning the shoulder blades back.",
+      "bodyRegions": [
+        "scapula"
+      ],
+      "purposes": [
+        "control"
+      ],
+      "applicablePhases": [
+        "training"
+      ],
+      "scope": "segment",
+      "tags": [
+        "scapula",
+        "control"
+      ],
+      "equipmentSummary": "徒手、牆面",
+      "equipmentSummaryEn": "Bodyweight; wall",
+      "prescriptions": [
+        {
+          "id": "bf_A07",
+          "sets": 1,
+          "value": "6",
+          "unit": "reps",
+          "restSeconds": 0,
+          "perSide": false,
+          "phase": "accessory"
+        },
+        {
+          "id": "bf_C12",
+          "sets": 1,
+          "value": "6",
+          "unit": "reps",
+          "restSeconds": 0,
+          "perSide": false,
+          "phase": "accessory"
+        },
+        {
+          "id": "bf_C13",
+          "sets": 1,
+          "value": "6",
+          "unit": "reps",
+          "restSeconds": 0,
+          "perSide": false,
+          "phase": "accessory"
+        }
+      ]
+    },
+    {
+      "id": "daily-warmup",
+      "version": 1,
+      "name": "每日全身暖身",
+      "nameEn": "Daily whole-body warm-up",
+      "description": "八個獨立動作，包含左右側與換位時間。Y／T 與牆推為控制練習；下犬踩跟活動腿後側與小腿，未涵蓋所有大腿區域。",
+      "descriptionEn": "Eight independent movements with both sides and transitions. Y/T and wall pushes train control; heel pedals move the hamstrings and calves, not every thigh region.",
+      "bodyRegions": [
+        "full_body"
+      ],
+      "purposes": [
+        "mobility",
+        "control"
+      ],
+      "applicablePhases": [
+        "warmup"
+      ],
+      "scope": "segment",
+      "tags": [
+        "full_body",
+        "mobility",
+        "control"
+      ],
+      "equipmentSummary": "徒手、牆面、防滑地面",
+      "equipmentSummaryEn": "Bodyweight; wall; non-slip floor",
+      "prescriptions": [
+        {
+          "id": "bf_A16",
+          "sets": 1,
+          "value": "4",
+          "unit": "reps",
+          "restSeconds": 0,
+          "perSide": false,
+          "phase": "warmup"
+        },
+        {
+          "id": "bf_A17",
+          "sets": 1,
+          "value": "3",
+          "unit": "reps",
+          "restSeconds": 10,
+          "perSide": true,
+          "phase": "warmup"
+        },
+        {
+          "id": "bf_A10",
+          "sets": 1,
+          "value": "4",
+          "unit": "reps",
+          "restSeconds": 0,
+          "perSide": false,
+          "phase": "warmup"
+        },
+        {
+          "id": "bf_A18",
+          "sets": 1,
+          "value": "4",
+          "unit": "reps",
+          "restSeconds": 0,
+          "perSide": false,
+          "phase": "warmup"
+        },
+        {
+          "id": "bf_A07",
+          "sets": 1,
+          "value": "6",
+          "unit": "reps",
+          "restSeconds": 0,
+          "perSide": false,
+          "phase": "warmup"
+        },
+        {
+          "id": "bf_A06",
+          "sets": 1,
+          "value": "3",
+          "unit": "reps",
+          "restSeconds": 10,
+          "perSide": true,
+          "phase": "warmup"
+        },
+        {
+          "id": "bf_A15",
+          "sets": 1,
+          "value": "4",
+          "unit": "reps",
+          "restSeconds": 0,
+          "perSide": false,
+          "phase": "warmup"
+        },
+        {
+          "id": "bf_A19",
+          "sets": 1,
+          "value": "4",
+          "unit": "reps",
+          "restSeconds": 10,
+          "perSide": true,
+          "phase": "warmup"
+        }
+      ]
+    }
+  ]
+}

@@ -1,3 +1,4 @@
+import { MAX_DAY_EXERCISES, MAX_PLANNING_DAYS } from './plannerLimits.js';
 import { getWeekString, isCalendarDate } from './dates.js';
 import { exercisePhase, moveWithinPhase, SESSION_PHASES } from './phases.js';
 import { validateGeneratedDay } from './planning.js';
@@ -5,8 +6,8 @@ import { prescription } from './training.js';
 import { validSequenceDose } from './exerciseCatalog.js';
 import { matchesTrainingTarget } from './trainingTargets.js';
 
-export const MANUAL_MAX_EXERCISES = 8;
-export const MANUAL_MAX_DAYS = 28;
+export const MANUAL_MAX_EXERCISES = MAX_DAY_EXERCISES;
+export const MANUAL_MAX_DAYS = MAX_PLANNING_DAYS;
 export const MANUAL_TYPES = ['all', 'strength', 'dynamic', 'static', 'skill', 'other'];
 export const MANUAL_REGIONS = ['all', 'legs', 'chest', 'back', 'serratus', 'thoracic', 'hip', 'leg_stretch', 'shoulder', 'core'];
 const DAY_MS = 86400000;
@@ -41,7 +42,7 @@ export function createManualSession(date, lang = 'zh') {
     coachAdvice: text(lang, '依列出的計畫執行；不適時停止並調整。', 'Follow the listed plan; stop and adjust if uncomfortable.'),
     warmupNote: text(lang, '依列出的暖身與主項準備組進行；尚未加入暖身時，請先補齊再檢查。', 'Follow the listed warm-up and preparation sets. Add a warm-up before reviewing a training session.'),
     cooldownNote: text(lang, '依列出的收操進行；沒有收操動作時不需額外補做。', 'Follow the listed cooldown; no extra work is required when none is listed.'),
-    sessionType: 'rest', routine: [], prescriptions: [],
+    sessionType: 'rest', routine: [], prescriptions: [], explicitRest: false,
   };
 }
 
@@ -59,7 +60,8 @@ export function manualExerciseType(id, exercise = {}) {
 
 const MOBILITY_CODES = {
   thoracic: ['A06', 'A10', 'A11', 'A12', 'A13', 'H12'],
-  hip: ['A03', 'A04', 'A05', 'A12', 'A13', 'A15', 'H03', 'H04', 'H05', 'H06', 'H11'],
+  hip: ['A03', 'A04', 'A05', 'A12', 'A13', 'A15', 'A16', 'A17', 'B16', 'B17', 'H03', 'H04', 'H05', 'H06', 'H11'],
+  ankle: ['A02', 'A19', 'B13', 'B14', 'B15', 'H01', 'H02'],
   leg_stretch: ['A02', 'A03', 'A04', 'A05', 'A12', 'A13', 'A14', 'A15', 'H01', 'H02', 'H03', 'H04', 'H05', 'H06', 'H09', 'H10', 'H11'],
 };
 const REGION_TERMS = {
@@ -72,7 +74,7 @@ export function manualExerciseRegions(id, exercise = {}) {
   if (exercise.category === 'lower' || exercise.type === 'lower') result.add('legs');
   for (const region of ['chest', 'back', 'serratus']) if (matchesTrainingTarget(region, id, exercise)) result.add(region);
   for (const [region, codes] of Object.entries(MOBILITY_CODES)) if (codes.includes(exercise.catalogCode)) result.add(region);
-  if (['A07', 'A08', 'A09', 'C05', 'C06', 'C07', 'H07'].includes(exercise.catalogCode)) result.add('shoulder');
+  if (['A07', 'A08', 'A09', 'C05', 'C06', 'C07', 'C12', 'C13', 'H07'].includes(exercise.catalogCode)) result.add('shoulder');
   if (exercise.category === 'core' || exercise.type === 'core') result.add('core');
   // Custom exercises remain discoverable by their declared names and aliases.
   const description = words([exercise.name, exercise.nameEn, ...(exercise.aliases || [])].join(' '));
@@ -107,6 +109,7 @@ export function hydrateManualSession(source, exercises = {}, lang = 'zh') {
   const existing = source.prescriptions || [];
   if (existing.some(dose => !dose || !source.routine.includes(dose.id) || dose.phase !== undefined && !SESSION_PHASES.includes(dose.phase)) || new Set(existing.map(dose => dose.id)).size !== existing.length) fail('MANUAL_INVALID_DRAFT');
   const session = { ...createManualSession(source.date, lang), ...Object.fromEntries(NOTES.filter(key => typeof source[key] === 'string').map(key => [key, source[key]])),
+    explicitRest: source.explicitRest === true || source.explicitRest === undefined && source.sessionType === 'rest' && source.routine.length === 0,
     routine: [...source.routine], prescriptions: source.routine.map(id => {
       const dose = existing.find(value => value.id === id);
       const defaults = defaultDose(id, exercises[id] || {}, exercisePhase(source, id, exercises[id]));
@@ -179,6 +182,7 @@ export function prepareManualPreview(sessions, { exercises = {}, eligibleExercis
   validateManualDates(sessions.map(session => session.date), { today });
   return [...sessions].sort((a, b) => a.date.localeCompare(b.date)).map(session => {
     try {
+      if (!session.routine.length && session.explicitRest !== true) fail('MANUAL_EMPTY_DAY');
       if (session.routine.length > MANUAL_MAX_EXERCISES) fail('MANUAL_CAPACITY');
       requireAvailable(session.routine, exercises, eligibleExercises);
       const identity = createManualSession(session.date);
@@ -194,7 +198,7 @@ export function saveManualDraft(uid, sessions, { storage = globalThis.localStora
   validateManualDates(sessions.map(session => session.date));
   if (!storage) fail('MANUAL_STORAGE_UNAVAILABLE');
   // Only public planning fields enter the draft; no actuals, profile or clinical notes.
-  const clean = sessions.map(session => ({ ...Object.fromEntries(['date', 'week', 'day', ...NOTES, 'sessionType'].map(key => [key, session[key]])),
+  const clean = sessions.map(session => ({ ...Object.fromEntries(['date', 'week', 'day', ...NOTES, 'sessionType', 'explicitRest'].map(key => [key, session[key]])),
     routine: [...session.routine], prescriptions: session.prescriptions.map(clone) }));
   storage.setItem(manualDraftStorageKey(uid), JSON.stringify({ version: 1, scope: scope(uid), sessions: clean }));
 }
@@ -223,7 +227,8 @@ export function manualPlannerErrorMessage(error, lang = 'zh', exercises = {}) {
     MANUAL_DATE_SPAN: ['第一天到最後一天最多 28 天，可以不連續。', 'The inclusive first-to-last date span must be at most 28 days. Dates may be nonconsecutive.'],
     MANUAL_INVALID_DRAFT: ['無法讀取這份草稿；原本資料尚未清除。可以返回或明確捨棄後重新開始。', 'This draft cannot be read. The stored data has not been cleared. Return or explicitly discard it to start again.'],
     MANUAL_INELIGIBLE_EXERCISE: ['有動作已不符合目前器材、搭檔、治療限制或啟用條件。請移除或更換後再檢查。', 'An exercise no longer meets the current equipment, partner, treatment or enabled conditions. Remove or replace it before reviewing.'],
-    MANUAL_CAPACITY: ['每天最多 8 個動作，包含暖身與收操。這一批尚未加入，請減少選取或先移除既有動作。', 'Each day allows 8 exercises, including warm-up and cooldown. This batch was not added. Select fewer or remove an existing exercise.'],
+    MANUAL_EMPTY_DAY: ['這天尚未安排動作；請加入內容、明確選休息或移除日期。', 'This day is empty. Add exercises, explicitly choose rest, or remove the date.'],
+    MANUAL_CAPACITY: ['每天最多 24 個動作，包含暖身與收操。這一批尚未加入，請減少選取或先移除既有動作。', 'Each day allows 24 exercises, including warm-up and cooldown. This batch was not added. Select fewer or remove an existing exercise.'],
     MANUAL_DUPLICATE_EXERCISE: ['同一天不能重複加入同一動作；這一批尚未加入。', 'The same exercise cannot be added twice to a day. This batch was not added.'],
     MANUAL_SEQUENCE_LIMIT: ['每天只能選一套完整計時暖身，不能同時加入 6 分與 10 分流程。這一批尚未加入。', 'Choose only one complete timed flow per day. The 6- and 10-minute flows cannot both be added. This batch was not added.'],
     MANUAL_SEQUENCE_DOSE: ['整套流程的時間包含全部段落與左右側，不能改成縮短組次。', 'A complete flow includes every part and both sides; its fixed dose cannot be shortened.'],

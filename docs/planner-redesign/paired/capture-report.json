@@ -1,0 +1,652 @@
+{
+  "fixture": {
+    "today": "2026-11-02",
+    "dates": [
+      "2026-11-03",
+      "2026-11-05",
+      "2026-11-07"
+    ],
+    "sessions": [
+      {
+        "date": "2026-11-03",
+        "week": "2026-W45",
+        "day": 2,
+        "name": "每日全身暖身",
+        "theme": "全身暖身與髖控制",
+        "concept": "依自己選擇的動作、階段與組次安排。",
+        "coachAdvice": "依列出的計畫執行；不適時停止並調整。",
+        "warmupNote": "依列出的暖身與主項準備組進行；尚未加入暖身時，請先補齊再檢查。",
+        "cooldownNote": "依列出的收操進行；沒有收操動作時不需額外補做。",
+        "sessionType": "training",
+        "routine": [
+          "bf_A16",
+          "bf_A17",
+          "bf_A10",
+          "bf_A18",
+          "bf_A07",
+          "bf_A06",
+          "bf_A15",
+          "bf_A19",
+          "bf_B16",
+          "bf_B17"
+        ],
+        "prescriptions": [
+          {
+            "id": "bf_A16",
+            "phase": "warmup",
+            "sets": 1,
+            "value": "4",
+            "unit": "reps",
+            "restSeconds": 0,
+            "perSide": false
+          },
+          {
+            "id": "bf_A17",
+            "phase": "warmup",
+            "sets": 1,
+            "value": "3",
+            "unit": "reps",
+            "restSeconds": 10,
+            "perSide": true
+          },
+          {
+            "id": "bf_A10",
+            "phase": "warmup",
+            "sets": 1,
+            "value": "4",
+            "unit": "reps",
+            "restSeconds": 0,
+            "perSide": false
+          },
+          {
+            "id": "bf_A18",
+            "phase": "warmup",
+            "sets": 1,
+            "value": "4",
+            "unit": "reps",
+            "restSeconds": 0,
+            "perSide": false
+          },
+          {
+            "id": "bf_A07",
+            "phase": "warmup",
+            "sets": 1,
+            "value": "6",
+            "unit": "reps",
+            "restSeconds": 0,
+            "perSide": false
+          },
+          {
+            "id": "bf_A06",
+            "phase": "warmup",
+            "sets": 1,
+            "value": "3",
+            "unit": "reps",
+            "restSeconds": 10,
+            "perSide": true
+          },
+          {
+            "id": "bf_A15",
+            "phase": "warmup",
+            "sets": 1,
+            "value": "4",
+            "unit": "reps",
+            "restSeconds": 0,
+            "perSide": false
+          },
+          {
+            "id": "bf_A19",
+            "phase": "warmup",
+            "sets": 1,
+            "value": "4",
+            "unit": "reps",
+            "restSeconds": 10,
+            "perSide": true
+          },
+          {
+            "id": "bf_B16",
+            "phase": "accessory",
+            "sets": 1,
+            "value": "5",
+            "unit": "reps",
+            "restSeconds": 10,
+            "perSide": true
+          },
+          {
+            "id": "bf_B17",
+            "phase": "accessory",
+            "sets": 1,
+            "value": "5",
+            "unit": "reps",
+            "restSeconds": 10,
+            "perSide": true
+          }
+        ],
+        "explicitRest": false
+      },
+      {
+        "date": "2026-11-05",
+        "week": "2026-W45",
+        "day": 4,
+        "name": "每日全身暖身",
+        "theme": "足弓支撐與單腳控制",
+        "concept": "依自己選擇的動作、階段與組次安排。",
+        "coachAdvice": "依列出的計畫執行；不適時停止並調整。",
+        "warmupNote": "依列出的暖身與主項準備組進行；尚未加入暖身時，請先補齊再檢查。",
+        "cooldownNote": "依列出的收操進行；沒有收操動作時不需額外補做。",
+        "sessionType": "training",
+        "routine": [
+          "bf_A16",
+          "bf_A17",
+          "bf_A10",
+          "bf_A18",
+          "bf_A07",
+          "bf_A06",
+          "bf_A15",
+          "bf_A19",
+          "bf_B13",
+          "bf_B14",
+          "bf_B15"
+        ],
+        "prescriptions": [
+          {
+            "id": "bf_A16",
+            "phase": "warmup",
+            "sets": 1,
+            "value": "4",
+            "unit": "reps",
+            "restSeconds": 0,
+            "perSide": false
+          },
+          {
+            "id": "bf_A17",
+            "phase": "warmup",
+            "sets": 1,
+            "value": "3",
+            "unit": "reps",
+            "restSeconds": 10,
+            "perSide": true
+          },
+          {
+            "id": "bf_A10",
+            "phase": "warmup",
+            "sets": 1,
+            "value": "4",
+            "unit": "reps",
+            "restSeconds": 0,
+            "perSide": false
+          },
+          {
+            "id": "bf_A18",
+            "phase": "warmup",
+            "sets": 1,
+            "value": "4",
+            "unit": "reps",
+            "restSeconds": 0,
+            "perSide": false
+          },
+          {
+            "id": "bf_A07",
+            "phase": "warmup",
+            "sets": 1,
+            "value": "6",
+            "unit": "reps",
+            "restSeconds": 0,
+            "perSide": false
+          },
+          {
+            "id": "bf_A06",
+            "phase": "warmup",
+            "sets": 1,
+            "value": "3",
+            "unit": "reps",
+            "restSeconds": 10,
+            "perSide": true
+          },
+          {
+            "id": "bf_A15",
+            "phase": "warmup",
+            "sets": 1,
+            "value": "4",
+            "unit": "reps",
+            "restSeconds": 0,
+            "perSide": false
+          },
+          {
+            "id": "bf_A19",
+            "phase": "warmup",
+            "sets": 1,
+            "value": "4",
+            "unit": "reps",
+            "restSeconds": 10,
+            "perSide": true
+          },
+          {
+            "id": "bf_B13",
+            "phase": "accessory",
+            "sets": 1,
+            "value": "5",
+            "unit": "reps",
+            "restSeconds": 10,
+            "perSide": true
+          },
+          {
+            "id": "bf_B14",
+            "phase": "accessory",
+            "sets": 1,
+            "value": "4",
+            "unit": "reps",
+            "restSeconds": 10,
+            "perSide": true
+          },
+          {
+            "id": "bf_B15",
+            "phase": "accessory",
+            "sets": 1,
+            "value": "20",
+            "unit": "seconds",
+            "restSeconds": 10,
+            "perSide": true
+          }
+        ],
+        "explicitRest": false
+      },
+      {
+        "date": "2026-11-07",
+        "week": "2026-W45",
+        "day": 6,
+        "name": "每日全身暖身",
+        "theme": "肩胛上旋與上舉控制",
+        "concept": "依自己選擇的動作、階段與組次安排。",
+        "coachAdvice": "依列出的計畫執行；不適時停止並調整。",
+        "warmupNote": "依列出的暖身與主項準備組進行；尚未加入暖身時，請先補齊再檢查。",
+        "cooldownNote": "依列出的收操進行；沒有收操動作時不需額外補做。",
+        "sessionType": "training",
+        "routine": [
+          "bf_A16",
+          "bf_A17",
+          "bf_A10",
+          "bf_A18",
+          "bf_A07",
+          "bf_A06",
+          "bf_A15",
+          "bf_A19",
+          "bf_C12",
+          "bf_C13"
+        ],
+        "prescriptions": [
+          {
+            "id": "bf_A16",
+            "phase": "warmup",
+            "sets": 1,
+            "value": "4",
+            "unit": "reps",
+            "restSeconds": 0,
+            "perSide": false
+          },
+          {
+            "id": "bf_A17",
+            "phase": "warmup",
+            "sets": 1,
+            "value": "3",
+            "unit": "reps",
+            "restSeconds": 10,
+            "perSide": true
+          },
+          {
+            "id": "bf_A10",
+            "phase": "warmup",
+            "sets": 1,
+            "value": "4",
+            "unit": "reps",
+            "restSeconds": 0,
+            "perSide": false
+          },
+          {
+            "id": "bf_A18",
+            "phase": "warmup",
+            "sets": 1,
+            "value": "4",
+            "unit": "reps",
+            "restSeconds": 0,
+            "perSide": false
+          },
+          {
+            "id": "bf_A07",
+            "phase": "warmup",
+            "sets": 1,
+            "value": "6",
+            "unit": "reps",
+            "restSeconds": 0,
+            "perSide": false
+          },
+          {
+            "id": "bf_A06",
+            "phase": "warmup",
+            "sets": 1,
+            "value": "3",
+            "unit": "reps",
+            "restSeconds": 10,
+            "perSide": true
+          },
+          {
+            "id": "bf_A15",
+            "phase": "warmup",
+            "sets": 1,
+            "value": "4",
+            "unit": "reps",
+            "restSeconds": 0,
+            "perSide": false
+          },
+          {
+            "id": "bf_A19",
+            "phase": "warmup",
+            "sets": 1,
+            "value": "4",
+            "unit": "reps",
+            "restSeconds": 10,
+            "perSide": true
+          },
+          {
+            "id": "bf_C12",
+            "phase": "accessory",
+            "sets": 1,
+            "value": "6",
+            "unit": "reps",
+            "restSeconds": 0,
+            "perSide": false
+          },
+          {
+            "id": "bf_C13",
+            "phase": "accessory",
+            "sets": 1,
+            "value": "6",
+            "unit": "reps",
+            "restSeconds": 0,
+            "perSide": false
+          }
+        ],
+        "explicitRest": false
+      }
+    ],
+    "referenceFixture": {
+      "dateSummaries": [
+        "10 動作 · 9 分",
+        "11 動作 · 11 分",
+        "10 動作 · 9 分"
+      ],
+      "warmupTime": "約 7 分鐘",
+      "weekArrangedCount": 0,
+      "weekRows": [
+        [
+          "11/2",
+          "一",
+          "尚未安排",
+          ""
+        ],
+        [
+          "11/3",
+          "二",
+          "尚未安排",
+          ""
+        ],
+        [
+          "11/4",
+          "三",
+          "尚未安排",
+          ""
+        ],
+        [
+          "11/5",
+          "四",
+          "尚未安排",
+          ""
+        ],
+        [
+          "11/6",
+          "五",
+          "尚未安排",
+          ""
+        ],
+        [
+          "11/7",
+          "六",
+          "尚未安排",
+          ""
+        ],
+        [
+          "11/8",
+          "日",
+          "尚未安排",
+          ""
+        ]
+      ],
+      "totalCount": 10,
+      "theme": "全身暖身與髖控制",
+      "minutes": 9,
+      "dailyTime": 40,
+      "warmup": [
+        [
+          "嬰兒式動態後坐",
+          "1 組 × 4 下"
+        ],
+        [
+          "偉大拉伸（動態弓步轉胸）",
+          "1 組 × 3 下／側"
+        ],
+        [
+          "貓牛式",
+          "1 組 × 4 下"
+        ],
+        [
+          "徒手 Y／T 肩胛控制",
+          "1 組 × 4 下"
+        ],
+        [
+          "肩胛伏地挺身／牆推",
+          "1 組 × 6 下"
+        ],
+        [
+          "側躺胸椎開書",
+          "1 組 × 3 下／側"
+        ],
+        [
+          "坐姿 90/90 髖轉換",
+          "1 組 × 4 下"
+        ],
+        [
+          "下犬式交替踩跟",
+          "1 組 × 4 下／側"
+        ]
+      ],
+      "training": [
+        [
+          "坐姿主動髖內旋",
+          "1 組 × 5 下／側"
+        ],
+        [
+          "俯臥屈膝主動髖內旋",
+          "1 組 × 5 下／側"
+        ]
+      ],
+      "cooldown": [],
+      "review": [
+        [
+          "11/3（二）",
+          "全身暖身與髖控制",
+          "8／2／0",
+          "9"
+        ],
+        [
+          "11/5（四）",
+          "足弓支撐與單腳控制",
+          "8／3／0",
+          "11"
+        ],
+        [
+          "11/7（六）",
+          "肩胛上旋與上舉控制",
+          "8／2／0",
+          "9"
+        ]
+      ]
+    }
+  },
+  "screens": [
+    {
+      "state": "week",
+      "width": 390,
+      "height": 844,
+      "overflow": false
+    },
+    {
+      "state": "dates",
+      "width": 390,
+      "height": 844,
+      "overflow": false
+    },
+    {
+      "state": "empty",
+      "width": 390,
+      "height": 844,
+      "overflow": false
+    },
+    {
+      "state": "picker",
+      "width": 390,
+      "height": 844,
+      "overflow": false
+    },
+    {
+      "state": "detail",
+      "width": 390,
+      "height": 844,
+      "overflow": false
+    },
+    {
+      "state": "day",
+      "width": 390,
+      "height": 844,
+      "overflow": false
+    },
+    {
+      "state": "save",
+      "width": 390,
+      "height": 844,
+      "overflow": false
+    },
+    {
+      "state": "review",
+      "width": 390,
+      "height": 844,
+      "overflow": false
+    },
+    {
+      "state": "week",
+      "width": 1440,
+      "height": 1000,
+      "overflow": false
+    },
+    {
+      "state": "dates",
+      "width": 1440,
+      "height": 1000,
+      "overflow": false
+    },
+    {
+      "state": "empty",
+      "width": 1440,
+      "height": 1000,
+      "overflow": false
+    },
+    {
+      "state": "picker",
+      "width": 1440,
+      "height": 1000,
+      "overflow": false
+    },
+    {
+      "state": "detail",
+      "width": 1440,
+      "height": 1000,
+      "overflow": false
+    },
+    {
+      "state": "day",
+      "width": 1440,
+      "height": 1000,
+      "overflow": false
+    },
+    {
+      "state": "save",
+      "width": 1440,
+      "height": 1000,
+      "overflow": false
+    },
+    {
+      "state": "review",
+      "width": 1440,
+      "height": 1000,
+      "overflow": false
+    }
+  ],
+  "p6ManualChecks": [
+    {
+      "component": "ApplyWorkoutPlan",
+      "visibleSteppers": 0,
+      "statusPills": 0,
+      "outerBorder": "0px",
+      "outerBackground": "rgba(0, 0, 0, 0)",
+      "outerRadius": "0px",
+      "modifyButtons": 3,
+      "width": 390,
+      "modifiedDate": "2026-11-05",
+      "allThreeDraftContentsPreserved": true,
+      "changedCopyRetainedOnReview": true,
+      "scheduledDatesUpdated": false
+    },
+    {
+      "component": "ApplyWorkoutPlan",
+      "visibleSteppers": 0,
+      "statusPills": 0,
+      "outerBorder": "0px",
+      "outerBackground": "rgba(0, 0, 0, 0)",
+      "outerRadius": "0px",
+      "modifyButtons": 3,
+      "width": 1440,
+      "modifiedDate": "2026-11-05",
+      "allThreeDraftContentsPreserved": true,
+      "changedCopyRetainedOnReview": true,
+      "scheduledDatesUpdated": false
+    }
+  ],
+  "runtimeErrors": [],
+  "realHumanTaskTesting": "PENDING",
+  "rootVisualReview": {
+    "status": "passed",
+    "reviewedLatest": [
+      "compare-week-390.png",
+      "compare-review-390.png",
+      "compare-empty-1440.png"
+    ],
+    "reviewedOther": [
+      "compare-day-390.png",
+      "compare-day-1440.png",
+      "compare-picker-390.png",
+      "compare-detail-390.png",
+      "compare-save-390.png"
+    ],
+    "approvedStructuralVariance": "P5 reuses existing Save modal",
+    "approvedNonstructuralVariance": "P6 copy varies while preview/confirm/date-edit boundaries remain explicit"
+  },
+  "finalDesktopSourceGeometry": {
+    "source": "src/components/manual-planner.css",
+    "layout": "real parent CSS grid; 200px date rail +36px gap +760px central content; workbench display:contents",
+    "headerAndContentColumn": 2,
+    "dateRailColumn": 1,
+    "fixedNegativeOffset": false,
+    "emptyChoiceWidth": "100% of central column; previous max-width540px removed",
+    "sourceModifiedBeforeFinalCapture": true,
+    "screenshotEvidence": "actual-empty-1440.png"
+  }
+}

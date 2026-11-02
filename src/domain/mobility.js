@@ -1,3 +1,4 @@
+import { MAX_DAY_EXERCISES } from './plannerLimits.js';
 import { catalogExercises } from './exerciseCatalog.js';
 import { dateForWeekDay, getWeekString, isCalendarDate } from './dates.js';
 import { classifyBalanceExercise } from './weeklyBalance.js';
@@ -5,6 +6,7 @@ import { resolveExerciseId } from './training.js';
 import { validateTrainingLog, validateReadiness, evaluateReadiness } from './coaching.js';
 import { SESSION_PHASES } from './phases.js';
 import { estimateSessionMinutes } from './sessions.js';
+import { isDailyWarmupComplete } from './quickWorkouts.js';
 
 const CATALOG = catalogExercises();
 export const MOBILITY_AREAS = ['thoracic', 'shoulder', 'hip_front', 'hip_rotation', 'adductors', 'quads', 'hamstrings', 'ankle'];
@@ -13,10 +15,10 @@ export const MOBILITY_LABELS = {
   en: { thoracic: 'Thoracic spine', shoulder: 'Shoulder / chest', hip_front: 'Hip flexors', hip_rotation: 'Hip rotation', adductors: 'Adductors', quads: 'Quadriceps', hamstrings: 'Hamstrings', ankle: 'Ankles / calves' },
 };
 const CODES = {
-  thoracic: ['A06', 'A10', 'A11', 'A12', 'A13', 'H12'], shoulder: ['A09', 'A12', 'A13', 'H07'],
-  hip_front: ['A04', 'A12', 'A13', 'H03'], hip_rotation: ['A12', 'A13', 'A15', 'H04'],
+  thoracic: ['A06', 'A10', 'A11', 'A12', 'A13', 'A17', 'H12'], shoulder: ['A09', 'A12', 'A13', 'H07'],
+  hip_front: ['A04', 'A12', 'A13', 'A17', 'H03'], hip_rotation: ['A12', 'A13', 'A15', 'H04'],
   adductors: ['A05', 'A13', 'H06'], quads: ['A12', 'A13', 'A14'],
-  hamstrings: ['A03', 'A12', 'A13', 'H05'], ankle: ['A02', 'A12', 'A13', 'H01', 'H02'],
+  hamstrings: ['A03', 'A12', 'A13', 'A19', 'H05'], ankle: ['A02', 'A12', 'A13', 'A19', 'H01', 'H02'],
 };
 const DYNAMIC = { thoracic: ['A06', 'A11', 'A10'], shoulder: ['A09'], hip_front: ['A04'], hip_rotation: ['A15'],
   adductors: ['A05'], quads: ['A14'], hamstrings: ['A03'], ankle: ['A02'] };
@@ -116,7 +118,7 @@ export function adaptMobilityDay(day, available, minutes, intent, selected = [],
   if (!day.routine.length || intent.recentSymptoms) return day;
   let next = { ...day, routine: [...day.routine], prescriptions: day.prescriptions.map(dose => ({ ...dose })) };
   const recovery = day.sessionType === 'recovery';
-  const flow = next.routine.some(id => available[id]?.sequenceMinutes);
+  const flow = isDailyWarmupComplete(next) || next.routine.some(id => available[id]?.sequenceMinutes);
   const separateOpening = !flow && !recovery;
   if (separateOpening) {
     next.prescriptions = next.prescriptions.filter(dose => !(dose.phase === 'warmup' || dose.phase === 'cooldown' && available[dose.id]?.catalogCode === 'D09') || selected.includes(dose.id));
@@ -133,7 +135,7 @@ export function adaptMobilityDay(day, available, minutes, intent, selected = [],
     if (next.routine.some(id => mobilityAreas(id, available).includes(area))) continue;
     const id = DYNAMIC[area].map(code => Object.keys(available).find(id => available[id].catalogCode === code && !next.routine.includes(id))).find(Boolean);
     if (!id) continue;
-    if (separateOpening && next.routine.length >= 8) {
+    if (separateOpening && next.routine.length >= MAX_DAY_EXERCISES) {
       const optional = next.prescriptions.findIndex(dose => ['accessory', 'skill'].includes(dose.phase) && !selected.includes(dose.id));
       if (optional < 0) break;
       const [removedDose] = next.prescriptions.splice(optional, 1);
@@ -142,7 +144,7 @@ export function adaptMobilityDay(day, available, minutes, intent, selected = [],
     const candidate = { ...next, routine: [...next.routine, id], prescriptions: [...next.prescriptions, { id, ...available[id].prescription, sets: 1, value: gentle ? '2' : '4', phase: recovery ? 'recovery' : 'warmup' }] };
     if (recovery && estimateSessionMinutes(candidate, available) > minutes) continue;
     next = candidate; added++;
-    if (added >= limit || recovery && next.routine.length >= (flow ? 3 : limit)) break;
+    if (added >= limit || recovery && !flow && next.routine.length >= limit) break;
   }
   if (!added) return mobilityAreas(removed, available).some(area => intent.excludedAreas?.includes(area)) ? next : day;
   next.prescriptions.sort((a, b) => SESSION_PHASES.indexOf(a.phase) - SESSION_PHASES.indexOf(b.phase));

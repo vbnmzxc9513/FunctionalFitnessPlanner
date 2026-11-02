@@ -1,3 +1,6 @@
+import { MAX_DAY_EXERCISES } from '../domain/plannerLimits.js';
+import { dateDoseKeys, dateDoseRecord, dateDoseDocuments } from '../domain/dateDoseStorage.js';
+export { dateDoseKeys, dateDoseRecord, dateDoseDocuments } from '../domain/dateDoseStorage.js';
 import { documentId, endAt, getDoc, getDocs, orderBy, query, runTransaction, serverTimestamp, startAt } from 'firebase/firestore';
 import { auth, db } from './firebase.js';
 import { userCollection, userDoc } from './userPaths.js';
@@ -32,9 +35,9 @@ export function assembleDateSessions(metadata, doses) {
   for (const [date, entry] of Object.entries(metadata)) {
     if (entry.date !== date || entry.week !== weekFor(date) || dateForWeekDay(entry.week, entry.day) !== date
       || !Number.isInteger(entry.revision) || entry.revision < 1 || !Array.isArray(entry.routine)
-      || entry.routine.length > 8 || new Set(entry.routine).size !== entry.routine.length) throw new Error('DATE_SESSION_INCOMPLETE');
+      || entry.routine.length > MAX_DAY_EXERCISES || new Set(entry.routine).size !== entry.routine.length) throw new Error('DATE_SESSION_INCOMPLETE');
     const prescriptions = entry.routine.map(exerciseId => {
-      const record = doses[`${date}_${exerciseId}`];
+      const record = dateDoseRecord(date, entry, doses, exerciseId);
       if (!record || record.date !== date || record.exerciseId !== exerciseId || record.revision !== entry.revision || record.dose?.id !== exerciseId) throw new Error('DATE_SESSION_INCOMPLETE');
       return record.dose;
     });
@@ -93,7 +96,7 @@ export async function loadPeriodState(uid, requestedRange, { today = localDate()
   reads.forEach(({ group, id }, i) => { documents[keyFor(group, id)] = raw(snapshots[i]); });
   for (const date of enumeratePeriodDates({ from: scope.from, to: scope.to }, { maxDays: 49 })) documents[keyFor('dateSessions', date)] = null;
   for (const snapshot of native.docs) documents[keyFor('dateSessions', snapshot.id)] = snapshot.data();
-  const activeDoseKeys = new Set(native.docs.flatMap(snapshot => (snapshot.data().routine || []).map(id => `${snapshot.id}_${id}`)));
+  const activeDoseKeys = new Set(native.docs.flatMap(snapshot => dateDoseKeys(snapshot.id, snapshot.data())));
   for (const id of activeDoseKeys) documents[keyFor('dateDoses', id)] = null;
   for (const snapshot of doseRecords.docs) if (activeDoseKeys.has(snapshot.id)) documents[keyFor('dateDoses', snapshot.id)] = snapshot.data();
   const logs = Object.fromEntries(logRecords.docs.map(snapshot => [snapshot.id, snapshot.data()]));
@@ -137,7 +140,8 @@ function weeklySnapshot(week, documents, replacements, fallbackPlans = {}) {
     const priorDay = prior.find(item => item.day === day);
     let entry = native || priorDay || saved.find(item => item.day === day);
     if (native && !native.prescriptions) {
-      const doses = native.routine.map(id => documents[keyFor('dateDoses', `${date}_${id}`)]).filter(record => record?.revision === native.revision).map(record => record.dose);
+      const records = Object.fromEntries(dateDoseKeys(date, native).map(id => [id, documents[keyFor('dateDoses', id)]]));
+      const doses = native.routine.map(id => dateDoseRecord(date, native, records, id)).filter(record => record?.revision === native.revision).map(record => record.dose);
       entry = { ...native, ...(doses.length === native.routine.length ? { prescriptions: doses } : priorDay?.prescriptions ? { prescriptions: priorDay.prescriptions } : {}) };
     }
     if (entry) schedule.push(fields(entry, [...dayFields, 'prescriptions']));
@@ -146,19 +150,20 @@ function weeklySnapshot(week, documents, replacements, fallbackPlans = {}) {
 }
 
 function writeSession(transaction, uid, session, revision, periodId, weeklyIntent) {
-  const metadata = { ...fields(session, ['date', 'week', ...dayFields]), revision, periodId, ...(weeklyIntent ? { weeklyIntent } : {}) };
+  const metadata = { v: 3, ...fields(session, ['date', 'week', ...dayFields]), revision, periodId, ...(weeklyIntent ? { weeklyIntent } : {}) };
   transaction.set(userDoc(uid, 'dateSessions', session.date), metadata);
-  for (const dose of session.prescriptions) transaction.set(userDoc(uid, 'dateDoses', `${session.date}_${dose.id}`), {
-    date: session.date, exerciseId: dose.id, revision, dose,
-  });
+  for (const { id, data } of dateDoseDocuments(session, revision)) transaction.set(userDoc(uid, 'dateDoses', id), data);
   return metadata;
 }
 
-export async function applyPeriodPlan(uid, { range: requestedRange, sessions, profile = {}, expectedState, periodId, conclusion = '', selectedDates, replaceDates = [] }) {
+export async function applyPeriodPlan(uid, { range: requestedRange, sessions, profile = {}, expectedState, periodId, conclusion = '', selectedDates, replaceDates = [], legacyWeek }) {
   assertUser(uid);
-  const range = normalizePlanningRange(requestedRange, localDate()), scope = scopeDates(range);
+  const today = localDate();
+  if (legacyWeek !== undefined && (legacyWeek !== weekFor(today) || requestedRange?.from !== dateForWeekDay(legacyWeek, 1) || requestedRange?.to !== dateForWeekDay(legacyWeek, 5))) throw new Error('INVALID_PERIOD_PLAN');
+  const range = normalizePlanningRange(requestedRange, legacyWeek ? dateForWeekDay(legacyWeek, 1) : today), scope = scopeDates(range);
   if (!expectedState?.documents || expectedState.fingerprint !== stable(expectedState.documents)) throw new Error('PERIOD_CHANGED');
   const targets = selectedDates || scope.dates;
+  if (legacyWeek && (targets.length !== 5 || scope.dates.some(date => !targets.includes(date)))) throw new Error('INVALID_PERIOD_PLAN');
   if (!Array.isArray(targets) || !targets.length || new Set(targets).size !== targets.length || targets.some(date => !scope.dates.includes(date))) throw new Error('INVALID_PERIOD_PLAN');
   if (!Array.isArray(sessions) || sessions.length !== targets.length) throw new Error('INVALID_PERIOD_PLAN');
   const expectedProgress = Object.fromEntries(scope.weeks.map(week => [week, expectedState.documents[keyFor('progress', week)] || {}]));
@@ -211,9 +216,7 @@ export async function saveDateReadinessAdjustment(uid, date, session, { expected
     const trueKeys = value => Object.keys(value || {}).filter(key => value[key] === true).sort();
     if (expectedCompleted !== undefined && stable(trueKeys(progress.completed)) !== stable(trueKeys(expectedCompleted.completed || expectedCompleted))) throw new Error('PROGRESS_CHANGED');
     const doses = {};
-    for (const exerciseId of new Set([...current.routine, ...(session.routine || [])])) {
-      doses[exerciseId] = raw(await transaction.get(userDoc(uid, 'dateDoses', `${date}_${exerciseId}`)));
-    }
+    for (const id of dateDoseKeys(date, current)) doses[id] = raw(await transaction.get(userDoc(uid, 'dateDoses', id)));
     const documents = { [keyFor('plans', week)]: plan, [keyFor('progress', week)]: progress };
     for (let day = 1; day <= 7; day++) {
       const otherDate = dateForWeekDay(week, day);
@@ -226,8 +229,9 @@ export async function saveDateReadinessAdjustment(uid, date, session, { expected
     const routine = [...new Set([...next.routine, ...preserved])];
     const prescriptions = routine.map(id => {
       if (preserved.includes(id)) {
-        if (doses[id]?.revision !== current.revision) throw new Error('DATE_SESSION_INCOMPLETE');
-        return doses[id].dose;
+        const record = dateDoseRecord(date, current, doses, id);
+        if (record?.revision !== current.revision) throw new Error('DATE_SESSION_INCOMPLETE');
+        return record.dose;
       }
       const dose = session.prescriptions.find(item => item.id === id);
       if (!dose) throw new Error('INVALID_PERIOD_PLAN');

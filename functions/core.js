@@ -54,11 +54,11 @@ export function createTrialService({ config, quota, generate, domain, clock = ()
     if (Buffer.byteLength(prompt, 'utf8') > 60000) fail('AI_TRIAL_INVALID_INPUT');
     const hash = createHash('sha256').update(JSON.stringify({ ...input, currentWeek: period.currentWeek })).digest('hex');
     const reservation = await quota.reserve({ uid, hash, ...period, dailyCap: settings.dailyCap });
-    if (reservation.plan) return { plan: domain.validate(reservation.plan, candidates, input.dailyTime), ...period };
+    if (reservation.plan) return { plan: domain.validate(reservation.plan, candidates, input.dailyTime, { context: input.context, lang: input.lang, ...period }), ...period };
     try {
       const raw = await generate(prompt);
       if (!raw || JSON.stringify(raw).length > 60000) throw new Error('INVALID_RESULT');
-      const plan = domain.validate(raw, candidates, input.dailyTime);
+      const plan = domain.validate(raw, candidates, input.dailyTime, { context: input.context, lang: input.lang, ...period });
       if (plan.schedule.some(day => day.prescriptions.some(dose => dose.preparation?.instruction.length > 1000))) throw new Error('INVALID_RESULT');
       await quota.complete({ uid, hash, currentWeek: period.currentWeek, plan });
       return { plan, ...period };

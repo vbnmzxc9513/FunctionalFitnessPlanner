@@ -13,6 +13,8 @@ import { normalizeTrialInput } from '../../functions/core.js';
 import { EQUIPMENT } from '../../src/domain/exerciseCatalog.js';
 import { buildPlanningPrompt } from '../../src/domain/coachingPrompt.js';
 import { createSharePayload } from '../../src/domain/sharing.js';
+import { DAILY_WARMUP_IDS, isDailyWarmupComplete } from '../../src/domain/quickWorkouts.js';
+import { MAX_DAY_EXERCISES } from '../../src/domain/plannerLimits.js';
 
 const exercises = catalogExercises();
 const context = { healthStatus: 'unrestricted', equipment: ['dumbbell', 'band', 'cable'], badmintonDays: [2, 3, 5], badmintonMinutes: 90, badmintonIntensity: 'mixed' };
@@ -36,15 +38,18 @@ test('serratus selection assigns a real specific accessory while preserving the 
   for (const time of [30, 35, 40]) {
     const base = make([], {}, '2026-10-23', time), plan = make(['serratus'], {}, '2026-10-23', time);
     const day = plan.sessions.find(day => day.sessionType === 'training');
-    assert.equal(day.routine[0], 'bf_A13');
+    assert.ok(isDailyWarmupComplete(day));
+    assert.deepEqual(day.routine.slice(0, 8), DAILY_WARMUP_IDS);
     assert.ok(day.prescriptions.some(dose => dose.id === 'bf_C07' && dose.phase === 'accessory' && dose.sets === 1));
     for (const id of ['bf_B10', 'bf_B11', 'bf_C01', 'bf_C11']) assert.ok(day.routine.includes(id));
-    assert.ok(plan.sessions.every(day => day.routine.length <= 8 && estimateSessionMinutes(day, exercises) <= time));
+    assert.ok(plan.sessions.every(day => day.routine.length <= MAX_DAY_EXERCISES && estimateSessionMinutes(day, exercises) <= time));
     assert.ok(workSets(plan) <= workSets(base));
     assert.equal(plan.weeklySummaries[0].strengthSessions, base.weeklySummaries[0].strengthSessions);
   }
   const none = make(['serratus'], { equipment: [] });
-  assert.ok(none.sessions.some(day => day.prescriptions.some(dose => dose.id === 'bf_A07' && dose.phase === 'accessory')));
+  assert.ok(none.sessions.some(day => day.prescriptions.some(dose => dose.id === 'bf_A07' && dose.phase === 'warmup')));
+  assert.ok(none.sessions.every(day => new Set(day.routine).size === day.routine.length));
+  assert.deepEqual(trainingTargetReport(none.sessions, exercises, ['serratus'])[0].dates, [], 'existing warmup control is not relabeled as dedicated work');
   assert.ok(none.sessions.every(day => !day.routine.includes('bf_C07')));
 });
 
@@ -95,7 +100,7 @@ test('fine priorities affect recommendations and AI context without leaking into
   const ids = recommendWeeklyChoices(exercises, profile, 'balanced', manualPlanningExercises(exercises, profile));
   assert.ok(ids.indexOf('bf_C07') < ids.indexOf('bf_C11'));
   const prompt = buildPlanningPrompt({ context: profile, availableExercises: exercises, dailyTime: 35 });
-  assert.ok(prompt.includes('最多四項')); assert.ok(prompt.includes('不能把一般推胸或A13暖身啟動宣稱成已排專項肌力'));
+  assert.ok(prompt.includes('最多四項')); assert.ok(prompt.includes('不能把一般推胸或Y/T暖身啟動宣稱成已排專項肌力'));
   for (const lang of ['zh', 'en']) assert.ok(Buffer.byteLength(buildPlanningPrompt({ context: { ...context, targetRegions: ['serratus', 'rotator_cuff', 'calves', 'glutes'] }, availableExercises: catalogExercises(lang), dailyTime: 35, lang })) < 60000, 'target metadata stays within the hosted prompt bound');
   const share = createSharePayload(make(['serratus']).sessions[0]);
   assert.equal(Object.hasOwn(share, 'weeklyIntent'), false); assert.equal(Object.hasOwn(share, 'targetRegions'), false);

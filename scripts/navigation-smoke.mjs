@@ -12,7 +12,7 @@ if (process.env.NODE_ENV !== 'test' || process.env.VITE_USE_FIREBASE_EMULATORS !
 
 const port = Number(process.env.NAVIGATION_SMOKE_PORT || 5202);
 const site = `http://127.0.0.1:${port}/FunctionalFitnessPlanner/`;
-const server = spawn(process.execPath, ['scripts/smoke-server.mjs', String(port)], { env: process.env, stdio: 'ignore' });
+const server = spawn(process.execPath, ['scripts/smoke-server.mjs', String(port)], { env: { ...process.env, SMOKE_DISABLE_HMR: '1' }, stdio: 'ignore' });
 let browser, page;
 try {
   for (let attempt = 0; attempt < 100; attempt++) {
@@ -93,9 +93,11 @@ try {
   await page.goto(site, { waitUntil: 'networkidle2' });
   await clickText('課表'); await click('[data-testid="open-manual-planner"]');
   await click('[data-testid^="manual-date-"]:not([disabled])'); await click('[data-testid="manual-start"]');
-  await click('[data-testid="manual-add-warmup"]');
-  await click('[data-testid="batch-option-bf_A13"]'); await click('[data-testid="batch-picker-add"]');
-  await click('[data-exercise-id="bf_A13"] button');
+  await click('[data-testid="manual-common-workouts"]'); await click('[data-testid="quick-view-daily-warmup"]');
+  await back(); assert.ok(await page.$('[data-testid="quick-view-daily-warmup"]'), 'Back from quick preview returns to picker without adding');
+  await click('[data-testid="quick-view-daily-warmup"]'); await click('[data-testid="quick-workout-add"]');
+  assert.equal(await page.$$eval('[data-testid="session-plan-editor"] [data-exercise-id]', items => items.length), 8, 'All eight independent warmups remain visible');
+  await click('[data-exercise-id="bf_A16"] button');
   await page.waitForSelector('dialog[open]');
   await back(); assert.equal(await page.$('dialog[open]'), null, 'Back closes exercise modal first');
   await click('[data-testid="manual-add-strength"]');
@@ -108,7 +110,7 @@ try {
   assert.equal(await page.evaluate(() => localStorage.getItem('fitness_date_period_v1')), null, 'Back never applies draft');
   // Explicitly apply a test draft, then verify daily detail -> week -> root.
   await clickText('課表'); await click('[data-testid="open-manual-planner"]');
-  await click('[data-testid="manual-review"]'); await click('[data-testid="assignment-preview"]');
+  await click('[data-testid="manual-review"]'); await page.waitForSelector('[data-testid="assignment-apply"]');
   await click('[data-testid="assignment-apply"]');
   const appliedDate = await page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('fitness_date_period_v1')).sessionsByDate)[0]);
   await page.waitForFunction(date => !!document.querySelector(`[data-testid="period-day-${date}"]`), {}, appliedDate);

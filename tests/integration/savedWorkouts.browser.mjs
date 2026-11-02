@@ -55,21 +55,21 @@ try {
     assert.ok(metrics.width <= width, `no overflow at ${width}`);
     assert.ok(metrics.buttons.every(([w, h]) => w >= 44 && h >= 44), `44px dialog controls at ${width}`);
   }
-  await fill('dialog[open] input', 'Shoulders'); await click('儲存到我的課表'); await page.waitForFunction(() => !document.querySelector('dialog[open]'));
+  await fill('dialog[open] input[maxlength="80"]', 'Shoulders'); await click('存入我的課表'); await page.waitForFunction(() => !document.querySelector('dialog[open]'));
   assert.equal((await rows()).length, 1);
   await page.reload(); await page.waitForSelector('article'); assert.match(await page.$eval('article', item => item.innerText), /Shoulders/);
-  await open(); await fill('dialog[open] input', ' shoulders '); await click('儲存到我的課表');
+  await open(); await fill('dialog[open] input[maxlength="80"]', ' shoulders '); await click('存入我的課表');
   await page.waitForFunction(() => document.querySelector('dialog[open] [role="alert"]')?.innerText.includes('已有同名收藏'));
   assert.equal((await rows()).length, 1);
-  await fill('dialog[open] input', 'Second workout'); await click('儲存到我的課表'); await page.waitForFunction(() => !document.querySelector('dialog[open]'));
+  await fill('dialog[open] input[maxlength="80"]', 'Second workout'); await click('存入我的課表'); await page.waitForFunction(() => !document.querySelector('dialog[open]'));
   const originalId = (await rows()).find(item => item.name === 'Second workout').id;
   await openSaved('Second workout'); await click('重新命名 Second workout'); await fill('article form input', 'Renamed'); await click('儲存名稱');
   await page.waitForFunction(() => [...document.querySelectorAll('[data-testid="saved-workouts"] h2')].some(item => item.innerText === 'Renamed'));
   assert.equal((await rows()).find(item => item.name === 'Renamed').id, originalId);
 
-  await open(); await fill('dialog[open] input', 'Storage must fail');
+  await open(); await fill('dialog[open] input[maxlength="80"]', 'Storage must fail');
   await page.evaluate(key => { window.originalSetItem = Storage.prototype.setItem; Storage.prototype.setItem = function(name, value) { if (name === key) throw Error('quota'); return window.originalSetItem.call(this, name, value); }; }, key);
-  await click('儲存到我的課表'); await page.waitForFunction(() => document.querySelector('dialog[open] [role="alert"]')?.innerText.includes('瀏覽器無法儲存'));
+  await click('存入我的課表'); await page.waitForFunction(() => document.querySelector('dialog[open] [role="alert"]')?.innerText.includes('瀏覽器無法儲存'));
   assert.equal((await rows()).length, 2); assert.equal(await page.$eval('[data-testid="saved-count"]', item => item.innerText), '1', 'failed save does not call onSaved');
   await page.evaluate(() => { Storage.prototype.setItem = window.originalSetItem; }); await page.click('dialog[open] [data-detail-close]');
   await click('刪除 Renamed'); await click('取消', 'dialog[open] footer button'); assert.equal((await rows()).length, 2, 'cancelled delete preserves collection');

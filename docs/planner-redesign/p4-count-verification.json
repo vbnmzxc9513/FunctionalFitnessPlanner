@@ -1,0 +1,19 @@
+{
+  "result": [
+    {
+      "lang": "zh",
+      "before": "加入 2 個動作到 11/3 草稿",
+      "after": "加入 2 個動作到 11/3 草稿，更新 1 項劑量",
+      "incoming": "改用新劑量 · 輔助 · 1 組 × 4 下",
+      "scheduledDatesUpdated": false
+    },
+    {
+      "lang": "en",
+      "before": "Add 2 exercises to 11/3 draft",
+      "after": "Add 2 exercises to 11/3 draft and update 1 doses",
+      "incoming": "Use new dose · Accessory · 1 sets × 4 reps",
+      "scheduledDatesUpdated": false
+    }
+  ],
+  "realHumanTaskTesting": "PENDING"
+}

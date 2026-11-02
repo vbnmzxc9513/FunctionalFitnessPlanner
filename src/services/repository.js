@@ -5,6 +5,8 @@ import { dateForWeekDay, getWeekString, localDate } from '../domain/dates.js';
 import { prepareTrainingPreview, writeTrainingPreview } from './trainingRepository.js';
 import { userDoc, userCollection } from './userPaths.js';
 import { captureWorkoutTemplate, importSavedWorkoutTemplates } from './workoutRepository.js';
+import { dateDoseKeys, dateDoseRecord } from '../domain/dateDoseStorage.js';
+import { LEGACY_MAX_DAY_EXERCISES } from '../domain/plannerLimits.js';
 export { userDoc, userCollection } from './userPaths.js';
 
 export function weekHistoryStart(week, weeks) {
@@ -24,6 +26,7 @@ function withoutPrevious(plan) {
 }
 
 function writePlanDays(transaction, uid, week, schedule) {
+  if (schedule.some(day => !Array.isArray(day.routine) || day.routine.length > LEGACY_MAX_DAY_EXERCISES)) throw new Error('LEGACY_PLAN_CAPACITY');
   // Two identical daily mirrors validate four doses each to stay within the
   // rule expression budget, even when every lift has a preparation set. Rules
   // confirm both same-commit mirrors against the weekly snapshot atomically.
@@ -73,8 +76,20 @@ export async function setCompletion(uid, week, day, id, done, exercise, fallback
     const progress = await transaction.get(ref);
     const native = [];
     for (let slot = 1; slot <= 7; slot++) {
-      const snapshot = await transaction.get(userDoc(uid, 'dateSessions', dateForWeekDay(week, slot)));
-      if (snapshot.exists()) native.push(snapshot.data());
+      const date = dateForWeekDay(week, slot);
+      const snapshot = await transaction.get(userDoc(uid, 'dateSessions', date));
+      if (snapshot.exists()) {
+        const metadata = snapshot.data();
+        const records = {};
+        for (const id of dateDoseKeys(date, metadata)) {
+          const dose = await transaction.get(userDoc(uid, 'dateDoses', id));
+          if (dose.exists()) records[id] = dose.data();
+        }
+        const doses = metadata.routine.map(id => dateDoseRecord(date, metadata, records, id));
+        if (doses.some((dose, index) => !dose || dose.revision !== metadata.revision || dose.date !== date
+          || dose.dose?.id !== metadata.routine[index])) throw new Error('PLAN_CHANGED');
+        native.push({ ...metadata, prescriptions: doses.map(dose => dose.dose) });
+      }
     }
     assertUser(uid);
     const savedSchedule = plan.exists() ? plan.data().schedule : fallback || [];
@@ -85,8 +100,8 @@ export async function setCompletion(uid, week, day, id, done, exercise, fallback
       const prior = priorSchedule.find(item => item.day === slot);
       const legacy = savedSchedule.find(item => item.day === slot);
       if (!dated) return prior || legacy;
-      const { date: _date, week: _week, revision: _revision, periodId: _periodId, weeklyIntent: _intent, ...daily } = dated;
-      return { ...daily, ...(prior?.prescriptions ? { prescriptions: prior.prescriptions } : {}) };
+      const { v: _v, date: _date, week: _week, revision: _revision, periodId: _periodId, weeklyIntent: _intent, ...daily } = dated;
+      return daily;
     }).filter(Boolean);
     if (!schedule.some(item => item.day === day && (item.routine.includes(id) || item.routine.includes(exercise.name)))) throw new Error('PLAN_CHANGED');
     const key = exerciseKey(day, id);
@@ -145,15 +160,19 @@ export async function importGuestData(uid, records) {
     // doses have no effect on the active plan and do not need to be copied.
     if (record.group === 'dateDoses') continue;
     if (record.group === 'dateSessions') {
-      const doses = (record.data.routine || []).map(id => dateDoses.get(`${record.id}_${id}`));
-      if (doses.some(dose => !dose || dose.date !== record.id || dose.revision !== record.data.revision)) throw new Error('INVALID_IMPORT');
+      if (!Array.isArray(record.data?.routine)) throw new Error('INVALID_IMPORT');
+      const keys = dateDoseKeys(record.id, record.data);
+      const documents = Object.fromEntries(keys.map(id => [id, dateDoses.get(id)]));
+      const doses = record.data.routine.map(id => dateDoseRecord(record.id, record.data, documents, id));
+      if (doses.some((dose, index) => !dose || dose.date !== record.id || dose.revision !== record.data.revision
+        || dose.exerciseId !== record.data.routine[index] || dose.dose?.id !== record.data.routine[index])) throw new Error('INVALID_IMPORT');
       await runTransaction(db, async transaction => {
         const ref = userDoc(uid, record.group, record.id);
         const existing = await transaction.get(ref);
         assertUser(uid);
         if (existing.exists()) return;
         transaction.set(ref, record.data);
-        for (const dose of doses) transaction.set(userDoc(uid, 'dateDoses', `${record.id}_${dose.exerciseId}`), dose);
+        for (const id of keys) transaction.set(userDoc(uid, 'dateDoses', id), documents[id]);
       });
       continue;
     }

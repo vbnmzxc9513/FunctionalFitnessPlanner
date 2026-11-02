@@ -1,3 +1,4 @@
+import { DAILY_WARMUP_IDS } from '../../src/domain/quickWorkouts.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { catalogExercises } from '../../src/domain/exerciseCatalog.js';
@@ -32,9 +33,9 @@ test('genuinely hard court play with fatigue can retain a recovery week while ro
   assert.ok(result.sessions.every(day => day.sessionType === 'recovery'));
   assert.ok(scheduledMobility(result.sessions).every(row => row.dates.length > 0));
   for (const day of result.sessions) {
-    assert.ok(day.routine.length <= 3);
-    assert.equal(day.routine[0], 'bf_A13');
-    assert.equal(day.prescriptions[0].value, '10');
+    assert.ok(day.routine.length <= 10);
+    assert.deepEqual(day.routine.slice(0, 8), DAILY_WARMUP_IDS);
+    assert.equal(day.prescriptions[0].value, '4');
     assert.ok(!day.routine.some(id => ['bf_A01', 'bf_I01'].includes(id)));
   }
   assert.match(result.conclusion, /本段未排主要肌力/);

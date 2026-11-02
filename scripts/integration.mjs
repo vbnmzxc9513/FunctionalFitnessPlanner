@@ -11,11 +11,12 @@ async function run(args) {
   const code = await new Promise(resolve => child.on('exit', resolve));
   if (code !== 0) process.exit(code || 1);
 }
-if (!process.argv.includes('--browser-only')) await run(['--test', '--test-concurrency=1', 'tests/integration/firestore.test.js', 'tests/integration/training.test.js', 'tests/integration/period.test.js', 'tests/integration/sharedPlans.test.js', 'tests/integration/savedWorkouts.test.js', 'tests/integration/guestMigration.test.js']);
+if (!process.argv.includes('--browser-only')) await run(['--test', '--test-concurrency=1', 'tests/integration/firestore.test.js', 'tests/integration/training.test.js', 'tests/integration/period.test.js', 'tests/integration/sharedPlans.test.js', 'tests/integration/savedWorkouts.test.js', 'tests/integration/guestMigration.test.js', 'tests/integration/plannerAdaptersV3.test.js']);
 await run(['tests/integration/planShareDialog.browser.mjs']);
 await run(['tests/integration/savedWorkouts.browser.mjs']);
 await run(['scripts/navigation-smoke.mjs']);
 await run(['scripts/workout-planner-smoke.mjs']);
+await run(['scripts/planner-redesign-smoke.mjs']);
 await run(['scripts/browser-smoke.mjs']);
 await run(['scripts/coaching-smoke.mjs']);
 await run(['scripts/selection-smoke.mjs']);

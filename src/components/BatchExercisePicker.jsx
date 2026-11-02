@@ -1,7 +1,7 @@
 import { useBackNavigation } from '../hooks/useBackNavigation.js';
 import { useId, useRef, useState } from 'react';
 import { ArrowLeft, Check, Loader2, Search, Star, X } from 'lucide-react';
-import { defaultManualPhaseType, filterManualExercises, manualExerciseRegions } from '../domain/manualPlanner.js';
+import { MANUAL_MAX_EXERCISES, defaultManualPhaseType, filterManualExercises, manualExerciseRegions } from '../domain/manualPlanner.js';
 import { libraryGroups, suggestedUses } from '../domain/library.js';
 import './manual-planner.css';
 const labels = {
@@ -9,7 +9,7 @@ const labels = {
     title: '加入動作', cancel: '回到排課', destination: '加入到', types: '先選動作類型', regions: '再選部位',
     search: '搜尋名稱、別名或部位', placeholder: '例如：腿拉伸、胸椎、前鋸肌、B01', matches: '符合條件的動作',
     selected: '檢查已選動作', existing: '已在這天課表', pending: '待加入', remove: '取消選取', count: n => `已選 ${n} 個`,
-    remaining: n => `這天還可加入 ${n} 個（含暖身與收操，最多 8 個）`, add: n => `加入 ${n} 個動作`,
+    remaining: n => `這天還可加入 ${n} 個（含暖身與收操，最多 24 個）`, add: n => `加入 ${n} 個動作`,
     empty: '沒有符合的可用動作。請切換類型、部位或清除搜尋。', clear: '清除搜尋與篩選', none: '還沒選動作。勾選後才會列在這裡。',
     full: '這天的動作名額已滿。先回排課移除動作，再加入新的項目。', over: '已選超過剩餘名額，請先取消部分選取。',
     unavailable: '目前條件已不能加入，請取消選取。', hint: '勾選只保留候選；按「加入」才會放進草稿。切換類型、部位與搜尋會保留已選項目。',
@@ -21,7 +21,7 @@ const labels = {
     title: 'Add exercises', cancel: 'Back to planner', destination: 'Add to', types: 'Exercise type', regions: 'Body region',
     search: 'Search names, aliases or regions', placeholder: 'For example: leg stretch, thoracic, serratus, B01', matches: 'Matching exercises',
     selected: 'Review selected exercises', existing: 'Already in this day', pending: 'To add', remove: 'Deselect', count: n => `${n} selected`,
-    remaining: n => `Room for ${n} more (8 per day, including warm-up and cooldown)`, add: n => `Add ${n} exercises`,
+    remaining: n => `Room for ${n} more (24 per day, including warm-up and cooldown)`, add: n => `Add ${n} exercises`,
     empty: 'No available exercises match. Change a type or region, or clear the search.', clear: 'Clear search and filters', none: 'Nothing selected yet. Check exercises to list them here.',
     full: 'This day is full. Return to the planner and remove an exercise before adding more.', over: 'Your selection exceeds the remaining capacity. Deselect some exercises.',
     unavailable: 'No longer available under your current conditions. Deselect it.', hint: 'Checking an exercise only selects it. Add it to put it in the draft. Selections stay when you change filters or search.',
@@ -32,7 +32,7 @@ const labels = {
 };
 
 export default function BatchExercisePicker({ exercises = {}, eligibleExercises = {}, selectedIds = [], onSelectionChange,
-  existingIds = [], remainingCapacity = 8, phase = 'strength', date = '', lang = 'zh', t, onAdd, onCancel, onOrganize, canManage = false, onSignIn }) {
+  existingIds = [], remainingCapacity = MANUAL_MAX_EXERCISES, phase = 'strength', date = '', lang = 'zh', t, onAdd, onCancel, onOrganize, canManage = false, onSignIn }) {
   const en = lang === 'en';
   const copy = labels[en ? 'en' : 'zh'];
   const id = useId();
@@ -76,8 +76,6 @@ export default function BatchExercisePicker({ exercises = {}, eligibleExercises 
   const clear = () => { setQuery(''); setType('all'); setRegion('all'); setFavoritesOnly(false); setLimit(24); };
   const phaseTitle = en ? `Add ${destination.toLowerCase()} exercises` : `加入${destination}動作`;
   const regionSummary = exercise => manualExerciseRegions(exercise.id, exercise).map(value => copy.region[value]).filter(Boolean).slice(0, 2).join(' · ');
-  const sequence = exercises.bf_A13;
-  const canSelectSequence = !!eligibleExercises.bf_A13 && !existing.has('bf_A13') && (chosen.has('bf_A13') || selectedIds.length < remainingCapacity);
   return <section data-testid="batch-exercise-picker" className="manual-picker">
     <button type="button" data-testid="batch-picker-cancel" onClick={() => reviewing ? switchView(false) : onCancel?.()} className="manual-back"><ArrowLeft size={20} aria-hidden="true" />{reviewing ? en ? 'Continue choosing' : '繼續選動作' : en ? 'Cancel selection' : '取消選擇'}</button>
     <header className="manual-picker-heading"><h2 ref={heading} tabIndex="-1">{reviewing ? en ? 'Review selected exercises' : '確認已選動作' : phaseTitle}</h2><p>{shortDate} · {reviewing ? destination : en ? 'Choose, then add together' : '選好後一次加入'}</p></header>
@@ -88,7 +86,6 @@ export default function BatchExercisePicker({ exercises = {}, eligibleExercises 
       <fieldset className="manual-picker-regions"><legend className="sr-only">{copy.regions}</legend>{regions.map(value => <button type="button" key={value} aria-pressed={region === value && !query.trim()} onClick={() => { setRegion(value); setQuery(''); setLimit(24); }}>{region === value && !query.trim() && <Check size={16} aria-hidden="true" />}{regionLabel(value)}</button>)}<button type="button" ref={favoriteFilter} aria-pressed={favoritesOnly} onClick={() => { setFavoritesOnly(value => !value); setLimit(24); }}><Star size={16} aria-hidden="true" fill={favoritesOnly ? 'currentColor' : 'none'} />{en ? 'Saved' : '收藏'}</button>
       <details className="manual-picker-more"><summary>{en ? 'More types' : '更多類型'}{['skill', 'other', 'all'].includes(type) && ` · ${copy.type[type]}`}</summary><div className="flex flex-wrap gap-2">{['skill', 'other', 'all'].map(value => <button type="button" key={value} aria-pressed={type === value && !query.trim()} onClick={() => chooseType(value)} className="manual-filter-button">{copy.type[value]}</button>)}</div><p className="mt-2 text-xs text-slate-500">{copy.eligibility}</p></details></fieldset>
       {query.trim() && <p className="manual-search-hint">{en ? 'Searching all available exercise types and regions.' : '正在跨類型與部位搜尋所有可用動作。'}</p>}
-      {phase === 'warmup' && type === 'dynamic' && !query.trim() && sequence && <div className="manual-eight-shortcut"><div><h3>{en ? 'My daily eight-part warm-up' : '我的每日八段暖身'}</h3><p>{en ? 'One complete 10-minute sequence · both sides included' : '完整 10 分鐘流程 · 包含八段與左右側'}</p></div><button type="button" data-testid="batch-eight-stretch" disabled={!canSelectSequence} onClick={() => toggle('bf_A13')}>{existing.has('bf_A13') ? copy.existing : chosen.has('bf_A13') ? en ? 'Deselect sequence' : '取消整套' : en ? 'Select sequence' : '整套選取'}</button></div>}
       {organizeError && <p role="alert" className="text-sm text-red-700">{organizeError}</p>}
       <section aria-labelledby={`${id}-matches`} className="manual-picker-results"><header><h3 id={`${id}-matches`}>{en ? 'Available exercises' : '可選動作'}</h3><p>{candidates.length} {en ? 'exercises' : '個'}</p></header>
         <div className="manual-picker-list">{candidates.slice(0, limit).map(([value, exercise]) => {

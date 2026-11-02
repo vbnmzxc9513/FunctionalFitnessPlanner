@@ -1,6 +1,6 @@
 import { useBackNavigation } from '../hooks/useBackNavigation.js';
 import { useId, useState } from 'react';
-import { ArrowLeft, ChevronRight, Share2, Trash2 } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Pin, Share2, Trash2 } from 'lucide-react';
 import ExerciseDetails from './ExerciseDetails.jsx';
 import { workoutName, savedWorkoutDay } from '../domain/savedWorkouts.js';
 import { estimateSessionMinutes } from '../domain/sessions.js';
@@ -37,12 +37,13 @@ function WorkoutContents({ item, t, exercises, en }) {
     </ExerciseDetails></>;
 }
 
-function SavedWorkoutList({ store, exercises, lang = 'zh', onUse, onShare, onClose }) {
+function SavedWorkoutList({ store, exercises, lang = 'zh', onUse, onShare, onClose, onEdit }) {
   const t = SAVED_WORKOUTS_TEXT[lang] || SAVED_WORKOUTS_TEXT.zh, en = lang === 'en';
   const titleId = useId(), nameId = useId(), nameHintId = useId(), errorId = useId();
   const [selectedId, setSelectedId] = useState(null), [renaming, setRenaming] = useState(null);
   const [name, setName] = useState(''), [deleting, setDeleting] = useState(null);
   const [pending, setPending] = useState(false), [error, setError] = useState(null), [status, setStatus] = useState('');
+  const sortedItems = [...store.items].sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned) || (b.lastUsedAt || 0) - (a.lastUsedAt || 0));
   const selected = store.items.find(item => item.id === selectedId);
   const selectedDelete = store.items.find(item => item.id === deleting);
   const busy = pending || store.busy;
@@ -62,6 +63,7 @@ function SavedWorkoutList({ store, exercises, lang = 'zh', onUse, onShare, onClo
     try { await store.remove(selectedDelete.id, selectedDelete.revision); setDeleting(null); setSelectedId(null); setStatus(t.deleted); }
     catch (value) { setError(value); } finally { setPending(false); }
   };
+  const pin = async item => { if (busy) return; setPending(true); try { await store.setPinned(item.id, !item.pinned, item.revision); setError(null); } catch (value) { setError(value); } finally { setPending(false); } };
   const externalAction = async (handler, item) => {
     if (busy) return;
     setError(null); setStatus(''); setPending(true);
@@ -69,18 +71,19 @@ function SavedWorkoutList({ store, exercises, lang = 'zh', onUse, onShare, onClo
   };
   return <section aria-labelledby={titleId} className="workout-library workout-ui" data-testid="saved-workouts">
     {(selected || onClose) && <button type="button" className="workout-ui-back" disabled={busy} onClick={selected ? () => { setSelectedId(null); setRenaming(null); setError(null); } : onClose}><ArrowLeft size={18} />{selected ? en ? 'My saved workouts' : '我的課表' : en ? 'Back to plans' : '返回課表'}</button>}
-    <header className="workout-ui-heading"><h2 id={titleId}>{selected?.name || (en ? t.title : '我的課表')}</h2><p>{selected ? `${selected.snapshot.routine.length} ${t.motions} · ${minutes(selected)} ${en ? 'min' : '分鐘'}` : en ? 'Save a routine, then choose dates next time.' : '收藏好的安排，下次直接選日期使用。'}</p></header>
+    <header className="workout-ui-heading"><h2 id={titleId}>{selected?.name || (en ? t.title : '我的課表')}</h2><p>{selected ? `${selected.snapshot.routine.length} ${t.motions} · ${minutes(selected)} ${en ? 'min' : '分鐘'}` : en ? 'Save a routine, then choose dates next time.' : '保存常用組合，下次加入草稿或選日期使用。'}</p></header>
     {!store.loaded && <p role="status">{t.loading}</p>}
     {store.error && <div role="alert" className="workout-ui-notice"><p>{savedWorkoutError(store.error, lang)}</p><button type="button" className="workout-ui-link" onClick={store.reload}>{t.retry}</button></div>}
     {error && <p id={errorId} role="alert" className="workout-ui-error">{savedWorkoutError(error, lang)}</p>}
     {status && <p role="status" className="workout-ui-notice">{status}</p>}
     {selected ? <article data-testid="saved-workout-detail" className="workout-library-detail">
-      <div className="workout-library-status"><span className="workout-ui-badge">{en ? 'Saved copy · no date assigned' : '已收藏・尚未指定日期'}</span><button type="button" disabled={busy} className="workout-ui-link" aria-label={`${t.rename} ${selected.name}`} onClick={() => { setName(selected.name); setRenaming(selected.id); setError(null); setStatus(''); }}>{t.rename}</button></div>
+      <p className="workout-ui-muted">{(selected.scope || 'day') === 'day' ? en ? 'Full-day workout' : '整天課表' : en ? 'A segment to add to your day' : '可加入一天的訓練片段'}{selected.tags?.length ? ` · ${selected.tags.join('／')}` : ''}</p><div className="workout-library-status"><span className="workout-ui-badge">{en ? 'Saved copy · no date assigned' : '已收藏・尚未指定日期'}</span><button type="button" disabled={busy} className="workout-ui-link" aria-label={`${t.rename} ${selected.name}`} onClick={() => { setName(selected.name); setRenaming(selected.id); setError(null); setStatus(''); }}>{t.rename}</button></div>
       {renaming === selected.id && <form onSubmit={event => rename(event, selected)} className="workout-ui-card workout-ui-form">
         <label htmlFor={nameId}>{t.name}</label><input id={nameId} value={name} onChange={event => { setName(event.target.value); setError(null); }} maxLength={80} required disabled={busy} autoFocus aria-describedby={`${nameHintId}${error ? ` ${errorId}` : ''}`} aria-invalid={['INVALID_WORKOUT_NAME', 'DUPLICATE_WORKOUT_NAME'].includes(error?.message) || undefined} />
         <p id={nameHintId} className="workout-ui-muted">{t.nameHint}</p><div className="workout-ui-inline"><button type="submit" className="workout-ui-primary" disabled={busy}>{t.renameSave}</button><button type="button" className="workout-ui-link" disabled={busy} onClick={() => { setRenaming(null); setError(null); }}>{t.cancel}</button></div>
       </form>}
       {onShare && <button type="button" data-testid="saved-workout-share" disabled={busy} onClick={() => externalAction(onShare, selected)} className="workout-ui-secondary workout-library-share" aria-label={`${t.share} ${selected.name}`}><Share2 size={19} />{en ? 'Share this workout' : '分享這份課表'}</button>}
+      {onEdit && <button type="button" className="workout-ui-secondary" onClick={() => onEdit(selected)} disabled={busy}>{en ? 'Edit a copy' : '修改副本'}</button>}
       <WorkoutContents key={selected.id} item={selected} {...{ t, exercises, en }} />
       <p className="workout-ui-muted">{en ? 'Each scheduled date gets its own copy. Later edits will not change this saved workout or any shared copy.' : '套用後，每個日期都有自己的副本；修改某一天，不會改到這份收藏或朋友收到的分享。'}</p>
       <details className="workout-ui-fineprint"><summary>{en ? 'What is saved' : '收藏內容與儲存位置'}</summary><p>{t.privacy}</p><p>{store.scope === 'account' ? t.account : t.device}</p>{selected.snapshot.exercises.some(exercise => exercise.custom) && <p>{t.custom}</p>}</details>
@@ -89,7 +92,7 @@ function SavedWorkoutList({ store, exercises, lang = 'zh', onUse, onShare, onClo
     </article> : <>
       <p className="workout-ui-muted">{store.items.length} {en ? 'saved workouts' : '份課表'} · {store.scope === 'account' ? en ? 'Saved to this account' : '目前帳號已保存' : en ? 'Saved on this device' : '這台裝置已保存'}</p>
       {store.loaded && !store.error && !store.items.length && <p className="workout-ui-card workout-ui-muted">{t.empty}</p>}
-      <div className="workout-library-cards">{store.items.map(item => <article key={item.id} className="workout-ui-card"><button type="button" data-testid="saved-workout-open" data-workout-id={item.id} onClick={() => { setSelectedId(item.id); setError(null); setStatus(''); }} className="workout-library-open"><div><h3>{item.name}</h3><p>{item.snapshot.routine.length ? `${item.snapshot.routine.length} ${t.motions} · ${minutes(item)} ${en ? 'min' : '分鐘'}` : t.restDay}</p><PhaseTags item={item} en={en} /></div><ChevronRight size={23} aria-hidden="true" /></button></article>)}</div>
+      <div className="workout-library-cards">{sortedItems.map(item => <article key={item.id} className="workout-ui-card"><button type="button" data-testid="saved-workout-open" data-workout-id={item.id} onClick={() => { setSelectedId(item.id); setError(null); setStatus(''); }} className="workout-library-open"><div><h3>{item.pinned ? '📌 ' : ''}{item.name}</h3><p>{(item.scope || 'day') === 'day' ? en ? 'Full-day workout' : '整天課表' : en ? 'Workout segment' : '可加入一天的訓練片段'}</p><p>{item.snapshot.routine.length ? `${item.snapshot.routine.length} ${t.motions} · ${minutes(item)} ${en ? 'min' : '分鐘'}` : t.restDay}</p><PhaseTags item={item} en={en} /></div><ChevronRight size={23} aria-hidden="true" /></button>{store.setPinned && <button type="button" className="workout-ui-link" aria-pressed={!!item.pinned} disabled={busy} onClick={() => pin(item)}><Pin size={17} />{item.pinned ? en ? 'Unpin' : '取消釘選' : en ? 'Pin' : '釘選'}</button>}</article>)}</div>
       <p className="workout-ui-muted">{store.scope === 'account' ? t.account : t.device}</p>
     </>}
     <ExerciseDetails open={!!selectedDelete} title={t.deleteTitle} subtitle={selectedDelete?.name || ''} closeLabel={t.cancel} onClose={() => { if (!busy) setDeleting(null); }} footer={<><button type="button" disabled={busy} onClick={() => setDeleting(null)} className="button-secondary">{t.cancel}</button><button type="button" disabled={busy} onClick={remove} className="button-primary bg-rose-700">{t.deleteConfirm}</button></>}><p>{t.deleteHint}</p>{error && selectedDelete && <p role="alert" className="workout-ui-error">{savedWorkoutError(error, lang)}</p>}</ExerciseDetails>

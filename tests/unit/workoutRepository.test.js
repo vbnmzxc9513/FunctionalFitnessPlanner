@@ -103,3 +103,33 @@ test('account reads reject malformed persisted payloads instead of showing parti
   repository.subscribe(() => assert.fail('must not deliver invalid records'), error => { failure = error; });
   assert.match(failure.message, /INVALID_SAVED_WORKOUT/);
 });
+
+test('scope/tags/version, pin and recent metadata persist independently with revision guards; partial updates retain content', async () => {
+  const storage = memory(); let time = 100;
+  const repository = createDeviceWorkoutRepository({ storage: () => storage, identity: () => null, clock: () => time, id: () => 'savedmetadata' });
+  const saved = await repository.create({ name: 'Warm-up', snapshot: empty, scope: 'warmup', tags: ['control'], contentVersion: 2 });
+  assert.equal(saved.scope, 'warmup'); assert.deepEqual(saved.tags, ['control']); assert.equal(saved.contentVersion, 2);
+  await assert.rejects(repository.setPinned(saved.id, true), /WORKOUT_CHANGED/);
+  const pinned = await repository.setPinned(saved.id, true, 1);
+  assert.equal(pinned.pinned, true); assert.equal(pinned.revision, 2);
+  time = 150; const recent = await repository.markUsed(saved.id, 2);
+  assert.equal(recent.lastUsedAt, 150); assert.equal(recent.revision, 3);
+  const edited = await repository.update(saved.id, { tags: ['mobility'] }, 3);
+  assert.deepEqual(edited.snapshot, empty); assert.equal(edited.scope, 'warmup'); assert.equal(edited.pinned, true); assert.equal(edited.lastUsedAt, 150);
+  await assert.rejects(repository.update(saved.id, { scope: 'day' }, 3), /WORKOUT_CHANGED/);
+  await assert.rejects(repository.update(saved.id, { scope: 'day' }), /WORKOUT_CHANGED/);
+  assert.deepEqual((await repository.list())[0], edited);
+});
+
+test('account metadata and content updates preserve name reservations and reject a stale identity', async () => {
+  const data = cloud(), repository = data.make('a');
+  const saved = await repository.create({ name: 'Account template', snapshot: empty, scope: 'selection', tags: ['hip'] });
+  await repository.setPinned(saved.id, true, 1);
+  await repository.markUsed(saved.id, 2);
+  const updated = await repository.update(saved.id, { snapshot: createWorkoutSnapshot({ routine: ['bf_A13'] }), tags: ['mobility'] }, 3);
+  assert.equal(updated.snapshot.routine[0], 'bf_A13'); assert.equal(updated.pinned, true); assert.equal(updated.scope, 'selection'); assert.ok(updated.lastUsedAt > 0);
+  assert.equal(data.documents.size, 2);
+  data.login({ uid: 'b' });
+  await assert.rejects(repository.setPinned(saved.id, false, 4), /WORKOUT_AUTH_CHANGED/);
+  await assert.rejects(repository.markUsed(saved.id), /WORKOUT_AUTH_CHANGED/);
+});

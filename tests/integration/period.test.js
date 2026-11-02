@@ -1,3 +1,5 @@
+import { largePlannerDay } from '../fixtures/plannerV3.js';
+import { dateDoseKeys } from '../../src/domain/dateDoseStorage.js';
 import { after, before, beforeEach, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -5,7 +7,9 @@ import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebas
 import { doc, getDoc, getDocs, setDoc, writeBatch } from 'firebase/firestore';
 import { signInAnonymously, signOut } from 'firebase/auth';
 import { auth } from '../../src/services/firebase.js';
-import { userDoc, userCollection, setCompletion, captureGuestData, importGuestData } from '../../src/services/repository.js';
+import { userDoc, userCollection, savePlan, setCompletion, captureGuestData, importGuestData } from '../../src/services/repository.js';
+import { prepareWeeklyApplication, applyWeeklyApplication } from '../../src/services/weeklyApplication.js';
+import legacyPlans from '../fixtures/legacyWeeklyPlans.json' with { type: 'json' };
 import { applyPeriodPlan, assembleDateSessions, loadPeriodState, saveDateReadinessAdjustment } from '../../src/services/periodRepository.js';
 import { saveTrainingLog, plannedSnapshot } from '../../src/services/trainingRepository.js';
 import { dateForWeekDay, getWeekString, localDate } from '../../src/domain/dates.js';
@@ -41,12 +45,12 @@ before(async () => {
 beforeEach(async () => { await environment.clearFirestore(); });
 after(async () => { await signOut(auth); await environment.cleanup(); });
 
-test('28 dates and 224 independently validated doses apply atomically without legacy mirrors or private profile data', async () => {
+test('28 dates and 224 independent doses in bounded chunks apply atomically without legacy mirrors or private profile data', async () => {
   const range = rangeFor(28), sessions = sessionsFor(range);
   const result = await apply(range, sessions);
   assert.equal(result.appliedDates.length, 28);
   assert.equal((await getDocs(userCollection(uid, 'dateSessions'))).size, 28);
-  assert.equal((await getDocs(userCollection(uid, 'dateDoses'))).size, 224);
+  assert.equal((await getDocs(userCollection(uid, 'dateDoses'))).size, 112);
   assert.equal((await getDocs(userCollection(uid, 'planDays'))).size, 0);
   assert.equal((await getDocs(userCollection(uid, 'plans'))).size, 0);
   const state = await loadPeriodState(uid, range);
@@ -72,7 +76,10 @@ test('four detailed targets persist in native date sessions and cloud period sum
 test('malformed preparation rolls back the entire independent document batch; collections enforce owner and whitelists', async () => {
   const range = rangeFor(1); await apply(range);
   const session = (await getDoc(userDoc(uid, 'dateSessions', today))).data();
-  const doseRef = userDoc(uid, 'dateDoses', `${today}_bf_B02`), dose = (await getDoc(doseRef)).data();
+  const doseRef = userDoc(uid, 'dateDoses', `${today}_bf_B02`);
+  const source = (await loadPeriodState(uid, range)).sessionsByDate[today];
+  const dose = { date: today, exerciseId: 'bf_B02', revision: 1, dose: source.prescriptions.find(item => item.id === 'bf_B02') };
+  await assertSucceeds(setDoc(doseRef, dose));
   const batch = writeBatch(doseRef.firestore);
   batch.set(userDoc(uid, 'dateSessions', today), { ...session, revision: 2 });
   batch.set(doseRef, { ...dose, revision: 2, dose: { ...dose.dose, preparation: { ...dose.dose.preparation, value: '100' } } });
@@ -215,7 +222,7 @@ test('legacy five-day documents remain untouched and incomplete native joins res
 test('guest capture and idempotent import retain historical native sessions, doses and bounded metadata', async () => {
   const range = rangeFor(1); await apply(range);
   const captured = (await captureGuestData(uid)).filter(record => ['dateSessions', 'dateDoses', 'planningPeriods'].includes(record.group));
-  assert.equal(captured.length, 10);
+  assert.equal(captured.length, 6);
   const past = shift(today, -20);
   const imported = captured.map(record => {
     const data = structuredClone(record.data);
@@ -226,7 +233,7 @@ test('guest capture and idempotent import retain historical native sessions, dos
   });
   await environment.clearFirestore();
   await importGuestData(uid, imported); await importGuestData(uid, imported);
-  assert.equal((await getDocs(userCollection(uid, 'dateDoses'))).size, 8);
+  assert.equal((await getDocs(userCollection(uid, 'dateDoses'))).size, 4);
   const state = await loadPeriodState(uid, { from: past, to: past });
   assert.equal(state.sessionsByDate[past].routine.length, 8);
   assert.equal((await getDocs(userCollection(uid, 'planningPeriods'))).size, 1);
@@ -252,4 +259,55 @@ test('manual/import sparse assignments write only chosen dates, require replacem
   state = await loadPeriodState(uid, range);
   await assert.rejects(applyPeriodPlan(uid, { ...draft, sessions: changed, replaceDates: dates, expectedState: state.expectedState }), /DATE_PROTECTED/);
   assert.deepEqual((await getDoc(userDoc(uid, 'dateSessions', dates[1]))).data(), current);
+});
+
+
+test('maximum 28×24 date assignments commit atomically, reload all 672 doses and reject malformed chunks/account access', async () => {
+  const range = rangeFor(28), sessions = enumeratePeriodDates(range).map(date => largePlannerDay(date));
+  const result = await apply(range, sessions);
+  assert.equal(result.appliedDates.length, 28);
+  assert.equal((await getDocs(userCollection(uid, 'dateDoses'))).size, 336);
+  const state = await loadPeriodState(uid, range);
+  for (const session of sessions) {
+    assert.deepEqual(state.sessionsByDate[session.date].routine, session.routine);
+    assert.deepEqual(state.sessionsByDate[session.date].prescriptions, session.prescriptions);
+  }
+  const metadata = (await getDoc(userDoc(uid, 'dateSessions', today))).data();
+  for (const routine of [[123], [null], [true], [{ id: 'bad' }], ['part|injection'], [''], ['a'.repeat(101)], Array.from({ length: 25 }, (_, index) => `id${index}`), ['duplicate', 'duplicate']]) {
+    await assertFails(setDoc(userDoc(uid, 'dateSessions', today), { ...metadata, routine }));
+  }
+  await assert.rejects(async () => setDoc(userDoc(uid, 'dateSessions', today), { ...metadata, routine: [['nested']] }), /Nested arrays are not supported/);
+  const alternateDate = shift(today, 29), alternateWeek = getWeekString(new Date(`${alternateDate}T12:00:00`));
+  await assertSucceeds(setDoc(userDoc(uid, 'dateSessions', alternateDate), { ...metadata, date: alternateDate, week: alternateWeek, day: new Date(`${alternateDate}T12:00:00`).getDay() || 7, routine: ['a'.repeat(100), 'custom_valid-ID_2'] }));
+  const key = dateDoseKeys(today, metadata)[4], ref = userDoc(uid, 'dateDoses', key), chunk = (await getDoc(ref)).data();
+  for (const mutation of [value => { value.items[0].sets = 6; }, value => { value.items[0].preparation.value = '100'; },
+    value => { value.items.push(value.items[0]); }, value => { value.privateNote = 'never'; }, value => { value.revision = 0; }]) {
+    const invalid = structuredClone(chunk); mutation(invalid); await assertFails(setDoc(ref, invalid));
+  }
+  for (const context of [environment.unauthenticatedContext(), environment.authenticatedContext('stranger')]) {
+    await assertFails(getDoc(doc(context.firestore(), ref.path)));
+    await assertFails(setDoc(doc(context.firestore(), ref.path), chunk));
+  }
+  const bad = writeBatch(ref.firestore);
+  bad.set(userDoc(uid, 'dateSessions', today), { ...metadata, revision: 2 });
+  bad.set(ref, { ...chunk, revision: 2, items: [{ ...chunk.items[0], value: '0' }] });
+  await assertFails(bad.commit());
+  assert.equal((await getDoc(userDoc(uid, 'dateSessions', today))).data().revision, 1);
+});
+
+test('weekly AI adapter previews the retained protected day and writes unprotected >8-row days through native storage', async () => {
+  const legacy = { ...structuredClone(legacyPlans.balanced), source: 'template', language: 'zh' };
+  await savePlan(uid, week, legacy, legacy, false, 0);
+  const completedId = legacy.schedule[0].routine[0];
+  await setCompletion(uid, week, 1, completedId, true, EXERCISES_I18N.zh[completedId], legacy.schedule);
+  const plan = { conclusion: 'New week', schedule: Array.from({ length: 5 }, (_, index) => largePlannerDay(dateForWeekDay(week, index + 1))) };
+  const application = await prepareWeeklyApplication(uid, { plan, profile, week }, { today, exercises: EXERCISES_I18N.zh });
+  assert.deepEqual(application.protectedDates, [dateForWeekDay(week, 1)]);
+  assert.deepEqual(application.sessions[0].routine, legacy.schedule[0].routine, 'review shows the actual protected content');
+  const result = await applyWeeklyApplication(uid, application);
+  assert.equal(result.appliedDates.length, 4);
+  assert.equal((await getDoc(userDoc(uid, 'dateSessions', dateForWeekDay(week, 1)))).exists(), false);
+  const state = await loadPeriodState(uid, application.range);
+  assert.equal(state.sessionsByDate[dateForWeekDay(week, 2)].prescriptions.length, 24);
+  assert.equal((await getDoc(userDoc(uid, 'progress', week))).data().completed[`day1_${completedId}`], true);
 });

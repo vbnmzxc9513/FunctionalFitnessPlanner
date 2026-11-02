@@ -6,6 +6,7 @@ import { spawn } from 'node:child_process';
 import puppeteer from 'puppeteer';
 import { localDate, getWeekString, dateForWeekDay } from '../src/domain/dates.js';
 
+if (process.env.VITE_USE_FIREBASE_EMULATORS === 'true') assert.equal(process.env.VITE_FIREBASE_PROJECT_ID, 'demo-fitness-planner', 'Account smoke tests require the explicitly configured demo project');
 const actualToday = localDate();
 // Keep local actuals in the real past so reloading at the emulator's real
 // date tests retention without importing impossible future training facts.
@@ -55,7 +56,13 @@ try {
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${layout}: regional dates fit the viewport`);
       await clickSelector('[data-testid="period-mobility-overview"] summary');
     };
-    await page.goto(site, { waitUntil: 'networkidle2' }); await visible('[data-testid="first-plan"] [data-testid="planning-range"]');
+    await page.goto(site, { waitUntil: 'networkidle2' });
+    if (process.env.VITE_USE_FIREBASE_EMULATORS === 'true') {
+      const projectId = await page.evaluate(async () => (await import('/FunctionalFitnessPlanner/src/services/firebase.js')).db.app.options.projectId);
+      assert.equal(projectId, 'demo-fitness-planner');
+      console.log(`${layout}: verified browser Firestore project ${projectId}`);
+    }
+    await visible('[data-testid="first-plan"] [data-testid="planning-range"]');
     assert.equal(await page.$('[data-testid="planner-form"]'), null, `${layout}: dates precede questionnaire`);
     await fill('[data-testid="planning-range"] input:first-of-type', shift(-1));
     assert.equal(await page.$eval('[data-testid="planning-range-continue"]', item => item.disabled), true, `${layout}: past start blocked`);
@@ -85,7 +92,7 @@ try {
     await click('今天'); await visible('[data-testid="session-start"]'); await click('開始今天訓練'); await visible('[data-testid="current-exercise"]');
     const completion = await page.waitForSelector('[data-testid="current-exercise"] button[aria-label][aria-pressed]', { visible: true }); const name = await completion.evaluate(item => item.getAttribute('aria-label')); await completion.evaluate(item => item.scrollIntoView({ block: 'center', behavior: 'instant' })); await completion.asLocator().click(); await completion.dispose();
     await page.waitForFunction(() => Object.values(JSON.parse(localStorage.getItem('fitness_date_period_v1')).progressByWeek).some(progress => Object.values(progress.completed).includes(true)));
-    for (let index = 0; index < 10 && !await page.$eval('[data-testid="current-exercise"]', item => !!item.querySelector('[data-testid^="exercise-log-"]')).catch(() => false); index++) await click('查看下一個動作');
+    for (let index = 0; index < applied.sessionsByDate[today].routine.length && !await page.$eval('[data-testid="current-exercise"]', item => !!item.querySelector('[data-testid^="exercise-log-"]')).catch(() => false); index++) await click('查看下一個動作');
     await visible('[data-testid="current-exercise"] [data-testid^="exercise-log-"]');
     await page.$$eval('[data-testid="current-exercise"] input[required][type="number"]', inputs => { for (const input of inputs) { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, '4'); input.dispatchEvent(new Event('input', { bubbles: true })); } });
     await click('儲存紀錄');
@@ -104,11 +111,13 @@ try {
     await click('課表'); await visible('[data-testid="period-plan-preview"]');
     assert.ok((await draft()).sessionsByDate[shift(7)], `${layout}: next week retains already planned dates`);
     await click('設定'); await click('🌐 English'); await click('Plan'); await visible('[data-testid="period-plan-preview"]');
-    assert.equal(await page.$eval('[data-testid="planner-actions"] h2', item => item.innerText), 'Weekly plan', `${layout}: saved weekly overview title is localized`);
+    assert.equal(await page.$eval('[data-testid="planner-actions"] h2', item => item.innerText), 'This week’s plan', `${layout}: saved weekly overview title is localized`);
     const displayedWeek = getWeekString(new Date(`${shift(5)}T12:00:00`));
     const displayedDates = Array.from({ length: 7 }, (_, index) => dateForWeekDay(displayedWeek, index + 1));
     assert.deepEqual(await page.$$eval('[data-testid="period-plan-preview"] .period-agenda-row', items => items.map(item => item.dataset.testid.slice('period-day-'.length))), displayedDates, `${layout}: saved agenda shows the real current-week date range`);
-    assert.equal(await page.$eval('[data-testid="planner-actions"] .planner-week-nav strong', item => item.innerText), `${displayedDates[0].slice(5).replace('-', '/')} — ${displayedDates[6].slice(5).replace('-', '/')}`, `${layout}: localized overview range matches its agenda`);
+    const plannedSessions = (await draft()).sessionsByDate;
+    const plannedCount = displayedDates.filter(date => plannedSessions[date]).length;
+    assert.equal(await page.$eval('[data-testid="planner-actions"] .planner-week-nav strong', item => item.innerText), `${displayedDates[0].slice(5).replace('-', '/')} — ${displayedDates[6].slice(5).replace('-', '/')} · ${plannedCount} days planned`, `${layout}: localized overview range and scheduled-date count match actual stored sessions`);
     assert.equal(await page.$eval('.period-agenda-heading h3', item => item.innerText), 'This week’s plan', `${layout}: agenda heading is localized`);
     await click('Plan another date range');
     await fill('[data-testid="planning-range"] input', shift(5));
@@ -141,7 +150,17 @@ try {
       assert.ok(await page.$eval('[data-testid="review-planning-conditions"]', item => item.innerText.includes('Dumbbell')), `${layout}: selected equipment is visible before preview`);
       await preview();
       assert.ok(await page.$eval('[data-testid="period-equipment-summary"]', item => item.innerText.includes('Dumbbell')), `${layout}: preview retains selected equipment`);
-      await clickSelector('[data-testid="period-plan-apply"]'); await page.waitForFunction(() => !document.querySelector('[data-testid="period-plan-apply"]'));
+      const diagnosticSession = await page.createCDPSession(); const caught = [];
+      await diagnosticSession.send('Debugger.enable');
+      diagnosticSession.on('Debugger.paused', async event => { caught.push(String(event.data?.description || event.reason)); await diagnosticSession.send('Debugger.resume'); });
+      await diagnosticSession.send('Debugger.setPauseOnExceptions', { state: 'all' });
+      try {
+        await clickSelector('[data-testid="period-plan-apply"]'); await page.waitForFunction(() => !document.querySelector('[data-testid="period-plan-apply"]'));
+      } finally {
+        await diagnosticSession.send('Debugger.setPauseOnExceptions', { state: 'none' });
+        await writeFile(`/tmp/auto-period-account-exceptions-${layout}.json`, JSON.stringify(caught, null, 2));
+        await diagnosticSession.detach();
+      }
       await page.evaluate(() => { for (const key of Object.keys(localStorage).filter(key => key.startsWith('fitness_saved_period_'))) { const saved = JSON.parse(localStorage.getItem(key)); if (saved?.periodId) { saved.createdAt = 1; localStorage.setItem(key, JSON.stringify(saved)); } } });
       await page.reload({ waitUntil: 'networkidle2' }); await click('Plan'); await visible('[data-testid="period-plan-preview"]');
       await clickSelector('[data-testid="period-plan-conditions"] > summary');
@@ -155,7 +174,9 @@ try {
       await page.waitForFunction(item => !item.matches(':disabled'), {}, cloudCompletion);
       await cloudCompletion.evaluate(item => item.scrollIntoView({ block: 'center', behavior: 'instant' })); await cloudCompletion.asLocator().click(); await cloudCompletion.dispose();
       await page.waitForFunction(name => [...document.querySelectorAll('button[aria-label][aria-pressed]')].some(item => item.getAttribute('aria-label') === name && item.getAttribute('aria-pressed') === 'true'), {}, cloudCompletedName);
-      for (let index = 0; index < 10 && !await page.$eval('[data-testid="current-exercise"]', item => !!item.querySelector('[data-testid^="exercise-log-"]')).catch(() => false); index++) await click('View next exercise');
+      const cloudMovementCount = await page.$$eval('[data-testid="daily-exercise-list"] [data-testid^="exercise-row-"]', rows => rows.length);
+      assert.ok(cloudMovementCount > 8, `${layout}: native training retains independent warm-ups and real main work`);
+      for (let index = 0; index < cloudMovementCount && !await page.$eval('[data-testid="current-exercise"]', item => !!item.querySelector('[data-testid^="exercise-log-"]')).catch(() => false); index++) await click('View next exercise');
       await visible('[data-testid="current-exercise"] [data-testid^="exercise-log-"]');
       const actualInputs = await page.$$('[data-testid="current-exercise"] input[required][type="number"]');
       assert.ok(actualInputs.length > 0, `${layout}: native actual performance inputs are visible`);
@@ -173,7 +194,7 @@ try {
 
     }
     assert.deepEqual(errors, []); assert.ok(name);
-    console.log(`${layout}: date-first validation, custom partial cross-week/weekend preview/back/apply, actual logs/execution, reload, protected facts, stale rollover, English and account isolation passed`);
+    console.log(`${layout}: date-first validation, custom partial cross-week/weekend preview/back/apply, actual logs/execution, reload, protected facts, stale rollover and English passed; ${process.env.VITE_USE_FIREBASE_EMULATORS === 'true' ? 'signed-in account isolation/save/reload also passed' : 'signed-in branch not run (emulators disabled)'}`);
     await context.close();
   }
 } catch (error) { if (diagnosticPage && !diagnosticPage.isClosed()) { await diagnosticPage.screenshot({ path: '/tmp/period-smoke.mjs.png', fullPage: true }); await writeFile('/tmp/period-smoke.mjs.txt', await diagnosticPage.evaluate(() => document.body.innerText)); await writeFile('/tmp/period-smoke.debug.json', JSON.stringify(await diagnosticPage.evaluate(() => {

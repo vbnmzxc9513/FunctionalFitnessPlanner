@@ -20,8 +20,8 @@ const include = (plan, id, dose = catalog[id].prescription) => {
   return plan;
 };
 
-test('curated catalog has 87 bilingual entries, nine categories and controlled jump doses', () => {
-  assert.equal(Object.keys(catalog).length, 87);
+test('curated catalog has 98 bilingual entries, nine categories and controlled jump doses', () => {
+  assert.equal(Object.keys(catalog).length, 98);
   assert.deepEqual([...new Set(Object.values(catalog).map(item => item.category))].sort(), [...EXERCISE_CATEGORIES].sort());
   assert.deepEqual(Object.keys(catalog), Object.keys(catalogExercises('en')));
   assert.ok(Object.values(catalogExercises('en')).every(item => item.name && item.tip && !/[\u4e00-\u9fff]/.test(item.name + item.tip)));

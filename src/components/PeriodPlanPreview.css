@@ -58,3 +58,15 @@
   .period-day-heading h2 { font-size: 24px; }
   .period-day-tools .period-text-action { font-size: 13px; }
 }
+/* P0/P6 date rows follow the approved compact divider list. */
+.period-agenda-card { border:0; border-radius:0; background:transparent; }
+.period-agenda-row { grid-template-columns:62px minmax(0,1fr) auto 44px; padding:14px 0; min-height:76px; }
+.period-agenda-date { justify-items:start; gap:3px; }
+.period-agenda-date strong { font-size:14px; margin:0; }
+.period-agenda-date > span { font-size:14px; }
+.period-agenda-content > strong { font-size:16px; }
+.period-agenda-content > span { font-size:14px; }
+.period-agenda-action { font-size:14px; color:#0284c7; text-align:right; }
+.period-agenda-minutes { font-size:14px; }
+.period-agenda-heading > span { font-size:14px; }
+@media(max-width:400px) { .period-agenda-row { grid-template-columns:50px minmax(0,1fr) auto 36px; gap:10px; } }

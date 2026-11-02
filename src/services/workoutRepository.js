@@ -1,7 +1,7 @@
 import { doc, onSnapshot, runTransaction, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from './firebase.js';
 import { userCollection, userDoc } from './userPaths.js';
-import { normalizedWorkoutName, readSavedWorkout, workoutName, workoutNameKey, workoutPayload } from '../domain/savedWorkouts.js';
+import { normalizedWorkoutName, readSavedWorkout, workoutName, workoutNameKey, workoutPayload, workoutMetadata } from '../domain/savedWorkouts.js';
 
 export const DEVICE_WORKOUTS_KEY = 'fitness-planner:saved-workouts:v1';
 const DEVICE_EVENT = 'fitness-planner:saved-workouts-changed';
@@ -58,15 +58,52 @@ export function createDeviceWorkoutRepository({ storage = () => globalThis.local
       events?.addEventListener('storage', changed); events?.addEventListener(DEVICE_EVENT, changed); refresh();
       return () => { active = false; events?.removeEventListener('storage', changed); events?.removeEventListener(DEVICE_EVENT, changed); };
     },
-    async create({ name, snapshot }) {
-      const cleanName = workoutName(name), payload = workoutPayload(snapshot);
+    async create({ name, snapshot, ...metadata }) {
+      const cleanName = workoutName(name), payload = workoutPayload(snapshot), meta = workoutMetadata(metadata);
       return mutate(records => {
         if (records.some(record => normalizedWorkoutName(record.name) === normalizedWorkoutName(cleanName))) error('DUPLICATE_WORKOUT_NAME');
-        const now = clock(), document = { v: 1, name: cleanName, payload, revision: 1, createdAt: now, updatedAt: now }, workoutId = id();
+        const now = clock(), document = { v: 1, name: cleanName, payload, ...meta, revision: 1, createdAt: now, updatedAt: now }, workoutId = id();
         if (records.some(record => record.id === workoutId)) error('WORKOUT_CHANGED');
         const item = readSavedWorkout(workoutId, document);
         records.push({ id: workoutId, ...document });
         return item;
+      });
+    },
+    async update(workoutId, input, revision) {
+      if (!Number.isSafeInteger(revision) || revision < 1) error('WORKOUT_CHANGED');
+      return mutate(records => {
+        const record = records.find(item => item.id === workoutId);
+        if (!record) error('WORKOUT_NOT_FOUND');
+        checkRevision(record, revision);
+        const current = readSavedWorkout(workoutId, Object.fromEntries(Object.entries(record).filter(([key]) => key !== 'id')));
+        const { snapshot = current.snapshot, name = current.name, ...metadata } = input;
+        const cleanName = workoutName(name);
+        if (records.some(item => item.id !== workoutId && normalizedWorkoutName(item.name) === normalizedWorkoutName(cleanName))) error('DUPLICATE_WORKOUT_NAME');
+        const payload = workoutPayload(snapshot), meta = workoutMetadata({ ...current, ...metadata });
+        Object.assign(record, { name: cleanName, payload, ...meta, revision: record.revision + 1, updatedAt: Math.max(record.updatedAt, clock()) });
+        const { id, ...document } = record;
+        return readSavedWorkout(id, document);
+      });
+    },
+    async setPinned(workoutId, pinned, revision) {
+      if (!Number.isSafeInteger(revision) || revision < 1) error('WORKOUT_CHANGED');
+      if (typeof pinned !== 'boolean') error('INVALID_SAVED_WORKOUT');
+      return mutate(records => {
+        const record = records.find(item => item.id === workoutId);
+        if (!record) error('WORKOUT_NOT_FOUND');
+        checkRevision(record, revision);
+        Object.assign(record, { pinned, revision: record.revision + 1, updatedAt: Math.max(record.updatedAt, clock()) });
+        const { id, ...document } = record; return readSavedWorkout(id, document);
+      });
+    },
+    async markUsed(workoutId, revision) {
+      return mutate(records => {
+        const record = records.find(item => item.id === workoutId);
+        if (!record) error('WORKOUT_NOT_FOUND');
+        checkRevision(record, revision);
+        const now = clock();
+        Object.assign(record, { lastUsedAt: now, revision: record.revision + 1, updatedAt: Math.max(record.updatedAt, now) });
+        const { id, ...document } = record; return readSavedWorkout(id, document);
       });
     },
     async rename(workoutId, name, revision) {
@@ -111,6 +148,15 @@ export function createAccountWorkoutRepository(uid, { identity = () => auth.curr
   const ref = id => document(uid, 'workoutTemplates', id);
   const indexRef = key => document(uid, 'workoutNames', key);
   const locked = async operation => { assertScope(); const result = await operation(); assertScope(); return result; };
+  const changeUsage = (id, revision, fields) => locked(() => transaction(async tx => {
+    assertScope();
+    const snapshot = await tx.get(ref(id));
+    if (!snapshot.exists()) error('WORKOUT_NOT_FOUND');
+    const item = parseCloud(id, snapshot.data()); checkRevision(item, revision);
+    assertScope();
+    tx.update(ref(id), { ...fields, revision: item.revision + 1, updatedAt: now() });
+    return { ...item, ...fields, revision: item.revision + 1 };
+  }));
   return {
     scope: 'account', uid, assertScope,
     subscribe(next, failed) {
@@ -122,19 +168,45 @@ export function createAccountWorkoutRepository(uid, { identity = () => auth.curr
         }, failed);
       } catch (value) { queueMicrotask(() => failed(value)); return () => {}; }
     },
-    async create({ name, snapshot }) {
+    async create({ name, snapshot, ...metadata }) {
       assertScope();
+      const meta = workoutMetadata(metadata);
       const cleanName = workoutName(name), payload = workoutPayload(snapshot), key = await nameKey(cleanName), id = allocate();
       return locked(() => transaction(async tx => {
         assertScope();
         const lock = await tx.get(indexRef(key));
         if (lock.exists()) error('DUPLICATE_WORKOUT_NAME');
         assertScope();
-        tx.set(ref(id), { v: 1, name: cleanName, payload, revision: 1, createdAt: now(), updatedAt: now() });
+        tx.set(ref(id), { v: 1, name: cleanName, payload, ...meta, revision: 1, createdAt: now(), updatedAt: now() });
         tx.set(indexRef(key), { v: 1, workoutId: id });
-        return { id, name: cleanName, snapshot: JSON.parse(payload), revision: 1 };
+        return { id, name: cleanName, snapshot: JSON.parse(payload), ...meta, revision: 1 };
       }));
     },
+    async update(id, input, revision) {
+      if (!Number.isSafeInteger(revision) || revision < 1) error('WORKOUT_CHANGED');
+      return locked(() => transaction(async tx => {
+        assertScope();
+        const document = await tx.get(ref(id));
+        if (!document.exists()) error('WORKOUT_NOT_FOUND');
+        const item = parseCloud(id, document.data()); checkRevision(item, revision);
+        const { snapshot = item.snapshot, name = item.name, ...metadata } = input;
+        const cleanName = workoutName(name), oldKey = await nameKey(item.name), newKey = await nameKey(cleanName);
+        const oldLock = await tx.get(indexRef(oldKey)), newLock = oldKey === newKey ? oldLock : await tx.get(indexRef(newKey));
+        if (!oldLock.exists() || !validIndex(oldLock.data(), id)) error('WORKOUT_CHANGED');
+        if (newLock.exists() && (oldKey !== newKey || !validIndex(newLock.data(), id))) error('DUPLICATE_WORKOUT_NAME');
+        const payload = workoutPayload(snapshot), meta = workoutMetadata({ ...item, ...metadata });
+        assertScope();
+        tx.update(ref(id), { name: cleanName, payload, ...meta, revision: item.revision + 1, updatedAt: now() });
+        if (oldKey !== newKey) { tx.delete(indexRef(oldKey)); tx.set(indexRef(newKey), { v: 1, workoutId: id }); }
+        return { ...item, name: cleanName, snapshot: JSON.parse(payload), ...meta, revision: item.revision + 1 };
+      }));
+    },
+    async setPinned(id, pinned, revision) {
+      if (!Number.isSafeInteger(revision) || revision < 1) error('WORKOUT_CHANGED');
+      if (typeof pinned !== 'boolean') error('INVALID_SAVED_WORKOUT');
+      return changeUsage(id, revision, { pinned });
+    },
+    async markUsed(id, revision) { return changeUsage(id, revision, { lastUsedAt: Date.now() }); },
     async rename(id, name, revision) {
       const cleanName = workoutName(name), newKey = await nameKey(cleanName);
       return locked(() => transaction(async tx => {
@@ -171,7 +243,7 @@ export const createWorkoutRepository = uid => uid ? createAccountWorkoutReposito
 /** Capture only validated templates, never a guest-provided name reservation. */
 export function captureWorkoutTemplate(sourceUid, id, value) {
   const item = parseCloud(id, value);
-  return { group: 'workoutTemplates', id, sourceUid, data: { v: 1, name: item.name, payload: workoutPayload(item.snapshot),
+  return { group: 'workoutTemplates', id, sourceUid, data: { v: 1, name: item.name, payload: workoutPayload(item.snapshot), ...workoutMetadata(item),
     revision: item.revision, createdAt: item.createdAt, updatedAt: item.updatedAt } };
 }
 
@@ -210,7 +282,7 @@ export async function importSavedWorkoutTemplates(uid, records, { identity = () 
         const index = document(uid, 'workoutNames', await workoutNameKey(name)), reserved = await tx.get(index);
         if (reserved.exists()) continue;
         assertScope();
-        tx.set(ref, { v: 1, name, payload, revision: 1, createdAt: now(), updatedAt: now() });
+        tx.set(ref, { v: 1, name, payload, ...workoutMetadata(source), revision: 1, createdAt: now(), updatedAt: now() });
         tx.set(index, { v: 1, workoutId: id });
         return { id, name, previousName: source.name, renamed: name !== source.name, skipped: false };
       }

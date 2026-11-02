@@ -66,16 +66,21 @@ test('normal templates expose their actual cool-down and recovery mobility in th
   const options = { currentDate: '2026-10-12', currentWeek: '2026-W42' };
   const seen = new Set();
   // Exercise unavailable alternatives too: rotation must stay discoverable after choosing a fallback.
-  for (const weeklyExerciseIds of [[], ['bf_D09']]) for (const excluded of [[], ['bf_A12', 'bf_A13'], ['bf_A12', 'bf_A13', 'bf_A06'], ['bf_A12', 'bf_A13', 'bf_A11', 'bf_A06', 'bf_H12'], ['bf_A12', 'bf_A13', 'bf_A05']]) {
+  for (const weeklyExerciseIds of [[], ['bf_D09'], ['bf_A11'], ['bf_A03']]) for (const excluded of [[], ['bf_A16'], ['bf_A16', 'bf_A06'], ['bf_A16', 'bf_A11', 'bf_A06', 'bf_H12'], ['bf_A16', 'bf_A05']]) {
     const available = Object.fromEntries(Object.entries(catalog).filter(([id]) => !excluded.includes(id)));
     const plan = generateTemplatePlan(available, { ...profile, weeklyExerciseIds }, 35, 'zh', options);
     const coolDowns = plan.schedule.flatMap(day => day.prescriptions.filter(dose => dose.phase === 'cooldown'));
-    if (weeklyExerciseIds.length) assert.ok(coolDowns.length > 0, 'an explicitly selected optional finish remains scheduled');
+    if (weeklyExerciseIds.includes('bf_D09')) assert.ok(coolDowns.length > 0, 'an explicitly selected optional finish remains scheduled');
     const mobility = plan.schedule.flatMap(day => day.prescriptions.filter(dose => dose.phase === 'recovery' && available[dose.id].type === 'mobility'));
-    for (const dose of [...coolDowns, ...mobility]) {
+    for (const dose of coolDowns) {
       seen.add(dose.id);
       assert.equal(matchesLibraryPurpose(dose.id, available[dose.id], 'cooldown'), true, `${dose.id} must be discoverable where its prescribed purpose is shown`);
     }
+    for (const dose of mobility) {
+      seen.add(dose.id);
+      assert.ok(['warmup', 'cooldown'].some(purpose => matchesLibraryPurpose(dose.id, available[dose.id], purpose)), `${dose.id} must remain discoverable for low-load recovery`);
+      if (['bf_A07', 'bf_A18'].includes(dose.id)) assert.equal(matchesLibraryPurpose(dose.id, available[dose.id], 'cooldown'), false, 'scapular control does not become stretching in recovery');
+    }
   }
-  for (const id of ['bf_A11', 'bf_A06', 'bf_A10', 'bf_A03', 'bf_A05']) assert.ok(seen.has(id), `${id} should be exercised by a real template`);
+  for (const id of ['bf_A11', 'bf_A06', 'bf_A10', 'bf_A03', 'bf_A05', 'bf_A18']) assert.ok(seen.has(id), `${id} should be exercised by a real template`);
 });

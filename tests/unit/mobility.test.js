@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { catalogExercises } from '../../src/domain/exerciseCatalog.js';
 import { createMobilityContext, mobilityAreas, mobilityEvidence, scheduledMobility, datedPlanningSessions } from '../../src/domain/mobility.js';
 import { generatePeriodPlan } from '../../src/domain/periodPlanning.js';
+import { isDailyWarmupComplete } from '../../src/domain/quickWorkouts.js';
 import { generateTemplatePlan } from '../../src/domain/templatePlanner.js';
 import { buildPlanningPrompt } from '../../src/domain/coachingPrompt.js';
 import { estimateSessionMinutes } from '../../src/domain/sessions.js';
@@ -46,7 +47,7 @@ test('recent actual hinge and upper-body work change regional priorities; planne
   assert.ok(!planned.ranked.some(row => row.reasons.includes('recorded_training')));
   const first = plan({ logs: [log('bf_B11')] }).sessions;
   const second = plan({ logs: [log('bf_C01')] }).sessions;
-  assert.notEqual(first[1].warmupNote, second[1].warmupNote);
+  assert.notEqual(first[0].warmupNote, second[0].warmupNote);
 });
 
 test('recent court reports override an assumed court day and keep unknowns distinct', () => {
@@ -65,7 +66,7 @@ test('longer gaps outrank recently repeated regions even without strength work f
   const period = plan({}, { ...context, equipment: [], badmintonDays: [1, 2, 3, 4, 5, 6, 7] }, 15);
   assert.ok(scheduledMobility(period.sessions.slice(0, 7)).every(row => row.dates.length >= 1));
   assert.ok(scheduledMobility(period.sessions.slice(7)).every(row => row.dates.length >= 1));
-  assert.ok(period.sessions.every(day => day.sessionType === 'recovery' && day.routine.length <= 3 && estimateSessionMinutes(day, exercises) <= 15));
+  assert.ok(period.sessions.every(day => day.sessionType === 'recovery' && day.routine.length <= 12 && estimateSessionMinutes(day, exercises) <= 15));
 });
 
 test('prospective coverage crosses ISO weeks, ignores future neighbors and preserves logged dates', () => {
@@ -101,10 +102,10 @@ test('same-day readiness symptoms and fatigue keep their existing rest and recov
   const stopped = plan({ readiness: [ready] });
   assert.ok(stopped.sessions.every(day => !day.routine.length));
   const fatigued = plan({ readiness: [{ ...ready, symptoms: 'none', fatigue: 4 }] });
-  assert.ok(fatigued.sessions.filter(day => day.sessionType !== 'rest').every(day => day.routine.includes('bf_A13')));
+  assert.ok(fatigued.sessions.filter(day => day.sessionType !== 'rest').every(day => isDailyWarmupComplete(day)));
   assert.ok(fatigued.sessions.every(day => day.sessionType !== 'training'));
   assert.ok(fatigued.sessions.some(day => day.warmupNote.includes('活動度重點')));
-  assert.ok(fatigued.sessions.filter(day => day.sessionType === 'recovery').flatMap(day => day.prescriptions).filter(dose => exercises[dose.id].sequenceMinutes).every(dose => dose.sets === 1 && dose.value === '10'));
+  assert.ok(fatigued.sessions.filter(day => day.sessionType === 'recovery').flatMap(day => day.prescriptions).every(dose => dose.sets === 1));
 });
 
 test('regional history during whole-week replanning does not reserve replaced future strength sessions', () => {

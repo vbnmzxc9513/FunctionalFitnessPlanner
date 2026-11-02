@@ -59,6 +59,13 @@ export default function ApplyWorkoutPlan({ days, name, initialDates, uid, today,
             : en ? 'Could not prepare this plan. Check exercises, warm-up, preparation sets and doses, then retry.' : '無法預覽。請確認動作、暖身、準備組與劑量完整，或先編輯這份課表。');
     } finally { running.current = false; setBusy(false); }
   };
+  const initialInspection = useRef(false);
+  useEffect(() => {
+    if (!initialDates || initialInspection.current) return;
+    initialInspection.current = true; void inspect();
+    // Inspect the original explicit manual dates once; later edits require another review.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const apply = async () => {
     if (running.current || !preview || stale) return;
     running.current = true; setBusy(true); setError('');
@@ -87,10 +94,10 @@ export default function ApplyWorkoutPlan({ days, name, initialDates, uid, today,
         : en ? 'Plans, records or your account changed. Inspect these dates again before applying.' : '課表、紀錄或帳號已變更。請重新檢查日期後再套用，沒有覆蓋既有紀錄。');
     } finally { running.current = false; setBusy(false); }
   };
-  return <section className="assignment-flow" data-testid="apply-workout-plan">
-    <div className="assignment-top"><button disabled={busy} type="button" onClick={stage === 'review' ? () => setStage('dates') : onCancel}><ArrowLeft size={18} />{stage === 'review' ? en ? 'Change dates' : '修改日期' : en ? 'Back to preview' : '回到預覽'}</button>{stage !== 'done' && <button disabled={busy} type="button" onClick={onCancel}>{en ? 'Cancel' : '取消套用'}</button>}</div>
-    <div className="assignment-steps"><span data-active={stage === 'dates'}>1 {en ? 'Dates' : '選日期'}</span><i /><span data-active={stage === 'review'}>2 {en ? 'Review and apply' : '檢查並套用'}</span></div>
-    <header className="assignment-heading"><h2 ref={heading} tabIndex={-1}>{stage === 'dates' ? en ? 'Where should these days go?' : `這 ${days.length} 天，要排在哪天？` : stage === 'review' ? en ? 'Review before applying' : '最後確認，才會套用' : en ? 'Plan applied' : '課表已套用'}</h2><p>{stage === 'dates' ? en ? 'Each source day maps to one of your dates.' : '每個來源日都會明確對應你的日期。' : `${name} · ${days.length} ${en ? 'days' : '天課表'}`}</p></header>
+  return <section className={`assignment-flow ${stage === 'review' ? 'assignment-review-flow' : ''}`} data-testid="apply-workout-plan">
+    <div className="assignment-top"><button disabled={busy} type="button" onClick={onCancel}><ArrowLeft size={18} />{stage === 'review' && initialDates ? en ? 'Back to daily draft' : '返回每日編輯' : en ? 'Back to preview' : '回到預覽'}</button>{stage !== 'done' && <button disabled={busy} type="button" onClick={onCancel}>{en ? 'Cancel' : '取消套用'}</button>}</div>
+    {stage === 'dates' && <div className="assignment-steps"><span data-active={stage === 'dates'}>1 {en ? 'Dates' : '選日期'}</span><i /><span data-active={stage === 'review'}>2 {en ? 'Review and apply' : '檢查並套用'}</span></div>}
+    <header className="assignment-heading"><h2 ref={heading} tabIndex={-1}>{stage === 'dates' ? en ? 'Where should these days go?' : `這 ${days.length} 天，要排在哪天？` : stage === 'review' ? en ? 'Review before applying' : '檢查並套用' : en ? 'Plan applied' : '課表已套用'}</h2><p>{stage === 'dates' ? en ? 'Each source day maps to one of your dates.' : '每個來源日都會明確對應你的日期。' : `${name} · ${days.length} ${en ? 'days' : '天課表'}`}</p></header>
     {error && <div role="alert" className="assignment-error">{error}{onEdit && <button onClick={() => onEdit(days.map((day, index) => ({ ...day, date: dates[index] })))}>{en ? 'Edit this copy first' : '先編輯這份副本'}</button>}</div>}
     {stage === 'dates' && <>
       <div className="assignment-modes" role="group" aria-label={en ? 'Date mapping' : '日期安排方式'}><button type="button" disabled={busy} aria-pressed={mode === 'gaps'} onClick={() => { try { change(offsets.map(offset => shiftPlanDate(dates[0] || today, offset))); setMode('gaps'); } catch { change(days.map(() => '')); setMode('gaps'); } }}>{en ? 'Keep intervals' : '保留原間隔'}</button><button type="button" disabled={busy} aria-pressed={mode === 'individual'} onClick={() => setMode('individual')}>{en ? 'Choose each date' : '逐天指定日期'}</button></div>
@@ -104,16 +111,17 @@ export default function ApplyWorkoutPlan({ days, name, initialDates, uid, today,
       <footer className="assignment-actions"><div><strong>{en ? `Apply ${days.length} days` : `要套用 ${days.length} 天`}</strong><span>{en ? 'One source day per date' : '每一天對應一個日期'}</span></div><button type="button" data-testid="assignment-preview" disabled={busy || !!dateError || unresolved} onClick={inspect} className="button-primary">{busy && <Loader2 className="animate-spin" size={17} />}{en ? 'Check dates and preview' : '檢查日期並預覽'}</button></footer>
     </>}
     {stage === 'review' && preview && <>
-      <div className="assignment-review-list">{preview.sessions.map((day, index) => <section key={day.date}><header><span className="assignment-source-label">{en ? 'Day' : '第'} {index + 1}{en ? '' : ' 天'}</span><span className={replacements.includes(day.date) ? 'assignment-replace-tag' : 'assignment-new-tag'}>{replacements.includes(day.date) ? en ? 'Replace' : '替換' : en ? 'Add' : '新增'}</span></header><h3>{day.theme}</h3><p className="assignment-review-date">→ {day.date} · {estimateSessionMinutes(day, exercises)} {en ? 'min' : '分鐘'}</p>
+      <div className="assignment-review-list">{preview.sessions.map(day => <section key={day.date}><header><span className="assignment-source-label">{new Intl.DateTimeFormat(en ? 'en' : 'zh-TW', { month: 'numeric', day: 'numeric', weekday: 'short', timeZone: 'UTC' }).format(new Date(`${day.date}T12:00:00Z`))}</span>{onEdit && <button type="button" className="assignment-modify-day text-link" onClick={() => onEdit(days.map((source, index) => ({ ...source, date: dates[index] })), day.date)}>{en ? 'Modify' : '修改'}</button>}</header><h3>{day.theme}</h3><p className="assignment-review-date">{en ? 'Estimated ' : '預估 '}{estimateSessionMinutes(day, exercises)} {en ? 'min' : '分鐘'}</p>
+        <p className="assignment-phase-counts">{en ? 'Warm-up' : '暖身'} {day.prescriptions.filter(dose => dose.phase === 'warmup').length} · {en ? 'Training' : '訓練'} {day.prescriptions.filter(dose => ['skill', 'strength', 'accessory'].includes(dose.phase)).length} · {en ? 'Cooldown' : '收操'} {day.prescriptions.filter(dose => ['recovery', 'cooldown'].includes(dose.phase)).length}</p>
         {Number(profile.time) > 0 && estimateSessionMinutes(day, exercises) > Number(profile.time) && <p className="assignment-warning">{en ? `Exceeds your ${profile.time}-minute availability. Edit this copy if needed.` : `超出你設定的 ${profile.time} 分鐘；請確認時間，或先編輯副本。`}</p>}
         {replacements.includes(day.date) && <p className="assignment-warning">{en ? 'Original' : '原課表'}：{conflictState.sessionsByDate[day.date]?.theme || conflictState.sessionsByDate[day.date]?.name}</p>}
         <button type="button" aria-expanded={expanded === day.date} onClick={() => setExpanded(expanded === day.date ? null : day.date)} className="text-link">{en ? 'Details' : '查看內容'}</button>{expanded === day.date && <WorkoutPlanSummary {...{ day, exercises, lang }} />}
       </section>)}</div>
       <p role="status" className="assignment-success">{en ? '✓ Existing training records will be retained.' : '✓ 既有訓練紀錄會保留。'}{replacements.length === 0 && (en ? ' No existing plans will be replaced.' : '不覆蓋任何既有課表。')}</p>
-      {onEdit && <button className="assignment-edit-copy" onClick={() => onEdit(days.map((day, index) => ({ ...day, date: dates[index] })))}>{en ? 'Edit this copy before applying' : '套用前調整這份副本'} →</button>}
+      <details className="assignment-date-options"><summary>{en ? 'Change target dates' : '調整套用日期'}</summary><button type="button" className="text-link" onClick={() => setStage('dates')}>{en ? 'Change dates and check conflicts again' : '修改日期並重新檢查衝突'}</button></details>
       <p className="assignment-storage">{uid ? en ? 'Saves to your signed-in account.' : '將儲存到目前登入帳號。' : en ? 'Saves to this device.' : '將儲存在這台裝置。'}{en ? ' Your source and actual records stay unchanged.' : '來源與實際訓練紀錄保持完整。'}</p>
       {stale && <p role="alert" className="assignment-warning">{en ? 'Plan changed. Review the dates again.' : '資料已變更，請返回重新檢查。'}</p>}
-      <footer className="assignment-actions"><div><strong>{en ? 'Add' : '新增'} {dates.length - replacements.length} {en ? 'days' : '天'}{replacements.length > 0 && ` · ${en ? 'Replace' : '替換'} ${replacements.length} ${en ? 'days' : '天'}`}</strong><span>{en ? 'Only changes after confirmation' : '確認後才更新我的課表'}</span></div><button type="button" data-testid="assignment-apply" disabled={busy || stale} onClick={apply} className="button-primary">{busy ? <Loader2 size={17} className="animate-spin" /> : <Check size={17} />}{en ? `Confirm ${dates.length} days` : `確認套用 ${dates.length} 天課表`}</button></footer>
+      <footer className="assignment-actions"><div><strong>{en ? 'Add' : '新增'} {dates.length - replacements.length} {en ? 'days' : '天'}{replacements.length > 0 && ` · ${en ? 'Replace' : '替換'} ${replacements.length} ${en ? 'days' : '天'}`}</strong><span>{en ? 'Only changes after confirmation' : '確認後才更新我的課表'}</span></div><button type="button" data-testid="assignment-apply" disabled={busy || stale} onClick={apply} className="button-primary">{busy ? <Loader2 size={17} className="animate-spin" /> : <Check size={17} />}{en ? `Confirm ${dates.length} days` : `確認套用到 ${dates.length} 天`}</button></footer>
     </>}
     {stage === 'done' && <div role="status" className="assignment-success">{en ? 'Saved to your selected dates.' : '已儲存到所選日期。'}<button className="button-primary" onClick={onCancel}>{en ? 'View my plans' : '查看我的課表'}</button></div>}
   </section>;

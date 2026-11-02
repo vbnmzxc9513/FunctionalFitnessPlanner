@@ -1,5 +1,5 @@
 import { buildPlanningPrompt } from '../domain/coachingPrompt.js';
-import { validateGeneratedPlan } from '../domain/planning.js';
+import { validateNewAIPlan } from '../domain/newAIPlan.js';
 import { SESSION_PHASES, SESSION_TYPES } from '../domain/phases.js';
 
 export const generateAIPlan = async (lastWeekData, currentLevel, lastWeekFeedback, userApiKey, allProgress, metricsHistory, userGoal, dailyTime, userMessage, availableExercises, lang = 'zh', selectedModel = 'gemini-2.5-flash', options = {}) => {
@@ -40,7 +40,7 @@ export const generateAIPlan = async (lastWeekData, currentLevel, lastWeekFeedbac
       const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const data = await response.json();
       if (data.error) throw new Error(data.error.message || 'API Error');
-      return validateGeneratedPlan(JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text), availableExercises, dailyTime);
+      return validateNewAIPlan(JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text), availableExercises, dailyTime, { ...options, lang });
     } catch (error) {
       if (attempt === 2) throw error;
       await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));

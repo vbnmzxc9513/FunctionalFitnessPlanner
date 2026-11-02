@@ -1,0 +1,6 @@
+import puppeteer from 'puppeteer';
+import path from 'node:path';
+import fs from 'node:fs/promises';
+const dir=path.dirname(new URL(import.meta.url).pathname);
+const browser=await puppeteer.launch({headless:true,args:['--no-sandbox']});
+try{const page=await browser.newPage();const report=[];for(const width of [390,1440]){await page.setViewport({width,height:width===390?844:1000,deviceScaleFactor:1});for(const state of ['week','dates','empty','day','picker','mine','detail','conflict','replace','save','review']){await page.goto('file://'+dir+'/reference.html#'+state);await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:path.join(dir,`reference-${state}-${width}.png`),fullPage:true});await page.screenshot({path:path.join(dir,`reference-${state}-${width}-fold.png`)});report.push(await page.evaluate(({state,width})=>({state,width,scrollWidth:document.documentElement.scrollWidth,viewport:window.innerWidth,h1:document.querySelector('h1')?.textContent,bottom:document.querySelector('.bottom .primary')?.textContent||null}),{state,width}));}}await fs.writeFile(path.join(dir,'reference-capture-report.json'),JSON.stringify(report,null,2)+'\n');}finally{await browser.close();}

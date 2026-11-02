@@ -1,3 +1,4 @@
+import { DAILY_WARMUP_IDS, isDailyWarmupComplete } from '../src/domain/quickWorkouts.js';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import puppeteer from 'puppeteer';
@@ -44,7 +45,7 @@ try {
     await click('[data-testid="period-day-2026-10-19"]');
     await click('[data-testid="period-day-detail"] > details > summary');
     assert.ok(await page.$eval('[data-testid="period-day-reason"]', item => item.innerText.trim().length > 0));
-    assert.ok(await page.$('[data-testid="exercise-open-bf_A13"]'));
+    for (const id of DAILY_WARMUP_IDS) assert.ok(await page.$(`[data-testid="exercise-open-${id}"]`), `independent warm-up row ${id}`);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     await click('[data-testid="period-day-detail"] > button');
     await page.waitForSelector('[data-testid="period-plan-apply"]', { visible: true });
@@ -58,7 +59,7 @@ try {
     const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('fitness_date_period_v1')));
     assert.equal(saved.profile.context.recoveryState, state); assert.equal(saved.profile.context.warmupFamiliar, true);
     const days = Object.values(saved.sessionsByDate), doses = days.flatMap(day => day.prescriptions.filter(dose => dose.phase === 'strength'));
-    assert.ok(days.every(day => day.routine[0] === 'bf_A13' && !day.routine.some(id => ['bf_A01', 'bf_I01'].includes(id))));
+    assert.ok(days.every(day => isDailyWarmupComplete(day) && !day.routine.some(id => ['bf_A01', 'bf_I01'].includes(id))));
     if (state === 'recover') assert.equal(doses.length, 0);
     else {
       const patterns = new Set(doses.flatMap(dose => classifyBalanceExercise(dose.id, exercises[dose.id]).patterns));

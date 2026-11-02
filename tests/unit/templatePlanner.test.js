@@ -25,7 +25,7 @@ test('template matrix respects phases, actual time, equipment, partners and cour
         for (const day of plan.schedule) {
           assert.ok(estimateSessionMinutes(day, available) <= dailyTime);
           if (badmintonDays.includes(day.day)) assert.notEqual(day.sessionType, 'training');
-          assert.ok(day.routine.length <= 8);
+          assert.ok(day.routine.length <= 24);
           for (const id of day.routine) {
             assert.ok(equipmentChoices(available[id], equipment).length);
             assert.equal(available[id].requiresPartner, false);
@@ -104,7 +104,7 @@ test('fatigue and genuinely heavy court load reduce strength while moderate cons
 test('competition uses each scheduled date, includes post-event recovery and avoids new taper moves', () => {
   const profile = { ...context, badmintonDays: [], competitionDate: '2026-10-26' };
   const noHistory = generateTemplatePlan(catalog, profile, 35, 'zh', options);
-  assert.ok(noHistory.schedule.every(day => day.sessionType === 'recovery'));
+  assert.ok(noHistory.schedule.every(day => day.sessionType === 'rest'), 'taper without confirmed familiar movements does not invent recovery drills');
   const previousPlan = generateTemplatePlan(catalog, { ...profile, competitionDate: '' }, 35, 'zh', options);
   const taper = generateTemplatePlan(catalog, profile, 35, 'zh', { ...options, previousPlan });
   assert.ok(volume(taper) < volume(previousPlan));

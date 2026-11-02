@@ -1,3 +1,4 @@
+import { DAILY_WARMUP_IDS, isDailyWarmupComplete } from '../src/domain/quickWorkouts.js';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import puppeteer from 'puppeteer';
@@ -63,7 +64,8 @@ try {
     assert.ok(await page.$$eval('[data-testid="period-mobility-overview"] dd', items => items.length === 8 && items.every(item => item.innerText.includes('10/'))));
     await click('[data-testid="period-day-2026-10-19"]');
     await click('[data-testid="period-day-detail"] > details > summary');
-    assert.ok(await page.$eval('[data-testid="period-day-detail"] [data-testid="session-time-summary"]', item => /40/.test(item.innerText) && /3[5-9]|40/.test(item.innerText)));
+    assert.ok(await page.$eval('[data-testid="period-day-detail"] [data-testid="session-time-summary"]', item => /40/.test(item.innerText)), 'preview shows the actual available time');
+    for (const id of DAILY_WARMUP_IDS) assert.ok(await page.$(`[data-testid="exercise-open-${id}"]`), `preview lists independent warm-up ${id}`);
     await click('[data-testid="period-day-detail"] > button');
     await click('[data-testid="period-day-2026-10-20"]');
     await click('[data-testid="period-day-detail"] > details > summary');
@@ -76,7 +78,8 @@ try {
     const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('fitness_date_period_v1'))), days = Object.values(saved.sessionsByDate);
     assert.ok(ids.every(id => days.some(day => day.routine.includes(id))));
     assert.equal(days.filter(day => day.sessionType === 'training').length, 2);
-    assert.ok(estimateSessionMinutes(days.find(day => day.day === 1), exercises) >= 35);
+    assert.ok(days.filter(day => day.sessionType === 'training').every(day => day.prescriptions.filter(dose => dose.phase === 'strength').every(dose => dose.preparation)), 'actual main work retains its counted light preparation');
+    assert.ok(days.every(isDailyWarmupComplete));
     assert.ok(days.every(day => estimateSessionMinutes(day, exercises) <= 40 && !day.routine.some(id => ['bf_A01', 'bf_I01'].includes(id))));
     assert.deepEqual(saved.logs, []); assert.deepEqual(saved.progressByWeek, {});
     await page.reload({ waitUntil: 'networkidle2' });
