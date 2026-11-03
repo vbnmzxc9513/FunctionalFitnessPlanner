@@ -1,5 +1,7 @@
 # 排課體驗重新設計：快速課表、常用組合與獨立暖身動作
 
+2026-11-03 使用性簡化追加：名稱、概覽與收藏入口以 [UX-FOLLOWUP.md](docs/planner-redesign/UX-FOLLOWUP.md) 為準；最終畫面與主代理驗收見 [UX-FOLLOWUP-REVIEW.md](docs/planner-redesign/UX-FOLLOWUP-REVIEW.md)。以下保留原核准設計與歷史紀錄。
+
 日期：2026-11-02。狀態：**本分支已依核准設計實作，程式與畫面驗收完成；尚未合併發布**。本文件保留原核准需求；實作、對照、例外與驗證紀錄見 [交付審查](docs/planner-redesign/IMPLEMENTATION-REVIEW.md)。真人任務測試仍待實際收集，不以 agent 走查替代。
 
 本文件以目前 repository 的 React 元件、資料驗證及既有設計／實際畫面對照為依據，並非本日線上版本的真人試用報告。後續實作以本文件的新需求為準；舊文件「八段暖身算一個動作、每天最多八個動作」屬既有行為，不能沿用為新設計的驗收標準。

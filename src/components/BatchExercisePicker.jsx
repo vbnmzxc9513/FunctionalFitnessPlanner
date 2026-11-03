@@ -1,5 +1,5 @@
 import { useBackNavigation } from '../hooks/useBackNavigation.js';
-import { useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { ArrowLeft, Check, Loader2, Search, Star, X } from 'lucide-react';
 import { MANUAL_MAX_EXERCISES, defaultManualPhaseType, filterManualExercises, manualExerciseRegions } from '../domain/manualPlanner.js';
 import { libraryGroups, suggestedUses } from '../domain/library.js';
@@ -38,6 +38,7 @@ export default function BatchExercisePicker({ exercises = {}, eligibleExercises 
   const id = useId();
   const heading = useRef(null);
   const favoriteFilter = useRef(null);
+  useEffect(() => { heading.current?.focus({ preventScroll: true }); window.scrollTo({ top: 0, behavior: 'instant' }); }, []);
   const [type, setType] = useState(() => defaultManualPhaseType(phase));
   const [region, setRegion] = useState('all');
   const [query, setQuery] = useState('');
@@ -81,7 +82,7 @@ export default function BatchExercisePicker({ exercises = {}, eligibleExercises 
     <header className="manual-picker-heading"><h2 ref={heading} tabIndex="-1">{reviewing ? en ? 'Review selected exercises' : '確認已選動作' : phaseTitle}</h2><p>{shortDate} · {reviewing ? destination : en ? 'Choose, then add together' : '選好後一次加入'}</p></header>
     {!reviewing ? <>
       <label className="sr-only" htmlFor={`${id}-search`}>{copy.search}</label>
-      <div className="manual-search"><Search size={20} aria-hidden="true" /><input id={`${id}-search`} data-testid="batch-picker-search" type="search" autoFocus value={query} onChange={event => { setQuery(event.target.value); setLimit(24); }} placeholder={en ? 'Search exercises, leg stretches, serratus…' : '搜尋動作、腿拉伸、前鋸肌…'} />{query && <button type="button" aria-label={en ? 'Clear search' : '清除搜尋'} onClick={() => setQuery('')}><X size={19} aria-hidden="true" /></button>}</div>
+      <div className="manual-search"><Search size={20} aria-hidden="true" /><input id={`${id}-search`} data-testid="batch-picker-search" type="search" value={query} onChange={event => { setQuery(event.target.value); setLimit(24); }} placeholder={en ? 'Search exercises, leg stretches, serratus…' : '搜尋動作、腿拉伸、前鋸肌…'} />{query && <button type="button" aria-label={en ? 'Clear search' : '清除搜尋'} onClick={() => setQuery('')}><X size={19} aria-hidden="true" /></button>}</div>
       <div className="manual-picker-types" role="group" aria-label={copy.types}>{['strength', 'dynamic', 'static'].map(value => <button type="button" key={value} aria-pressed={type === value && !query.trim()} onClick={() => chooseType(value)}>{copy.type[value]}</button>)}</div>
       <fieldset className="manual-picker-regions"><legend className="sr-only">{copy.regions}</legend>{regions.map(value => <button type="button" key={value} aria-pressed={region === value && !query.trim()} onClick={() => { setRegion(value); setQuery(''); setLimit(24); }}>{region === value && !query.trim() && <Check size={16} aria-hidden="true" />}{regionLabel(value)}</button>)}<button type="button" ref={favoriteFilter} aria-pressed={favoritesOnly} onClick={() => { setFavoritesOnly(value => !value); setLimit(24); }}><Star size={16} aria-hidden="true" fill={favoritesOnly ? 'currentColor' : 'none'} />{en ? 'Saved' : '收藏'}</button>
       <details className="manual-picker-more"><summary>{en ? 'More types' : '更多類型'}{['skill', 'other', 'all'].includes(type) && ` · ${copy.type[type]}`}</summary><div className="flex flex-wrap gap-2">{['skill', 'other', 'all'].map(value => <button type="button" key={value} aria-pressed={type === value && !query.trim()} onClick={() => chooseType(value)} className="manual-filter-button">{copy.type[value]}</button>)}</div><p className="mt-2 text-xs text-slate-500">{copy.eligibility}</p></details></fieldset>
@@ -94,7 +95,7 @@ export default function BatchExercisePicker({ exercises = {}, eligibleExercises 
           const favorite = libraryGroups(exercise).length > 0;
           return <div key={value} className="manual-picker-row" data-selected={checked} data-existing={added}>
             <label className="manual-picker-choice"><input type="checkbox" data-testid={`batch-option-${value}`} checked={checked} disabled={blocked} onChange={() => toggle(value)} aria-describedby={`${id}-capacity`} />
-              <span className="manual-picker-row-main"><strong>{exercise.name}</strong><span>{regionSummary({ ...exercise, id: value })}{exercise.equipment && ` · ${exercise.equipment}`}</span>{added && <small>{copy.existing}</small>}{chosen.has(value) && !added && <small>{copy.pending}</small>}</span><span className="manual-picker-row-mark">{checked ? <Check size={19} aria-hidden="true" /> : <span aria-hidden="true">＋</span>}</span>
+              <span className="manual-picker-row-main"><strong>{exercise.name}</strong><span>{regionSummary({ ...exercise, id: value })}{exercise.equipment && ` · ${exercise.equipment}`}</span>{added && <small>{copy.existing}</small>}{chosen.has(value) && !added && <small>{copy.pending}</small>}</span>{checked && <span className="manual-picker-row-mark"><Check size={19} aria-hidden="true" /></span>}
             </label>
             <button type="button" data-testid={`batch-favorite-${value}`} className="manual-picker-favorite" aria-pressed={favorite} aria-label={`${!canManage ? en ? 'Sign in to save' : '登入後收藏' : favorite ? en ? 'Remove favorite' : '取消收藏' : en ? 'Save favorite' : '收藏'} ${exercise.name}`} disabled={!!pendingId || canManage && !onOrganize} onClick={event => organize(value, exercise, event.currentTarget)}>{pendingId === value ? <Loader2 size={21} className="animate-spin" aria-hidden="true" /> : <Star size={23} fill={favorite ? 'currentColor' : 'none'} aria-hidden="true" />}</button>
           </div>;

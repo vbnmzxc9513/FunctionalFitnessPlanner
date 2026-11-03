@@ -130,7 +130,7 @@ export default function PeriodPlanPreview({ preview, lang = 'zh', t = key => key
         {choiceReport}
         {preview.conclusion && <details className="period-secondary"><summary>{p('conclusion')}</summary><p className="period-secondary-content whitespace-pre-wrap text-sm text-slate-600 leading-relaxed">{preview.conclusion}</p></details>}
       </div>
-      {onApply && onEditWorkout && <button type="button" className="period-text-action" data-testid="period-edit-draft" onClick={() => onEditWorkout(sessions)}><Pencil size={17} />{en ? 'Adjust this draft with common or my workouts' : '用常見或我的課表調整這份草稿'}</button>}
+      {onApply && onEditWorkout && <button type="button" className="period-text-action" data-testid="period-edit-draft" onClick={() => onEditWorkout(sessions)}><Pencil size={17} />{en ? 'Adjust this draft with quick combos or my favorites' : '用快速組合或我的收藏調整這份草稿'}</button>}
       {onApply && <p className="period-readonly-hint">{p('previewHint')} {p('scope')}</p>}
       {(onBack || onApply) && <div className="preview-actions period-preview-actions">{onBack && <button type="button" onClick={onBack} disabled={busy} className="button-secondary"><ArrowLeft size={16} />{p('back')}</button>}{onApply && <button type="button" data-testid="period-plan-apply" onClick={onApply} disabled={busy || stale || incomplete} className="button-primary">{busy ? <Loader2 size={17} className="animate-spin" /> : <Check size={17} />}{en ? busy ? 'Applying…' : 'Apply to plan' : busy ? '套用中…' : `確認套用到 ${dates.length} 天`}</button>}</div>}
     </>}

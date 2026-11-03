@@ -17,6 +17,7 @@ await run(['tests/integration/savedWorkouts.browser.mjs']);
 await run(['scripts/navigation-smoke.mjs']);
 await run(['scripts/workout-planner-smoke.mjs']);
 await run(['scripts/planner-redesign-smoke.mjs']);
+await run(['scripts/ux-followup-review.mjs']);
 await run(['scripts/browser-smoke.mjs']);
 await run(['scripts/coaching-smoke.mjs']);
 await run(['scripts/selection-smoke.mjs']);

@@ -47,13 +47,13 @@ try {
     await click('[data-exercise-id="bf_A16"] button'); await visible('dialog[open] form');
     await fill('dialog[open] form input[type="number"]', '2'); await textClick('儲存草稿修改');
     assert.equal((await draft()).prescriptions.find(dose => dose.id === 'bf_A16').sets, 2);
-    await click('.manual-more > summary'); await textClick('存為我的課表'); await visible('dialog[open] form');
+    await click('[data-testid="manual-save-day"]'); await visible('dialog[open] form');
     await page.click('input[value="warmup"]'); await fill('dialog[open] input:not([type])', `暖身測試 ${width}`); await shot('save'); await click('[data-testid="save-workout-confirm"]');
     await page.waitForFunction(() => !document.querySelector('dialog[open]'));
     await page.reload({ waitUntil: 'networkidle2' }); await textClick('課表'); await click('[data-testid="open-manual-planner"]'); await visible('[data-testid="session-plan-editor"]'); assert.equal((await draft()).routine.length, 8);
-    await click('[data-testid="manual-add-workout"]'); await textClick('我的課表'); await visible('.quick-workout-card'); await shot('mine');
+    await click('[data-testid="manual-add-workout"]'); await textClick('我的收藏'); await visible('.quick-workout-card'); await shot('mine');
     await textClick('查看'); await visible('.quick-preview-list'); assert.equal(await page.$eval('[data-testid="quick-workout-add"]', node => node.disabled), true, 'All duplicates preserved; do not claim 8 new additions');
-    await textClick('返回課表選擇'); await textClick('返回今日草稿');
+    await textClick('返回組合選擇'); await textClick('返回今日草稿');
     step = `${width} review apply`;
     await click('[data-testid="manual-review"]'); await visible('[data-testid="assignment-apply"]'); await shot('review');
     assert.equal(await page.evaluate(() => localStorage.getItem('fitness_date_period_v1')), null, 'Review is not apply');
