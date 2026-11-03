@@ -24,3 +24,9 @@
 穩定操作 selector 為 `manual-save-day`、`manual-day-overview`、`manual-jump-warmup`／`manual-jump-strength`／`manual-jump-cooldown` 與 `manual-continue-training`。既有 browser scripts 的受影響文案／保存入口同步更新；`capture-paired.mjs` 僅更新產品保存入口 selector。本次沒有重拍或改寫原 `paired/`、原參考 HTML 及原核准文件，這些仍代表先前審查時的歷史快照。新的獨立主代理走查與截圖另列於 `ux-followup/`。
 
 上述為程式與 agent 瀏覽器走查，未進行真人任務測試；未更動 domain、schema、路由、API、rules、儲存或交易邊界，亦未提交、推送或部署。
+
+## CI 日期相依檢查修正（2026-11-03）
+
+既有 `scripts/browser-smoke.mjs` 在保護週一舊版完成紀錄的驗證末尾，誤用「今天」尋找週一動作；11/2（週一）會通過，11/3（週二）則正確切換到週二的新版課表，使舊驗證逾時。測試已改為從日期總覽開啟明確的 `mondayDate`，確認原舊版動作仍顯示，再從 emulator 重新讀取該週的 `exerciseKey(1, originalID)` 完成事實，確認其為 true、八個新版暖身完成 key 未被憑空標為 true。原有套用前後完整 progress 相等檢查保留；日期預覽保持唯讀，不新增完成操作。
+
+修正只涉及 browser smoke 與本證據紀錄，沒有更動產品、資料或凍結整個測試日期。以真實執行日 2026-11-03（週二）啟動全新 `demo-fitness-planner` Auth／Firestore emulators，聚焦執行 `node scripts/browser-smoke.mjs`：desktop 1280×900、mobile 390×844 均通過，含 BYOK 攔截、保護日期／十筆動作重開、實做資料、週切換、登出及英文檢查；未呼叫正式 Gemini。該檔 ESLint 與 `git diff --check` 通過。執行記錄為工作區 `/workspace/scratch/browser-smoke-date-fix.log`；其他 browser suites 與 CI 全套重跑由主代理另行確認。

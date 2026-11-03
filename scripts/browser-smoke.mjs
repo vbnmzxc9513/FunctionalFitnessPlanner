@@ -6,6 +6,7 @@ import { legacyFixture } from './legacy-fixture.mjs';
 import { EXERCISES_I18N, TRANSLATIONS } from '../src/locale.js';
 import { dailyWarmupPrescriptions, DAILY_WARMUP_IDS } from '../src/domain/quickWorkouts.js';
 import { dateForWeekDay, getWeekString } from '../src/domain/dates.js';
+import { exerciseKey } from '../src/domain/training.js';
 
 if (process.env.NODE_ENV !== 'test' || process.env.VITE_USE_FIREBASE_EMULATORS !== 'true' || process.env.VITE_FIREBASE_PROJECT_ID !== 'demo-fitness-planner') throw new Error('Requires demo-fitness-planner Auth/Firestore emulators.');
 const candidateExercises = prompt => {
@@ -286,8 +287,19 @@ try {
     await visibleElement('dialog[open]'); await waitText('1 組 × 6 次'); await waitText('1 組 × 4 次'); await waitText('Use bodyweight first.');
     await closeExerciseDetails(page);
     await clickSelector('[data-testid="exercise-open-bf_D09"]'); await waitText('Finish with gentle breathing.'); await closeExerciseDetails(page);
-    await click('今天'); await waitCompletion(name, true);
-    assert.equal(await visibleCount(completion(EXERCISES_I18N.zh.bf_A16.name)), 0, `${layout} protected legacy completion is not expanded into eight new facts`);
+    // Today follows the real weekday, while the protected completion belongs to
+    // Monday. Reopen that exact date; its period preview is intentionally read-only,
+    // so verify completion against the reloaded cloud fact rather than a Today toggle.
+    await click('返回課表'); await clickSelector(`[data-testid="period-day-${mondayDate}"]`);
+    const protectedExerciseId = beforeApply.sessions[mondayDate].routine.find(id => EXERCISES_I18N.zh[id]?.name === name);
+    assert.ok(protectedExerciseId, `${layout} original completed exercise belongs to protected Monday`);
+    await visibleElement(`[data-testid="exercise-row-${protectedExerciseId}"]`);
+    const protectedReload = await readCloud();
+    assert.equal(protectedReload.progress[currentWeek].completed[exerciseKey(1, protectedExerciseId)], true, `${layout} reloaded protected Monday keeps its original completion`);
+    for (const id of DAILY_WARMUP_IDS) {
+      assert.equal(await visibleCount(`[data-testid="exercise-row-${id}"]`), 0, `${layout} protected legacy Monday is not expanded into independent warmup rows`);
+      assert.notEqual(protectedReload.progress[currentWeek].completed[exerciseKey(1, id)], true, `${layout} protected legacy completion is not expanded into eight new facts`);
+    }
 
     await click('紀錄'); await click('身體紀錄'); await fill('input[name="weight"]', '70'); await fill('input[name="bodyFat"]', '18');
     await click('儲存紀錄'); await waitText('身體數據已成功儲存'); await fill('input[name="weight"]', '72'); await fill('input[name="bodyFat"]', '');
