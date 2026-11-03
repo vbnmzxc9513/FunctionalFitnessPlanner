@@ -1,6 +1,7 @@
+import { MAX_PLANNING_DAYS } from './plannerLimits.js';
 import { createSharePayload, shareDay, validateSharePayload } from './sharing.js';
 
-export const MAX_PLAN_DAYS = 28;
+export const MAX_PLAN_DAYS = MAX_PLANNING_DAYS;
 export const MAX_PLAN_SHARE_LENGTH = 14000;
 export const MAX_PLAN_NAME_LENGTH = 40;
 const invalid = () => { throw new Error('INVALID_PLAN_SHARE'); };
@@ -22,17 +23,17 @@ function dateNumber(value) {
 
 export function validatePlanPayload(payload) {
   exactKeys(payload, ['v', 'name', 'days']);
-  if (payload.v !== 2 || !Array.isArray(payload.days) || payload.days.length < 1 || payload.days.length > MAX_PLAN_DAYS) invalid();
+  if (![2, 3].includes(payload.v) || !Array.isArray(payload.days) || payload.days.length < 1 || payload.days.length > MAX_PLAN_DAYS) invalid();
   let previous = -1;
   const days = payload.days.map((day, index) => {
     exactKeys(day, ['name', 'offset', 'items']);
     if (!Number.isInteger(day.offset) || day.offset < 0 || day.offset > 27 || day.offset <= previous || index === 0 && day.offset !== 0) invalid();
     previous = day.offset;
     let items;
-    try { items = validateSharePayload({ v: 1, items: day.items }).items; } catch { invalid(); }
+    try { items = validateSharePayload({ v: payload.v === 2 ? 1 : 3, items: day.items }).items; } catch { invalid(); }
     return { name: publicName(day.name), offset: day.offset, items };
   });
-  return { v: 2, name: publicName(payload.name), days };
+  return { v: payload.v, name: publicName(payload.name), days };
 }
 
 // Only the explicitly public plan name and generated day labels cross this
@@ -45,14 +46,14 @@ export function createPlanPayload(sessions, { name, exercises, level = 1 } = {})
   if (dated && sessions.some(day => day.date === undefined) || !dated && offset && sessions.some(day => !Number.isInteger(day.offset))) invalid();
   const rows = sessions.map((day, index) => ({ day, order: dated ? dateNumber(day.date) : offset ? day.offset : index })).sort((a, b) => a.order - b.order);
   const first = rows[0].order;
-  return validatePlanPayload({ v: 2, name: String(name ?? '').trim(), days: rows.map(({ day, order }, index) => ({
+  return validatePlanPayload({ v: 3, name: String(name ?? '').trim(), days: rows.map(({ day, order }, index) => ({
     name: `第 ${index + 1} 天`, offset: order - first, items: createSharePayload(day, exercises, level).items,
   })) });
 }
 
 export function rebuildPlanDays(payload, lang = 'zh') {
   return validatePlanPayload(payload).days.map((day, index) => ({
-    ...shareDay({ v: 1, items: day.items }, lang), day: index + 1,
+    ...shareDay({ v: payload.v === 2 ? 1 : 3, items: day.items }, lang), day: index + 1,
     name: day.name, theme: day.name, offset: day.offset,
   }));
 }

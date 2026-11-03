@@ -33,7 +33,8 @@ test('batch addition is all-or-nothing for capacity, duplicates and unavailable 
   let session = withWarmup();
   session = addManualExercises(session, ['bf_B01', 'bf_B02', 'bf_B03', 'bf_B05', 'bf_B06', 'bf_B07'], options('strength'));
   const before = structuredClone(session);
-  assert.throws(() => addManualExercises(session, ['bf_C01', 'bf_C02'], options('accessory')), /MANUAL_CAPACITY/);
+  const full = { ...session, routine: Array.from({ length: 24 }, (_, index) => `existing_${index}`) };
+  assert.throws(() => addManualExercises(full, ['bf_C01'], options('accessory')), /MANUAL_CAPACITY/);
   assert.throws(() => addManualExercises(session, ['bf_B01'], options('strength')), /MANUAL_DUPLICATE_EXERCISE/);
   assert.throws(() => addManualExercises(empty(), ['bf_B01', 'bf_B01'], options('strength')), /MANUAL_DUPLICATE_EXERCISE/);
   const bodyweight = eligibleExercises(exercises, { equipment: [], partnerAvailable: false, experience: 'beginner', healthStatus: 'unrestricted' });
@@ -117,7 +118,7 @@ test('preview blocks an unfinished training draft and never silently removes sel
 
 test('preview returns all dated public session fields, including rest days, and no factual logs', () => {
   const session = addManualExercises(withWarmup(), ['bf_B01'], options('strength'));
-  const sessions = prepareManualPreview([{ ...session, actualWeight: 30, completed: true }, createManualSession('2026-10-21')], { exercises, eligibleExercises: eligible, today: '2026-10-19' });
+  const sessions = prepareManualPreview([{ ...session, actualWeight: 30, completed: true }, { ...createManualSession('2026-10-21'), explicitRest: true }], { exercises, eligibleExercises: eligible, today: '2026-10-19' });
   assert.equal(sessions.length, 2);
   for (const key of ['date', 'week', 'day', 'name', 'theme', 'concept', 'coachAdvice', 'warmupNote', 'cooldownNote', 'sessionType', 'routine', 'prescriptions']) assert.ok(Object.hasOwn(sessions[0], key), key);
   assert.equal(sessions[1].sessionType, 'rest');

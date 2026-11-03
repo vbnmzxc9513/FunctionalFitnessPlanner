@@ -1,8 +1,9 @@
+import { largePlannerDay } from '../fixtures/plannerV3.js';
 import { after, before, beforeEach, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
-import { collection, deleteDoc, doc, getDoc, getDocs, limit, query, serverTimestamp, setDoc, writeBatch } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, limit, query, serverTimestamp, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import { signInAnonymously, signOut } from 'firebase/auth';
 import { auth, appId } from '../../src/services/firebase.js';
 import { createPlanPayload, rebuildPlanDays } from '../../src/domain/sharedPlans.js';
@@ -12,7 +13,7 @@ import { DEFAULT_SCHEDULE_I18N } from '../../src/locale.js';
 let environment, uid;
 const path = id => `artifacts/${appId}/sharedPlans/${id}`;
 const registryPath = id => `artifacts/${appId}/shareOwners/${id}`;
-const fixture = () => createPlanPayload([structuredClone(DEFAULT_SCHEDULE_I18N.zh[0])], { name: '公開計畫' });
+const fixture = () => ({ ...createPlanPayload([structuredClone(DEFAULT_SCHEDULE_I18N.zh[0])], { name: '公開計畫' }), v: 2 });
 const nextId = () => globalThis.crypto.randomUUID().replaceAll('-', '');
 function rawBatch(context, id, payload = fixture(), change = () => {}) {
   const firestore = context.firestore(), rows = rebuildPlanDays(payload);
@@ -59,7 +60,7 @@ test('28 days and 224 doses with eight preparation sets commit in 254 writes wit
   const routine = Array.from({ length: 8 }, (_, index) => `bf_B0${index + 1}`);
   const prescriptions = routine.map(id => ({ id, phase: 'strength', sets: 2, value: '6', unit: 'reps', restSeconds: 60, perSide: false,
     preparation: { sets: 1, value: '4', unit: 'reps', restSeconds: 30, perSide: false, instruction: 'PRIVATE_INSTRUCTION' } }));
-  const payload = createPlanPayload(Array.from({ length: 28 }, (_, offset) => ({ offset, routine, prescriptions })), { name: 'Four weeks' });
+  const payload = { ...createPlanPayload(Array.from({ length: 28 }, (_, offset) => ({ offset, routine, prescriptions })), { name: 'Four weeks' }), v: 2 };
   const id = await createSharedPlan(uid, payload);
   assert.deepEqual(await loadSharedPlan(id), payload);
   assert.equal(JSON.stringify(payload).includes('PRIVATE_INSTRUCTION'), false);
@@ -115,4 +116,77 @@ test('loading fails closed for incomplete or cross-document inconsistent public 
   await assertSucceeds(rawBatch(context, id, fixture(), records => { records.pop(); }));
   await assert.rejects(loadSharedPlan(id), /INVALID_PLAN_SHARE/);
   await assert.rejects(loadSharedPlan('bad/id'), /INVALID_PLAN_SHARE/);
+});
+
+
+test('v3 28-day 672-dose public copy publishes through bounded checkpoints and round-trips all 24 items', async () => {
+  const payload = createPlanPayload(Array.from({ length: 28 }, (_, offset) => ({ ...largePlannerDay(), date: undefined, offset })), { name: 'Independent exercises' });
+  assert.equal(payload.v, 3); assert.equal(payload.days[0].items.length, 24);
+  const id = await createSharedPlan(uid, payload);
+  const anonymous = environment.unauthenticatedContext().firestore();
+  const header = (await assertSucceeds(getDoc(doc(anonymous, path(id))))).data();
+  assert.equal(header.status, 'complete'); assert.equal(header.completedDays, 28);
+  assert.deepEqual(await loadSharedPlan(id), payload);
+  assert.equal((await getDocs(query(collection(anonymous, `${path(id)}/days/0/doses`), limit(14)))).size, 14);
+});
+
+test('v3 interrupted publication is unreadable; incomplete checkpoints, foreign publishers and mutation fail', async () => {
+  const firestore = environment.authenticatedContext(uid).firestore(), anonymous = environment.unauthenticatedContext().firestore();
+  const id = nextId(), payload = createPlanPayload([largePlannerDay()], { name: 'Interrupted' });
+  const initial = writeBatch(firestore);
+  initial.set(doc(firestore, registryPath(id)), { uid, createdAt: serverTimestamp() });
+  initial.set(doc(firestore, path(id)), { v: 3, name: payload.name, dayCount: 1, status: 'building', completedDays: 0, createdAt: serverTimestamp() });
+  await assertSucceeds(initial.commit());
+  await assertFails(getDoc(doc(anonymous, path(id))));
+  await assertFails(getDocs(query(collection(anonymous, `${path(id)}/days`), limit(28))));
+  const day = payload.days[0], parent = `${path(id)}/days/0`;
+  await assertSucceeds(setDoc(doc(firestore, parent), { index: 0, name: day.name, offset: 0, routine: day.items.map(item => item.id), sessionType: 'training' }));
+  await assertFails(getDoc(doc(anonymous, parent)));
+  await assertFails(getDocs(query(collection(anonymous, `${parent}/doses`), limit(14))));
+  await assertFails(updateDoc(doc(firestore, path(id)), { completedDays: 1, status: 'complete' }));
+  await assertFails(setDoc(doc(firestore, `${parent}/doses/proof0`), { v: 3, count: 6 }));
+  await assertFails(setDoc(doc(environment.authenticatedContext('stranger').firestore(), `${parent}/doses/0`), { v: 3, items: day.items.slice(0, 2) }));
+  const wrong = structuredClone(day.items.slice(0, 2)); wrong[0].id = 'private-custom';
+  await assertFails(setDoc(doc(firestore, `${parent}/doses/0`), { v: 3, items: wrong }));
+  await assertSucceeds(setDoc(doc(firestore, `${parent}/doses/4`), { v: 3, items: day.items.slice(8, 10) }));
+  const batch = writeBatch(firestore);
+  for (let slot = 0; slot < 12; slot++) if (slot !== 4) batch.set(doc(firestore, `${parent}/doses/${slot}`), { v: 3, items: day.items.slice(slot * 2, slot * 2 + 2) });
+  batch.set(doc(firestore, `${parent}/doses/proof0`), { v: 3, count: 6 });
+  batch.set(doc(firestore, `${parent}/doses/proof1`), { v: 3, count: 6 });
+  batch.update(doc(firestore, path(id)), { completedDays: 1, status: 'complete' });
+  await assertSucceeds(batch.commit());
+  assert.deepEqual(await loadSharedPlan(id), payload);
+  await assertFails(updateDoc(doc(firestore, `${parent}/doses/0`), { items: day.items.slice(2, 4) }));
+  await assertFails(setDoc(doc(firestore, `${parent}/doses/12`), { v: 3, items: day.items.slice(0, 2) }));
+});
+
+test('v3 checkpoints cannot skip or replay days, reuse earlier proofs, or publish missing dose fields', async () => {
+  const firestore = environment.authenticatedContext(uid).firestore(), id = nextId();
+  const payload = createPlanPayload([0, 1].map(offset => ({ ...largePlannerDay(), date: undefined, offset })), { name: 'Two immutable days' });
+  const header = doc(firestore, path(id)), initial = writeBatch(firestore);
+  initial.set(doc(firestore, registryPath(id)), { uid, createdAt: serverTimestamp() });
+  initial.set(header, { v: 3, name: payload.name, dayCount: 2, status: 'building', completedDays: 0, createdAt: serverTimestamp() });
+  await initial.commit();
+  const addDay = async (index, includeDoses = true) => {
+    const day = payload.days[index], parent = `${path(id)}/days/${index}`, batch = writeBatch(firestore);
+    batch.set(doc(firestore, parent), { index, name: day.name, offset: index, routine: day.items.map(item => item.id), sessionType: 'training' });
+    if (includeDoses) {
+      for (let slot = 0; slot < 12; slot++) batch.set(doc(firestore, `${parent}/doses/${slot}`), { v: 3, items: day.items.slice(slot * 2, slot * 2 + 2) });
+      for (let group = 0; group < 2; group++) batch.set(doc(firestore, `${parent}/doses/proof${group}`), { v: 3, count: 6 });
+      batch.update(header, { completedDays: index + 1, status: index === 1 ? 'complete' : 'building' });
+    }
+    await batch.commit();
+  };
+  await addDay(0);
+  await assertFails(updateDoc(header, { completedDays: 0, status: 'building' }));
+  await assertFails(updateDoc(header, { completedDays: 2, status: 'complete' }));
+  await assertFails(setDoc(doc(firestore, `${path(id)}/days/0/doses/12`), { v: 3, items: payload.days[0].items.slice(0, 2) }));
+  await assertFails(setDoc(doc(firestore, `${path(id)}/days/0/doses/proof0`), { v: 3, count: 6 }));
+  await addDay(1, false);
+  await assertFails(updateDoc(header, { completedDays: 2, status: 'complete' }));
+  await assertFails(setDoc(doc(firestore, `${path(id)}/days/1/doses/proof0`), { v: 3, count: 6 }));
+  for (const field of ['id', 'phase', 'sets', 'value', 'unit', 'restSeconds', 'perSide']) {
+    const items = structuredClone(payload.days[1].items.slice(8, 10)); delete items[0][field];
+    await assertFails(setDoc(doc(firestore, `${path(id)}/days/1/doses/4`), { v: 3, items }));
+  }
 });

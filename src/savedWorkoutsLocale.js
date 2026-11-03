@@ -1,9 +1,9 @@
 export const SAVED_WORKOUTS_TEXT = {
   zh: {
-    title: '我的收藏課表', saveTitle: '命名並收藏這天課表', close: '關閉', cancel: '取消', name: '課表名稱',
+    title: '我的收藏', saveTitle: '命名並收藏這天課表', close: '關閉', cancel: '取消', name: '課表名稱',
     nameHint: '1–40 個字；同名不會覆寫既有收藏。', save: '確認收藏', saving: '正在儲存…', rename: '重新命名', renameSave: '儲存名稱',
     delete: '刪除', deleteTitle: '刪除這份收藏？', deleteHint: '只刪除這份收藏，不影響已安排的課表或訓練紀錄。', deleteConfirm: '確認刪除收藏',
-    use: '選日期套用', share: '分享', preview: '查看內容', hide: '收起內容', empty: '還沒有收藏課表。可從某一天的課表命名收藏，之後再選日期使用。',
+    use: '選日期套用', share: '分享', preview: '查看內容', hide: '收起內容', empty: '還沒有收藏。可從當日課表名稱旁的「收藏這天」保存整天或指定階段，下次加入草稿或選日期使用。',
     loading: '正在讀取收藏…', retry: '重新讀取', device: '保存在這個瀏覽器；清除網站資料會移除收藏。登入後不會自動加入帳號。',
     account: '保存在目前帳號，只有你能存取。', privacy: '保存計畫動作、順序、階段、組次與準備組；不保存原日期、實際重量、完成紀錄、健康資料或私人筆記。',
     custom: '含自訂動作：會保留必要的動作名稱與類型。公開分享會另外檢查支援範圍。', motions: '個動作', restDay: '休息日，沒有動作。',
@@ -22,10 +22,10 @@ export const SAVED_WORKOUTS_TEXT = {
     },
   },
   en: {
-    title: 'My saved workouts', saveTitle: 'Name and save this workout', close: 'Close', cancel: 'Cancel', name: 'Workout name',
+    title: 'My favorites', saveTitle: 'Name and save this workout', close: 'Close', cancel: 'Cancel', name: 'Workout name',
     nameHint: '1–40 characters. An existing name will never be overwritten.', save: 'Save workout', saving: 'Saving…', rename: 'Rename', renameSave: 'Save name',
     delete: 'Delete', deleteTitle: 'Delete this saved workout?', deleteHint: 'Only this saved copy is removed. Scheduled workouts and training records remain unchanged.', deleteConfirm: 'Delete saved workout',
-    use: 'Choose dates to use', share: 'Share', preview: 'View contents', hide: 'Hide contents', empty: 'No saved workouts yet. Name and save a scheduled day, then choose a new date to use it.',
+    use: 'Choose dates to use', share: 'Share', preview: 'View contents', hide: 'Hide contents', empty: 'No favorites yet. Use Save this day beside the daily workout name to save a day or selected phase, then reuse it in a draft or on chosen dates.',
     loading: 'Loading saved workouts…', retry: 'Reload', device: 'Saved in this browser. Clearing site data removes these workouts. Signing in does not automatically add them to an account.',
     account: 'Saved privately in the current account. Only you can access them.', privacy: 'Saves planned exercises, order, phases, doses and preparation sets. Excludes original dates, actual weights, completion, health details and private notes.',
     custom: 'Includes custom exercises: only necessary names and types are retained. Public sharing checks support separately.', motions: 'exercises', restDay: 'Rest day with no exercises.',

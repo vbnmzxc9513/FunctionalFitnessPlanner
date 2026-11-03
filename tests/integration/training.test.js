@@ -13,6 +13,7 @@ import { trainingLogId } from '../../src/domain/coaching.js';
 import { createWeeklyIntent } from '../../src/domain/trainingPreferences.js';
 import { loadTrainingExport } from '../../src/services/trainingExport.js';
 import { buildTrainingReport } from '../../src/domain/trainingExport.js';
+import legacyPlans from '../fixtures/legacyWeeklyPlans.json' with { type: 'json' };
 
 const week = getWeekString();
 // Follow-up must be valid even when CI runs on Monday.
@@ -238,10 +239,11 @@ test('rest-adjusted preview adopts its completed strength slot and original priv
   const { adaptDayForReadiness } = await import('../../src/domain/coaching.js');
   const { normalizePromotionDraft } = await import('../../src/domain/promotion.js');
   const { catalogExercises } = await import('../../src/domain/exerciseCatalog.js');
-  const { generateTemplatePlan } = await import('../../src/domain/templatePlanner.js');
   const exercises = catalogExercises('zh');
   const profile = { context: { healthStatus: 'unrestricted' }, time: '30', focus: 'strength', goal: '' };
-  const baselinePlan = { ...generateTemplatePlan(exercises, profile.context, profile.time, 'zh', { currentDate: localDate(), currentWeek: week }), source: 'template', language: 'zh' };
+  // Adoption is a historical weekly path (eight slots). Modern generator
+  // output uses native date storage and is covered by plannerAdaptersV3.
+  const baselinePlan = { ...structuredClone(legacyPlans.balanced), source: 'template', language: 'zh' };
   const original = baselinePlan.schedule.find(day => day.prescriptions.some(dose => dose.phase === 'strength'));
   const strength = original.prescriptions.find(dose => dose.phase === 'strength');
   const completed = { [`day${original.day}_${strength.id}`]: true };

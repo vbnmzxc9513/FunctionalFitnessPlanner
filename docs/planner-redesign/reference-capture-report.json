@@ -1,0 +1,178 @@
+[
+  {
+    "state": "week",
+    "width": 390,
+    "scrollWidth": 390,
+    "viewport": 390,
+    "h1": "本週安排",
+    "bottom": null
+  },
+  {
+    "state": "dates",
+    "width": 390,
+    "scrollWidth": 390,
+    "viewport": 390,
+    "h1": "要安排哪幾天？",
+    "bottom": "開始安排 3 天"
+  },
+  {
+    "state": "empty",
+    "width": 390,
+    "scrollWidth": 390,
+    "viewport": 390,
+    "h1": "安排 11/3（二）",
+    "bottom": null
+  },
+  {
+    "state": "day",
+    "width": 390,
+    "scrollWidth": 390,
+    "viewport": 390,
+    "h1": "安排 11/3（二）",
+    "bottom": "檢查並套用 3 天"
+  },
+  {
+    "state": "picker",
+    "width": 390,
+    "scrollWidth": 390,
+    "viewport": 390,
+    "h1": "加入課表到 11/3（二）",
+    "bottom": null
+  },
+  {
+    "state": "mine",
+    "width": 390,
+    "scrollWidth": 390,
+    "viewport": 390,
+    "h1": "加入課表到 11/3（二）",
+    "bottom": null
+  },
+  {
+    "state": "detail",
+    "width": 390,
+    "scrollWidth": 390,
+    "viewport": 390,
+    "h1": "髖內旋活動與控制",
+    "bottom": "加入 3 個動作到 11/3 草稿"
+  },
+  {
+    "state": "conflict",
+    "width": 390,
+    "scrollWidth": 390,
+    "viewport": 390,
+    "h1": "髖內旋活動與控制",
+    "bottom": "確認加入 2 個動作到草稿"
+  },
+  {
+    "state": "replace",
+    "width": 390,
+    "scrollWidth": 390,
+    "viewport": 390,
+    "h1": "確認取代暖身",
+    "bottom": "確認取代暖身"
+  },
+  {
+    "state": "save",
+    "width": 390,
+    "scrollWidth": 390,
+    "viewport": 390,
+    "h1": "存為我的課表",
+    "bottom": "存入我的課表"
+  },
+  {
+    "state": "review",
+    "width": 390,
+    "scrollWidth": 390,
+    "viewport": 390,
+    "h1": "檢查並套用",
+    "bottom": "確認套用到 3 天"
+  },
+  {
+    "state": "week",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "viewport": 1440,
+    "h1": "本週安排",
+    "bottom": null
+  },
+  {
+    "state": "dates",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "viewport": 1440,
+    "h1": "要安排哪幾天？",
+    "bottom": "開始安排 3 天"
+  },
+  {
+    "state": "empty",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "viewport": 1440,
+    "h1": "安排 11/3（二）",
+    "bottom": null
+  },
+  {
+    "state": "day",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "viewport": 1440,
+    "h1": "安排 11/3（二）",
+    "bottom": "檢查並套用 3 天"
+  },
+  {
+    "state": "picker",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "viewport": 1440,
+    "h1": "加入課表到 11/3（二）",
+    "bottom": null
+  },
+  {
+    "state": "mine",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "viewport": 1440,
+    "h1": "加入課表到 11/3（二）",
+    "bottom": null
+  },
+  {
+    "state": "detail",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "viewport": 1440,
+    "h1": "髖內旋活動與控制",
+    "bottom": "加入 3 個動作到 11/3 草稿"
+  },
+  {
+    "state": "conflict",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "viewport": 1440,
+    "h1": "髖內旋活動與控制",
+    "bottom": "確認加入 2 個動作到草稿"
+  },
+  {
+    "state": "replace",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "viewport": 1440,
+    "h1": "確認取代暖身",
+    "bottom": "確認取代暖身"
+  },
+  {
+    "state": "save",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "viewport": 1440,
+    "h1": "存為我的課表",
+    "bottom": "存入我的課表"
+  },
+  {
+    "state": "review",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "viewport": 1440,
+    "h1": "檢查並套用",
+    "bottom": "確認套用到 3 天"
+  }
+]

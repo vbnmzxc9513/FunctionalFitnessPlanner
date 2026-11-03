@@ -15,7 +15,7 @@ import { auth } from '../services/firebase.js';
 import { periodQuestionnaireText } from '../periodLocale.js';
 
 export default function PeriodWorkspace({ uid, today, lang, t, exercises, profile, setProfile, available, onToggleWeekly,
-  localPeriod, onLocalPeriod, onApplied, onClose, overview, refreshToken = 0, fallbackPlans = {}, onToday, preserveCurrentChoices = false, history = {}, onSaveWorkout, onShare, onEditWorkout }) {
+  localPeriod, onLocalPeriod, onApplied, onClose, overview, refreshToken = 0, fallbackPlans = {}, onToday, preserveCurrentChoices = false, history = {}, onSaveWorkout, onShare, onEditWorkout, onPlanDate, onOverviewLoaded }) {
   const scope = uid || 'signed-out';
   const questionnaireT = periodQuestionnaireText(lang, t);
   const storageKey = `fitness_period_questionnaire_${scope}`;
@@ -66,6 +66,7 @@ export default function PeriodWorkspace({ uid, today, lang, t, exercises, profil
           restDays: days.filter(day => day.sessionType === 'rest' || (!day.sessionType && !day.routine.length)).length,
           minutes: days.reduce((sum, day) => sum + estimateSessionMinutes(day, exercises), 0) };
       });
+      onOverviewLoaded?.(sessions);
       setPreview({ ...overview, sessions, weeklySummaries, protectedDates: state.protectedDates });
     }).catch(() => { if (active) setError(lang === 'zh' ? '無法載入日期課表，請稍後重試。' : 'Could not load this date plan. Please retry.'); });
     return () => { active = false; };
@@ -139,7 +140,7 @@ export default function PeriodWorkspace({ uid, today, lang, t, exercises, profil
       <Onboarding lang={lang} t={questionnaireT} exercises={exercises} available={available} onToggleWeekly={onToggleWeekly} step={step} onStepChange={setStep}
         context={profile.context} setContext={value => update('context', value)} focus={profile.focus} setFocus={value => update('focus', value)} time={profile.time} setTime={value => update('time', value)} goal={profile.goal} setGoal={value => update('goal', value)} message={message} setMessage={setMessage} generating={busy} onGenerate={generate} />
     </>}
-    {(stage === 'preview' || stage === 'overview') && preview && <PeriodPlanPreview preview={preview} choiceReport={choiceReport} choiceSummary={choiceSummary} lang={lang} t={t} exercises={exercises} today={today} onBack={stage === 'preview' ? () => { setStage('questionnaire'); setStep(2); } : undefined} onApply={stage === 'preview' ? apply : undefined} onSaveWorkout={onSaveWorkout} onShare={onShare} onEditWorkout={onEditWorkout} busy={busy} stale={stage === 'preview' && preview.fingerprint !== fingerprint} />}
+    {(stage === 'preview' || stage === 'overview') && preview && <PeriodPlanPreview preview={preview} choiceReport={choiceReport} choiceSummary={choiceSummary} lang={lang} t={t} exercises={exercises} today={today} onBack={stage === 'preview' ? () => { setStage('questionnaire'); setStep(2); } : undefined} onApply={stage === 'preview' ? apply : undefined} onSaveWorkout={onSaveWorkout} onShare={onShare} onEditWorkout={onEditWorkout} onPlanDate={onPlanDate} busy={busy} stale={stage === 'preview' && preview.fingerprint !== fingerprint} />}
     {stage === 'overview' && <div className="flex gap-3 mt-5"><button className="button-primary" onClick={replan}>{lang === 'zh' ? '規劃另一段日期' : 'Plan another date range'}</button>{onToday && <button className="button-secondary" onClick={onToday}>{lang === 'zh' ? '回到今日訓練' : 'Go to Today'}</button>}</div>}
   </section>;
 }

@@ -1,3 +1,4 @@
+import { MAX_DAY_EXERCISES, LEGACY_MAX_DAY_EXERCISES } from './plannerLimits.js';
 import { catalogExercises } from './exerciseCatalog.js';
 import { exercisePhase, SESSION_PHASES, SESSION_TYPES } from './phases.js';
 import { prescription, resolveExerciseId } from './training.js';
@@ -48,8 +49,8 @@ function cleanDose(value, preparation = false) {
 /** Strict reader: unknown fields and incomplete/custom movements fail closed. */
 export function validateWorkoutSnapshot(value) {
   keys(value, ['v', 'sessionType', 'routine', 'prescriptions', 'exercises']);
-  if (value.v !== 1 || !SESSION_TYPES.includes(value.sessionType) || !Array.isArray(value.routine)
-    || value.routine.length > 8 || new Set(value.routine).size !== value.routine.length
+  if (![1, 3].includes(value.v) || !SESSION_TYPES.includes(value.sessionType) || !Array.isArray(value.routine)
+    || value.routine.length > (value.v === 1 ? LEGACY_MAX_DAY_EXERCISES : MAX_DAY_EXERCISES) || new Set(value.routine).size !== value.routine.length
     || value.routine.some(id => !identifier(id)) || !Array.isArray(value.prescriptions)
     || !Array.isArray(value.exercises) || value.prescriptions.length !== value.routine.length
     || value.exercises.length !== value.routine.length) fail();
@@ -69,14 +70,14 @@ export function validateWorkoutSnapshot(value) {
   });
   const sessionType = !prescriptions.length ? 'rest' : prescriptions.some(dose => ['skill', 'strength', 'accessory'].includes(dose.phase)) ? 'training' : 'recovery';
   if (value.sessionType !== sessionType) fail();
-  const clean = { v: 1, sessionType, routine: [...value.routine], prescriptions, exercises };
+  const clean = { v: value.v, sessionType, routine: [...value.routine], prescriptions, exercises };
   if (JSON.stringify(clean).length > MAX_WORKOUT_PAYLOAD) fail('SAVED_WORKOUT_TOO_LARGE');
   return clean;
 }
 
 /** A private, date-free plan snapshot. No source free text is copied. */
 export function createWorkoutSnapshot(day, exercises = builtin, level = 1) {
-  if (!day || !Array.isArray(day.routine) || day.routine.length > 8 || !plain(exercises)
+  if (!day || !Array.isArray(day.routine) || day.routine.length > MAX_DAY_EXERCISES || !plain(exercises)
     || day.prescriptions !== undefined && !Array.isArray(day.prescriptions)) fail();
   const routine = day.routine.map(value => {
     const id = resolveExerciseId(value, exercises);
@@ -98,7 +99,7 @@ export function createWorkoutSnapshot(day, exercises = builtin, level = 1) {
     return { id, phase: exercisePhase(source, id, exercise), ...pick(dose), ...(dose.preparation ? { preparation: pick(dose.preparation) } : {}) };
   });
   const sessionType = !routine.length ? 'rest' : prescriptions.some(dose => ['skill', 'strength', 'accessory'].includes(dose.phase)) ? 'training' : 'recovery';
-  return validateWorkoutSnapshot({ v: 1, sessionType, routine, prescriptions, exercises: savedExercises });
+  return validateWorkoutSnapshot({ v: 3, sessionType, routine, prescriptions, exercises: savedExercises });
 }
 
 export function workoutPayload(snapshot) {
@@ -110,14 +111,29 @@ export function readWorkoutPayload(payload) {
   try { return validateWorkoutSnapshot(JSON.parse(payload)); } catch { fail(); }
 }
 
+export const WORKOUT_SCOPES = ['day', 'warmup', 'training', 'cooldown', 'selection'];
+export function workoutMetadata({ scope = 'day', tags = [], contentVersion = 1, pinned = false, lastUsedAt = null } = {}) {
+  if (!WORKOUT_SCOPES.includes(scope) || !Array.isArray(tags) || tags.length > 6
+    || typeof pinned !== 'boolean' || lastUsedAt !== null && (!Number.isSafeInteger(lastUsedAt) || lastUsedAt < 0 || lastUsedAt > 4102444800000)
+    || !Number.isSafeInteger(contentVersion) || contentVersion < 1 || contentVersion > 1000000) fail();
+  const cleanTags = tags.map(tag => {
+    if (typeof tag !== 'string') fail();
+    const clean = tag.normalize('NFKC').trim();
+    if (!text(clean, 30)) fail();
+    return clean;
+  });
+  if (new Set(cleanTags).size !== cleanTags.length) fail();
+  return { scope, tags: cleanTags, contentVersion, pinned, lastUsedAt };
+}
+
 export function readSavedWorkout(id, record) {
-  keys(record, ['v', 'name', 'payload', 'revision', 'createdAt', 'updatedAt']);
+  keys(record, ['v', 'name', 'payload', 'revision', 'createdAt', 'updatedAt', 'scope', 'tags', 'contentVersion', 'pinned', 'lastUsedAt'], ['v', 'name', 'payload', 'revision', 'createdAt', 'updatedAt']);
   if (!identifier(id) || record.v !== 1 || workoutName(record.name) !== record.name
     || !Number.isSafeInteger(record.revision) || record.revision < 1
     || !Number.isSafeInteger(record.createdAt) || record.createdAt < 0
     || !Number.isSafeInteger(record.updatedAt) || record.updatedAt < record.createdAt) fail();
   return { id, name: record.name, revision: record.revision, createdAt: record.createdAt,
-    updatedAt: record.updatedAt, snapshot: readWorkoutPayload(record.payload) };
+    updatedAt: record.updatedAt, ...workoutMetadata(record), snapshot: readWorkoutPayload(record.payload) };
 }
 
 export function savedWorkoutDay(item, lang = 'zh') {

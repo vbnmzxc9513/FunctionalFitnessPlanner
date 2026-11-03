@@ -1,3 +1,4 @@
+import { largePlannerDay } from '../fixtures/plannerV3.js';
 import { after, before, beforeEach, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -108,4 +109,29 @@ test('guest-to-existing-Google migration renames collisions explicitly, rebuilds
     assert.ok(!record.payload.includes('PRIVATE_NOT_MIGRATED'));
   }
   await assert.rejects(guestRepository.create({ name: 'Wrong identity', snapshot: snapshot() }), /WORKOUT_AUTH_CHANGED/);
+});
+
+
+test('v3 24-item private templates save scope/tags/version, pin/recent and atomically update content plus a unique name', async () => {
+  const repository = createAccountWorkoutRepository(uid), source = createWorkoutSnapshot(largePlannerDay());
+  const saved = await repository.create({ name: 'Independent warm-up', snapshot: source, scope: 'day', tags: ['control', 'mobility'], contentVersion: 1 });
+  assert.equal(saved.snapshot.routine.length, 24);
+  const originalCreatedAt = (await getDoc(userDoc(uid, 'workoutTemplates', saved.id))).data().createdAt.toMillis();
+  await repository.setPinned(saved.id, true, 1);
+  await repository.markUsed(saved.id, 2);
+  const changed = await repository.update(saved.id, { name: 'Updated independent exercises', scope: 'selection', snapshot: createWorkoutSnapshot(largePlannerDay(undefined, 14)) }, 3);
+  assert.equal(changed.snapshot.routine.length, 14); assert.equal(changed.scope, 'selection');
+  assert.deepEqual(changed.tags, ['control', 'mobility']); assert.equal(changed.pinned, true); assert.ok(changed.lastUsedAt > 0);
+  const record = (await getDoc(userDoc(uid, 'workoutTemplates', saved.id))).data();
+  assert.equal(record.revision, 4); assert.equal(record.createdAt.toMillis(), originalCreatedAt);
+  assert.equal(JSON.parse(record.payload).routine.length, 14);
+  assert.equal((await getDoc(userDoc(uid, 'workoutNames', await workoutNameKey(saved.name)))).exists(), false);
+  assert.equal((await getDoc(userDoc(uid, 'workoutNames', await workoutNameKey(changed.name)))).data().workoutId, saved.id);
+  await assert.rejects(repository.update(saved.id, { tags: [] }, 3), /WORKOUT_CHANGED/);
+  const collision = await repository.create({ name: 'Other reserved name', snapshot: source });
+  await assert.rejects(repository.update(saved.id, { name: collision.name, tags: [] }, 4), /DUPLICATE_WORKOUT_NAME/);
+  assert.equal((await getDoc(userDoc(uid, 'workoutTemplates', saved.id))).data().revision, 4);
+  for (const bad of [{ scope: 'other' }, { tags: ['x'.repeat(31)] }, { tags: ['same', 'same'] }, { contentVersion: 0 }, { pinned: 'yes' }, { lastUsedAt: -1 }]) {
+    await assertFails(updateDoc(userDoc(uid, 'workoutTemplates', saved.id), { ...bad, revision: 5, updatedAt: serverTimestamp() }));
+  }
 });

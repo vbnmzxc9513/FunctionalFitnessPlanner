@@ -1,0 +1,680 @@
+{
+  "coordination": {
+    "conclusion": "本週免金鑰模板：協調。安排 2 堂主要肌力，不要求每天練滿 30 分鐘。\n\n未提供球日，先用一般週安排；補上球日後請重新排課。\n\n 尚未提供比賽日期，不假設賽前週期。\n\n這是固定規則起步課表，不能判斷傷勢或取代教練觀察。\n\n每天先檢查睡眠、精神和症狀；疲勞先減量。完成品質穩定、保有餘力且翌日無惡化兩次後，才考慮增加最小阻力；本模板不會因「太簡單」自動加重。每週回報難度與疲勞再排課；每 4–8 週回顧同版本動作表現。\n\n一般無限制、非賽前／恢復優先週，保留主肌力的目的性重複，以全身動態開場及短活動槽維護八個區域，參考當日主項、近兩天訓練／球日及滾動七天的活動間隔；球日以同套舒適動態拉伸恢復，受限或短課才採精簡活動。時間、器材、恢復與治療限制優先；安排不等於實做或實測活動度，缺少資料不推定失衡或要求補課。\n\n暖身使用指定的八段動態拉伸：嬰兒式、偉大拉伸、貓牛式、Y/T、前鋸肌 push-up、胸椎、90/90 髖、大小腿。30 分鐘以上優先完整 10 分鐘，10–29 分鐘採完整 6 分鐘精簡流程；不安排跑步、快走或側移暖身。輕疲勞先減正式工作，不只砍暖身；各主項模式的輕準備組與其後休息全部計時。時間、治療、症狀與賽前熟悉度優先，純休息不補拉伸。\n\n這是可恢復的起步／維持劑量；正常週保留推拉與互補下肢，少數下肢槽跨週 A/B 輪替，避免一堂週永遠漏練。每 2–4 週用實做品質、餘力與翌日反應檢查是否適合回量，不因排滿日期自動加重。",
+    "schedule": [
+      {
+        "day": 1,
+        "name": "星期一",
+        "theme": "全身肌力與穩定",
+        "concept": "先練清楚的步序與控制，再以可恢復的劑量累積力量；不追求疲勞。",
+        "coachAdvice": "今天是非球日，以互補的下肢與上肢模式累積肌力。 正式組保留約 2–3 次姿勢良好的餘力；若睡眠、精神或隔天反應變差，少做一組或改恢復。 預估 27 分鐘，含左右側、休息及準備組。",
+        "sessionType": "training",
+        "warmupNote": "依序完成 10 分鐘八段動態拉伸，不另加跑步或快走。長按暖身查看每段做法；已含左右側與換姿勢，不另外加一輪。接著做列出的步序與主項輕量準備組（有列出時）。 活動度重點：肩胸（近七天可確認的活動安排較少）、胸椎（近七天可確認的活動安排較少）。依列出的動態活動慢速進出，不另加組數或強拉；已安排不等於已完成或實測活動度。",
+        "cooldownNote": "本次沒有額外收操動作，可省略；不要在時間之外補做。",
+        "routine": [
+          "bf_A13",
+          "bf_F01",
+          "bf_C03",
+          "dead_bug",
+          "bf_B01",
+          "bf_B06"
+        ],
+        "prescriptions": [
+          {
+            "id": "bf_A13",
+            "sets": 1,
+            "value": "10",
+            "unit": "minutes",
+            "restSeconds": 0,
+            "perSide": false,
+            "phase": "warmup"
+          },
+          {
+            "id": "bf_F01",
+            "sets": 2,
+            "value": "3",
+            "unit": "reps",
+            "restSeconds": 60,
+            "perSide": false,
+            "phase": "skill"
+          },
+          {
+            "id": "bf_C03",
+            "sets": 1,
+            "value": "6",
+            "unit": "reps",
+            "restSeconds": 90,
+            "perSide": false,
+            "phase": "strength",
+            "preparation": {
+              "sets": 1,
+              "value": "4",
+              "unit": "reps",
+              "restSeconds": 30,
+              "perSide": false,
+              "instruction": "使用同一動作的徒手版本，保留餘力，不做到疲勞；完成後休息 30 秒再進正式組。"
+            }
+          },
+          {
+            "id": "dead_bug",
+            "sets": 1,
+            "value": "4",
+            "unit": "reps",
+            "restSeconds": 45,
+            "perSide": true,
+            "phase": "strength",
+            "preparation": {
+              "sets": 1,
+              "value": "4",
+              "unit": "reps",
+              "restSeconds": 30,
+              "perSide": true,
+              "instruction": "使用同一動作的徒手版本，保留餘力，不做到疲勞；完成後休息 30 秒再進正式組。"
+            }
+          },
+          {
+            "id": "bf_B01",
+            "sets": 1,
+            "value": "6",
+            "unit": "reps",
+            "restSeconds": 90,
+            "perSide": true,
+            "phase": "strength",
+            "preparation": {
+              "sets": 1,
+              "value": "4",
+              "unit": "reps",
+              "restSeconds": 30,
+              "perSide": true,
+              "instruction": "使用同一動作的徒手版本，保留餘力，不做到疲勞；完成後休息 30 秒再進正式組。"
+            }
+          },
+          {
+            "id": "bf_B06",
+            "sets": 2,
+            "value": "6",
+            "unit": "reps",
+            "restSeconds": 90,
+            "perSide": false,
+            "phase": "strength",
+            "preparation": {
+              "sets": 1,
+              "value": "4",
+              "unit": "reps",
+              "restSeconds": 30,
+              "perSide": false,
+              "instruction": "使用同一動作的徒手版本，保留餘力，不做到疲勞；完成後休息 30 秒再進正式組。"
+            }
+          }
+        ]
+      },
+      {
+        "day": 2,
+        "name": "星期二",
+        "theme": "短協調與步序",
+        "concept": "先練清楚的步序與控制，再以可恢復的劑量累積力量；不追求疲勞。",
+        "coachAdvice": "每次步序重置、依動作提示充分休息；獨自預設方向是協調練習，不稱作未知訊號反應。 預估 19 分鐘，含左右側、休息及準備組。",
+        "sessionType": "training",
+        "warmupNote": "依序完成 10 分鐘八段動態拉伸，不另加跑步或快走。長按暖身查看每段做法；已含左右側與換姿勢，不另外加一輪。接著做列出的步序與主項輕量準備組（有列出時）。 活動度重點：髖旋轉（近兩天原有訓練安排，尚未確認完成）、內收肌（近兩天原有訓練安排，尚未確認完成）。依列出的動態活動慢速進出，不另加組數或強拉；已安排不等於已完成或實測活動度。",
+        "cooldownNote": "安排短呼吸收尾，可依感受省略；不以拉伸取代睡眠與合理球量。",
+        "routine": [
+          "bf_A13",
+          "bf_F01",
+          "bf_F02",
+          "bf_D09"
+        ],
+        "prescriptions": [
+          {
+            "id": "bf_A13",
+            "sets": 1,
+            "value": "10",
+            "unit": "minutes",
+            "restSeconds": 0,
+            "perSide": false,
+            "phase": "warmup"
+          },
+          {
+            "id": "bf_F01",
+            "sets": 2,
+            "value": "3",
+            "unit": "reps",
+            "restSeconds": 60,
+            "perSide": false,
+            "phase": "skill"
+          },
+          {
+            "id": "bf_F02",
+            "sets": 1,
+            "value": "3",
+            "unit": "reps",
+            "restSeconds": 60,
+            "perSide": true,
+            "phase": "skill"
+          },
+          {
+            "id": "bf_D09",
+            "sets": 1,
+            "value": "4",
+            "unit": "breaths",
+            "restSeconds": 45,
+            "perSide": false,
+            "phase": "cooldown"
+          }
+        ]
+      },
+      {
+        "day": 3,
+        "name": "星期三",
+        "theme": "全身肌力與穩定",
+        "concept": "先練清楚的步序與控制，再以可恢復的劑量累積力量；不追求疲勞。",
+        "coachAdvice": "今天是非球日，以互補的下肢與上肢模式累積肌力。 正式組保留約 2–3 次姿勢良好的餘力；若睡眠、精神或隔天反應變差，少做一組或改恢復。 預估 27 分鐘，含左右側、休息及準備組。",
+        "sessionType": "training",
+        "warmupNote": "依序完成 10 分鐘八段動態拉伸，不另加跑步或快走。長按暖身查看每段做法；已含左右側與換姿勢，不另外加一輪。接著做列出的步序與主項輕量準備組（有列出時）。 活動度重點：肩胸（近兩天原有訓練安排，尚未確認完成）、胸椎（近兩天原有訓練安排，尚未確認完成）。依列出的動態活動慢速進出，不另加組數或強拉；已安排不等於已完成或實測活動度。",
+        "cooldownNote": "本次沒有額外收操動作，可省略；不要在時間之外補做。",
+        "routine": [
+          "bf_A13",
+          "bf_F01",
+          "bf_C03",
+          "dead_bug",
+          "bf_B01",
+          "bf_B06"
+        ],
+        "prescriptions": [
+          {
+            "id": "bf_A13",
+            "sets": 1,
+            "value": "10",
+            "unit": "minutes",
+            "restSeconds": 0,
+            "perSide": false,
+            "phase": "warmup"
+          },
+          {
+            "id": "bf_F01",
+            "sets": 2,
+            "value": "3",
+            "unit": "reps",
+            "restSeconds": 60,
+            "perSide": false,
+            "phase": "skill"
+          },
+          {
+            "id": "bf_C03",
+            "sets": 1,
+            "value": "6",
+            "unit": "reps",
+            "restSeconds": 90,
+            "perSide": false,
+            "phase": "strength",
+            "preparation": {
+              "sets": 1,
+              "value": "4",
+              "unit": "reps",
+              "restSeconds": 30,
+              "perSide": false,
+              "instruction": "使用同一動作的徒手版本，保留餘力，不做到疲勞；完成後休息 30 秒再進正式組。"
+            }
+          },
+          {
+            "id": "dead_bug",
+            "sets": 1,
+            "value": "4",
+            "unit": "reps",
+            "restSeconds": 45,
+            "perSide": true,
+            "phase": "strength",
+            "preparation": {
+              "sets": 1,
+              "value": "4",
+              "unit": "reps",
+              "restSeconds": 30,
+              "perSide": true,
+              "instruction": "使用同一動作的徒手版本，保留餘力，不做到疲勞；完成後休息 30 秒再進正式組。"
+            }
+          },
+          {
+            "id": "bf_B01",
+            "sets": 1,
+            "value": "6",
+            "unit": "reps",
+            "restSeconds": 90,
+            "perSide": true,
+            "phase": "strength",
+            "preparation": {
+              "sets": 1,
+              "value": "4",
+              "unit": "reps",
+              "restSeconds": 30,
+              "perSide": true,
+              "instruction": "使用同一動作的徒手版本，保留餘力，不做到疲勞；完成後休息 30 秒再進正式組。"
+            }
+          },
+          {
+            "id": "bf_B06",
+            "sets": 2,
+            "value": "6",
+            "unit": "reps",
+            "restSeconds": 90,
+            "perSide": false,
+            "phase": "strength",
+            "preparation": {
+              "sets": 1,
+              "value": "4",
+              "unit": "reps",
+              "restSeconds": 30,
+              "perSide": false,
+              "instruction": "使用同一動作的徒手版本，保留餘力，不做到疲勞；完成後休息 30 秒再進正式組。"
+            }
+          }
+        ]
+      },
+      {
+        "day": 4,
+        "name": "星期四",
+        "theme": "短恢復活動",
+        "concept": "以舒適動態拉伸維持活動，保留球場與下一堂訓練的精神。",
+        "coachAdvice": "本週肌力名額與前後課表間隔已納入，這天安排恢復。 拉伸採舒適幅度、自然呼吸；若明顯疲勞或不適，改完整休息，不補強度。 預估 12 分鐘，含左右側、休息及準備組。",
+        "sessionType": "recovery",
+        "warmupNote": "依序完成 10 分鐘八段動態拉伸，不另加跑步或快走。長按暖身查看每段做法；已含左右側與換姿勢，不另外加一輪。接著做列出的步序與主項輕量準備組（有列出時）。 活動度重點：肩胸（近兩天原有訓練安排，尚未確認完成）、胸椎（近兩天原有訓練安排，尚未確認完成）。依列出的動態活動慢速進出，不另加組數或強拉；已安排不等於已完成或實測活動度。",
+        "cooldownNote": "本次沒有額外收操動作，可省略；不要在時間之外補做。",
+        "routine": [
+          "bf_A13"
+        ],
+        "prescriptions": [
+          {
+            "id": "bf_A13",
+            "sets": 1,
+            "value": "10",
+            "unit": "minutes",
+            "restSeconds": 0,
+            "perSide": false,
+            "phase": "recovery"
+          }
+        ]
+      },
+      {
+        "day": 5,
+        "name": "星期五",
+        "theme": "短恢復活動",
+        "concept": "以舒適動態拉伸維持活動，保留球場與下一堂訓練的精神。",
+        "coachAdvice": "本週肌力名額與前後課表間隔已納入，這天安排恢復。 拉伸採舒適幅度、自然呼吸；若明顯疲勞或不適，改完整休息，不補強度。 預估 12 分鐘，含左右側、休息及準備組。",
+        "sessionType": "recovery",
+        "warmupNote": "依序完成 10 分鐘八段動態拉伸，不另加跑步或快走。長按暖身查看每段做法；已含左右側與換姿勢，不另外加一輪。接著做列出的步序與主項輕量準備組（有列出時）。 活動度重點：肩胸（近兩天原有訓練安排，尚未確認完成）、胸椎（近兩天原有訓練安排，尚未確認完成）。依列出的動態活動慢速進出，不另加組數或強拉；已安排不等於已完成或實測活動度。",
+        "cooldownNote": "本次沒有額外收操動作，可省略；不要在時間之外補做。",
+        "routine": [
+          "bf_A13"
+        ],
+        "prescriptions": [
+          {
+            "id": "bf_A13",
+            "sets": 1,
+            "value": "10",
+            "unit": "minutes",
+            "restSeconds": 0,
+            "perSide": false,
+            "phase": "recovery"
+          }
+        ]
+      }
+    ],
+    "weeklyIntent": {
+      "focus": "coordination",
+      "targetRegions": [
+        "upper",
+        "core"
+      ],
+      "stiffnessRegions": [
+        "shoulder"
+      ],
+      "trainingDays": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "badmintonDays": [],
+      "dailyTime": 30,
+      "competitionDate": ""
+    }
+  },
+  "balanced": {
+    "conclusion": "本週免金鑰模板：整體肌力、協調與穩定。安排 2 堂主要肌力，不要求每天練滿 30 分鐘。\n\n未提供球日，先用一般週安排；補上球日後請重新排課。\n\n 尚未提供比賽日期，不假設賽前週期。\n\n這是固定規則起步課表，不能判斷傷勢或取代教練觀察。\n\n每天先檢查睡眠、精神和症狀；疲勞先減量。完成品質穩定、保有餘力且翌日無惡化兩次後，才考慮增加最小阻力；本模板不會因「太簡單」自動加重。每週回報難度與疲勞再排課；每 4–8 週回顧同版本動作表現。\n\n一般無限制、非賽前／恢復優先週，保留主肌力的目的性重複，以全身動態開場及短活動槽維護八個區域，參考當日主項、近兩天訓練／球日及滾動七天的活動間隔；球日以同套舒適動態拉伸恢復，受限或短課才採精簡活動。時間、器材、恢復與治療限制優先；安排不等於實做或實測活動度，缺少資料不推定失衡或要求補課。\n\n暖身使用指定的八段動態拉伸：嬰兒式、偉大拉伸、貓牛式、Y/T、前鋸肌 push-up、胸椎、90/90 髖、大小腿。30 分鐘以上優先完整 10 分鐘，10–29 分鐘採完整 6 分鐘精簡流程；不安排跑步、快走或側移暖身。輕疲勞先減正式工作，不只砍暖身；各主項模式的輕準備組與其後休息全部計時。時間、治療、症狀與賽前熟悉度優先，純休息不補拉伸。\n\n這是可恢復的起步／維持劑量；正常週保留推拉與互補下肢，少數下肢槽跨週 A/B 輪替，避免一堂週永遠漏練。每 2–4 週用實做品質、餘力與翌日反應檢查是否適合回量，不因排滿日期自動加重。",
+    "schedule": [
+      {
+        "day": 1,
+        "name": "星期一",
+        "theme": "全身肌力與穩定",
+        "concept": "先練清楚的步序與控制，再以可恢復的劑量累積力量；不追求疲勞。",
+        "coachAdvice": "今天是非球日，以互補的下肢與上肢模式累積肌力。 正式組保留約 2–3 次姿勢良好的餘力；若睡眠、精神或隔天反應變差，少做一組或改恢復。 預估 27 分鐘，含左右側、休息及準備組。",
+        "sessionType": "training",
+        "warmupNote": "依序完成 10 分鐘八段動態拉伸，不另加跑步或快走。長按暖身查看每段做法；已含左右側與換姿勢，不另外加一輪。接著做列出的步序與主項輕量準備組（有列出時）。 活動度重點：肩胸（近七天可確認的活動安排較少）、胸椎（近七天可確認的活動安排較少）。依列出的動態活動慢速進出，不另加組數或強拉；已安排不等於已完成或實測活動度。",
+        "cooldownNote": "本次沒有額外收操動作，可省略；不要在時間之外補做。",
+        "routine": [
+          "bf_A13",
+          "bf_F01",
+          "bf_C03",
+          "dead_bug",
+          "bf_B01",
+          "bf_B06"
+        ],
+        "prescriptions": [
+          {
+            "id": "bf_A13",
+            "sets": 1,
+            "value": "10",
+            "unit": "minutes",
+            "restSeconds": 0,
+            "perSide": false,
+            "phase": "warmup"
+          },
+          {
+            "id": "bf_F01",
+            "sets": 2,
+            "value": "3",
+            "unit": "reps",
+            "restSeconds": 60,
+            "perSide": false,
+            "phase": "skill"
+          },
+          {
+            "id": "bf_C03",
+            "sets": 1,
+            "value": "6",
+            "unit": "reps",
+            "restSeconds": 90,
+            "perSide": false,
+            "phase": "strength",
+            "preparation": {
+              "sets": 1,
+              "value": "4",
+              "unit": "reps",
+              "restSeconds": 30,
+              "perSide": false,
+              "instruction": "使用同一動作的徒手版本，保留餘力，不做到疲勞；完成後休息 30 秒再進正式組。"
+            }
+          },
+          {
+            "id": "dead_bug",
+            "sets": 1,
+            "value": "4",
+            "unit": "reps",
+            "restSeconds": 45,
+            "perSide": true,
+            "phase": "strength",
+            "preparation": {
+              "sets": 1,
+              "value": "4",
+              "unit": "reps",
+              "restSeconds": 30,
+              "perSide": true,
+              "instruction": "使用同一動作的徒手版本，保留餘力，不做到疲勞；完成後休息 30 秒再進正式組。"
+            }
+          },
+          {
+            "id": "bf_B01",
+            "sets": 1,
+            "value": "6",
+            "unit": "reps",
+            "restSeconds": 90,
+            "perSide": true,
+            "phase": "strength",
+            "preparation": {
+              "sets": 1,
+              "value": "4",
+              "unit": "reps",
+              "restSeconds": 30,
+              "perSide": true,
+              "instruction": "使用同一動作的徒手版本，保留餘力，不做到疲勞；完成後休息 30 秒再進正式組。"
+            }
+          },
+          {
+            "id": "bf_B06",
+            "sets": 2,
+            "value": "6",
+            "unit": "reps",
+            "restSeconds": 90,
+            "perSide": false,
+            "phase": "strength",
+            "preparation": {
+              "sets": 1,
+              "value": "4",
+              "unit": "reps",
+              "restSeconds": 30,
+              "perSide": false,
+              "instruction": "使用同一動作的徒手版本，保留餘力，不做到疲勞；完成後休息 30 秒再進正式組。"
+            }
+          }
+        ]
+      },
+      {
+        "day": 2,
+        "name": "星期二",
+        "theme": "短協調與步序",
+        "concept": "先練清楚的步序與控制，再以可恢復的劑量累積力量；不追求疲勞。",
+        "coachAdvice": "每次步序重置、依動作提示充分休息；獨自預設方向是協調練習，不稱作未知訊號反應。 預估 19 分鐘，含左右側、休息及準備組。",
+        "sessionType": "training",
+        "warmupNote": "依序完成 10 分鐘八段動態拉伸，不另加跑步或快走。長按暖身查看每段做法；已含左右側與換姿勢，不另外加一輪。接著做列出的步序與主項輕量準備組（有列出時）。 活動度重點：髖旋轉（近兩天原有訓練安排，尚未確認完成）、內收肌（近兩天原有訓練安排，尚未確認完成）。依列出的動態活動慢速進出，不另加組數或強拉；已安排不等於已完成或實測活動度。",
+        "cooldownNote": "安排短呼吸收尾，可依感受省略；不以拉伸取代睡眠與合理球量。",
+        "routine": [
+          "bf_A13",
+          "bf_F01",
+          "bf_F02",
+          "bf_D09"
+        ],
+        "prescriptions": [
+          {
+            "id": "bf_A13",
+            "sets": 1,
+            "value": "10",
+            "unit": "minutes",
+            "restSeconds": 0,
+            "perSide": false,
+            "phase": "warmup"
+          },
+          {
+            "id": "bf_F01",
+            "sets": 2,
+            "value": "3",
+            "unit": "reps",
+            "restSeconds": 60,
+            "perSide": false,
+            "phase": "skill"
+          },
+          {
+            "id": "bf_F02",
+            "sets": 1,
+            "value": "3",
+            "unit": "reps",
+            "restSeconds": 60,
+            "perSide": true,
+            "phase": "skill"
+          },
+          {
+            "id": "bf_D09",
+            "sets": 1,
+            "value": "4",
+            "unit": "breaths",
+            "restSeconds": 45,
+            "perSide": false,
+            "phase": "cooldown"
+          }
+        ]
+      },
+      {
+        "day": 3,
+        "name": "星期三",
+        "theme": "全身肌力與穩定",
+        "concept": "先練清楚的步序與控制，再以可恢復的劑量累積力量；不追求疲勞。",
+        "coachAdvice": "今天是非球日，以互補的下肢與上肢模式累積肌力。 正式組保留約 2–3 次姿勢良好的餘力；若睡眠、精神或隔天反應變差，少做一組或改恢復。 預估 27 分鐘，含左右側、休息及準備組。",
+        "sessionType": "training",
+        "warmupNote": "依序完成 10 分鐘八段動態拉伸，不另加跑步或快走。長按暖身查看每段做法；已含左右側與換姿勢，不另外加一輪。接著做列出的步序與主項輕量準備組（有列出時）。 活動度重點：肩胸（近兩天原有訓練安排，尚未確認完成）、胸椎（近兩天原有訓練安排，尚未確認完成）。依列出的動態活動慢速進出，不另加組數或強拉；已安排不等於已完成或實測活動度。",
+        "cooldownNote": "本次沒有額外收操動作，可省略；不要在時間之外補做。",
+        "routine": [
+          "bf_A13",
+          "bf_F01",
+          "bf_C03",
+          "dead_bug",
+          "bf_B01",
+          "bf_B06"
+        ],
+        "prescriptions": [
+          {
+            "id": "bf_A13",
+            "sets": 1,
+            "value": "10",
+            "unit": "minutes",
+            "restSeconds": 0,
+            "perSide": false,
+            "phase": "warmup"
+          },
+          {
+            "id": "bf_F01",
+            "sets": 2,
+            "value": "3",
+            "unit": "reps",
+            "restSeconds": 60,
+            "perSide": false,
+            "phase": "skill"
+          },
+          {
+            "id": "bf_C03",
+            "sets": 1,
+            "value": "6",
+            "unit": "reps",
+            "restSeconds": 90,
+            "perSide": false,
+            "phase": "strength",
+            "preparation": {
+              "sets": 1,
+              "value": "4",
+              "unit": "reps",
+              "restSeconds": 30,
+              "perSide": false,
+              "instruction": "使用同一動作的徒手版本，保留餘力，不做到疲勞；完成後休息 30 秒再進正式組。"
+            }
+          },
+          {
+            "id": "dead_bug",
+            "sets": 1,
+            "value": "4",
+            "unit": "reps",
+            "restSeconds": 45,
+            "perSide": true,
+            "phase": "strength",
+            "preparation": {
+              "sets": 1,
+              "value": "4",
+              "unit": "reps",
+              "restSeconds": 30,
+              "perSide": true,
+              "instruction": "使用同一動作的徒手版本，保留餘力，不做到疲勞；完成後休息 30 秒再進正式組。"
+            }
+          },
+          {
+            "id": "bf_B01",
+            "sets": 1,
+            "value": "6",
+            "unit": "reps",
+            "restSeconds": 90,
+            "perSide": true,
+            "phase": "strength",
+            "preparation": {
+              "sets": 1,
+              "value": "4",
+              "unit": "reps",
+              "restSeconds": 30,
+              "perSide": true,
+              "instruction": "使用同一動作的徒手版本，保留餘力，不做到疲勞；完成後休息 30 秒再進正式組。"
+            }
+          },
+          {
+            "id": "bf_B06",
+            "sets": 2,
+            "value": "6",
+            "unit": "reps",
+            "restSeconds": 90,
+            "perSide": false,
+            "phase": "strength",
+            "preparation": {
+              "sets": 1,
+              "value": "4",
+              "unit": "reps",
+              "restSeconds": 30,
+              "perSide": false,
+              "instruction": "使用同一動作的徒手版本，保留餘力，不做到疲勞；完成後休息 30 秒再進正式組。"
+            }
+          }
+        ]
+      },
+      {
+        "day": 4,
+        "name": "星期四",
+        "theme": "短恢復活動",
+        "concept": "以舒適動態拉伸維持活動，保留球場與下一堂訓練的精神。",
+        "coachAdvice": "本週肌力名額與前後課表間隔已納入，這天安排恢復。 拉伸採舒適幅度、自然呼吸；若明顯疲勞或不適，改完整休息，不補強度。 預估 12 分鐘，含左右側、休息及準備組。",
+        "sessionType": "recovery",
+        "warmupNote": "依序完成 10 分鐘八段動態拉伸，不另加跑步或快走。長按暖身查看每段做法；已含左右側與換姿勢，不另外加一輪。接著做列出的步序與主項輕量準備組（有列出時）。 活動度重點：肩胸（近兩天原有訓練安排，尚未確認完成）、胸椎（近兩天原有訓練安排，尚未確認完成）。依列出的動態活動慢速進出，不另加組數或強拉；已安排不等於已完成或實測活動度。",
+        "cooldownNote": "本次沒有額外收操動作，可省略；不要在時間之外補做。",
+        "routine": [
+          "bf_A13"
+        ],
+        "prescriptions": [
+          {
+            "id": "bf_A13",
+            "sets": 1,
+            "value": "10",
+            "unit": "minutes",
+            "restSeconds": 0,
+            "perSide": false,
+            "phase": "recovery"
+          }
+        ]
+      },
+      {
+        "day": 5,
+        "name": "星期五",
+        "theme": "短恢復活動",
+        "concept": "以舒適動態拉伸維持活動，保留球場與下一堂訓練的精神。",
+        "coachAdvice": "本週肌力名額與前後課表間隔已納入，這天安排恢復。 拉伸採舒適幅度、自然呼吸；若明顯疲勞或不適，改完整休息，不補強度。 預估 12 分鐘，含左右側、休息及準備組。",
+        "sessionType": "recovery",
+        "warmupNote": "依序完成 10 分鐘八段動態拉伸，不另加跑步或快走。長按暖身查看每段做法；已含左右側與換姿勢，不另外加一輪。接著做列出的步序與主項輕量準備組（有列出時）。 活動度重點：肩胸（近兩天原有訓練安排，尚未確認完成）、胸椎（近兩天原有訓練安排，尚未確認完成）。依列出的動態活動慢速進出，不另加組數或強拉；已安排不等於已完成或實測活動度。",
+        "cooldownNote": "本次沒有額外收操動作，可省略；不要在時間之外補做。",
+        "routine": [
+          "bf_A13"
+        ],
+        "prescriptions": [
+          {
+            "id": "bf_A13",
+            "sets": 1,
+            "value": "10",
+            "unit": "minutes",
+            "restSeconds": 0,
+            "perSide": false,
+            "phase": "recovery"
+          }
+        ]
+      }
+    ],
+    "weeklyIntent": {
+      "focus": "balanced",
+      "targetRegions": [
+        "upper",
+        "core"
+      ],
+      "stiffnessRegions": [
+        "shoulder"
+      ],
+      "trainingDays": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "badmintonDays": [],
+      "dailyTime": 30,
+      "competitionDate": ""
+    }
+  }
+}

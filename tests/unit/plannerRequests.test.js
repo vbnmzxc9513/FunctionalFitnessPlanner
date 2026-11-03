@@ -1,3 +1,4 @@
+import { DAILY_WARMUP_IDS, isDailyWarmupComplete } from '../../src/domain/quickWorkouts.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { catalogExercises } from '../../src/domain/exerciseCatalog.js';
@@ -19,7 +20,7 @@ test('a normal 40-minute moderate 235 week has two spaced main sessions, with re
   const result = make();
   const training = result.sessions.filter(day => day.sessionType === 'training');
   assert.deepEqual(training.map(day => day.day), [1, 4]);
-  assert.ok(estimateSessionMinutes(training[0], exercises) >= 35);
+  assert.ok(training[0].prescriptions.filter(dose => dose.phase === 'strength').every(dose => dose.preparation));
   assert.ok(training[1].coachAdvice.includes('昨天有球局'));
   for (const day of training) {
     for (const pattern of ['squat_lunge', 'hinge', 'push', 'pull']) assert.ok(day.prescriptions.some(dose => dose.phase === 'strength' && classifyBalanceExercise(dose.id, exercises[dose.id]).patterns.includes(pattern)));
@@ -36,8 +37,8 @@ test('five selected lower-body movements and selected mobility are actually dist
     const report = buildWeeklyChoiceReport({ schedule: result.sessions, weeklyIntent: { weeklyExerciseIds: choices } }, exercises, profile, manualPlanningExercises(exercises, profile), '2026-W43');
     assert.ok(report.every(item => item.reason === 'planned'), `${time} min: ${JSON.stringify(report)}`);
     for (const day of result.sessions) {
-      assert.ok(day.routine.length <= 8 && estimateSessionMinutes(day, exercises) <= time);
-      assert.equal(day.routine[0], 'bf_A13');
+      assert.ok(day.routine.length <= 24 && estimateSessionMinutes(day, exercises) <= time);
+      assert.deepEqual(day.routine.slice(0, 8), DAILY_WARMUP_IDS);
     }
     assert.deepEqual(result.sessions.filter(day => formal(day).length).map(day => day.day), [1, 4]);
   }
@@ -54,23 +55,25 @@ test('running and walking disappear from questionnaire recommendations and old s
   assert.ok(result.sessions.every(day => !day.routine.some(id => ['bf_A01', 'bf_I01'].includes(id))));
 });
 
-test('when both flows are disabled, two available training days can still reserve all eight regions through actual individual drills', () => {
+test('legacy flow availability does not change the independent opening or invent coverage for unlisted stretches', () => {
   const modified = Object.fromEntries(Object.entries(exercises).map(([id, exercise]) => [id, ['A12', 'A13'].includes(exercise.catalogCode) ? { ...exercise, active: false } : exercise]));
   const result = make({ trainingDays: [1, 4], badmintonDays: [] }, 40, modified);
-  assert.ok(scheduledMobility(result.sessions, modified).every(row => row.dates.length > 0));
+  assert.ok(result.sessions.filter(day => day.routine.length).every(isDailyWarmupComplete));
+  assert.ok(scheduledMobility(result.sessions, modified).filter(row => ['thoracic', 'hip_rotation', 'hamstrings', 'ankle'].includes(row.area)).every(row => row.dates.length > 0));
   for (const day of result.sessions.filter(day => day.sessionType === 'training')) {
-    assert.equal(day.prescriptions.filter(dose => dose.phase === 'warmup').length, 4);
+    assert.ok(day.prescriptions.filter(dose => dose.phase === 'warmup').length >= 8);
     assert.ok(day.routine.every(id => modified[id].active !== false));
-    assert.ok(day.routine.length <= 8 && estimateSessionMinutes(day, modified) <= 40);
+    assert.ok(day.routine.length <= 24 && estimateSessionMinutes(day, modified) <= 40);
   }
   const limited = Object.fromEntries(Object.entries(modified).map(([id, exercise]) => [id, mobilityAreas(id, modified).includes('shoulder') ? { ...exercise, active: false } : exercise]));
   const gap = make({ badmintonDays: [] }, 40, limited);
   assert.deepEqual(scheduledMobility(gap.sessions, limited).find(row => row.area === 'shoulder').dates, []);
 });
 
-test('explicit compact flow stays a complete timed flow and does not stack with the default full flow', () => {
+test('legacy compact-flow preferences are excluded from new plans while keeping independent warmups', () => {
   const result = make({ weeklyExerciseIds: ['bf_A12'] });
-  assert.ok(result.sessions.some(day => day.routine.includes('bf_A12')));
+  assert.ok(result.sessions.every(day => !day.routine.includes('bf_A12')));
+  assert.ok(result.sessions.some(isDailyWarmupComplete));
   for (const day of result.sessions) assert.ok(day.routine.filter(id => exercises[id].sequenceMinutes).length <= 1);
   assert.ok(scheduledMobility(result.sessions).every(row => row.dates.length > 0));
 });

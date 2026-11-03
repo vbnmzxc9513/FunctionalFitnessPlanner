@@ -7,6 +7,8 @@ import { planningExercises, validateGeneratedPlan } from '../../src/domain/plann
 import { estimateSessionMinutes } from '../../src/domain/sessions.js';
 import { buildPlanningPrompt } from '../../src/domain/coachingPrompt.js';
 import { WEEKLY_BALANCE_TEXT, weeklyBalanceText } from '../../src/weeklyBalanceLocale.js';
+import { DAILY_WARMUP_IDS, dailyWarmupPrescriptions, isDailyWarmupComplete } from '../../src/domain/quickWorkouts.js';
+import { MAX_DAY_EXERCISES } from '../../src/domain/plannerLimits.js';
 
 const catalog = catalogExercises();
 const context = { healthStatus: 'unrestricted', healthNotes: '', equipment: ['dumbbell', 'cable', 'foam_roller'], badmintonDays: [2, 4, 5], badmintonMinutes: 90, badmintonIntensity: 'mixed' };
@@ -64,7 +66,7 @@ test('equipment, disabled entries, court days and competition affect explanation
   assert.ok(taper.days.every(day => day.protected));
   const fatigue = analysis([], { ...context, recoveryNotes: 'poor sleep' });
   assert.equal(byKey(fatigue, 'mobility', 'thoracic').status, 'recovery_priority');
-  const disabled = Object.fromEntries(Object.entries(catalog).map(([id, e]) => [id, ['A06', 'A10', 'A11', 'A12', 'A13', 'H12'].includes(e.catalogCode) ? { ...e, active: false } : e]));
+  const disabled = Object.fromEntries(Object.entries(catalog).map(([id, e]) => [id, classifyBalanceExercise(id, e).mobility.includes('thoracic') ? { ...e, active: false } : e]));
   assert.equal(byKey(analysis([], context, disabled), 'mobility', 'thoracic').status, 'unavailable');
 });
 
@@ -77,13 +79,13 @@ test('normal template includes thoracic, hip and ankle days through existing sho
   assert.equal(first.id, 'bf_B10');
   assert.deepEqual(first.preparation, { sets: 1, value: '4', unit: 'reps', restSeconds: 30, perSide: false,
     instruction: '使用同一動作最輕可控阻力，不做到疲勞；完成後休息 30 秒再進正式組。' });
-  assert.ok(main.routine.includes('bf_A13'));
+  assert.ok(isDailyWarmupComplete(main));
+  assert.deepEqual(main.routine.slice(0, 8), DAILY_WARMUP_IDS);
   assert.ok(main.routine.includes('bf_B11'));
-  assert.ok(main.routine.length <= 8);
+  assert.ok(main.routine.length <= MAX_DAY_EXERCISES);
   for (const day of plan.schedule.filter(item => context.badmintonDays.includes(item.day))) {
     assert.equal(day.sessionType, 'recovery');
-    assert.equal(day.routine[0], 'bf_A13');
-    assert.equal(day.prescriptions[0].value, '10');
+    assert.deepEqual(day.prescriptions.slice(0, 8), dailyWarmupPrescriptions('recovery'));
     assert.ok(!day.routine.includes('bf_I01'));
     assert.ok(estimateSessionMinutes(day, catalog) <= 35);
   }
@@ -112,16 +114,18 @@ test('restricted, unknown, fatigue and taper templates preserve their clinical/r
   assert.ok(unknown.schedule.every(day => day.routine.length === 0));
   const taperProfile = { ...context, competitionDate: '2026-10-26', badmintonDays: [] };
   const taper = generateTemplatePlan(catalog, taperProfile, 35, 'zh', options);
-  assert.ok(taper.schedule.every(day => JSON.stringify(day.routine) === JSON.stringify(['bf_A02'])));
+  assert.ok(taper.schedule.every(day => day.sessionType === 'rest' && day.routine.length === 0), 'unfamiliar taper work is not introduced');
   assert.equal(byKey(analysis(taper.schedule, taperProfile), 'mobility', 'thoracic').count, 0);
+  const familiar = generateTemplatePlan(catalog, { ...taperProfile, warmupFamiliar: true }, 35, 'zh', options);
+  assert.ok(familiar.schedule.every(day => day.sessionType === 'recovery' && isDailyWarmupComplete(day)), 'familiar warmup is retained without introducing formal work');
   const fatigue = generateTemplatePlan(catalog, { ...context, recoveryNotes: 'poor sleep' }, 35, 'zh', options);
   assert.ok(byKey(analysis(fatigue.schedule), 'mobility', 'thoracic').count > 0);
-  assert.ok(fatigue.schedule.filter(day => day.routine.length).every(day => day.routine.includes('bf_A13')));
+  assert.ok(fatigue.schedule.filter(day => day.routine.length).every(isDailyWarmupComplete));
   assert.ok(fatigue.schedule.every(day => day.prescriptions.every(dose => dose.phase !== 'skill')));
 });
 
 test('rotation never uses disabled/no-equipment thoracic moves, is deterministic and short sessions remain validated', () => {
-  const limited = { ...catalog, bf_A12: { ...catalog.bf_A12, active: false }, bf_A13: { ...catalog.bf_A13, active: false }, bf_A11: { ...catalog.bf_A11, active: false }, bf_A06: { ...catalog.bf_A06, active: false }, bf_A10: { ...catalog.bf_A10, active: false } };
+  const limited = Object.fromEntries(Object.entries(catalog).map(([id, exercise]) => [id, classifyBalanceExercise(id, exercise).mobility.includes('thoracic') ? { ...exercise, active: false } : exercise]));
   const profile = { ...context, equipment: [] };
   const noRoller = generateTemplatePlan(limited, profile, 35, 'zh', options);
   assert.equal(byKey(analysis(noRoller.schedule, profile, limited), 'mobility', 'thoracic').count, 0);

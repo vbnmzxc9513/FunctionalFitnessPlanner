@@ -8,13 +8,15 @@ import { dateForWeekDay } from './dates.js';
 import { weeklyChoiceIds } from './trainingPreferences.js';
 import { estimateSessionMinutes } from './sessions.js';
 import { SESSION_PHASES } from './phases.js';
+import { MAX_DAY_EXERCISES } from './plannerLimits.js';
+import { DAILY_WARMUP_IDS, isDailyWarmupComplete } from './quickWorkouts.js';
 
 const CURATED = catalogExercises();
 
 export function weeklyChoicePhase(id, exercise) {
   if (!exercise || CURATED[id]?.catalogCode !== exercise.catalogCode || !exercise.prescription) return null;
   if (exercise.catalogCode === 'D09') return 'cooldown';
-  if (['A07', 'A08', 'B07', 'B08', 'C05', 'C06', 'C07', 'C08', 'C09'].includes(exercise.catalogCode)) return 'accessory';
+  if (['A07', 'A08', 'A18', 'B07', 'B08', 'B13', 'B14', 'B15', 'B16', 'B17', 'C05', 'C06', 'C07', 'C08', 'C09', 'C12', 'C13'].includes(exercise.catalogCode)) return 'accessory';
   if (['power', 'footwork', 'reaction'].includes(exercise.category)) return 'skill';
   if (['lower', 'upper'].includes(exercise.category)) return 'strength';
   if (exercise.category === 'core') return exercise.type === 'mobility' ? 'cooldown' : 'accessory';
@@ -28,7 +30,7 @@ export function weeklyChoiceBlockReason(id, exercises, context, available) {
   const exercise = exercises[id];
   const profile = normalizePlanningContext(context);
   if (!exercise || exercise.deleted || exercise.active === false) return 'unavailable';
-  if (['A01', 'I01'].includes(exercise.catalogCode)) return 'stretch_opening';
+  if (['A01', 'A12', 'A13', 'I01'].includes(exercise.catalogCode)) return 'stretch_opening';
   if (!weeklyChoicePhase(id, exercise)) return 'metadata';
   if (exercise.advanced && profile.experience === 'beginner') return 'experience';
   if (exercise.requiresPartner && !profile.partnerAvailable) return 'partner';
@@ -66,7 +68,8 @@ export function buildWeeklyChoiceReport(plan, exercises, context = {}, available
       const away = competitionDaysAway(context.competitionDate, day.date || dateForWeekDay(week, day.day));
       return away !== null && away <= 10 && away >= -5;
     });
-    const fixedOpening = weeklyChoicePhase(id, exercises[id]) === 'warmup' && (plan.schedule || []).some(day => day.routine.some(item => exercises[item]?.sequenceMinutes)) && !(plan.schedule || []).some(day => day.sessionType === 'training' && !day.routine.some(item => exercises[item]?.sequenceMinutes));
+    const hasFixedOpening = day => isDailyWarmupComplete(day) || day.routine.some(item => exercises[item]?.sequenceMinutes);
+    const fixedOpening = weeklyChoicePhase(id, exercises[id]) === 'warmup' && (plan.schedule || []).some(hasFixedOpening) && !(plan.schedule || []).some(day => day.sessionType === 'training' && !hasFixedOpening(day));
     const noStrength = weeklyChoicePhase(id, exercises[id]) === 'strength' && !(plan.schedule || []).some(day => day.prescriptions?.some(dose => dose.phase === 'strength'));
     return { id, days, reason: blocked || (source !== 'template' ? 'omitted' : protectedWeek ? 'competition' : noStrength ? 'no_strength' : fixedOpening ? 'warmup_flow' : !conditionsKnown ? 'conditions_unknown'
       : recoveryDecision(context).action !== 'normal' ? 'recovery' : 'capacity') };
@@ -80,17 +83,18 @@ export function applyWeeklyChoices(day, available, ids, used, lang = 'zh', minut
   if (day.sessionType === 'rest') return day;
   const selected = weeklyChoiceIds(ids);
   const recovery = day.sessionType === 'recovery';
+  const opening = new Set(day.prescriptions.filter(dose => DAILY_WARMUP_IDS.includes(dose.id) && ['warmup', 'recovery'].includes(dose.phase)).map(dose => dose.id));
   const locked = new Set(day.prescriptions.filter(dose => selected.includes(dose.id) && !used.has(dose.id)).map(dose => dose.id));
   const pending = selected.filter(id => !day.routine.includes(id) && !used.has(id) && available[id]);
   for (const id of pending) {
     const exercise = available[id];
     const phase = weeklyChoicePhase(id, exercise);
-    if (!phase || phase === 'recovery' || ['A01', 'I01'].includes(exercise.catalogCode)) continue;
+    if (!phase || phase === 'recovery' || ['A01', 'A12', 'A13', 'I01'].includes(exercise.catalogCode)) continue;
     if (recovery && (!['warmup', 'cooldown'].includes(phase) || !['warmup', 'recovery', 'core'].includes(exercise.category))) continue;
     const patterns = classifyBalanceExercise(id, exercise).patterns;
     let index = exercise.sequenceMinutes ? day.prescriptions.findIndex(dose => available[dose.id]?.sequenceMinutes && !locked.has(dose.id)) : -1;
     if (index < 0) index = day.prescriptions.findIndex(dose => {
-      if (locked.has(dose.id) || available[dose.id]?.sequenceMinutes || available[dose.id]?.catalogCode === 'A01') return false;
+      if (locked.has(dose.id) || opening.has(dose.id) || available[dose.id]?.sequenceMinutes || available[dose.id]?.catalogCode === 'A01') return false;
       if (['warmup', 'cooldown'].includes(phase)) return dose.phase === phase || recovery && dose.phase === 'recovery';
       if (phase === 'accessory') return dose.phase === 'accessory';
       if (dose.phase !== phase) return false;
@@ -119,7 +123,7 @@ export function applyWeeklyChoices(day, available, ids, used, lang = 'zh', minut
       const [removed] = candidate.prescriptions.splice(optional, 1);
       candidate.routine = candidate.routine.filter(item => item !== removed.id);
     }
-    if (candidate.routine.length > 8 || estimateSessionMinutes(candidate, available) > budget) continue;
+    if (candidate.routine.length > MAX_DAY_EXERCISES || estimateSessionMinutes(candidate, available) > budget) continue;
     day.prescriptions = candidate.prescriptions; day.routine = candidate.routine;
     if (targetPhase === 'warmup') day.warmupNote = lang === 'en'
       ? 'Follow the listed dynamic stretches and any listed light lift preparation. No extra movements are added.'

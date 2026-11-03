@@ -7,6 +7,8 @@ function weekHistoryStart(week, weeks) {
 import { dateForWeekDay, getWeekString, localDate } from '../domain/dates.js';
 import { prescription } from '../domain/training.js';
 import { validateTrainingLog, validateReadiness, trainingLogId, plannedSnapshot } from '../domain/coaching.js';
+import { dateDoseKeys, dateDoseRecord } from '../domain/dateDoseStorage.js';
+import { DOSES_PER_CHUNK, MAX_DAY_EXERCISES } from '../domain/plannerLimits.js';
 
 function assertUser(uid) {
   if (!uid || auth.currentUser?.uid !== uid) throw new Error('SESSION_CHANGED');
@@ -25,7 +27,7 @@ export function trainingHistoryQueries(uid, currentWeek = getWeekString(), weeks
   const endWeek = currentWeek > getWeekString() ? getWeekString() : currentWeek;
   const endDate = [dateForWeekDay(endWeek, 7), localDate()].sort()[0];
   return {
-    logs: query(userCollection(uid, 'trainingLogs'), orderBy('week', 'desc'), startAt(endWeek), endAt(start), limit(boundedWeeks * 56 + 1)),
+    logs: query(userCollection(uid, 'trainingLogs'), orderBy('week', 'desc'), startAt(endWeek), endAt(start), limit(boundedWeeks * 7 * MAX_DAY_EXERCISES + 1)),
     readiness: query(userCollection(uid, 'readiness'), orderBy('date', 'desc'), startAt(endDate), endAt(dateForWeekDay(start)), limit(boundedWeeks * 7 + 1)),
   };
 }
@@ -40,21 +42,30 @@ export async function saveTrainingLog(uid, record, { fallback, expectedRevision,
     const savedPlan = await transaction.get(userDoc(uid, 'plans', clean.week));
     const scheduledDate = dateForWeekDay(clean.week, clean.day);
     const native = await transaction.get(userDoc(uid, 'dateSessions', scheduledDate));
-    const nativeDose = native.exists() ? await transaction.get(userDoc(uid, 'dateDoses', `${scheduledDate}_${clean.exerciseId}`)) : null;
+    const nativeData = native.exists() ? native.data() : null;
+    const nativeRecords = {};
+    if (nativeData) {
+      const index = nativeData.routine.indexOf(clean.exerciseId);
+      const id = index < 0 ? null : dateDoseKeys(scheduledDate, nativeData)[nativeData.v === 3 ? Math.floor(index / DOSES_PER_CHUNK) : index];
+      if (id) {
+        const snapshot = await transaction.get(userDoc(uid, 'dateDoses', id));
+        if (snapshot.exists()) nativeRecords[id] = snapshot.data();
+      }
+    }
+    const nativeDose = nativeData ? dateDoseRecord(scheduledDate, nativeData, nativeRecords, clean.exerciseId) : null;
     assertUser(uid);
     const plan = savedPlan.exists() ? savedPlan.data() : fallback;
-    const nativeData = native.exists() ? native.data() : null;
     if ((nativeData ? nativeData.revision : plan?.revision || 0) !== expectedRevision || (!nativeData && !plan)) throw new Error('PLAN_CHANGED');
     const day = nativeData || plan.schedule?.find(item => item.day === clean.day);
-    if (nativeData && (!nativeDose?.exists() || nativeDose.data().revision !== nativeData.revision
-      || nativeDose.data().dose?.id !== clean.exerciseId || nativeData.week !== clean.week || nativeData.day !== clean.day)) throw new Error('PLAN_CHANGED');
+    if (nativeData && (!nativeDose || nativeDose.date !== scheduledDate || nativeDose.exerciseId !== clean.exerciseId || nativeDose.revision !== nativeData.revision
+      || nativeDose.dose?.id !== clean.exerciseId || nativeData.week !== clean.week || nativeData.day !== clean.day)) throw new Error('PLAN_CHANGED');
     const matchesExercise = value => value === clean.exerciseId || (exercise && (value === exercise.name || exercise.aliases?.includes(value)));
     if (!day?.routine?.some(matchesExercise)) throw new Error('PLAN_CHANGED');
     if (existing.exists()) {
       const original = existing.data();
       if (original.date !== clean.date || !samePlanned(original.planned, clean.planned)) throw new Error('LOG_CHANGED');
     } else {
-      const dose = nativeData ? nativeDose.data().dose : prescription(clean.exerciseId, exercise?.type, level, exercise, day);
+      const dose = nativeData ? nativeDose.dose : prescription(clean.exerciseId, exercise?.type, level, exercise, day);
       if (!samePlanned(plannedSnapshot(dose), clean.planned)) throw new Error('PLAN_CHANGED');
     }
     // Exercise edits cannot undo a separately recorded next-day response.

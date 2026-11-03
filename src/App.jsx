@@ -36,7 +36,8 @@ import { readShareFromLocation } from './domain/sharing.js';
 import { readSharedPlanLocation } from './domain/sharedPlans.js';
 import { useSavedWorkouts } from './hooks/useSavedWorkouts.js';
 import { savedWorkoutDay } from './domain/savedWorkouts.js';
-import { clearManualDraft } from './domain/manualPlanner.js';
+import { clearManualDraft, createManualSession } from './domain/manualPlanner.js';
+import { prepareWeeklyApplication, applyWeeklyApplication } from './services/weeklyApplication.js';
 import { generateTemplatePlan, manualPlanningExercises } from './domain/templatePlanner.js';
 import { datedPlanningSessions } from './domain/mobility.js';
 import { PROMOTION_TRANSLATIONS } from './promotionLocale.js';
@@ -119,8 +120,11 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
   useEffect(() => { window.scrollTo({ top: 0 }); }, [planScreen]);
   const workoutStore = useSavedWorkouts(user?.uid);
   const [saveWorkoutDay, setSaveWorkoutDay] = useState(null);
+  const [manualSavedSource, setManualSavedSource] = useState(null);
   const [shareRequest, setShareRequest] = useState(null);
   const [manualInput, setManualInput] = useState(undefined);
+  const [manualActiveDate, setManualActiveDate] = useState(null);
+  const [overviewCounts, setOverviewCounts] = useState({});
   const [assignment, setAssignment] = useState(null);
   const periodKey = `fitness_saved_period_${user?.uid || 'signed-out'}`;
   const [savedPeriod, setSavedPeriod] = useState(() => user ? readSavedPeriod(periodKey) : localPeriod);
@@ -462,7 +466,9 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
       if (report.length) {
         plan.conclusion += `\n\n${t('choiceReport')}\n${report.map(item => `${exercises[item.id]?.name || item.id}: ${item.days.length ? `${t('choicePlanned')} ${item.days.map(day => t('dayShort')[day - 1]).join(', ')}` : t(`choice_reason_${item.reason}`)}`).join('\n')}`;
       }
-      setLegacyPreview({ plan, profile, week: currentWeek, revision, fingerprint: legacyFingerprint, mode: planningMode });
+      const application = await prepareWeeklyApplication(user.uid, { plan, profile, week: currentWeek }, { today, exercises, fallbackPlans: { ...data.plans, [currentWeek]: savedPlan || fallbackPlan } });
+      if (request !== planRequest.current || auth.currentUser?.uid !== user.uid) return;
+      setLegacyPreview({ application, plan, profile, week: currentWeek, revision, fingerprint: legacyFingerprint, mode: planningMode });
       setActiveTab('plan'); setPlanView('week'); setPlanScreen('legacy-preview'); window.scrollTo({ top: 0 });
     } catch (err) {
       console.error('Plan generation failed', err.code || err.message);
@@ -482,9 +488,10 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
         onPublicDraft({ plan, profile, week: currentWeek, completed, logs: publicDraft?.logs || [], readiness: publicDraft?.readiness || [] });
         setPublicProgress(completed);
       } else {
-        await savePlan(user.uid, currentWeek, plan, fallbackPlan, false, preview.revision, {}, {}, progress);
+        const result = await applyWeeklyApplication(user.uid, preview.application);
         if (auth.currentUser?.uid !== user.uid) return;
         writeStorage(preferencesKey, JSON.stringify(profile));
+        periodApplied({ ...preview.application, ...result });
       }
       setReadinessPreview(null); setLegacyPreview(null); setPlanningStep(0); setEditingAI(false); setMessage('');
       setPeriodCreating(false); setTrainingMode('plan'); setActiveTab('plan'); setPlanView('week'); setPlanScreen('overview'); window.scrollTo({ top: 0 });
@@ -564,7 +571,7 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
   const cloudPeriod = periodsData.periods.find(period => period.periodId === selectedPeriodId) || periodsData.periods[0];
   const selectedPeriod = !user ? localPeriod : selectedPeriodId ? savedPeriod?.periodId === selectedPeriodId ? savedPeriod : cloudPeriod : selectSavedPeriod(savedPeriod, cloudPeriod);
   const displayWeek = localBrowseWeek || (selectedPeriod?.range?.from ? getWeekString(new Date(`${selectedPeriod.range.from}T12:00:00`)) : currentWeek);
-  const dateOverview = !!selectedPeriod || displayWeek !== currentWeek;
+  const dateOverview = !!selectedPeriod || displayWeek !== currentWeek || !hasCurrentPlan;
   const calendarPeriod = useMemo(() => ({ ...selectedPeriod, range: { from: dateForWeekDay(displayWeek, 1), to: dateForWeekDay(displayWeek, 7) },
     dates: enumeratePeriodDates({ from: dateForWeekDay(displayWeek, 1), to: dateForWeekDay(displayWeek, 7) }), periodId: `view_${displayWeek}_${selectedPeriod?.periodId || 'empty'}` }), [displayWeek, selectedPeriod]);
   const shiftOverviewWeek = amount => setLocalBrowseWeek(getWeekString(new Date(`${dateForWeekDay(displayWeek, 1)}T12:00:00`), amount));
@@ -576,24 +583,25 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
     setLocalBrowseWeek(preview.sessions?.[0]?.week || currentWeek); setPeriodCreating(false); setActiveTab('plan'); setPlanView('week'); setPlanScreen('overview'); setReadinessPreview(null);
     showToast(lang === 'zh' ? '已套用所選日期的課表，已有紀錄與其他日期保持完整。' : 'Applied the selected dates. Recorded sessions and other dates are preserved.');
   };
-  const openManual = (sessions) => {
+  const openManual = (sessions, sourceItem = null, activeDate = null) => {
     if (editing || savingPlan) return;
-    setManualInput(sessions); setPeriodCreating(false); setActiveTab('plan'); setPlanView('week'); setPlanScreen('manual'); window.scrollTo({ top: 0 });
+    setManualActiveDate(activeDate); setManualSavedSource(sourceItem); setManualInput(sessions); setPeriodCreating(false); setActiveTab('plan'); setPlanView('week'); setPlanScreen('manual'); window.scrollTo({ top: 0 });
   };
   const shareDays = (days, name) => setShareRequest({ days: Array.isArray(days) ? days : [days], name: name || (lang === 'zh' ? '我的訓練課表' : 'My workout plan') });
-  const useWorkout = item => {
+  const useWorkout = async item => {
     const day = savedWorkoutDay(item, lang);
     if (day.routine.some(id => !exercises[id] || exercises[id].deleted)) { showToast(lang === 'zh' ? '這份收藏包含已刪除或找不到的自訂動作，請先在動作庫還原，再套用。' : 'This saved workout includes unavailable custom exercises. Restore them in your library before applying.'); return; }
+    if (workoutStore.markUsed) await workoutStore.markUsed(item.id, item.revision);
     setAssignment({ days: [day], name: item.name, returnScreen: 'saved' }); setPlanScreen('assign');
   };
   const plannerActions = <header className="planner-home-heading" data-testid="planner-actions">
-    <h2>{lang === 'zh' ? '本週課表' : 'Weekly plan'}</h2><p>{lang === 'zh' ? '先看這週安排，再選一天查看。' : 'See your week, then open a day.'}</p>
-    <div className="planner-week-nav"><button type="button" aria-label={lang === 'zh' ? '查看前一週' : 'Previous week'} onClick={() => shiftOverviewWeek(-1)}><ChevronLeft size={21} /></button><strong>{dateForWeekDay(displayWeek, 1)?.slice(5).replace('-', '/')} — {dateForWeekDay(displayWeek, 7)?.slice(5).replace('-', '/')}</strong><button type="button" aria-label={lang === 'zh' ? '查看下一週' : 'Next week'} onClick={() => shiftOverviewWeek(1)}><ChevronRight size={21} /></button></div>
-    <div className="planner-mode-cards"><button type="button" data-testid="open-manual-planner" onClick={() => openManual()}><span className="planner-mode-icon"><Pencil size={23} /></span><strong>{lang === 'zh' ? '手動排課' : 'Manual plan'}</strong><span>{lang === 'zh' ? '自己挑動作、組次與日期' : 'Pick exercises, doses and dates'}</span><b>{lang === 'zh' ? '開始安排 ›' : 'Start planning ›'}</b></button><button type="button" data-testid="open-auto-planner" onClick={openWeeklySelection}><span className="planner-mode-icon planner-mode-auto"><Sparkles size={23} /></span><strong>{lang === 'zh' ? '自動排課' : 'Automatic plan'}</strong><span>{lang === 'zh' ? '回答問題，依條件搭配' : 'Answer questions for your plan'}</span><b>{lang === 'zh' ? '開始互動 ›' : 'Get started ›'}</b></button></div>
+    <h2>{lang === 'zh' ? '本週安排' : 'This week’s plan'}</h2><p>{lang === 'zh' ? '先看這週安排，再選一天查看。' : 'See your week, then open a day.'}</p>
+    <div className="planner-week-nav"><button type="button" aria-label={lang === 'zh' ? '查看前一週' : 'Previous week'} onClick={() => shiftOverviewWeek(-1)}><ChevronLeft size={21} /></button><strong>{dateForWeekDay(displayWeek, 1)?.slice(5).replace('-', '/')} — {dateForWeekDay(displayWeek, 7)?.slice(5).replace('-', '/')} · {lang === 'zh' ? `已安排 ${overviewCounts[displayWeek] ?? (displayWeek === currentWeek && weeklyPlan ? weeklyPlan.schedule.length : 0)} 天` : `${overviewCounts[displayWeek] ?? (displayWeek === currentWeek && weeklyPlan ? weeklyPlan.schedule.length : 0)} days planned`}</strong><button type="button" aria-label={lang === 'zh' ? '查看下一週' : 'Next week'} onClick={() => shiftOverviewWeek(1)}><ChevronRight size={21} /></button></div>
+    <div className="planner-mode-cards"><button type="button" data-testid="open-manual-planner" onClick={() => openManual()}><span className="planner-mode-icon"><Pencil size={23} /></span><strong>{lang === 'zh' ? '手動排課' : 'Manual plan'}</strong><span>{lang === 'zh' ? '選日期，加入快速組合或我的收藏，再微調動作' : 'Choose dates, add quick combos or favorites, then adjust'}</span><b>{lang === 'zh' ? '開始安排 ›' : 'Start planning ›'}</b></button><button type="button" data-testid="open-auto-planner" onClick={openWeeklySelection}><span className="planner-mode-icon planner-mode-auto"><Sparkles size={23} /></span><strong>{lang === 'zh' ? '自動排課' : 'Automatic plan'}</strong><span>{lang === 'zh' ? '回答條件，先看建議，再確認安排' : 'Answer questions, preview suggestions, then confirm'}</span><b>{lang === 'zh' ? '開始互動 ›' : 'Get started ›'}</b></button></div>
   </header>;
-  const plannerTools = <div className="planner-home-tools"><button type="button" data-testid="open-saved-workouts" onClick={() => setPlanScreen('saved')}><Bookmark size={18} />{lang === 'zh' ? '我的課表' : 'My workouts'}</button><button type="button" onClick={() => changePlanView('library')}><Library size={18} />{lang === 'zh' ? '動作庫' : 'Exercise library'}</button></div>;
+  const plannerTools = <div className="planner-home-tools"><button type="button" data-testid="open-saved-workouts" onClick={() => setPlanScreen('saved')}><Bookmark size={18} />{lang === 'zh' ? '我的收藏' : 'My favorites'}</button><button type="button" onClick={() => changePlanView('library')}><Library size={18} />{lang === 'zh' ? '動作庫' : 'Exercise library'}</button></div>;
   const publicPeriodBase = localPeriod || (!user ? periodFromWeeklyDraft(publicDraft) : null);
-  const periodWorkspace = <PeriodWorkspace key={`${user?.uid || 'public'}:${periodCreating ? 'create' : activeTab === 'plan' && dateOverview ? `${displayWeek}_${selectedPeriod?.periodId || ''}` : 'first'}`} uid={user?.uid} today={today} lang={lang} t={t} exercises={exercises} profile={profile} setProfile={setProfile} available={weeklyAvailable} onToggleWeekly={toggleWeeklyChoice} preserveCurrentChoices={choicesChanged.current} history={{ logs: exerciseLogs, progress: allProgress, readiness: readinessRecords }} localPeriod={publicPeriodBase} onLocalPeriod={onLocalPeriod} onApplied={periodApplied} fallbackPlans={data.plans} refreshToken={JSON.stringify({ progress: allProgress, logs: exerciseLogs, nativeSessions })} overview={periodCreating ? null : activeTab === 'plan' && dateOverview ? calendarPeriod : selectedPeriod} onClose={periodCreating ? () => { setPeriodCreating(false); setPlanScreen('overview'); } : undefined} onToday={() => navigate('train')} onSaveWorkout={setSaveWorkoutDay} onShare={shareDays} onEditWorkout={day => openManual([day])} />;
+  const periodWorkspace = <PeriodWorkspace key={`${user?.uid || 'public'}:${periodCreating ? 'create' : activeTab === 'plan' && dateOverview ? `${displayWeek}_${selectedPeriod?.periodId || ''}` : 'first'}`} uid={user?.uid} today={today} lang={lang} t={t} exercises={exercises} profile={profile} setProfile={setProfile} available={weeklyAvailable} onToggleWeekly={toggleWeeklyChoice} preserveCurrentChoices={choicesChanged.current} history={{ logs: exerciseLogs, progress: allProgress, readiness: readinessRecords }} localPeriod={publicPeriodBase} onLocalPeriod={onLocalPeriod} onApplied={periodApplied} fallbackPlans={data.plans} refreshToken={JSON.stringify({ progress: allProgress, logs: exerciseLogs, nativeSessions })} overview={periodCreating ? null : activeTab === 'plan' && dateOverview ? calendarPeriod : selectedPeriod} onClose={periodCreating ? () => { setPeriodCreating(false); setPlanScreen('overview'); } : undefined} onToday={() => navigate('train')} onSaveWorkout={setSaveWorkoutDay} onShare={shareDays} onOverviewLoaded={sessions => setOverviewCounts(previous => ({ ...previous, [displayWeek]: sessions.length }))} onPlanDate={date => openManual([createManualSession(date, lang)])} onEditWorkout={day => openManual(Array.isArray(day) ? day : [day])} />;
   const openLegacyAI = () => { if (hasNativeWeek || editing || savingPlan || !user) return; setActiveTab('plan'); setPlanView('week'); setPlanScreen('legacy-ai'); setPlanningMode('byok'); setPlanningStep(0); setEditingAI(true); setLegacyPreview(null); setPeriodCreating(false); };
   const firstPlan = <div data-testid="first-plan">{periodWorkspace}</div>;
   const changePlanView = value => {
@@ -642,10 +650,10 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
       {activeTab === 'plan' && planView === 'week' && planScreen === 'overview' && !periodCreating && plannerActions}
       {showPlanArea && planLoaded && !hasCurrentPlan && !selectedPeriod && !pendingDraft && (activeTab === 'train' || periodCreating) && !['manual', 'saved', 'assign', 'legacy-ai', 'legacy-preview'].includes(planScreen) && firstPlan}
       <Suspense fallback={<p role="status" className="p-6">{t('loadingPlan')}</p>}>
-        {activeTab === 'plan' && planScreen === 'manual' && <ManualPlanner uid={user?.uid} today={today} lang={lang} t={t} exercises={exercises} eligibleExercises={weeklyAvailable} profile={profile} initialSessions={manualInput} onOrganize={organizeExercise} canManage={!!user} onSignIn={() => navigate('settings')} onContextChange={setPlanningContext} onProfileChange={setProfile} onCancel={() => setPlanScreen('overview')} onSaveWorkout={setSaveWorkoutDay} onShare={shareDays} onPreview={sessions => { setAssignment({ days: sessions, initialDates: sessions.map(day => day.date), name: lang === 'zh' ? '我的手動課表' : 'My manual plan', returnScreen: 'manual' }); setPlanScreen('assign'); }} />}
-        {activeTab === 'plan' && planScreen === 'saved' && <SavedWorkouts store={workoutStore} exercises={exercises} lang={lang} onUse={useWorkout} onShare={item => shareDays(savedWorkoutDay(item, lang), item.name)} onClose={() => setPlanScreen('overview')} />}
-        {activeTab === 'plan' && planScreen === 'assign' && assignment && <ApplyWorkoutPlan key={JSON.stringify(assignment)} {...assignment} uid={user?.uid} today={today} exercises={exercises} lang={lang} localPeriod={publicPeriodBase} onLocalPeriod={onLocalPeriod} fallbackPlans={data.plans} profile={profile} onCancel={() => setPlanScreen(assignment.returnScreen)} onEdit={days => openManual(days)} onApplied={preview => { if (assignment.returnScreen === 'manual') clearManualDraft(user?.uid); setAssignment(null); periodApplied(preview); }} />}
-        {saveWorkoutDay && <SaveWorkoutDialog store={workoutStore} day={saveWorkoutDay} exercises={exercises} level={difficultyLevel} lang={lang} onClose={() => setSaveWorkoutDay(null)} onSaved={() => { setSaveWorkoutDay(null); showToast(lang === 'zh' ? '已加入我的收藏課表。' : 'Added to your saved workouts.'); }} />}
+        {activeTab === 'plan' && planScreen === 'manual' && <ManualPlanner workoutStore={workoutStore} uid={user?.uid} today={today} lang={lang} t={t} exercises={exercises} eligibleExercises={weeklyAvailable} profile={profile} initialSessions={manualInput} initialActiveDate={manualActiveDate} onOrganize={organizeExercise} canManage={!!user} onSignIn={() => navigate('settings')} onContextChange={setPlanningContext} onProfileChange={setProfile} onCancel={() => setPlanScreen('overview')} onSaveWorkout={setSaveWorkoutDay} onShare={shareDays} onPreview={sessions => { setAssignment({ days: sessions, initialDates: sessions.map(day => day.date), name: lang === 'zh' ? '我的手動課表' : 'My manual plan', returnScreen: 'manual' }); setPlanScreen('assign'); }} />}
+        {activeTab === 'plan' && planScreen === 'saved' && <SavedWorkouts onEdit={item => openManual([{ ...savedWorkoutDay(item, lang), date: today }], item)} store={workoutStore} exercises={exercises} lang={lang} onUse={useWorkout} onShare={item => shareDays(savedWorkoutDay(item, lang), item.name)} onClose={() => setPlanScreen('overview')} />}
+        {activeTab === 'plan' && planScreen === 'assign' && assignment && <ApplyWorkoutPlan key={JSON.stringify(assignment)} {...assignment} uid={user?.uid} today={today} exercises={exercises} lang={lang} localPeriod={publicPeriodBase} onLocalPeriod={onLocalPeriod} fallbackPlans={data.plans} profile={profile} onCancel={() => setPlanScreen(assignment.returnScreen)} onEdit={(days, activeDate) => openManual(days, null, activeDate)} onApplied={preview => { if (assignment.returnScreen === 'manual') clearManualDraft(user?.uid); setAssignment(null); periodApplied(preview); }} />}
+        {saveWorkoutDay && <SaveWorkoutDialog sourceItem={planScreen === 'manual' ? manualSavedSource : null} store={workoutStore} day={saveWorkoutDay} exercises={exercises} level={difficultyLevel} lang={lang} onClose={() => setSaveWorkoutDay(null)} onSaved={() => { setSaveWorkoutDay(null); showToast(lang === 'zh' ? '已存入我的收藏，下次排課可直接加入。' : 'Saved to my favorites. Add it to your next draft.'); }} />}
         {shareRequest && <PlanShareDialog days={shareRequest.days} name={shareRequest.name} exercises={exercises} level={difficultyLevel} uid={user?.uid} lang={lang} onClose={() => setShareRequest(null)} onSignIn={() => { setShareRequest(null); navigate('settings'); }} />}
       </Suspense>
       {activeTab === 'plan' && planView === 'week' && hasCurrentPlan && !periodCreating && ['day', 'settings'].includes(planScreen) && <button type="button" data-testid="back-to-week" disabled={editing || savingPlan} onClick={() => openPlanScreen('overview')} className="screen-back"><ArrowLeft size={16} />{t('backToWeek')}</button>}

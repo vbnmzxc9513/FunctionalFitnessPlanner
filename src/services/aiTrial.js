@@ -3,7 +3,8 @@ import { getFunctions, httpsCallable, connectFunctionsEmulator } from 'firebase/
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check';
 import { auth } from './firebase.js';
 import { catalogExercises, eligibleExercises } from '../domain/exerciseCatalog.js';
-import { normalizePlanningContext, validateGeneratedPlan } from '../domain/planning.js';
+import { normalizePlanningContext } from '../domain/planning.js';
+import { validateNewAIPlan } from '../domain/newAIPlan.js';
 import { getWeekString, isCalendarDate } from '../domain/dates.js';
 
 const env = import.meta.env || globalThis.process?.env || {};
@@ -43,7 +44,7 @@ export async function requestTrialPlan(args) {
     const { data } = await callable(input);
     if (!data || data.currentWeek !== requestedWeek || data.currentWeek !== getWeekString(new Date())
       || !trialWeekMatches(data.currentWeek, data.currentDate)) throw new Error('AI_TRIAL_WEEK_MISMATCH');
-    return validateGeneratedPlan(data.plan, eligibleExercises(catalogExercises(input.lang), input.context), input.dailyTime);
+    return validateNewAIPlan(data.plan, eligibleExercises(catalogExercises(input.lang), input.context), input.dailyTime, { context: input.context, lang: input.lang, currentDate: data.currentDate, currentWeek: data.currentWeek });
   } catch (error) {
     const allowed = /^AI_TRIAL_(DISABLED|SIGN_IN_REQUIRED|APP_CHECK_REQUIRED|WEEK_EXHAUSTED|BUSY|DAILY_LIMIT|FAILED|INVALID_INPUT|WEEK_MISMATCH)$/;
     throw new Error(allowed.test(error.message) ? error.message : 'AI_TRIAL_FAILED');

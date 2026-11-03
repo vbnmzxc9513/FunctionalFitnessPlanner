@@ -97,7 +97,8 @@ export function catalogExercises(lang = 'zh') {
   return Object.fromEntries(catalog.map(exercise => [exercise.id, {
     ...exercise,
     name: lang === 'en' ? exercise.nameEn : exercise.name,
-    tip: lang === 'en' ? EN_TIPS[exercise.catalogCode] : exercise.cue,
+    tip: lang === 'en' ? exercise.cueEn || EN_TIPS[exercise.catalogCode] : exercise.cue,
+    ...(lang === 'en' ? Object.fromEntries(['purpose', 'equipment', 'dose', 'rest', 'easier', 'harder'].filter(key => exercise[`${key}En`]).map(key => [key, exercise[`${key}En`]])) : {}),
     aliases: [exercise.name, exercise.nameEn, ...(exercise.aliases || []), ...(exercise.catalogCode === 'B12' ? ['保佳利亞蹲'] : [])],
   }]));
 }
@@ -114,21 +115,34 @@ export function equipmentChoices(exercise, equipment = []) {
   return (exercise.equipmentOptions || []).filter(option => option.every(item => equipment.includes(item)));
 }
 
+const TREATMENT_RESISTANCE = ['dumbbell', 'cable', 'band', 'racket'];
+const treatmentEquipmentChoices = (exercise, context) => equipmentChoices(exercise, context.equipment)
+  .filter(option => !option.some(item => TREATMENT_RESISTANCE.includes(item)));
+
+/** Machine-readable reasons shared by eligibility and recipe previews. Missing
+ * options list alternatives: satisfying one whole alternative is sufficient. */
+export function exerciseEligibilityIssues(exercise, context = {}) {
+  if (!exercise) return [{ code: 'missing' }];
+  const issues = [];
+  if (exercise.deleted) issues.push({ code: 'deleted' });
+  if (exercise.active === false) issues.push({ code: 'disabled' });
+  if (exercise.advanced && context.experience === 'beginner') issues.push({ code: 'advanced' });
+  if (exercise.requiresPartner && !context.partnerAvailable) issues.push({ code: 'partner' });
+  const restricted = context.healthStatus !== 'unrestricted';
+  if (restricted && exercise.shoulderLoaded) issues.push({ code: 'health' });
+  if (restricted && !exercise.catalogCode) issues.push({ code: 'unknown_treatment' });
+  if (exercise.equipmentOptions && !equipmentChoices(exercise, context.equipment).length) issues.push({
+    code: 'equipment', missingOptions: exercise.equipmentOptions.map(option => option.filter(item => !(context.equipment || []).includes(item))),
+  });
+  if (restricted && !treatmentEquipmentChoices(exercise, context).length) issues.push({ code: 'treatment_equipment' });
+  return issues;
+}
+
 export function eligibleExercises(exercises, context) {
-  return Object.fromEntries(Object.entries(exercises).filter(([, exercise]) => {
-    if (exercise.deleted || exercise.active === false) return false;
-    if (exercise.advanced && context.experience === 'beginner') return false;
-    if (exercise.requiresPartner && !context.partnerAvailable) return false;
-    if (context.healthStatus !== 'unrestricted' && exercise.shoulderLoaded) return false;
-    if (exercise.equipmentOptions && !equipmentChoices(exercise, context.equipment).length) return false;
-    // Custom exercises without metadata remain available for ordinary planning, but
-    // uncertain clinical restrictions must not silently allow unclassified loading.
-    if (context.healthStatus !== 'unrestricted' && !exercise.catalogCode) return false;
-    return true;
-  }).map(([id, exercise]) => [id, {
-    ...exercise,
-    equipmentOptions: context.healthStatus !== 'unrestricted'
-      ? equipmentChoices(exercise, context.equipment).filter(option => !option.some(item => ['dumbbell', 'cable', 'band', 'racket'].includes(item)))
-      : exercise.equipmentOptions,
-  }]).filter(([, exercise]) => !exercise.equipmentOptions || exercise.equipmentOptions.length));
+  return Object.fromEntries(Object.entries(exercises).filter(([, exercise]) => !exerciseEligibilityIssues(exercise, context).length)
+    .map(([id, exercise]) => [id, {
+      ...exercise,
+      equipmentOptions: context.healthStatus !== 'unrestricted'
+        ? treatmentEquipmentChoices(exercise, context) : exercise.equipmentOptions,
+    }]));
 }

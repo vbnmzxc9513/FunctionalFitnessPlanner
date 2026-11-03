@@ -1,3 +1,4 @@
+import { DAILY_WARMUP_IDS, isDailyWarmupComplete } from '../../src/domain/quickWorkouts.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { defaultPlanningRange, enumeratePeriodDates, generatePeriodPlan, normalizePlanningRange, sanitizePeriodSession } from '../../src/domain/periodPlanning.js';
@@ -71,11 +72,12 @@ test('clinical restrictions, actual competition dates and complete warm-up timin
   const taper = plan('2026-10-17', '2026-10-25', {}, { ...profile, context: { ...context, competitionDate: '2026-10-20' } });
   assert.ok(taper.sessions.filter(session => session.date >= '2026-10-18' && session.date <= '2026-10-22').every(session => session.sessionType === 'rest'));
   const full = plan('2026-10-17', '2026-11-13');
-  assert.ok(full.sessions.some(session => session.routine.includes('bf_A13')));
+  assert.ok(full.sessions.some(session => isDailyWarmupComplete(session)));
   for (const session of full.sessions) {
-    assert.ok(session.routine.length <= 8);
+    assert.ok(session.routine.length <= 24);
     assert.ok(estimateSessionMinutes(session, exercises) <= 30);
-    for (const dose of session.prescriptions.filter(dose => dose.id === 'bf_A13')) assert.deepEqual([dose.sets, dose.value, dose.unit], [1, '10', 'minutes']);
+    assert.ok(!session.routine.some(id => ['bf_A12', 'bf_A13'].includes(id)));
+    if (isDailyWarmupComplete(session)) assert.deepEqual(session.routine.slice(0, 8), DAILY_WARMUP_IDS);
   }
 });
 

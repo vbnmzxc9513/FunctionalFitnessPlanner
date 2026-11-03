@@ -7,7 +7,8 @@ import { firestoreQuota } from './quota.js';
 import { planSchema } from './schema.js';
 import { buildPlanningPrompt } from './shared/domain/coachingPrompt.js';
 import { catalogExercises, eligibleExercises, EQUIPMENT } from './shared/domain/exerciseCatalog.js';
-import { normalizePlanningContext, validateGeneratedPlan } from './shared/domain/planning.js';
+import { validateNewAIPlan } from './shared/domain/newAIPlan.js';
+import { normalizePlanningContext } from './shared/domain/planning.js';
 
 initializeApp();
 const db = getFirestore();
@@ -25,7 +26,7 @@ const service = createTrialService({
   },
   quota: firestoreQuota(db, () => FieldValue.serverTimestamp()),
   domain: { prompt: buildPlanningPrompt, catalog: catalogExercises, eligible: eligibleExercises,
-    normalizeContext: normalizePlanningContext, validate: validateGeneratedPlan, equipment: EQUIPMENT },
+    normalizeContext: normalizePlanningContext, validate: validateNewAIPlan, equipment: EQUIPMENT },
   generate: async prompt => {
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`, {
       method: 'POST', signal: AbortSignal.timeout(45000),

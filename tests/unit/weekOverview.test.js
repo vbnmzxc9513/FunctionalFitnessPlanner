@@ -11,6 +11,8 @@ import { createSharePayload } from '../../src/domain/sharing.js';
 import { normalizeTrialInput } from '../../functions/core.js';
 import { EQUIPMENT } from '../../src/domain/exerciseCatalog.js';
 import { WEEK_PLAN_TEXT } from '../../src/weekPlanLocale.js';
+import { DAILY_WARMUP_IDS, isDailyWarmupComplete } from '../../src/domain/quickWorkouts.js';
+import { MAX_DAY_EXERCISES } from '../../src/domain/plannerLimits.js';
 
 const exercises = catalogExercises();
 const context = { healthStatus: 'unrestricted', equipment: ['dumbbell', 'band', 'cable', 'foam_roller'], badmintonDays: [2, 5, 6] };
@@ -32,8 +34,9 @@ test('target priorities change real main order and main-specific warm-up without
   const targeted = generateTemplatePlan(exercises, { ...context, targetRegions: ['upper'], stiffnessRegions: ['shoulder'] }, 35, 'zh', options);
   const main = targeted.schedule.find(day => day.prescriptions.some(dose => dose.phase === 'strength'));
   assert.equal(exercises[main.prescriptions.find(dose => dose.phase === 'strength').id].category, 'upper');
-  assert.ok(main.prescriptions.some(dose => dose.phase === 'warmup' && dose.id === 'bf_A13'));
-  const compactCatalog = { ...exercises, bf_A12: { ...exercises.bf_A12, active: false }, bf_A13: { ...exercises.bf_A13, active: false } };
+  assert.ok(isDailyWarmupComplete(main));
+  assert.deepEqual(main.routine.slice(0, 8), DAILY_WARMUP_IDS);
+  const compactCatalog = { ...exercises, bf_A16: { ...exercises.bf_A16, active: false } };
   const compact = generateTemplatePlan(compactCatalog, { ...context, targetRegions: ['upper'], stiffnessRegions: ['shoulder'] }, 35, 'zh', options);
   assert.ok(compact.schedule.some(day => day.prescriptions.some(dose => dose.phase === 'warmup' && dose.id === 'bf_A09')), 'when the flow is disabled, targeted individual warm-up remains available');
   const sets = plan => plan.schedule.flatMap(day => day.prescriptions).filter(dose => ['strength', 'accessory'].includes(dose.phase)).reduce((sum, dose) => sum + dose.sets, 0);
@@ -52,7 +55,7 @@ test('preference matrix keeps phase validation, eligibility, time, court recover
         assert.deepEqual(validateGeneratedPlan(plan, planningExercises(exercises, profile), time), plan);
         for (const day of plan.schedule) {
           assert.ok(estimateSessionMinutes(day, exercises) <= time);
-          assert.ok(day.routine.length <= 8);
+          assert.ok(day.routine.length <= MAX_DAY_EXERCISES);
           if (context.badmintonDays.includes(day.day)) assert.notEqual(day.sessionType, 'training');
         }
       }

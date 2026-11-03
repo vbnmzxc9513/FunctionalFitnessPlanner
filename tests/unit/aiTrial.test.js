@@ -4,11 +4,13 @@ import { createTrialService, normalizeTrialInput, utcPeriod } from '../../functi
 import { firestoreQuota } from '../../functions/quota.js';
 import { buildPlanningPrompt } from '../../src/domain/coachingPrompt.js';
 import { catalogExercises, eligibleExercises, EQUIPMENT } from '../../src/domain/exerciseCatalog.js';
-import { normalizePlanningContext, validateGeneratedPlan } from '../../src/domain/planning.js';
+import { normalizePlanningContext } from '../../src/domain/planning.js';
+import { validateNewAIPlan } from '../../src/domain/newAIPlan.js';
+import { generateTemplatePlan } from '../../src/domain/templatePlanner.js';
 import { trialWeekMatches } from '../../src/services/aiTrial.js';
 
 const domain = { prompt: buildPlanningPrompt, catalog: catalogExercises, eligible: eligibleExercises,
-  normalizeContext: normalizePlanningContext, validate: validateGeneratedPlan, equipment: EQUIPMENT };
+  normalizeContext: normalizePlanningContext, validate: validateNewAIPlan, equipment: EQUIPMENT };
 const restPlan = () => ({ conclusion: 'Recover this week', schedule: [1, 2, 3, 4, 5].map(day => ({ day,
   name: 'Rest', theme: 'Recovery', concept: 'Rest', coachAdvice: 'Review readiness',
   sessionType: 'rest', warmupNote: 'No warmup needed', cooldownNote: 'No extra cooldown needed', routine: [], prescriptions: [] })) });
@@ -143,4 +145,18 @@ test('UTC/local Sunday–Monday disagreement prevents week-misplaced trial use',
   assert.equal(trialWeekMatches('2026-W43', '2026-10-19'), true);
   assert.equal(trialWeekMatches('2026-W53', '2027-01-01'), true);
   assert.equal(trialWeekMatches('2026-W42', 'invalid'), false);
+});
+
+
+test('hosted trial enforces the canonical new warmup before caching while preserving short and clinical exceptions', async () => {
+  const context = { healthStatus: 'unrestricted', equipment: ['dumbbell'] };
+  const plan = generateTemplatePlan(catalogExercises('en'), context, 35, 'en', { currentDate: '2026-10-14', currentWeek: '2026-W42' });
+  const valid = harness({ generate: async () => plan });
+  const input = request({ data: { dailyTime: 35, lang: 'en', context } });
+  assert.deepEqual((await valid.service(input)).plan, plan);
+  const missing = structuredClone(plan); const day = missing.schedule.find(item => item.routine.length);
+  day.routine = day.routine.filter(id => id !== 'bf_A19'); day.prescriptions = day.prescriptions.filter(dose => dose.id !== 'bf_A19');
+  const invalid = harness({ generate: async () => missing });
+  await assert.rejects(invalid.service(input), /AI_TRIAL_FAILED/);
+  assert.ok([...invalid.db.documents.values()].some(document => document.status === 'failed'));
 });

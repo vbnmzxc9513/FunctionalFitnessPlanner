@@ -10,6 +10,8 @@ import { createSharePayload } from '../../src/domain/sharing.js';
 import { estimateSessionMinutes } from '../../src/domain/sessions.js';
 import { normalizeTrialInput } from '../../functions/core.js';
 import { SELECTION_TRANSLATIONS } from '../../src/selectionLocale.js';
+import { DAILY_WARMUP_IDS, isDailyWarmupComplete } from '../../src/domain/quickWorkouts.js';
+import { MAX_DAY_EXERCISES } from '../../src/domain/plannerLimits.js';
 
 const exercises = catalogExercises();
 const context = { healthStatus: 'unrestricted', equipment: ['dumbbell', 'band', 'cable', 'foam_roller'], experience: 'intermediate', badmintonDays: [2, 5] };
@@ -36,9 +38,12 @@ test('selected compatible moves replace real slots with specific preparation and
   const report = buildWeeklyChoiceReport(plan, exercises, profile, manualPlanningExercises(exercises, profile), options.currentWeek);
   assert.ok(report.every(item => item.reason === 'planned' && item.days.length), 'explicit single stretches use real mobility slots alongside the full opening');
   for (const day of plan.schedule) {
-    assert.ok(day.routine.length <= 8);
+    assert.ok(day.routine.length <= MAX_DAY_EXERCISES);
     assert.ok(estimateSessionMinutes(day, exercises) <= 35);
-    if (day.sessionType === 'training') assert.equal(day.routine[0], 'bf_A13', 'the full stretching opening survives preference priority');
+    if (day.sessionType === 'training') {
+      assert.ok(isDailyWarmupComplete(day), 'the complete independent opening survives preference priority');
+      assert.deepEqual(day.routine.slice(0, 8), DAILY_WARMUP_IDS);
+    }
     const first = day.prescriptions.find(dose => dose.phase === 'strength');
     if (first) assert.equal(first.preparation.perSide, first.perSide);
     if (context.badmintonDays.includes(day.day)) assert.notEqual(day.sessionType, 'training');

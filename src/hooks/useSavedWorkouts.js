@@ -35,12 +35,17 @@ export function useSavedWorkouts(uid) {
       setPending(value => value.scopeKey === scopeKey ? { scopeKey, count: Math.max(0, value.count - 1) } : value);
     }
   }, [repository, scopeKey]);
-  const create = useCallback(({ name, day, exercises, level = 1 }) => invoke(() => repository.create({ name,
+  const create = useCallback(({ name, day, exercises, level = 1, ...metadata }) => invoke(() => repository.create({ name, ...metadata,
     snapshot: createWorkoutSnapshot(day, exercises, level) })), [invoke, repository]);
   const rename = useCallback((id, name, revision) => invoke(() => repository.rename(id, name, revision)), [invoke, repository]);
+  const update = useCallback((id, { day, exercises, level = 1, ...input }, revision) => invoke(() => repository.update(id, {
+    ...input, ...(day ? { snapshot: createWorkoutSnapshot(day, exercises, level) } : {}),
+  }, revision)), [invoke, repository]);
+  const setPinned = useCallback((id, pinned, revision) => invoke(() => repository.setPinned(id, pinned, revision)), [invoke, repository]);
+  const markUsed = useCallback((id, revision) => invoke(() => repository.markUsed(id, revision)), [invoke, repository]);
   const remove = useCallback((id, revision) => invoke(() => repository.remove(id, revision)), [invoke, repository]);
   const reload = useCallback(() => setRefresh(value => value + 1), []);
   const current = state.scopeKey === scopeKey ? state : { items: [], loaded: false, error: null };
   return { uid: accountUid, scope: accountUid ? 'account' : 'device', scopeKey, ...current,
-    busy: pending.scopeKey === scopeKey && pending.count > 0, create, rename, remove, reload };
+    busy: pending.scopeKey === scopeKey && pending.count > 0, create, rename, update, setPinned, markUsed, remove, reload };
 }

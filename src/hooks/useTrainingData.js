@@ -3,6 +3,7 @@ import { onSnapshot } from 'firebase/firestore';
 import { trainingHistoryQueries } from '../services/trainingRepository.js';
 import { dateForWeekDay, getWeekString } from '../domain/dates.js';
 import { validateTrainingLog, validateReadiness, trainingLogId } from '../domain/coaching.js';
+import { MAX_DAY_EXERCISES } from '../domain/plannerLimits.js';
 
 const empty = () => ({ logs: {}, readiness: {}, loaded: false, error: null, hasMore: false });
 export function useTrainingData(uid, currentWeek = getWeekString(), weeks = 12) {
@@ -16,7 +17,7 @@ export function useTrainingData(uid, currentWeek = getWeekString(), weeks = 12) 
     const bounds = trainingHistoryQueries(uid, currentWeek, boundedWeeks);
     const unsubscribes = Object.entries(bounds).map(([field, source]) => onSnapshot(source, snapshot => {
       if (!active) return;
-      const cap = boundedWeeks * (field === 'logs' ? 56 : 7);
+      const cap = boundedWeeks * 7 * (field === 'logs' ? MAX_DAY_EXERCISES : 1);
       const records = {};
       for (const item of snapshot.docs.slice(0, cap)) {
         try {

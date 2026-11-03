@@ -4,6 +4,15 @@ import { spawn } from 'node:child_process';
 import puppeteer from 'puppeteer';
 import { legacyFixture } from './legacy-fixture.mjs';
 import { EXERCISES_I18N, TRANSLATIONS } from '../src/locale.js';
+import { dailyWarmupPrescriptions, DAILY_WARMUP_IDS } from '../src/domain/quickWorkouts.js';
+import { dateForWeekDay, getWeekString } from '../src/domain/dates.js';
+import { exerciseKey } from '../src/domain/training.js';
+
+if (process.env.NODE_ENV !== 'test' || process.env.VITE_USE_FIREBASE_EMULATORS !== 'true' || process.env.VITE_FIREBASE_PROJECT_ID !== 'demo-fitness-planner') throw new Error('Requires demo-fitness-planner Auth/Firestore emulators.');
+const candidateExercises = prompt => {
+  const section = prompt.split('【可用候選動作；ID 必須完全相同】')[1].split('【輸出要求】')[0];
+  return JSON.parse(section.slice(section.indexOf('['), section.lastIndexOf(']') + 1));
+};
 
 const server = spawn(process.execPath, ['scripts/smoke-server.mjs', '5174'], { env: process.env, stdio: ['ignore', 'pipe', 'pipe'] });
 const siteUrl = 'http://127.0.0.1:5174/FunctionalFitnessPlanner/';
@@ -57,11 +66,15 @@ try {
         if (request.method() === 'OPTIONS') request.respond({ status: 204, headers });
         else if (url.pathname.endsWith(':generateContent')) {
           planningPayload = JSON.parse(request.postData());
-          const plan = { conclusion: 'Mock recovery plan', schedule: [1, 2, 3, 4, 5].map(day => ({ day, name: 'Day', theme: 'Recovery', concept: 'Keep control', coachAdvice: 'Check next-day response', sessionType: day === 1 ? 'training' : 'rest', warmupNote: day === 1 ? 'Walk, then prepare the split squat.' : 'Rest today.', cooldownNote: day === 1 ? 'Finish with gentle breathing.' : 'No extra cool-down needed.', routine: day === 1 ? ['bf_A01', 'bf_B01', 'bf_D09'] : [], prescriptions: day === 1 ? [
-            { id: 'bf_A01', sets: 1, value: '2', unit: 'minutes', restSeconds: 0, perSide: false, phase: 'warmup' },
+          const prompt = planningPayload.contents[0].parts[0].text;
+          const candidates = candidateExercises(prompt);
+          const completeOpening = DAILY_WARMUP_IDS.every(id => candidates.some(item => item.id === id));
+          const opening = completeOpening ? dailyWarmupPrescriptions() : [{ id: 'bf_A02', sets: 1, value: '4', unit: 'reps', restSeconds: 0, perSide: true, phase: 'warmup' }];
+          const doses = [...opening,
             { id: 'bf_B01', sets: 1, value: '6', unit: 'reps', restSeconds: 90, perSide: true, phase: 'strength', preparation: { sets: 1, value: '4', unit: 'reps', restSeconds: 30, perSide: true, instruction: 'Use bodyweight first.' } },
             { id: 'bf_D09', sets: 1, value: '4', unit: 'breaths', restSeconds: 0, perSide: false, phase: 'cooldown' },
-          ] : [] })) };
+          ];
+          const plan = { conclusion: 'Mock recovery plan', schedule: [1, 2, 3, 4, 5].map(day => ({ day, name: 'Day', theme: 'Recovery', concept: 'Keep control', coachAdvice: 'Check next-day response', sessionType: day === 2 ? 'training' : 'rest', warmupNote: day === 2 ? 'Follow the listed independent warmup, then prepare the split squat.' : 'Rest today.', cooldownNote: day === 2 ? 'Finish with gentle breathing.' : 'No extra cool-down needed.', routine: day === 2 ? doses.map(dose => dose.id) : [], prescriptions: day === 2 ? doses : [] })) };
           request.respond({ status: 200, headers, contentType: 'application/json', body: JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(plan) }] } }] }) });
         } else request.respond({ status: 200, headers, contentType: 'application/json', body: JSON.stringify({ models: [{ name: 'models/gemini-2.5-flash', supportedGenerationMethods: ['generateContent'] }] }) });
       } else if (['127.0.0.1', 'localhost'].includes(url.hostname) || ['data:', 'blob:'].includes(url.protocol)) request.continue();
@@ -172,20 +185,21 @@ try {
     await click('課表');
     assert.equal(await visibleCount('[data-testid="week-overview"]'), 0, `${layout} current navigation preserves the active manual edit screen`);
     assert.equal(await visibleCount('[data-testid="exercise-picker"]'), 1, `${layout} unsaved edits stay visible until saved or cancelled`);
-    await clickSelector(`button[aria-label=${JSON.stringify(`移除動作 ${name}`)}]`);
-    const removedId = Object.entries(EXERCISES_I18N.zh).find(([, exercise]) => exercise.name === name)?.[0];
+    const editedName = EXERCISES_I18N.zh.bf_B06.name;
+    await clickSelector(`button[aria-label=${JSON.stringify(`移除動作 ${editedName}`)}]`);
+    const removedId = Object.entries(EXERCISES_I18N.zh).find(([, exercise]) => exercise.name === editedName)?.[0];
     assert.ok(removedId, `${layout} removed exercise has a catalog identity`);
     assert.equal(await visibleCount('[data-testid="exercise-picker"]'), 1, `${layout} replaces the long select with a phase picker`);
     await select('[data-testid="picker-phase"]', 'strength');
     await fill('[data-testid="picker-search"]', EXERCISES_I18N.zh.bf_C11.name);
     assert.equal(await visibleCount('[data-testid="picker-option-bf_C11"]'), 0, `${layout} manual picker excludes dumbbell exercises without dumbbells`);
-    await addFromPicker(removedId, 'warmup', name);
-    await clickSelector(`button[aria-label=${JSON.stringify(`移除動作 ${name}`)}]`);
-    const changedPhaseLabel = await read('select[aria-label^="訓練階段 "]', element => element.getAttribute('aria-label'));
+    await addFromPicker(removedId, 'strength', editedName);
+    await clickSelector(`button[aria-label=${JSON.stringify(`移除動作 ${editedName}`)}]`);
+    const changedPhaseLabel = `訓練階段 ${EXERCISES_I18N.zh.dead_bug.name}`;
     const changedPhaseName = changedPhaseLabel.slice('訓練階段 '.length);
     await select(`select[aria-label=${JSON.stringify(changedPhaseLabel)}]`, 'cooldown');
     await click('儲存修改'); await waitText('課表已儲存');
-    await page.waitForFunction(selector => ![...document.querySelectorAll(selector)].some(window.__smokeVisible), {}, completion(name));
+    await page.waitForFunction(selector => ![...document.querySelectorAll(selector)].some(window.__smokeVisible), {}, completion(editedName));
     await page.reload({ waitUntil: 'networkidle2' }); await monday(); await visibleElement('section[data-phase="cooldown"]');
     assert.ok(await read('section[data-phase="cooldown"]', (section, label) => section.innerText.includes(label), changedPhaseName), `${layout} preserves a manually chosen phase`);
     await click('↩ 復原上一次的課表'); await waitCompletion(name, true);
@@ -231,39 +245,61 @@ try {
     await openDetailsSelector('[data-testid="planner-advanced"]');
     assert.ok(await read('button', () => [...document.querySelectorAll('button')].find(button => window.__smokeVisible(button) && button.innerText === 'App AI 體驗').disabled));
     await click('AI 自備金鑰');
-    await click('產生 AI 預覽'); await visibleElement('[data-testid="weekly-plan-preview"]'); await click('確認套用本週'); await waitText(TRANSLATIONS.zh.toastAISuccess);
+    await click('產生 AI 預覽'); await visibleElement('[data-testid="weekly-plan-preview"]');
     assert.ok(planningPayload.contents[0].parts[0].text.includes('肩部／健康限制'));
-    const candidateSection = planningPayload.contents[0].parts[0].text.split('【可用候選動作；ID 必須完全相同】')[1].split('【輸出要求】')[0].trim();
-    assert.ok(!JSON.parse(candidateSection).some(item => item.shoulderLoaded));
-    await monday(); await waitCompletion('分腿蹲', false);
-    await openLegacyAI();
+    assert.ok(!candidateExercises(planningPayload.contents[0].parts[0].text).some(item => item.shoulderLoaded), `${layout} restricted AI candidates exclude shoulder loading`);
+    await waitText('已有實做／完成紀錄，以下日期唯讀並保持原安排');
+    await click('返回修改');
+    await click('上一步'); await labeledSelect('肩部狀態與活動限制', 'unrestricted'); await click('下一步');
+    await click('產生 AI 預覽'); await visibleElement('[data-testid="weekly-plan-preview"]');
+    const fullPrompt = planningPayload.contents[0].parts[0].text;
+    assert.ok(fullPrompt.includes('八筆獨立'), `${layout} AI prompt requests independent warmup prescriptions`);
     await openDetails(TRANSLATIONS.zh.aiConclusionTitle); await waitText('Mock recovery plan');
-    await page.reload({ waitUntil: 'networkidle2' }); await monday(); await waitText('每側');
-    await openExerciseDetails(page, 'bf_B01');
-    assert.ok(await read('dialog[open] section[data-phase="strength"] .dose-grid', element => element.getAttribute('aria-label').includes('1 組 × 6 下')));
-    assert.ok(await read('dialog[open] [data-preparation-for="bf_B01"]', element => element.innerText.includes('主項準備組') && element.innerText.includes('1 組 × 4 下')));
+    await clickSelector('[data-testid="weekly-plan-preview"] [data-testid="week-role-1"]');
+    const protectedPreview = await read('[data-testid="preview-day-detail"]', element => element.innerText);
+    assert.ok(protectedPreview.includes(EXERCISES_I18N.zh.bf_A13.name), `${layout} preview displays the preserved historical Monday`);
+    assert.ok(!protectedPreview.includes(EXERCISES_I18N.zh.bf_A16.name), `${layout} protected preview does not display proposed replacement warmup`);
+    const currentWeek = getWeekString(), mondayDate = dateForWeekDay(currentWeek, 1), trainingDate = dateForWeekDay(currentWeek, 2);
+    const nativeRange = { from: mondayDate, to: dateForWeekDay(currentWeek, 5) };
+    const readCloud = async () => page.evaluate(async range => {
+      const { auth } = await import('/FunctionalFitnessPlanner/src/services/firebase.js');
+      const { loadPeriodState } = await import('/FunctionalFitnessPlanner/src/services/periodRepository.js');
+      const state = await loadPeriodState(auth.currentUser.uid, range);
+      return { sessions: state.sessionsByDate, documents: state.expectedState.documents, progress: state.progressByWeek };
+    }, nativeRange);
+    const beforeApply = await readCloud();
+    await clickSelector('[data-testid="plan-preview-apply"]'); await waitText(TRANSLATIONS.zh.toastAISuccess);
+    await visibleElement('[data-testid="period-plan-preview"]');
+    const afterApply = await readCloud();
+    assert.deepEqual(afterApply.documents[`plans/${currentWeek}`], beforeApply.documents[`plans/${currentWeek}`], `${layout} native AI application preserves the historical weekly document`);
+    assert.equal(afterApply.documents[`dateSessions/${mondayDate}`], null, `${layout} completed Monday is not overwritten by AI`);
+    assert.deepEqual(afterApply.sessions[mondayDate].routine, beforeApply.sessions[mondayDate].routine, `${layout} protected Monday retains its actual movements`);
+    assert.deepEqual(afterApply.progress[currentWeek].completed, beforeApply.progress[currentWeek].completed, `${layout} applying AI never invents completion facts`);
+    assert.equal(afterApply.documents[`dateSessions/${trainingDate}`].v, 3);
+    assert.equal(afterApply.sessions[trainingDate].routine.length, 10, `${layout} native AI stores more than eight independent doses`);
+    assert.deepEqual(afterApply.sessions[trainingDate].routine.slice(0, 8), DAILY_WARMUP_IDS);
+    assert.equal(await visibleCount('[data-testid="legacy-ai-open"]'), 0, `${layout} native weeks use date planning for further changes`);
+    await page.reload({ waitUntil: 'networkidle2' }); await click('課表');
+    await clickSelector(`[data-testid="period-day-${trainingDate}"]`);
+    assert.equal(await visibleCount('[data-testid^="exercise-row-"]'), 10, `${layout} cloud reload displays all ten native movements`);
+    for (const id of DAILY_WARMUP_IDS) await visibleElement(`[data-testid="exercise-row-${id}"]`);
+    await clickSelector('[data-testid="exercise-open-bf_B01"]');
+    await visibleElement('dialog[open]'); await waitText('1 組 × 6 次'); await waitText('1 組 × 4 次'); await waitText('Use bodyweight first.');
     await closeExerciseDetails(page);
-    assert.equal(await visibleCount(completion('分腿蹲')), 1); await openExerciseDetails(page, 'bf_D09'); await waitText('Finish with gentle breathing.'); await closeExerciseDetails(page);
-    await click('編輯課表');
-    await select('[data-testid="picker-phase"]', 'accessory');
-    assert.equal(await visibleCount('[data-testid^="picker-option-"]'), 0, `${layout} unclear clinical restrictions cannot add training manually`);
-    await click('取消');
-    await openLegacyAI();
-    await click('下一步');
-    await labeledSelect('肩部狀態與活動限制', 'unrestricted');
-    await monday();
-    await click('編輯課表'); const breathing = EXERCISES_I18N.zh.bf_D09.name; const core = EXERCISES_I18N.zh.dead_bug.name;
-    await select(`select[aria-label=${JSON.stringify(`訓練階段 ${breathing}`)}]`, 'accessory');
-    await select('[data-testid="picker-phase"]', 'accessory'); await select('[data-testid="picker-scope"]', 'mine');
-    assert.equal(await visibleCount('[data-testid^="picker-option-"]'), 0, `${layout} favorite picker excludes an exercise already in the day`);
-    await addFromPicker('dead_bug', 'accessory', core); await clickSelector(`button[aria-label=${JSON.stringify(`往後移 ${breathing}`)}]`);
-    await click('儲存修改'); await waitText('課表已儲存'); await page.reload({ waitUntil: 'networkidle2' }); await monday();
-    const accessoryOrder = await page.$$eval('section[data-phase="accessory"] button[aria-pressed]', buttons => buttons.filter(window.__smokeVisible).map(button => button.getAttribute('aria-label')));
-    assert.deepEqual(accessoryOrder, [core, breathing], `${layout} persists phase and within-phase order`);
-    await openExerciseDetails(page, 'bf_B01');
-    assert.ok(await read('dialog[open] [data-preparation-for="bf_B01"]', element => element.innerText.includes('1 組 × 4 下')));
-    await closeExerciseDetails(page);
-    await click('↩ 復原上一次的課表'); await openExerciseDetails(page, 'bf_D09'); await waitText('Finish with gentle breathing.'); await closeExerciseDetails(page); assert.equal(await visibleCount('section[data-phase="accessory"]'), 0);
+    await clickSelector('[data-testid="exercise-open-bf_D09"]'); await waitText('Finish with gentle breathing.'); await closeExerciseDetails(page);
+    // Today follows the real weekday, while the protected completion belongs to
+    // Monday. Reopen that exact date; its period preview is intentionally read-only,
+    // so verify completion against the reloaded cloud fact rather than a Today toggle.
+    await click('返回課表'); await clickSelector(`[data-testid="period-day-${mondayDate}"]`);
+    const protectedExerciseId = beforeApply.sessions[mondayDate].routine.find(id => EXERCISES_I18N.zh[id]?.name === name);
+    assert.ok(protectedExerciseId, `${layout} original completed exercise belongs to protected Monday`);
+    await visibleElement(`[data-testid="exercise-row-${protectedExerciseId}"]`);
+    const protectedReload = await readCloud();
+    assert.equal(protectedReload.progress[currentWeek].completed[exerciseKey(1, protectedExerciseId)], true, `${layout} reloaded protected Monday keeps its original completion`);
+    for (const id of DAILY_WARMUP_IDS) {
+      assert.equal(await visibleCount(`[data-testid="exercise-row-${id}"]`), 0, `${layout} protected legacy Monday is not expanded into independent warmup rows`);
+      assert.notEqual(protectedReload.progress[currentWeek].completed[exerciseKey(1, id)], true, `${layout} protected legacy completion is not expanded into eight new facts`);
+    }
 
     await click('紀錄'); await click('身體紀錄'); await fill('input[name="weight"]', '70'); await fill('input[name="bodyFat"]', '18');
     await click('儲存紀錄'); await waitText('身體數據已成功儲存'); await fill('input[name="weight"]', '72'); await fill('input[name="bodyFat"]', '');
@@ -278,16 +314,16 @@ try {
     await changeDate('2026-01-01'); await changeDate(date);
     await page.waitForFunction(() => document.querySelector('input[name="bodyFat"]')?.value === '18');
     assert.equal(await read('input[name="weight"]', input => input.value), '72');
-    await weekPlan();
-    const oldWeek = await read('[data-testid="week-overview"]', element => element.dataset.week);
+    await click('課表'); await visibleElement('[data-testid="period-plan-preview"]');
+    const oldWeek = currentWeek;
     await page.evaluate(() => {
       const NativeDate = Date; const timestamp = Date.now() + 7 * 86400000;
       window.Date = class extends NativeDate { constructor(...args) { super(...(args.length ? args : [timestamp])); } static now() { return timestamp; } };
       window.dispatchEvent(new Event('focus'));
     });
-    await page.waitForFunction(week => !document.querySelector(`[data-testid="week-overview"][data-week="${week}"]`), {}, oldWeek);
+    await page.waitForFunction(week => !document.querySelector(`[data-testid="period-plan-preview"] [data-week="${week}"]`), {}, oldWeek);
     await visibleElement('[data-testid="planner-actions"]');
-    await click('今天'); await visibleElement('[data-testid="first-plan"]');
+    await click('今天'); await waitText('今天尚未安排訓練');
     assert.equal(await visibleCount('section[data-phase] button[aria-pressed="true"]'), 0, `${layout} a new week begins without inherited completions or a default plan`);
     await click('設定'); await click('登出'); await visibleElement('[data-testid="first-plan"]'); await click('設定'); await waitText('登入');
     assert.equal(await visibleCount('section[data-phase] button[aria-pressed="true"]'), 0, `${layout} logout clears progress`);
@@ -295,7 +331,7 @@ try {
     await click('🌐 English'); await click('Today'); await visibleElement('[data-testid="planning-range"]');
     assert.equal(await page.evaluate(() => document.documentElement.lang), 'en');
     assert.deepEqual(errors, [], `${layout} has no runtime errors`);
-    console.log(`${layout}: legacy restore/reload/share/adoption, editing/picker/restore, feedback, library groups/eligibility, mocked BYOK, records/body metrics, rollover, logout, English passed`);
+    console.log(`${layout}: legacy restore/reload/share/adoption, editing/picker/restore, feedback, library groups/eligibility, restricted BYOK preview, native ten-dose BYOK/protection/reload, records/body metrics, rollover, logout, English passed`);
     await context.close();
   }
 } finally {

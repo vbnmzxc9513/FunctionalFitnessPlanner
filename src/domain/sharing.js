@@ -1,3 +1,4 @@
+import { MAX_DAY_EXERCISES, LEGACY_MAX_DAY_EXERCISES } from './plannerLimits.js';
 import { PUBLIC_APP_LOCATION } from './publicOrigin.js';
 import { catalogExercises as loadCatalog, validSequenceDose } from './exerciseCatalog.js';
 import { exercisePhase, SESSION_PHASES } from './phases.js';
@@ -28,7 +29,7 @@ function validateDose(value, preparation = false) {
 
 export function validateSharePayload(payload) {
   exactKeys(payload, ['v', 'items']);
-  if (payload.v !== 1 || !Array.isArray(payload.items) || payload.items.length > 8) fail();
+  if (![1, 3].includes(payload.v) || !Array.isArray(payload.items) || payload.items.length > (payload.v === 1 ? LEGACY_MAX_DAY_EXERCISES : MAX_DAY_EXERCISES)) fail();
   const seen = new Set();
   let lastPhase = -1;
   let contacts = 0;
@@ -52,13 +53,13 @@ export function validateSharePayload(payload) {
   });
   if (contacts > 24 || contacts > 0 && items.some(item => catalogExercises[item.id].catalogCode === 'I04')) fail();
   if (items.filter(item => catalogExercises[item.id].sequenceMinutes).length > 1) fail();
-  return { v: 1, items };
+  return { v: payload.v, items };
 }
 
 // The catalog is trusted; arbitrary exercise names and all free-text plan fields
 // are intentionally excluded from the public representation.
 export function createSharePayload(day, _exercises = catalogExercises, level = 1) {
-  if (!day || !Array.isArray(day.routine) || day.routine.length > 8) fail();
+  if (!day || !Array.isArray(day.routine) || day.routine.length > MAX_DAY_EXERCISES) fail();
   if (day.routine.some(id => !Object.hasOwn(catalogExercises, id))) throw new Error('UNSUPPORTED_SHARE');
   const items = day.routine.map(id => {
     const exercise = catalogExercises[id];
@@ -71,7 +72,7 @@ export function createSharePayload(day, _exercises = catalogExercises, level = 1
     if (dose.preparation) selected.preparation = Object.fromEntries(DOSE_FIELDS.map(key => [key, key === 'value' ? String(dose.preparation[key]) : dose.preparation[key]]));
     return selected;
   }).sort((a, b) => SESSION_PHASES.indexOf(a.phase) - SESSION_PHASES.indexOf(b.phase));
-  return validateSharePayload({ v: 1, items });
+  return validateSharePayload({ v: 3, items });
 }
 
 export function encodeSharePayload(payload) {

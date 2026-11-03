@@ -188,7 +188,8 @@ test('writes reject stale signed-out session UIDs', async () => {
 });
 test('linking a new Google identity retains the anonymous UID and records', async () => {
   await saveMeasurement(uid, { date: '2026-10-13', weight: 70 });
-  const credential = GoogleAuthProvider.credential(JSON.stringify({ sub: 'new-google-identity', email: 'new@example.test' }));
+  const identity = `new-google-${crypto.randomUUID()}`;
+  const credential = GoogleAuthProvider.credential(JSON.stringify({ sub: identity, email: `${identity}@example.test` }));
   const result = await linkWithCredential(auth.currentUser, credential);
   assert.equal(result.user.uid, uid);
   assert.equal(result.user.isAnonymous, false);

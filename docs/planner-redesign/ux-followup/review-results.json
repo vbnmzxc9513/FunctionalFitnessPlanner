@@ -1,0 +1,117 @@
+{
+  "fixture": {
+    "today": "2026-11-03",
+    "dates": [
+      "2026-11-04",
+      "2026-11-06",
+      "2026-11-08"
+    ]
+  },
+  "results": [
+    {
+      "width": 320,
+      "lang": "zh",
+      "metrics": {
+        "overview": {
+          "top": 417,
+          "bottom": 482.59375,
+          "height": 65.59375
+        },
+        "save": {
+          "top": 242,
+          "bottom": 286,
+          "height": 44
+        },
+        "footerTop": 771,
+        "phases": [
+          "暖身\n8 個動作",
+          "訓練\n3 個動作",
+          "收操\n尚未安排"
+        ],
+        "timeLabelsOverlap": false,
+        "firstResultTop": 405.890625
+      },
+      "tasksPassed": true,
+      "runtimeErrors": []
+    },
+    {
+      "width": 390,
+      "lang": "zh",
+      "metrics": {
+        "overview": {
+          "top": 396,
+          "bottom": 461.59375,
+          "height": 65.59375
+        },
+        "save": {
+          "top": 242,
+          "bottom": 286,
+          "height": 44
+        },
+        "footerTop": 771,
+        "phases": [
+          "暖身\n8 個動作",
+          "訓練\n3 個動作",
+          "收操\n尚未安排"
+        ],
+        "timeLabelsOverlap": false,
+        "firstResultTop": 405.890625
+      },
+      "tasksPassed": true,
+      "runtimeErrors": []
+    },
+    {
+      "width": 1440,
+      "lang": "zh",
+      "metrics": {
+        "overview": {
+          "top": 378,
+          "bottom": 446.59375,
+          "height": 68.59375
+        },
+        "save": {
+          "top": 224,
+          "bottom": 268,
+          "height": 44
+        },
+        "footerTop": 927,
+        "phases": [
+          "暖身\n8 個動作",
+          "訓練\n3 個動作",
+          "收操\n尚未安排"
+        ],
+        "timeLabelsOverlap": false,
+        "firstResultTop": 363.890625
+      },
+      "tasksPassed": true,
+      "runtimeErrors": []
+    },
+    {
+      "width": 390,
+      "lang": "en",
+      "metrics": {
+        "overview": {
+          "top": 485,
+          "bottom": 550.59375,
+          "height": 65.59375
+        },
+        "save": {
+          "top": 310,
+          "bottom": 354,
+          "height": 44
+        },
+        "footerTop": 771,
+        "phases": [
+          "Warm-up\n8 exercises",
+          "Training\n3 exercises",
+          "Cooldown\nNot planned"
+        ],
+        "timeLabelsOverlap": false,
+        "firstResultTop": 463.890625
+      },
+      "tasksPassed": true,
+      "runtimeErrors": []
+    }
+  ],
+  "humanUsabilityTesting": "PENDING"
+}

@@ -1,3 +1,4 @@
+import { DAILY_WARMUP_IDS } from '../src/domain/quickWorkouts.js';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import puppeteer from 'puppeteer';
@@ -49,7 +50,7 @@ try {
     assert.ok(await page.$eval('[data-target="serratus"]', item => item.innerText.includes('10/19')));
     assert.ok(await page.$eval('[data-target="calves"]', (item, lang) => item.innerText.includes(lang === 'en' ? 'No dedicated work' : '未排專項'), lang));
     await click('[data-testid="period-day-2026-10-19"]'); assert.ok(await page.$('[data-testid="exercise-open-bf_C07"]'));
-    assert.ok(await page.$('[data-testid="exercise-open-bf_A13"]'));
+    for (const id of DAILY_WARMUP_IDS) assert.ok(await page.$(`[data-testid="exercise-open-${id}"]`), `independent warm-up row ${id}`);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     await page.screenshot({ path: `/tmp/fitness-targets-${layout}.png`, fullPage: true });
     if (layout === 'mobile') { await page.setViewport({ width: 320, height: 844, isMobile: true, hasTouch: true }); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false); }

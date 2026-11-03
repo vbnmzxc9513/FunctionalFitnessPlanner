@@ -1,3 +1,4 @@
+import { MAX_DAY_EXERCISES } from './plannerLimits.js';
 import { RECOVERY_STATES } from './recovery.js';
 import { selectedRegions, TARGET_REGIONS, STIFFNESS_REGIONS, SORENESS_REGIONS, normalizeWeeklyIntent, weeklyChoiceIds } from './trainingPreferences.js';
 import { estimateSessionMinutes } from './sessions.js';
@@ -41,7 +42,7 @@ export function competitionDaysAway(competitionDate, currentDate) {
 }
 
 export function planningExercises(exercises, context) {
-  return eligibleExercises(exercises, normalizePlanningContext(context));
+  return Object.fromEntries(Object.entries(eligibleExercises(exercises, normalizePlanningContext(context))).filter(([id]) => !['bf_A12', 'bf_A13'].includes(id)));
 }
 
 export function validateGeneratedPlan(plan, exercises, dailyTime, { calendarDays = [1, 2, 3, 4, 5] } = {}) {
@@ -52,7 +53,7 @@ export function validateGeneratedPlan(plan, exercises, dailyTime, { calendarDays
   const schedule = plan.schedule.map(day => {
     if (!day || !Number.isInteger(day.day) || !calendarDays.includes(day.day) || seen.has(day.day)
       || !['name', 'theme', 'concept', 'coachAdvice'].every(key => typeof day[key] === 'string')
-      || !Array.isArray(day.routine) || day.routine.length > 8 || new Set(day.routine).size !== day.routine.length
+      || !Array.isArray(day.routine) || day.routine.length > MAX_DAY_EXERCISES || new Set(day.routine).size !== day.routine.length
       || day.routine.some(id => typeof id !== 'string' || !Object.hasOwn(exercises, id))) throw new Error('INVALID_AI_PLAN');
     seen.add(day.day);
     if (day.routine.filter(id => exercises[id]?.sequenceMinutes).length > 1) throw new Error('INVALID_AI_PRESCRIPTION');
