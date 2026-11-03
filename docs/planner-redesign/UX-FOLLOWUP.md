@@ -30,3 +30,13 @@
 既有 `scripts/browser-smoke.mjs` 在保護週一舊版完成紀錄的驗證末尾，誤用「今天」尋找週一動作；11/2（週一）會通過，11/3（週二）則正確切換到週二的新版課表，使舊驗證逾時。測試已改為從日期總覽開啟明確的 `mondayDate`，確認原舊版動作仍顯示，再從 emulator 重新讀取該週的 `exerciseKey(1, originalID)` 完成事實，確認其為 true、八個新版暖身完成 key 未被憑空標為 true。原有套用前後完整 progress 相等檢查保留；日期預覽保持唯讀，不新增完成操作。
 
 修正只涉及 browser smoke 與本證據紀錄，沒有更動產品、資料或凍結整個測試日期。以真實執行日 2026-11-03（週二）啟動全新 `demo-fitness-planner` Auth／Firestore emulators，聚焦執行 `node scripts/browser-smoke.mjs`：desktop 1280×900、mobile 390×844 均通過，含 BYOK 攔截、保護日期／十筆動作重開、實做資料、週切換、登出及英文檢查；未呼叫正式 Gemini。該檔 ESLint 與 `git diff --check` 通過。執行記錄為工作區 `/workspace/scratch/browser-smoke-date-fix.log`；其他 browser suites 與 CI 全套重跑由主代理另行確認。
+
+## CI browser 診斷生命週期修正（2026-11-03）
+
+CI `41591038191` 的既有 `period-smoke.mjs` 在帳號套用時啟用 CDP「所有例外都暫停」，以非同步 `Debugger.paused` listener 呼叫 `Debugger.resume` 收集除錯 JSON；此 listener 的 promise 不受測試流程等待，CDP detach／target 關閉時可在流程外拋出 `TargetCloseError`。該 JSON 不參與任何產品驗收，因此已移除整段常駐暫停診斷。原本的實際套用按鈕消失、器材保存／雲端重開、帳號與裝置實做隔離、完成與實做保存／重開，以及 `pageerror` 必須為空的檢查完整保留；沒有忽略產品錯誤或調整產品程式。
+
+- 全新 `demo-fitness-planner` Auth／Firestore emulators 下，聚焦 `node scripts/period-smoke.mjs`：desktop 1280×900、mobile 390×844 的帳號日期課表套用／保存／重開／實做檢查均通過，exit 0。記錄：`/workspace/scratch/period-smoke-cdp-fix.log`。
+- 完整執行 `firebase emulators:exec --project demo-fitness-planner --only auth,firestore "node scripts/integration.mjs --browser-only"`：15 個 browser suites 全數通過，含四個 UX 情境、週二日期修正、帳號 period smoke 與後續 compact／recovery／coach review／targets／planner requests；exit 0，emulators 正常關閉。記錄：`/workspace/scratch/ux-followup-browser-only-cdp-fix.log`。
+- `period-smoke.mjs` 的 ESLint 與 `git diff --check` 通過；先前兩次 CI 已通過的 66 個資料整合測試未重跑。browser suite 產生的非預期游標閃爍截圖差異已還原，保留先前審閱圖片。
+
+此次修改僅包含該 browser script 與本證據紀錄；未提交或推送，CI 重跑由主代理另行確認。

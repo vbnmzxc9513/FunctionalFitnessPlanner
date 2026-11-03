@@ -150,17 +150,11 @@ try {
       assert.ok(await page.$eval('[data-testid="review-planning-conditions"]', item => item.innerText.includes('Dumbbell')), `${layout}: selected equipment is visible before preview`);
       await preview();
       assert.ok(await page.$eval('[data-testid="period-equipment-summary"]', item => item.innerText.includes('Dumbbell')), `${layout}: preview retains selected equipment`);
-      const diagnosticSession = await page.createCDPSession(); const caught = [];
-      await diagnosticSession.send('Debugger.enable');
-      diagnosticSession.on('Debugger.paused', async event => { caught.push(String(event.data?.description || event.reason)); await diagnosticSession.send('Debugger.resume'); });
-      await diagnosticSession.send('Debugger.setPauseOnExceptions', { state: 'all' });
-      try {
-        await clickSelector('[data-testid="period-plan-apply"]'); await page.waitForFunction(() => !document.querySelector('[data-testid="period-plan-apply"]'));
-      } finally {
-        await diagnosticSession.send('Debugger.setPauseOnExceptions', { state: 'none' });
-        await writeFile(`/tmp/auto-period-account-exceptions-${layout}.json`, JSON.stringify(caught, null, 2));
-        await diagnosticSession.detach();
-      }
+      // Observe the real apply result without pausing caught exceptions: an
+      // async Debugger.resume diagnostic can outlive its detached CDP session.
+      // Unhandled product errors remain covered by the pageerror assertion below.
+      await clickSelector('[data-testid="period-plan-apply"]');
+      await page.waitForFunction(() => !document.querySelector('[data-testid="period-plan-apply"]'));
       await page.evaluate(() => { for (const key of Object.keys(localStorage).filter(key => key.startsWith('fitness_saved_period_'))) { const saved = JSON.parse(localStorage.getItem(key)); if (saved?.periodId) { saved.createdAt = 1; localStorage.setItem(key, JSON.stringify(saved)); } } });
       await page.reload({ waitUntil: 'networkidle2' }); await click('Plan'); await visible('[data-testid="period-plan-preview"]');
       await clickSelector('[data-testid="period-plan-conditions"] > summary');
