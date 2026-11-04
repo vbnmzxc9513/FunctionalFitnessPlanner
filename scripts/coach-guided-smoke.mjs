@@ -23,9 +23,17 @@ try {
     page.on('pageerror', e => errors.push(e.message)); await page.setRequestInterception(true);
     page.on('request', request => ['127.0.0.1', 'localhost'].includes(new URL(request.url()).hostname) || /^(data|blob):/.test(request.url()) ? request.continue() : request.abort());
     const click = async selector => { const el = await page.waitForSelector(selector, { visible: true }); await el.evaluate(el => el.scrollIntoView({ block: 'center', behavior: 'instant' })); await el.click(); await el.dispose(); };
-    const shot = async name => { await page.evaluate(() => { document.activeElement?.blur(); scrollTo(0, 0); }); await page.screenshot({ path: `${out}/${width}-${lang}-${name}.png`, fullPage: true }); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${name}: no horizontal overflow`); };
+    const shot = async name => { assert.equal(await page.$$eval('[data-testid="period-workspace"]', els => els.length), 1, 'exactly one planning workspace is mounted'); await page.evaluate(() => { document.activeElement?.blur(); scrollTo(0, 0); }); await page.screenshot({ path: `${out}/${width}-${lang}-${name}.png`, fullPage: true }); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${name}: no horizontal overflow`); };
     const generate = async () => { await click('[data-testid="plan-preview-create"]'); await page.waitForSelector('[data-testid="coach-plan-brief"]', { visible: true }); assert.equal(await page.evaluate(() => localStorage.getItem('fitness_date_period_v1')), null, 'preview and adjustments do not apply dates'); };
-    await page.goto(site, { waitUntil: 'networkidle2' }); await click('[data-testid="planning-range-continue"]');
+    await page.goto(site, { waitUntil: 'networkidle2' });
+    if (width < 1000) {
+      await page.waitForFunction(() => [...document.querySelectorAll('button')].some(button => ['課表', 'Plan'].includes(button.innerText.trim())));
+      await page.evaluate(() => [...document.querySelectorAll('button')].find(button => ['課表', 'Plan'].includes(button.innerText.trim())).click());
+      await click('[data-testid="open-auto-planner"]');
+    }
+    await page.waitForSelector('[data-testid="planning-range"]');
+    assert.equal(await page.$$eval('[data-testid="period-workspace"]', els => els.length), 1, 'both Today and Plan entry show only one wizard');
+    await click('[data-testid="planning-range-continue"]');
     await click('[data-testid="coach-time-40"]');
     await click('[data-testid="quiz-schedule"] > summary');
     for (const day of [2, 4, 5]) await click(`[data-testid="quiz-schedule"] fieldset:first-of-type label:nth-of-type(${day})`);

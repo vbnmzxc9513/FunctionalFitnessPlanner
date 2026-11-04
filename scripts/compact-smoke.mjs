@@ -80,7 +80,8 @@ try {
     assert.equal(saved.logs[0].date, today); assert.ok(saved.logs[0].sets.every(set => set.value === 6 && (!saved.logs[0].perSide || set.otherSide === 6)));
     assert.deepEqual(saved.sessionsByDate, fixture.sessionsByDate, `${layout}: browsing and logging leave prescriptions unchanged`);
     assert.ok(DAILY_WARMUP_IDS.every(id => saved.progressByWeek[week]?.completed[`day3_${id}`] !== true), `${layout}: logging main work does not complete any warm-up`);
-    await close(); await page.reload({ waitUntil: 'networkidle2' }); await click(openMain);
+    // Readiness is the restored exercise UI, not idle Firebase/background requests.
+    await close(); await page.reload({ waitUntil: 'domcontentloaded' }); await click(openMain);
     assert.ok(await page.$$eval('dialog[open] [data-testid="current-exercise"] input[required]', items => items.every(item => item.value === '6')), `${layout}: factual sets survive reload`);
     await close(); await page.setViewport({ width: 320, height, hasTouch: touch, isMobile: touch });
     await page.waitForFunction(() => getComputedStyle(document.querySelector('.app-shell')).paddingLeft === '0px');
