@@ -25,6 +25,7 @@ try {
     await page.goto(site, { waitUntil: 'networkidle2' }); await fill('[data-testid="planning-range"] input:first-of-type', '2026-10-19');
     await page.$$eval('[data-testid="planning-range"] input', inputs => { const el = inputs[1]; Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, '2026-10-23'); el.dispatchEvent(new Event('input', { bubbles: true })); });
     await click('[data-testid="planning-range-continue"]');
+    await click('[data-testid="coach-targets"] > summary');
     assert.equal(await page.$eval('[data-testid="target-details"]', item => item.open), false, 'specific muscles initially stay collapsed');
     await click('[data-testid="target-details"] > summary');
     for (const region of targets) await click(`[data-regions="targetRegions"] label:has(input[data-target-region="${region}"])`);

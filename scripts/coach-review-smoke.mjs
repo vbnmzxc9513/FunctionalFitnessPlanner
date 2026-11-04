@@ -36,7 +36,7 @@ try {
     for (const index of [1, 2, 3]) await click(`[data-testid="quiz-equipment"] label:nth-of-type(${index})`);
     await click('[data-testid="setup-next"]'); await page.select('[data-testid="recovery-state"]', state);
     // Explicit normal and compound positive notes must not be classified as fatigue.
-    if (state === 'normal') await fill('[data-testid="recovery-notes"]', '睡得很好，沒有疲勞');
+    if (state === 'normal') { await click('[data-testid="coach-body-notes"] > summary'); await fill('[data-testid="recovery-notes"]', '睡得很好，沒有疲勞'); }
     await click('[data-testid="warmup-familiar"]'); await click('[data-testid="setup-next"]');
     assert.ok(await page.$eval('[data-testid="review-planning-conditions"]', item => item.innerText.includes('90')));
     await click('[data-testid="plan-preview-create"]'); await page.waitForSelector('[data-testid="period-plan-preview"]');

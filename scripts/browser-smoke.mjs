@@ -236,12 +236,12 @@ try {
     await click('設定'); await openDetails('進階：AI 教練自備金鑰');
     await fill('input[type="password"]', 'mock-test-only'); await click(TRANSLATIONS.zh.settingsSaveBtn);
     await openLegacyAI();
-    await openDetailsSelector('[data-testid="planner-optional"]'); await labeledSelect('球局強度', 'mixed');
+    await openDetailsSelector('[data-testid="quiz-schedule"]'); await labeledSelect('球局強度', 'mixed');
     await openDetailsSelector('[data-testid="quiz-schedule"]');
     for (const day of [2, 5, 6]) {
       await clickSelector(`[data-testid="quiz-schedule"] label:has(input[aria-label=${JSON.stringify(TRANSLATIONS.zh.allDayNames[day - 1])}])`);
     }
-    await click('下一步'); await labeledSelect('肩部狀態與活動限制', 'restricted'); await click('下一步');
+    await click('下一步'); await labeledSelect('目前有疼痛、治療或活動限制嗎？', 'restricted'); await click('下一步');
     await openDetailsSelector('[data-testid="planner-advanced"]');
     assert.ok(await read('button', () => [...document.querySelectorAll('button')].find(button => window.__smokeVisible(button) && button.innerText === 'App AI 體驗').disabled));
     await click('AI 自備金鑰');
@@ -250,7 +250,7 @@ try {
     assert.ok(!candidateExercises(planningPayload.contents[0].parts[0].text).some(item => item.shoulderLoaded), `${layout} restricted AI candidates exclude shoulder loading`);
     await waitText('已有實做／完成紀錄，以下日期唯讀並保持原安排');
     await click('返回修改');
-    await click('上一步'); await labeledSelect('肩部狀態與活動限制', 'unrestricted'); await click('下一步');
+    await click('上一步'); await labeledSelect('目前有疼痛、治療或活動限制嗎？', 'unrestricted'); await click('下一步');
     await click('產生 AI 預覽'); await visibleElement('[data-testid="weekly-plan-preview"]');
     const fullPrompt = planningPayload.contents[0].parts[0].text;
     assert.ok(fullPrompt.includes('八筆獨立'), `${layout} AI prompt requests independent warmup prescriptions`);

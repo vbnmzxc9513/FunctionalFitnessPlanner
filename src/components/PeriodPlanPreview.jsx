@@ -1,3 +1,4 @@
+import CoachBrief from './CoachBrief.jsx';
 import { useBackNavigation } from '../hooks/useBackNavigation.js';
 import SessionTimeSummary from './SessionTimeSummary.jsx';
 import TrainingTargetOverview from './TrainingTargetOverview.jsx';
@@ -16,7 +17,7 @@ import ExerciseDetails from './ExerciseDetails.jsx';
 import { journeyText } from '../journeyLocale.js';
 import './PeriodPlanPreview.css';
 
-export default function PeriodPlanPreview({ preview, lang = 'zh', t = key => key, exercises = {}, today, onBack, onApply, busy = false, stale = false, onSaveWorkout, onShare, onEditWorkout, onPlanDate, choiceReport, choiceSummary }) {
+export default function PeriodPlanPreview({ preview, lang = 'zh', t = key => key, exercises = {}, today, onBack, onApply, busy = false, stale = false, onSaveWorkout, onShare, onEditWorkout, onPlanDate, choiceReport, choiceSummary, onAdjust }) {
   const [selected, setSelected] = useState(null);
   const [opened, setOpened] = useState(null);
   useBackNavigation(!!opened, () => setOpened(null), 100);
@@ -51,7 +52,10 @@ export default function PeriodPlanPreview({ preview, lang = 'zh', t = key => key
   const label = session => {
     if (!session) return en ? 'Not planned' : '尚未安排';
     const type = sessionType(session);
-    return `${type === 'training' ? en ? 'Strength' : '肌力' : p(type === 'rest' && (court(session) || eventPhase(session.date) === 'competitionDay') ? 'fitnessRest' : type)}${court(session) ? ` · ${p('court')}` : ''}`;
+    const trainingLabel = session.prescriptions?.some(dose => dose.phase === 'strength') ? en ? 'Strength' : '肌力'
+      : session.prescriptions?.some(dose => ['skill', 'accessory'].includes(dose.phase)) ? en ? 'Coordination / control' : '協調／控制'
+        : en ? 'Training' : '訓練';
+    return `${type === 'training' ? trainingLabel : p(type === 'rest' && (court(session) || eventPhase(session.date) === 'competitionDay') ? 'fitnessRest' : type)}${court(session) ? ` · ${p('court')}` : ''}`;
   };
   const eventSummary = summary => [...new Set(dates.filter(date => date >= summary.from && date <= summary.to).map(eventPhase).filter(Boolean))]
     .map(phase => phase === 'competitionDay' ? `${p(phase)} ${preview.profile.context.competitionDate}` : p(phase)).join(' · ');
@@ -88,6 +92,7 @@ export default function PeriodPlanPreview({ preview, lang = 'zh', t = key => key
       </header>
       {eventPhase(selectedDate) && <p className="text-sm text-amber-800">{p(eventPhase(selectedDate))}</p>}
       {day && <>
+        {day.coachAdvice && <p className="coach-day-reason">{day.coachAdvice.split(/(?<=[。.!])\s*/)[0]}</p>}
         <div className="period-day-status"><span className="period-status">{statusLabel(selectedDate)}</span>{onEditWorkout && <button type="button" className="period-text-action" disabled={!!today && day.date < today} onClick={() => onEditWorkout(day)}><Pencil size={17} />{en ? 'Edit this day' : '手動調整這天'}</button>}</div>
         <div className="period-day-tools">{onSaveWorkout && <button type="button" data-testid="save-period-day" className="period-text-action" onClick={() => onSaveWorkout(day)}><BookOpen size={20} />{en ? 'Save as workout' : '儲存為課表'}</button>}{onShare && <button type="button" className="period-text-action" onClick={() => onShare(day)}><Share2 size={20} />{en ? 'Share this day' : '分享這天'}</button>}</div>
         <div className="period-phase-cards">{visualSections.map(group => {
@@ -100,6 +105,7 @@ export default function PeriodPlanPreview({ preview, lang = 'zh', t = key => key
       </>}
     </section> : <>
       {onApply && <header className="period-preview-heading"><h2>{en ? 'Review and apply' : '檢查並套用'}</h2><p>{shortDate(range.from)} — {shortDate(range.to)} · {dates.length} {p('days')}</p><div className="period-preview-meta"><span className="period-status period-status-draft">{en ? 'Draft preview' : '草稿預覽'}</span></div></header>}
+      {onApply && <CoachBrief {...{ preview, exercises, lang, t, onAdjust, busy }} />}
       {((onApply && (stale || incomplete || choiceSummary)) || noTraining) && <div className="period-preview-issues">
         {onApply && onEditWorkout && <button type="button" className="period-text-action" onClick={() => onEditWorkout(preview.sessions)}>{en ? 'Adjust this draft' : '調整這份草稿'}</button>}
         {onApply && stale && <p role="alert">{p('stale')}</p>}
@@ -109,7 +115,7 @@ export default function PeriodPlanPreview({ preview, lang = 'zh', t = key => key
       </div>}
       {groups.map(week => {
         const weekDates = dates.filter(date => getWeekString(new Date(`${date}T12:00:00`)) === week);
-        return <section className="period-agenda-week" key={week} data-week={week}><div className="period-agenda-heading"><h3>{groups.length > 1 ? `${shortDate(weekDates[0])} — ${shortDate(weekDates.at(-1))}` : en ? 'This week’s plan' : '這週的安排'}</h3>{groups.length === 1 && <span>{en ? `${trainingCount} strength · ${recoveryCount} recovery` : `${sessions.length} 天已安排 · ${trainingCount} 肌力 · ${recoveryCount} 恢復`}</span>}</div><div className="period-agenda-card">{weekDates.map(date => {
+        return <section className="period-agenda-week" key={week} data-week={week}><div className="period-agenda-heading"><h3>{groups.length > 1 ? `${shortDate(weekDates[0])} — ${shortDate(weekDates.at(-1))}` : en ? 'This week’s plan' : '這週的安排'}</h3>{groups.length === 1 && <span>{en ? `${trainingCount} training · ${recoveryCount} recovery` : `${sessions.length} 天已安排 · ${trainingCount} 訓練 · ${recoveryCount} 恢復`}</span>}</div><div className="period-agenda-card">{weekDates.map(date => {
           const session = sessions.find(item => item.date === date);
           return <button type="button" key={date} data-testid={`period-day-${date}`} onClick={() => !session && onPlanDate ? onPlanDate(date) : openDay(date)} className="period-agenda-row" aria-label={`${dateLabel(date)} · ${session?.theme || label(session)} · ${session ? statusLabel(date) : label(session)}`}>
             <span className="period-agenda-date"><strong>{shortDate(date)}</strong><span>{weekday(date)}</span></span>

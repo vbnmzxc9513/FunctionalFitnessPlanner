@@ -46,6 +46,7 @@ try {
     await click('[data-testid="quiz-equipment"] > summary');
     for (const index of [1, 2, 3]) await click(`[data-testid="quiz-equipment"] label:nth-of-type(${index})`);
     await click('[data-testid="setup-next"]'); await page.select('[data-testid="recovery-state"]', 'normal'); await click('[data-testid="setup-next"]');
+    await click('[data-testid="coach-exercise-options"] > summary');
     await click('[data-testid="weekly-choice-search"] > summary');
     const ids = ['bf_B01', 'bf_B02', 'bf_B11', 'bf_B10', 'bf_B06', 'bf_A06', 'bf_H03'];
     for (const id of ids) {

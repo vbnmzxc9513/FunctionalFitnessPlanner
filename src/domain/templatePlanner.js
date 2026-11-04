@@ -30,6 +30,11 @@ function clinicalMode(profile) {
   return 'normal';
 }
 
+// Intake explanations use the same restriction decision as the planner.
+export function planningRestriction(context) {
+  return clinicalMode(normalizePlanningContext(context));
+}
+
 /** Manual additions share the template's conservative handling of unclear restrictions. */
 export function manualPlanningExercises(exercises, context) {
   const profile = normalizePlanningContext(context);
@@ -269,7 +274,7 @@ export function generateTemplatePlan(exercises, context, dailyTime, lang = 'zh',
     else if (post || recoveryOnly || minutes < 15 || onCourt(number) || (taper && !familiar.size)) makeRecovery(day, recoveryAvailable, lang, reason, minutes, recovery.limited || post || taper && !familiarWarmup);
     else if (strengthDays.includes(number)) {
       addTraining(day, familiarAvailable, lang, focus, 'strength', tired || taper || longCourt || onCourt(number - 1) ? 1 : 2, taper ? new Set(Object.keys(familiarAvailable)) : null, weekVariant + sessionOrdinal++, !tired && !taper ? profile : {}, minutes, tired, targetUse);
-      day.coachAdvice = text(lang, tired ? '恢復狀態採低量課：保留拉伸，減少正式主項並取消額外步序。' : longCourt ? '本週球局較長，保留低量肌力；時間不用填滿。' : onCourt(number - 1) ? '昨天有球局，今天保留下肢低量正式組，不為了用滿時間加量。' : '今天是非球日，以互補的下肢與上肢模式累積肌力。', tired ? 'Recovery calls for reduced work: keep stretching, reduce main lifts and omit extra step practice.' : longCourt ? 'Long court sessions call for low-volume strength; there is no need to fill the time limit.' : onCourt(number - 1) ? 'Court play was scheduled yesterday; keep lower-body work low rather than adding volume to fill time.' : 'This non-court day uses complementary lower- and upper-body strength patterns.') + ' ' + text(lang, '正式組保留約 2–3 次姿勢良好的餘力；若睡眠、精神或隔天反應變差，少做一組或改恢復。', 'Keep about 2–3 good-form repetitions in reserve. Reduce a set or switch to recovery if sleep, readiness or next-day symptoms worsen.');
+      day.coachAdvice = (options.lastWeekFeedback === -1 ? text(lang, '上週回報偏難，這次先減量。', 'Last week felt too hard, so this plan reduces work. ') : '') + text(lang, tired ? '恢復狀態採低量課：保留拉伸，減少正式主項並取消額外步序。' : longCourt ? '本週球局較長，保留低量肌力；時間不用填滿。' : onCourt(number - 1) ? '昨天有球局，今天保留下肢低量正式組，不為了用滿時間加量。' : '今天是非球日，以互補的下肢與上肢模式累積肌力。', tired ? 'Recovery calls for reduced work: keep stretching, reduce main lifts and omit extra step practice.' : longCourt ? 'Long court sessions call for low-volume strength; there is no need to fill the time limit.' : onCourt(number - 1) ? 'Court play was scheduled yesterday; keep lower-body work low rather than adding volume to fill time.' : 'This non-court day uses complementary lower- and upper-body strength patterns.') + ' ' + text(lang, '正式組保留約 2–3 次姿勢良好的餘力；若睡眠、精神或隔天反應變差，少做一組或改恢復。', 'Keep about 2–3 good-form repetitions in reserve. Reduce a set or switch to recovery if sleep, readiness or next-day symptoms worsen.');
     } else if (!skillUsed && !tired && !highLoad && !longCourt && (!consecutive || shortLightCourt || focus === 'coordination') && (!taper || familiar.size)) {
       addTraining(day, familiarAvailable, lang, focus, 'skill', 1, taper ? new Set(Object.keys(familiarAvailable)) : null, 0, !taper ? profile : {}, minutes); skillUsed = true;
       day.coachAdvice = text(lang, '每次步序重置、依動作提示充分休息；獨自預設方向是協調練習，不稱作未知訊號反應。', 'Reset between trials and take the prescribed pauses. Predetermined solo directions train coordination, not reaction to an unknown cue.');

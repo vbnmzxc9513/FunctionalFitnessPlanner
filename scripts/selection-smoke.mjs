@@ -59,6 +59,7 @@ try {
     const choices = () => page.evaluate(() => Object.values(JSON.parse(localStorage.getItem('fitness_period_questionnaire_signed-out') || '{}').drafts || {}).at(-1)?.context?.weeklyExerciseIds || []);
     const waitChoice = async (id, chosen) => page.waitForFunction(({ id, chosen }) => (Object.values(JSON.parse(localStorage.getItem('fitness_period_questionnaire_signed-out') || '{}').drafts || {}).at(-1)?.context?.weeklyExerciseIds || []).includes(id) === chosen, {}, { id, chosen });
     const choose = async (code, purpose = '主要訓練') => {
+      await open('[data-testid="coach-exercise-options"]');
       const id = byCode(code); await click(purpose); await open('[data-testid="weekly-choice-search"]');
       await fill('[aria-label="輸入動作名稱"]', catalog[id].name); await clickSelector(`[data-testid="weekly-choice-toggle-${id}"]`); await waitChoice(id, true); return id;
     };
@@ -69,6 +70,7 @@ try {
     };
     await page.goto(site, { waitUntil: 'networkidle2' }); await visible('[data-testid="first-plan"]');
     await click('課表'); await click('動作庫'); await visible('.exercise-library'); await clickSelector('.exercise-library .button-primary'); await clickSelector('[data-testid="planning-range-continue"]');
+    await open('[data-testid="coach-targets"]');
     await visible('[data-testid="planner-form"] fieldset:not([hidden]) [data-regions="targetRegions"]');
     await page.select('[data-testid="planner-form"] select', 'stability');
     await label('臀部／腿後側', '[data-regions="targetRegions"]'); await label('核心控制', '[data-regions="targetRegions"]');
@@ -86,7 +88,7 @@ try {
     assert.equal(await page.$$eval('[data-testid="period-plan-preview"] [data-testid^="exercise-log-"]', elements => elements.length), 0, `${layout}: preview has no factual logging controls`);
     assert.equal(await page.$$eval('[data-testid="weekly-choice-report"] li', items => items.length), 4);
     await clickSelector(`[data-testid="period-day-${today}"]`); await visible('[data-testid="period-day-detail"]');
-    await click('返回課表'); await click('返回修改條件'); await clickSelector(`[data-testid="weekly-exercise-choices"] section button[aria-label$=${JSON.stringify(catalog[selected[2]].name)}]`); await waitChoice(selected[2], false);
+    await click('返回課表'); await click('返回修改條件'); await open('[data-testid="coach-exercise-options"]'); await clickSelector(`[data-testid="weekly-exercise-choices"] section button[aria-label$=${JSON.stringify(catalog[selected[2]].name)}]`); await waitChoice(selected[2], false);
     await preview(); await clickSelector('[data-testid="period-plan-apply"]');
     await page.waitForFunction(() => !!localStorage.getItem('fitness_date_period_v1'));
     const applied = await draft(); assert.deepEqual(applied.profile.context.weeklyExerciseIds, selected.filter((_, index) => index !== 2));
@@ -100,7 +102,7 @@ try {
     await clickSelector(`[data-testid="library-weekly-${selected[1]}"]`); await page.waitForFunction(id => document.querySelector(`[data-testid="library-weekly-${id}"]`)?.getAttribute('aria-pressed') === 'false', {}, selected[1]);
     assert.equal(await page.$eval(`[data-testid="favorite-${selected[1]}"]`, button => button.textContent), favoriteBefore, `${layout}: weekly choices do not change favorites`);
     assert.deepEqual(await draft(), beforeLibrary, `${layout}: library choices leave the applied plan and completion facts intact`);
-    await clickSelector('.exercise-library .button-primary'); await clickSelector('[data-testid="planning-range-continue"]'); await click('下一步'); await click('下一步'); await visible('[data-testid="weekly-exercise-choices"]');
+    await clickSelector('.exercise-library .button-primary'); await clickSelector('[data-testid="planning-range-continue"]'); await click('下一步'); await click('下一步'); await open('[data-testid="coach-exercise-options"]'); await visible('[data-testid="weekly-exercise-choices"]');
     for (const code of ['B01', 'B11', 'B05', 'D02', 'D04', 'C01']) await choose(code);
     assert.equal((await choices()).length, 8);
     await click('主要訓練'); await open('[data-testid="weekly-choice-search"]');
@@ -108,8 +110,8 @@ try {
     await page.waitForFunction(text => document.body.innerText.includes(text), {}, TRANSLATIONS.zh.noMatchingExercises);
     await fill('[aria-label="輸入動作名稱"]', catalog[byCode('C11')].name);
     assert.equal(await page.$eval(`[data-testid="weekly-choice-toggle-${byCode('C11')}"]`, button => button.matches(':disabled')), true, `${layout}: a ninth selection is blocked`);
-    await click('上一步'); await label('大腿前側', '[data-regions="sorenessRegions"]');
-    const health = await page.evaluateHandle(() => [...document.querySelectorAll('label')].find(element => element.textContent.startsWith('肩部狀態與活動限制') && element.getClientRects().length).querySelector('select'));
+    await click('上一步'); await open('[data-testid="coach-body-notes"]'); await label('大腿前側', '[data-regions="sorenessRegions"]');
+    const health = await page.evaluateHandle(() => [...document.querySelectorAll('label')].find(element => element.querySelector('[data-testid="health-status"]') && element.getClientRects().length).querySelector('select'));
     await health.asElement().select('unknown'); await health.dispose();
     await click('下一步'); await preview();
     assert.equal(await page.$$eval('[data-testid="period-plan-preview"] [data-testid^="period-day-"]', items => items.filter(item => item.innerText.includes('休息')).length), 6, `${layout}: health uncertainty overrides selected movements`);
@@ -117,7 +119,7 @@ try {
     assert.deepEqual(await draft(), beforeLibrary, `${layout}: an unapplied restricted preview cannot alter training facts`);
     await click('今天'); assert.deepEqual(await draft(), beforeLibrary);
     await click('設定'); await click('🌐 English'); await click('Plan'); await click('Plan another date range'); await clickSelector('[data-testid="planning-range-continue"]'); await click('Next'); await click('Next');
-    await visible('[data-testid="weekly-exercise-choices"]');
+    await open('[data-testid="coach-exercise-options"]'); await visible('[data-testid="weekly-exercise-choices"]');
     assert.equal(await page.$eval('[data-testid="planner-form"]', form => /[\u4e00-\u9fff]/.test(form.innerText)), false, `${layout}: visible questionnaire content is localized in English`);
     const expiredRange = await page.evaluate(() => JSON.parse(localStorage.getItem('fitness_period_questionnaire_signed-out')).range);
     const factsBeforeRollover = await draft();

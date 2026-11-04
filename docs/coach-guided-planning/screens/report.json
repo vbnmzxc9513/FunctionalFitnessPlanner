@@ -1,0 +1,62 @@
+[
+  {
+    "width": 390,
+    "lang": "zh",
+    "strength40": 2,
+    "adjustedMinutes": [
+      20,
+      8,
+      16,
+      8,
+      8,
+      0,
+      0
+    ],
+    "result": "passed"
+  },
+  {
+    "width": 320,
+    "lang": "zh",
+    "strength40": 2,
+    "adjustedMinutes": [
+      20,
+      8,
+      16,
+      8,
+      8,
+      0,
+      0
+    ],
+    "result": "passed"
+  },
+  {
+    "width": 390,
+    "lang": "en",
+    "strength40": 2,
+    "adjustedMinutes": [
+      20,
+      8,
+      16,
+      8,
+      8,
+      0,
+      0
+    ],
+    "result": "passed"
+  },
+  {
+    "width": 1280,
+    "lang": "en",
+    "strength40": 2,
+    "adjustedMinutes": [
+      20,
+      8,
+      16,
+      8,
+      8,
+      0,
+      0
+    ],
+    "result": "passed"
+  }
+]

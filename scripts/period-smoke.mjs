@@ -73,7 +73,7 @@ try {
     await clickSelector('[data-testid="planning-range-continue"]');
     await page.select('[data-testid="planner-form"] select', 'strength');
     await clickSelector('[data-testid="training-days"] label:nth-of-type(6)');
-    await clickSelector('[data-testid="weekly-preferences"] label');
+    await open('[data-testid="coach-targets"]'); await clickSelector('[data-testid="weekly-preferences"] label');
     await click('下一步'); await clickSelector('[data-regions="stiffnessRegions"] label'); await click('下一步'); await preview();
     assert.equal(await draft(), null, `${layout}: preview has no applied draft`);
     assert.ok(await page.$eval('[data-testid="period-minutes-scope"]', item => item.innerText.includes('球局與比賽時間另計')), `${layout}: preview explains the conditioning-only time estimate`);
@@ -145,7 +145,7 @@ try {
       const dumbbell = '[data-testid="quiz-equipment"] label:first-child input';
       if (!await page.$eval(dumbbell, item => item.checked)) await clickSelector('[data-testid="quiz-equipment"] label:first-child');
       await click('Next');
-      await page.select('[data-testid="planner-form"] fieldset:not([hidden]) select', 'unrestricted');
+      await page.select('[data-testid="health-status"]', 'unrestricted');
       await click('Next');
       assert.ok(await page.$eval('[data-testid="review-planning-conditions"]', item => item.innerText.includes('Dumbbell')), `${layout}: selected equipment is visible before preview`);
       await preview();
