@@ -72,25 +72,24 @@ export async function setCompletion(uid, week, day, id, done, exercise, fallback
   assertUser(uid);
   return runTransaction(db, async transaction => {
     const ref = userDoc(uid, 'progress', week);
-    const plan = await transaction.get(userDoc(uid, 'plans', week));
-    const progress = await transaction.get(ref);
-    const native = [];
-    for (let slot = 1; slot <= 7; slot++) {
-      const date = dateForWeekDay(week, slot);
-      const snapshot = await transaction.get(userDoc(uid, 'dateSessions', date));
-      if (snapshot.exists()) {
-        const metadata = snapshot.data();
-        const records = {};
-        for (const id of dateDoseKeys(date, metadata)) {
-          const dose = await transaction.get(userDoc(uid, 'dateDoses', id));
-          if (dose.exists()) records[id] = dose.data();
-        }
-        const doses = metadata.routine.map(id => dateDoseRecord(date, metadata, records, id));
-        if (doses.some((dose, index) => !dose || dose.revision !== metadata.revision || dose.date !== date
-          || dose.dose?.id !== metadata.routine[index])) throw new Error('PLAN_CHANGED');
-        native.push({ ...metadata, prescriptions: doses.map(dose => dose.dose) });
-      }
-    }
+    // Two read stages: metadata in parallel, then its dependent dose chunks.
+    // Every document remains inside the transaction's conflict check.
+    const dates = Array.from({ length: 7 }, (_, index) => dateForWeekDay(week, index + 1));
+    const [plan, progress, ...metadata] = await Promise.all([
+      transaction.get(userDoc(uid, 'plans', week)), transaction.get(ref),
+      ...dates.map(date => transaction.get(userDoc(uid, 'dateSessions', date))),
+    ]);
+    const native = (await Promise.all(metadata.map(async (snapshot, index) => {
+      if (!snapshot.exists()) return null;
+      const date = dates[index], session = snapshot.data();
+      const keys = dateDoseKeys(date, session);
+      const snapshots = await Promise.all(keys.map(key => transaction.get(userDoc(uid, 'dateDoses', key))));
+      const records = Object.fromEntries(snapshots.flatMap((dose, i) => dose.exists() ? [[keys[i], dose.data()]] : []));
+      const doses = session.routine.map(id => dateDoseRecord(date, session, records, id));
+      if (doses.some((dose, i) => !dose || dose.revision !== session.revision || dose.date !== date
+        || dose.dose?.id !== session.routine[i])) throw new Error('PLAN_CHANGED');
+      return { ...session, prescriptions: doses.map(dose => dose.dose) };
+    }))).filter(Boolean);
     assertUser(uid);
     const savedSchedule = plan.exists() ? plan.data().schedule : fallback || [];
     const priorSchedule = progress.data()?.scheduleSnapshot || [];

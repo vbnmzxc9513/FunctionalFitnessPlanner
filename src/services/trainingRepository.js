@@ -38,10 +38,11 @@ export async function saveTrainingLog(uid, record, { fallback, expectedRevision,
   if (!Number.isInteger(expectedRevision)) throw new Error('PLAN_CHANGED');
   return runTransaction(db, async transaction => {
     const ref = userDoc(uid, 'trainingLogs', trainingLogId(clean));
-    const existing = await transaction.get(ref);
-    const savedPlan = await transaction.get(userDoc(uid, 'plans', clean.week));
     const scheduledDate = dateForWeekDay(clean.week, clean.day);
-    const native = await transaction.get(userDoc(uid, 'dateSessions', scheduledDate));
+    const [existing, savedPlan, native] = await Promise.all([
+      transaction.get(ref), transaction.get(userDoc(uid, 'plans', clean.week)),
+      transaction.get(userDoc(uid, 'dateSessions', scheduledDate)),
+    ]);
     const nativeData = native.exists() ? native.data() : null;
     const nativeRecords = {};
     if (nativeData) {

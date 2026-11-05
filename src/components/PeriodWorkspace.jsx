@@ -1,11 +1,11 @@
 import { useBackNavigation } from '../hooks/useBackNavigation.js';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import PlanningRange from './PlanningRange.jsx';
 import PeriodPlanPreview from './PeriodPlanPreview.jsx';
 import Onboarding from './Onboarding.jsx';
 import { defaultPlanningRange, generatePeriodPlan, normalizePlanningRange } from '../domain/periodPlanning.js';
-import { applyPeriodPlan, loadPeriodState } from '../services/periodRepository.js';
+import { applyPeriodPlan, loadPeriodState, loadPeriodOverview } from '../services/periodRepository.js';
 import { applyLocalPeriod, localPeriodState, periodProfile, writePeriodDraft, readPeriodDraft, normalizePeriodDraft } from '../domain/periodDraft.js';
 import { readStorage, writeStorage } from '../domain/storage.js';
 import { estimateSessionMinutes } from '../domain/sessions.js';
@@ -41,7 +41,7 @@ export default function PeriodWorkspace({ uid, today, lang, t, exercises, profil
   const [storageFailed, setStorageFailed] = useState(false);
   const request = useRef(0);
   const rangeKey = `${range.from}_${range.to}`;
-  const fingerprint = JSON.stringify({ uid, range, profile, exercises, localPeriod, history, today, lang, refreshToken });
+  const fingerprint = useMemo(() => JSON.stringify({ uid, range, profile, exercises, localPeriod, history, today, lang, refreshToken }), [uid, range, profile, exercises, localPeriod, history, today, lang, refreshToken]);
   const fingerprintRef = useRef(fingerprint);
   useEffect(() => { fingerprintRef.current = fingerprint; }, [fingerprint]);
   useEffect(() => () => { ++request.current; }, []);
@@ -54,7 +54,8 @@ export default function PeriodWorkspace({ uid, today, lang, t, exercises, profil
   useEffect(() => {
     if (!overview) return;
     let active = true;
-    loadState(overview.range).then(state => {
+    const loading = uid ? loadPeriodOverview(uid, overview.range, { today, exercises, fallbackPlans }) : Promise.resolve(localPeriodState(localPeriod, overview.range, today));
+    loading.then(state => {
       if (!active) return;
       const sessions = Object.values(state.sessionsByDate).filter(session => session.date >= overview.range.from && session.date <= overview.range.to && (!overview.dates || overview.dates.includes(session.date))).sort((a, b) => a.date.localeCompare(b.date));
       const weeklySummaries = [...new Set(sessions.map(session => session.week))].map(week => {

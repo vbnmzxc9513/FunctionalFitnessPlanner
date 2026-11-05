@@ -10,7 +10,7 @@ import { auth } from '../../src/services/firebase.js';
 import { userDoc, userCollection, savePlan, setCompletion, captureGuestData, importGuestData } from '../../src/services/repository.js';
 import { prepareWeeklyApplication, applyWeeklyApplication } from '../../src/services/weeklyApplication.js';
 import legacyPlans from '../fixtures/legacyWeeklyPlans.json' with { type: 'json' };
-import { applyPeriodPlan, assembleDateSessions, loadPeriodState, saveDateReadinessAdjustment } from '../../src/services/periodRepository.js';
+import { applyPeriodPlan, assembleDateSessions, loadPeriodState, loadPeriodOverview, saveDateReadinessAdjustment } from '../../src/services/periodRepository.js';
 import { saveTrainingLog, plannedSnapshot } from '../../src/services/trainingRepository.js';
 import { dateForWeekDay, getWeekString, localDate } from '../../src/domain/dates.js';
 import { enumeratePeriodDates } from '../../src/domain/periodPlanning.js';
@@ -44,6 +44,23 @@ before(async () => {
 });
 beforeEach(async () => { await environment.clearFirestore(); });
 after(async () => { await signOut(auth); await environment.cleanup(); });
+
+test('lightweight browsing retains sessions and recorded-day protection but cannot authorize a write', async () => {
+  const range = rangeFor(7), sessions = sessionsFor(range);
+  await apply(range, sessions);
+  await saveTrainingLog(uid, recordFor(sessions[0]), { expectedRevision: 1 });
+  const overview = await loadPeriodOverview(uid, range, { exercises: EXERCISES_I18N.zh });
+  const editable = await loadPeriodState(uid, range, { exercises: EXERCISES_I18N.zh });
+  assert.deepEqual(overview.sessionsByDate, editable.sessionsByDate);
+  assert.deepEqual(overview.progressByWeek, editable.progressByWeek);
+  assert.deepEqual(overview.protectedDates, editable.protectedDates);
+  assert.ok(overview.protectedDates.includes(today));
+  assert.equal(overview.expectedState, undefined);
+  assert.equal(overview.fingerprint, undefined);
+  assert.ok(editable.expectedState.documents);
+  await assert.rejects(applyPeriodPlan(uid, { range, sessions, expectedState: overview.expectedState }), /PERIOD_CHANGED/);
+  await assert.rejects(loadPeriodOverview('stranger', range), /SESSION_CHANGED/);
+});
 
 test('28 dates and 224 independent doses in bounded chunks apply atomically without legacy mirrors or private profile data', async () => {
   const range = rangeFor(28), sessions = sessionsFor(range);

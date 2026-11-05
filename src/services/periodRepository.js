@@ -82,7 +82,15 @@ function protectedDays(scope, progressByWeek, logs) {
   });
 }
 
-export async function loadPeriodState(uid, requestedRange, { today = localDate(), exercises = {}, fallbackPlans = {} } = {}) {
+// Browsing never needs deterministic absent-log reads or a transaction fingerprint.
+// Only the full planning read can supply expectedState for an apply transaction.
+export function loadPeriodOverview(uid, requestedRange, options) {
+  return readPeriodState(uid, requestedRange, options, false);
+}
+export function loadPeriodState(uid, requestedRange, options) {
+  return readPeriodState(uid, requestedRange, options, true);
+}
+async function readPeriodState(uid, requestedRange, { today = localDate(), exercises = {}, fallbackPlans = {} } = {}, captureExpectedState) {
   assertUser(uid);
   const range = normalizePlanningRange(requestedRange, requestedRange?.from < today ? requestedRange.from : today), scope = scopeDates(range);
   const documents = {};
@@ -102,31 +110,33 @@ export async function loadPeriodState(uid, requestedRange, { today = localDate()
   const logs = Object.fromEntries(logRecords.docs.map(snapshot => [snapshot.id, snapshot.data()]));
   for (const [id, data] of Object.entries(logs)) documents[keyFor('trainingLogs', id)] = data;
   const sessionsByDate = resolvedSessions(scope, documents, fallbackPlans);
-  // Include absent deterministic slots so a log recorded during preview causes
-  // an explicit stale-preview error, including formerly scheduled exercises.
-  for (const week of scope.weeks) {
-    const candidates = [documents[keyFor('plans', week)]?.schedule, documents[keyFor('progress', week)]?.scheduleSnapshot,
-      fallbackPlans[week]?.schedule, Object.values(sessionsByDate).filter(session => session.week === week)].flatMap(value => value || []);
-    for (const day of candidates) for (const value of day.routine || []) {
-      const ids = new Set([resolveExerciseId(value, exercises), value].filter(id => typeof id === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(id)));
-      for (const id of ids) {
-        const key = keyFor('trainingLogs', `${week}-D${day.day}-${id}`);
-        if (!(key in documents)) documents[key] = null;
+  if (captureExpectedState) {
+    // Include absent deterministic slots so a log recorded during preview causes
+    // an explicit stale-preview error, including formerly scheduled exercises.
+    for (const week of scope.weeks) {
+      const candidates = [documents[keyFor('plans', week)]?.schedule, documents[keyFor('progress', week)]?.scheduleSnapshot,
+        fallbackPlans[week]?.schedule, Object.values(sessionsByDate).filter(session => session.week === week)].flatMap(value => value || []);
+      for (const day of candidates) for (const value of day.routine || []) {
+        const ids = new Set([resolveExerciseId(value, exercises), value].filter(id => typeof id === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(id)));
+        for (const id of ids) {
+          const key = keyFor('trainingLogs', `${week}-D${day.day}-${id}`);
+          if (!(key in documents)) documents[key] = null;
+        }
       }
     }
+    // Query results and individual absent-slot reads must describe the same
+    // state. A save between these reads is detected again when applying.
+    const absentKeys = Object.keys(documents).filter(key => key.startsWith('trainingLogs/') && documents[key] == null);
+    const absent = await Promise.all(absentKeys.map(key => getDoc(refFor(uid, key))));
+    absent.forEach((snapshot, i) => { documents[absentKeys[i]] = raw(snapshot); if (snapshot.exists()) logs[snapshot.id] = snapshot.data(); });
   }
-  // Query results and individual absent-slot reads must describe the same
-  // state. A save between these reads is detected again when applying.
-  const absentKeys = Object.keys(documents).filter(key => key.startsWith('trainingLogs/') && documents[key] == null);
-  const absent = await Promise.all(absentKeys.map(key => getDoc(refFor(uid, key))));
-  absent.forEach((snapshot, i) => { documents[absentKeys[i]] = raw(snapshot); if (snapshot.exists()) logs[snapshot.id] = snapshot.data(); });
   assertUser(uid);
   const progressByWeek = Object.fromEntries(scope.readWeeks.map(week => [week, documents[keyFor('progress', week)] || {}]));
-  const fingerprint = stable(documents);
+  const fingerprint = captureExpectedState ? stable(documents) : undefined;
   return { range, sessionsByDate, progressByWeek, logs, protectedDates: protectedDays(scope, progressByWeek, logs),
     // Historical property name includes fixed future neighbors for boundary spacing.
     previousSessions: Object.values(sessionsByDate).filter(session => session.date < range.from || session.date > range.to),
-    expectedState: { documents, fallbackPlans, fingerprint }, fingerprint };
+    ...(captureExpectedState ? { expectedState: { documents, fallbackPlans, fingerprint }, fingerprint } : {}) };
 }
 
 function weeklySnapshot(week, documents, replacements, fallbackPlans = {}) {
