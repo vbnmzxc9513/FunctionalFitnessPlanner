@@ -3530,5 +3530,193 @@
     "contentVersion": 1,
     "doseEn": "1 set × 6 reps",
     "restEn": "No additional rest between sets"
+  },
+  {
+    "id": "bf_C14",
+    "catalogCode": "C14",
+    "category": "upper",
+    "type": "upper_pull",
+    "name": "單臂滑輪下拉",
+    "nameEn": "Single-arm cable pulldown",
+    "aliases": [
+      "單臂下拉",
+      "單手下拉",
+      "single arm pulldown"
+    ],
+    "equipment": "高位滑輪機、單手握把",
+    "equipmentEn": "High cable pulley and single handle",
+    "equipmentOptions": [
+      [
+        "cable"
+      ]
+    ],
+    "purpose": "單側背部肌力與軀幹控制",
+    "purposeEn": "Unilateral pulling strength and trunk control",
+    "cue": "採站姿分腿，手肘向身體側面下拉；不側彎借力、不拉到頸後。",
+    "cueEn": "Use a split stance and pull the elbow toward your side without leaning or pulling behind the neck.",
+    "easier": "減輕滑輪重量、縮小無痛活動範圍",
+    "easierEn": "Reduce cable load and use a smaller comfortable range.",
+    "harder": "動作穩定後小幅增加重量",
+    "harderEn": "Increase load slightly after consistent control.",
+    "dose": "2 組 × 每側 8 次",
+    "doseEn": "2 sets × 8 reps per side",
+    "advanced": false,
+    "rest": "90 秒",
+    "restEn": "90 seconds",
+    "level": "基礎",
+    "priority": false,
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "prescription": {
+      "sets": 2,
+      "value": "8",
+      "unit": "reps",
+      "restSeconds": 90,
+      "perSide": true
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "shoulder_press",
+    "catalogCode": "C15",
+    "category": "upper",
+    "type": "upper_push",
+    "name": "站姿啞鈴肩推",
+    "nameEn": "Standing dumbbell shoulder press",
+    "aliases": [
+      "站姿肩推",
+      "肩推",
+      "overhead press"
+    ],
+    "equipment": "啞鈴",
+    "equipmentEn": "Dumbbells",
+    "equipmentOptions": [
+      [
+        "dumbbell"
+      ]
+    ],
+    "purpose": "肩部推舉肌力與軀幹穩定",
+    "purposeEn": "Overhead pressing strength and trunk stability",
+    "cue": "肋骨不外翻，肩胛隨手臂自然上旋；只推到能控制且無痛的高度。",
+    "cueEn": "Keep ribs controlled, allow the shoulder blades to rotate upward and press only within a comfortable controlled range.",
+    "easier": "減輕重量、縮小推舉範圍；抬手疼痛時停止",
+    "easierEn": "Use lighter weights and a smaller range; stop if arm elevation is painful.",
+    "harder": "保持軀幹穩定後小幅增加重量",
+    "harderEn": "Increase load slightly while keeping the trunk steady.",
+    "dose": "2 組 × 8 次",
+    "doseEn": "2 sets × 8 reps",
+    "advanced": false,
+    "rest": "90 秒",
+    "restEn": "90 seconds",
+    "level": "基礎",
+    "priority": false,
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "prescription": {
+      "sets": 2,
+      "value": "8",
+      "unit": "reps",
+      "restSeconds": 90,
+      "perSide": false
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "plank_row",
+    "catalogCode": "C16",
+    "category": "upper",
+    "type": "upper_pull",
+    "name": "平板啞鈴划船",
+    "nameEn": "Plank dumbbell row",
+    "aliases": [
+      "俯撐划船",
+      "俯撐啞鈴划船",
+      "renegade row"
+    ],
+    "equipment": "不會滾動的六角啞鈴、防滑平面",
+    "equipmentEn": "Stable hex dumbbells and a non-slip surface",
+    "equipmentOptions": [
+      [
+        "dumbbell"
+      ]
+    ],
+    "purpose": "上肢拉力與支撐時的核心抗旋轉",
+    "purposeEn": "Pulling strength and trunk anti-rotation in plank support",
+    "cue": "雙腳站寬、骨盆朝地面，交替輕拉啞鈴；不可使用會滾動的圓啞鈴。",
+    "cueEn": "Use a wide foot stance and keep the pelvis facing down while rowing alternately; never support yourself on rolling round dumbbells.",
+    "easier": "改做扶穩的單臂啞鈴划船，核心另做死蟲式",
+    "easierEn": "Use a supported single-arm dumbbell row and train the core separately with a dead bug.",
+    "harder": "先維持無晃動，再小幅增加重量",
+    "harderEn": "Maintain a steady pelvis before increasing load slightly.",
+    "dose": "2 組 × 每側 8 次",
+    "doseEn": "2 sets × 8 reps per side",
+    "advanced": true,
+    "rest": "90 秒",
+    "restEn": "90 seconds",
+    "level": "進階",
+    "priority": false,
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "prescription": {
+      "sets": 2,
+      "value": "8",
+      "unit": "reps",
+      "restSeconds": 90,
+      "perSide": true
+    },
+    "active": false,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
+  },
+  {
+    "id": "weighted_lunge",
+    "catalogCode": "B18",
+    "category": "lower",
+    "type": "lower",
+    "name": "單側負重前弓步蹲",
+    "nameEn": "Suitcase-loaded forward lunge",
+    "aliases": [
+      "負重跨步",
+      "前跨弓步",
+      "single-arm loaded forward lunge"
+    ],
+    "equipment": "單顆啞鈴、前方留有空間",
+    "equipmentEn": "One dumbbell and clear stepping space",
+    "equipmentOptions": [
+      [
+        "dumbbell"
+      ]
+    ],
+    "purpose": "腿部肌力、跨步減速與單側負重穩定",
+    "purposeEn": "Leg strength, stepping deceleration and unilateral load control",
+    "cue": "單手提啞鈴，前跨後穩穩下降；前腳踩實、膝蓋順腳尖，不側彎。",
+    "cueEn": "Hold one dumbbell at your side, step forward and lower under control with a stable front foot and no trunk lean.",
+    "easier": "先不負重；仍不穩時改為扶穩的原地分腿蹲",
+    "easierEn": "Start without weight; use a supported stationary split squat if stepping remains unstable.",
+    "harder": "能控制跨步與回位後再小幅加重",
+    "harderEn": "Increase load slightly once the step and return are controlled.",
+    "dose": "2 組 × 每側 6 次",
+    "doseEn": "2 sets × 6 reps per side",
+    "advanced": false,
+    "rest": "90 秒",
+    "restEn": "90 seconds",
+    "level": "基礎",
+    "priority": false,
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "prescription": {
+      "sets": 2,
+      "value": "6",
+      "unit": "reps",
+      "restSeconds": 90,
+      "perSide": true
+    },
+    "active": true,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0
   }
 ]

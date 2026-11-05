@@ -74,8 +74,8 @@ export function manualExerciseRegions(id, exercise = {}) {
   if (exercise.category === 'lower' || exercise.type === 'lower') result.add('legs');
   for (const region of ['chest', 'back', 'serratus']) if (matchesTrainingTarget(region, id, exercise)) result.add(region);
   for (const [region, codes] of Object.entries(MOBILITY_CODES)) if (codes.includes(exercise.catalogCode)) result.add(region);
-  if (['A07', 'A08', 'A09', 'C05', 'C06', 'C07', 'C12', 'C13', 'H07'].includes(exercise.catalogCode)) result.add('shoulder');
-  if (exercise.category === 'core' || exercise.type === 'core') result.add('core');
+  if (['A07', 'A08', 'A09', 'C05', 'C06', 'C07', 'C12', 'C13', 'C15', 'H07'].includes(exercise.catalogCode)) result.add('shoulder');
+  if (exercise.category === 'core' || exercise.type === 'core' || exercise.catalogCode === 'C16') result.add('core');
   // Custom exercises remain discoverable by their declared names and aliases.
   const description = words([exercise.name, exercise.nameEn, ...(exercise.aliases || [])].join(' '));
   if (!exercise.catalogCode) for (const [region, terms] of Object.entries(REGION_TERMS)) {

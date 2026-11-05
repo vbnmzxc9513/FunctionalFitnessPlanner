@@ -7,9 +7,9 @@ const CATALOG = catalogExercises();
 // Curated contributing movements, not muscle-isolation claims or measured outcomes.
 const TARGET_CODES = {
   serratus: ['A07', 'C07'], scapular: ['C06'], rotator_cuff: ['C05'],
-  chest: ['C02', 'C03', 'C11'], back: ['C01', 'C04', 'C06', 'C10'], forearm: ['C08', 'C09'],
-  glutes: ['B01', 'B02', 'B05', 'B06', 'B09', 'B10', 'B11', 'B12'],
-  quadriceps: ['B01', 'B02', 'B10', 'B12'], hamstrings: ['B03', 'B04', 'B05', 'B11'], adductors: ['B02'], calves: ['B07', 'B08'],
+  chest: ['C02', 'C03', 'C11'], back: ['C01', 'C04', 'C06', 'C10', 'C14', 'C16'], forearm: ['C08', 'C09'],
+  glutes: ['B01', 'B02', 'B05', 'B06', 'B09', 'B10', 'B11', 'B12', 'B18'],
+  quadriceps: ['B01', 'B02', 'B10', 'B12', 'B18'], hamstrings: ['B03', 'B04', 'B05', 'B11'], adductors: ['B02'], calves: ['B07', 'B08'],
 };
 export const TARGET_ACCESSORIES = { core: ['D01', 'D02', 'D04'], serratus: ['C07', 'A07'], scapular: ['C06'], rotator_cuff: ['C05'], forearm: ['C09', 'C08'], calves: ['B07', 'B08'] };
 
