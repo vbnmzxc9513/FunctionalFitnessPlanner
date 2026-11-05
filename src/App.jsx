@@ -1,3 +1,4 @@
+import { useCompletionQueue } from './hooks/useCompletionQueue.js';
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, BarChart3, CalendarDays, Feather, Info, Loader2, ChevronLeft, ChevronRight, Pencil, Sparkles, Bookmark, Library, LogOut, Settings as SettingsIcon } from 'lucide-react';
 import { getDoc, setDoc } from 'firebase/firestore';
@@ -181,7 +182,14 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
   const toastTimer = useRef();
   useEffect(() => () => clearTimeout(toastTimer.current), []);
   const showToast = message => { clearTimeout(toastTimer.current); setToast(message); toastTimer.current = setTimeout(() => setToast(''), 3500); };
-  const [busy, setBusy] = useState(false);
+  const completions = useCompletionQueue({
+    confirmedProgress: data.progress,
+    save: item => setCompletion(item.uid, item.week, item.day, item.id, item.value, item.exercise, item.schedule),
+    onSaved: item => { if (item.value) recordPromotionEvent('first_completion', item.week); },
+    onError: (_item, error) => showToast(t(error.message === 'PLAN_CHANGED' ? 'planChanged' : 'toastSaveFail')),
+  });
+  const [operationBusy, setBusy] = useState(false);
+  const busy = operationBusy || completions.pending;
   const busyRef = useRef(false);
   const [savingPlan, setSavingPlan] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -238,7 +246,7 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
 
   const requireUser = () => { if (user) return true; showToast(t('toastRequireLogin')); setActiveTab('settings'); return false; };
   const operation = async (action, success) => {
-    if (!requireUser() || busyRef.current || coachingBusyRef.current || savingPlan || generating || pendingDraft) return false;
+    if (!requireUser() || busyRef.current || completions.isPending() || coachingBusyRef.current || savingPlan || generating || pendingDraft) return false;
     busyRef.current = true; setBusy(true);
     try { await action(); if (success) showToast(t(success)); return true; }
     catch (err) { console.error('Data operation failed', err); showToast(t(err.message === 'PLAN_CHANGED' ? 'planChanged' : err.message === 'INVALID_METRICS' ? 'invalidMetrics' : 'toastSaveFail')); return false; }
@@ -247,7 +255,7 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
   const fallbackPlan = { conclusion: t('manualPlan'), schedule, source: 'manual', baseDefault: true, language: lang };
   const cancelEditing = () => { setDraft(null); setEditing(false); setSelected(''); };
   const enterEditing = () => {
-    if (coachingBusyRef.current || busyRef.current || savingPlan || generating || pendingDraft || !requireUser() || !data.loaded.plans || !data.loaded.exercises) return;
+    if (coachingBusyRef.current || busyRef.current || completions.isPending() || savingPlan || generating || pendingDraft || !requireUser() || !data.loaded.plans || !data.loaded.exercises) return;
     if (hasNativeWeek) { showToast(lang === 'zh' ? '日期課表請從日期規劃重新預覽調整。' : 'Replan the date range to edit date sessions.'); return; }
     setDraft(structuredClone(schedule)); setDraftRevision(weeklyPlan?.revision || 0); setEditing(true); setSelected('');
   };
@@ -313,12 +321,13 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
       if (done) recordPromotionEvent('first_completion', currentWeek);
       return;
     }
-    operation(async () => { await setCompletion(user.uid, currentWeek, day, id, done, exercises[id], schedule); if (done) recordPromotionEvent('first_completion', currentWeek); });
+    if (!requireUser()) return;
+    completions.enqueue({ uid: user.uid, week: currentWeek, day, id, value: done, exercise: exercises[id], schedule });
   };
   const feedback = value => operation(() => saveFeedback(user.uid, currentWeek, value), 'toastFeedback');
 
   const coachingOperation = async action => {
-    if (coachingBusyRef.current || busyRef.current || savingPlan || generating || editing || pendingDraft) throw new Error('COACHING_BUSY');
+    if (coachingBusyRef.current || busyRef.current || completions.isPending() || savingPlan || generating || editing || pendingDraft) throw new Error('COACHING_BUSY');
     if (user && (!trainingData.loaded || !dateData.loaded || !data.loaded.plans || !data.loaded.exercises)) throw new Error('COACHING_NOT_LOADED');
     if (!user && !publicDraft && !localPeriod) throw new Error('COACHING_NO_PLAN');
     coachingBusyRef.current = true; setCoachingBusy(true);
@@ -684,7 +693,7 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
       {activeTab === 'train' && planLoaded && !hasCurrentPlan && selectedPeriod && <section className="panel space-y-3"><h2 className="screen-title">{lang === 'zh' ? '今天尚未安排訓練' : 'No workout planned for today'}</h2><p className="text-sm text-slate-600">{lang === 'zh' ? '你已儲存其他日期的課表，可以到課表總覽查看，或另行規劃今天。' : 'You have plans on other dates. View your overview or plan today separately.'}</p><button type="button" onClick={() => navigate('plan')} className="button-primary">{lang === 'zh' ? '查看課表總覽' : 'View plan overview'}</button></section>}
       {hasNativeWeek && showPlanArea && !periodCreating && (activeTab === 'train' || planScreen === 'day') && <p className="mb-4 rounded-xl bg-indigo-50 p-4 text-sm text-indigo-900">{lang === 'zh' ? '日期課表的內容調整需先重新預覽；已有紀錄的日期會保留。' : 'Preview a date range to change its sessions. Dates with records are retained.'}<button type="button" onClick={openWeeklySelection} className="text-link ml-3">{lang === 'zh' ? '調整日期課表' : 'Replan dates'}</button></p>}
       {hasCurrentPlan && <div id="weekly-session-detail" hidden={!planLoaded || !showPlanArea || (activeTab === 'train' && weekend) || (activeTab === 'plan' && planScreen !== 'day')}>
-        <Training onSaveWorkout={setSaveWorkoutDay} onShare={shareDays} onManualEdit={day => openManual([{ ...day, date: day.date || dateForWeekDay(currentWeek, day.day) }])} eligibleExercises={weeklyAvailable} t={t} lang={lang} mode={trainingMode} onViewRecords={viewRecords} schedule={schedule} draft={draft} activeDay={activeDay} setActiveDay={setActiveDay} currentWeek={currentWeek} exercises={exercises} progress={progress} level={difficultyLevel} editing={editing} selected={selected} setSelected={setSelected} onEdit={enterEditing} onCancel={cancelEditing} onSave={saveEdits} onAdd={add} onRemove={remove} onMove={move} onPhase={changePhase} onToggle={toggle} onFeedback={feedback} feedback={allProgress[currentWeek]?.feedbackValue} busy={busy || generating || coachingBusy || savingPlan || !!pendingDraft} saving={savingPlan} canEdit={!hasNativeWeek && !!user && !!data.loaded.plans && !!data.loaded.exercises && !generating && !pendingDraft} canRestore={!hasNativeWeek && !!weeklyPlan?.previous} onRestore={restore} exerciseLogs={exerciseLogs} readiness={readiness} readinessPreview={readinessPreview?.date === activeDate ? readinessPreview : null} onSaveExerciseLog={user && !trainingData.loaded ? undefined : recordExercise} onUpdateNextDay={recordNextDay} onSaveReadiness={recordReadiness} onPreviewReadiness={previewReadiness} onApplyReadiness={applyReadiness} loggingBusy={coachingBusy || busy || savingPlan || generating || (!!user && !trainingData.loaded)} readinessBusy={coachingBusy || busy || savingPlan || generating || (!!user && !trainingData.loaded)} loggingDisabled={!!pendingDraft || editing || (!!user && !trainingData.loaded)} readinessDisabled={activeDate !== today || !!pendingDraft || editing || (!!user && !trainingData.loaded)} plannedTime={activeNative ? activeNative.weeklyIntent?.dailyTime || (!user ? localPeriod?.profile?.time : savedPeriod?.periodId === activeNative.periodId ? savedPeriod.profile?.time : undefined) : weeklyPlan?.weeklyIntent?.dailyTime} coachingContext={{ ...planningContext, today, readiness: readinessRecords.find(record => record.date === today) || null }} />
+        <Training completionState={completions.state} completionDisabled={operationBusy || generating || coachingBusy || savingPlan || !!pendingDraft} onSaveWorkout={setSaveWorkoutDay} onShare={shareDays} onManualEdit={day => openManual([{ ...day, date: day.date || dateForWeekDay(currentWeek, day.day) }])} eligibleExercises={weeklyAvailable} t={t} lang={lang} mode={trainingMode} onViewRecords={viewRecords} schedule={schedule} draft={draft} activeDay={activeDay} setActiveDay={setActiveDay} currentWeek={currentWeek} exercises={exercises} progress={progress} level={difficultyLevel} editing={editing} selected={selected} setSelected={setSelected} onEdit={enterEditing} onCancel={cancelEditing} onSave={saveEdits} onAdd={add} onRemove={remove} onMove={move} onPhase={changePhase} onToggle={toggle} onFeedback={feedback} feedback={allProgress[currentWeek]?.feedbackValue} busy={busy || generating || coachingBusy || savingPlan || !!pendingDraft} saving={savingPlan} canEdit={!hasNativeWeek && !!user && !!data.loaded.plans && !!data.loaded.exercises && !generating && !pendingDraft} canRestore={!hasNativeWeek && !!weeklyPlan?.previous} onRestore={restore} exerciseLogs={exerciseLogs} readiness={readiness} readinessPreview={readinessPreview?.date === activeDate ? readinessPreview : null} onSaveExerciseLog={user && !trainingData.loaded ? undefined : recordExercise} onUpdateNextDay={recordNextDay} onSaveReadiness={recordReadiness} onPreviewReadiness={previewReadiness} onApplyReadiness={applyReadiness} loggingBusy={coachingBusy || busy || savingPlan || generating || (!!user && !trainingData.loaded)} readinessBusy={coachingBusy || busy || savingPlan || generating || (!!user && !trainingData.loaded)} loggingDisabled={!!pendingDraft || editing || (!!user && !trainingData.loaded)} readinessDisabled={activeDate !== today || !!pendingDraft || editing || (!!user && !trainingData.loaded)} plannedTime={activeNative ? activeNative.weeklyIntent?.dailyTime || (!user ? localPeriod?.profile?.time : savedPeriod?.periodId === activeNative.periodId ? savedPeriod.profile?.time : undefined) : weeklyPlan?.weeklyIntent?.dailyTime} coachingContext={{ ...planningContext, today, readiness: readinessRecords.find(record => record.date === today) || null }} />
       </div>}
       {showPlanArea && hasCurrentPlan && (activeTab === 'train' || !['settings', 'saved', 'manual', 'assign'].includes(planScreen)) && !user && (publicDraft || localPeriod) && <details className="save-panel"><summary className="cursor-pointer text-sky-800">{t('localPreview')} · {localPeriod ? (lang === 'zh' ? '登入後重新預覽' : 'Sign in and re-preview') : t('saveAccount')}</summary><p className="mt-2 text-slate-600">{localPeriod ? (lang === 'zh' ? '登入後需要重新預覽並套用日期課表。這台裝置的暫存實際紀錄會保留，可在設定匯出，不會自動存入帳號。' : 'After signing in, preview and apply your date plan again. Temporary actual records stay on this device and can be exported in Settings; they are not automatically saved to your account.') : t('localPreviewHint')}</p><div className="flex flex-wrap gap-2 mt-3"><button disabled={account.busy} onClick={account.guestLogin} className="bg-indigo-600 text-white px-3 py-2 rounded-lg">{localPeriod ? (lang === 'zh' ? '訪客登入後重新預覽' : 'Guest sign-in and re-preview') : t('savePreviewGuest')}</button><button disabled={account.busy} onClick={account.googleLogin} className="bg-white text-sky-800 px-3 py-2 rounded-lg">{localPeriod ? (lang === 'zh' ? 'Google 登入後重新預覽' : 'Google sign-in and re-preview') : t('savePreviewGoogle')}</button></div></details>}
       <Suspense fallback={<div role="status" className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>}>
@@ -697,7 +706,8 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
       {activeTab === 'settings' && <div className="space-y-5 max-w-2xl"><h2 className="screen-title">{t('accountSettings')}</h2><section className="bg-white p-5 rounded-2xl border border-sky-100 space-y-4">
         <p className="text-sm text-slate-600">{t(!user ? 'accountStoragePublic' : user.isAnonymous ? 'accountStorageAnonymous' : 'accountStorageGoogle')}</p>
         <button onClick={toggleLanguage} className="text-sky-700 bg-sky-50 px-3 py-2 rounded-lg text-sm">🌐 {t('langToggle')}</button>
-        {user ? <div className="flex flex-wrap gap-3">{user.isAnonymous && <button disabled={account.busy || !!pendingDraft} onClick={account.googleLogin} className="rounded-lg bg-sky-600 text-white px-3 py-2 text-sm disabled:opacity-50">{t('upgradeGuest')}</button>}<button disabled={account.busy} onClick={account.logout} className="flex gap-1 items-center text-sm rounded-lg bg-slate-100 px-3 py-2"><LogOut size={14} />{t('logout')}</button></div> : login}
+        {user ? <div className="flex flex-wrap gap-3">{user.isAnonymous && <button disabled={account.busy || completions.pending || !!pendingDraft} onClick={account.googleLogin} className="rounded-lg bg-sky-600 text-white px-3 py-2 text-sm disabled:opacity-50">{t('upgradeGuest')}</button>}<button disabled={account.busy || completions.pending} onClick={account.logout} className="flex gap-1 items-center text-sm rounded-lg bg-slate-100 px-3 py-2"><LogOut size={14} />{t('logout')}</button></div> : login}
+        {completions.pending && <p role="status" className="text-sm text-sky-700">{lang === 'zh' ? '完成狀態儲存中，完成後即可登出或切換帳號。' : 'Saving completion changes. You can sign out or switch accounts when saving finishes.'}</p>}
       </section><Settings t={t} input={keyInput} setInput={setKeyInput} apiKey={apiKey} model={model} setModel={selectModel} models={models} onSave={saveKey} onClear={clearKey} /></div>}
     </main>
   </div>;

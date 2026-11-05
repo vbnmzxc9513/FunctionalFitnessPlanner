@@ -1,3 +1,4 @@
+import { completionKey } from '../domain/completionQueue.js';
 import { useBackNavigation } from '../hooks/useBackNavigation.js';
 import SessionTimeSummary from './SessionTimeSummary.jsx';
 import { useState } from 'react';
@@ -20,8 +21,15 @@ function CourtMark() {
 }
 
 export default function Training({ t, lang = 'zh', schedule, draft, activeDay, setActiveDay, currentWeek, exercises, progress, level,
-  editing, selected, setSelected, onEdit, onCancel, onSave, onAdd, onRemove, onMove, onPhase, onToggle, onFeedback, feedback, busy, saving, canEdit, canRestore, onRestore, exerciseLogs = [], readiness = null, readinessPreview = null, onSaveExerciseLog, onUpdateNextDay: _onUpdateNextDay, onSaveReadiness, onPreviewReadiness, onApplyReadiness, loggingBusy = false, readinessBusy = false, coachingContext = {}, readinessDisabled = false, loggingDisabled = false, mode = 'plan', onViewRecords, eligibleExercises = exercises, plannedTime, onSaveWorkout, onShare, onManualEdit }) {
+  editing, selected, setSelected, onEdit, onCancel, onSave, onAdd, onRemove, onMove, onPhase, onToggle, onFeedback, feedback, busy, completionState = { pending: {}, errors: {} }, completionDisabled = busy, saving, canEdit, canRestore, onRestore, exerciseLogs = [], readiness = null, readinessPreview = null, onSaveExerciseLog, onUpdateNextDay: _onUpdateNextDay, onSaveReadiness, onPreviewReadiness, onApplyReadiness, loggingBusy = false, readinessBusy = false, coachingContext = {}, readinessDisabled = false, loggingDisabled = false, mode = 'plan', onViewRecords, eligibleExercises = exercises, plannedTime, onSaveWorkout, onShare, onManualEdit }) {
   const j = (key, values) => journeyText(lang, key, values);
+  const completionView = (day, id) => {
+    const key = completionKey(currentWeek, day, id);
+    const pending = completionState.pending[key];
+    const failed = !!completionState.errors[key];
+    return { pending: !!pending, done: pending ? pending.value : !!progress[exerciseKey(day, id)], failed,
+      status: pending ? lang === 'en' ? 'Saving…' : '儲存中…' : failed ? lang === 'en' ? 'Not saved. Tap again to retry.' : '未儲存，請再點一下重試。' : '' };
+  };
   const isToday = mode === 'today' && !editing;
   const [details, setDetails] = useState({ scope: '', id: null, visited: [] });
   const display = editing ? draft : schedule;
@@ -64,17 +72,21 @@ export default function Training({ t, lang = 'zh', schedule, draft, activeDay, s
     <div className="space-y-5" data-testid="daily-exercise-list">{!rest && sections.filter(section => section.items.length).map(section => <section key={section.phase} aria-label={t(`phase_${section.phase}`)} data-phase={section.phase} className="space-y-2">
       <div className="flex items-center justify-between gap-3 pt-2"><h3 className="font-semibold text-slate-700">{t(`phase_${section.phase}`)}</h3>{section.seconds > 0 && <span className="text-xs text-slate-500">{t('aboutTime')} {Math.ceil(section.seconds / 60)} {t('minutes')}</span>}</div>
       {section.items.map((entry, position) => {
-        const { id, index, dose } = entry; const exercise = exercises[id]; const done = !!progress[exerciseKey(active.day, id)]; sequence++;
-        if (!editing) return <ExerciseRow key={id} id={id} name={exercise.name} number={sequence} summary={description(dose)} preparation={dose.preparation ? j('hasPreparation') : null} actionLabel={j('detailsLog')} done={done} disabled={busy || date > today} onToggle={() => onToggle(active.day, id)} onOpen={opener => openDetails(id, opener)} />;
+        const { id, index, dose } = entry; const exercise = exercises[id]; sequence++;
+        if (!editing) {
+          const completion = completionView(active.day, id);
+          return <ExerciseRow key={id} id={id} name={exercise.name} number={sequence} summary={description(dose)} preparation={dose.preparation ? j('hasPreparation') : null} actionLabel={j('detailsLog')} done={completion.done} status={completion.status} failed={completion.failed} disabled={completionDisabled || completion.pending || date > today} onToggle={() => onToggle(active.day, id)} onOpen={opener => openDetails(id, opener)} />;
+        }
         return <div key={id} className="exercise-card"><div className="flex items-center gap-3"><button aria-label={`${t('removeExercise')} ${exercise.name}`} disabled={saving} onClick={() => onRemove(active.day, index)} className="p-2 text-red-500 disabled:opacity-30"><Trash2 size={20} /></button><span className="exercise-title flex-1">{sequence}. {exercise.name}</span></div><div className="flex flex-wrap items-center gap-2 mt-3"><select aria-label={`${t('exercisePhaseLabel')} ${exercise.name}`} disabled={saving} value={section.phase} onChange={event => onPhase(active.day, id, event.target.value)} className="rounded-xl border border-slate-200 p-2 text-sm">{SESSION_PHASES.map(value => <option key={value} value={value}>{t(`phase_${value}`)}</option>)}</select><button type="button" aria-label={`${t('moveUp')} ${exercise.name}`} disabled={saving || position === 0} onClick={() => onMove(active.day, id, -1)} className="p-3 rounded-lg bg-slate-50 disabled:opacity-30"><ArrowUp size={16} /></button><button type="button" aria-label={`${t('moveDown')} ${exercise.name}`} disabled={saving || position === section.items.length - 1} onClick={() => onMove(active.day, id, 1)} className="p-3 rounded-lg bg-slate-50 disabled:opacity-30"><ArrowDown size={16} /></button></div>{doseGrid(dose, section.phase)}<p className="text-sm text-slate-600 leading-relaxed">{exercise.tip}</p></div>;
       })}
     </section>)}</div>
     <ExerciseDetails open={!editing && !!selectedEntry} title={selectedEntry ? exercises[selectedEntry.id].name : ''} subtitle={selectedEntry ? `${date} · ${t(`phase_${selectedEntry.phase}`)} · ${currentIndex + 1} / ${entries.length}` : date} closeLabel={j('returnList')} onClose={closeDetails} footer={selectedEntry && <><button type="button" disabled={currentIndex <= 0} onClick={() => openDetails(entries[currentIndex - 1].id)} className="button-secondary disabled:opacity-40">{j('previous')}</button>{currentIndex < entries.length - 1 && <button type="button" onClick={() => openDetails(entries[currentIndex + 1].id)} className="button-secondary">{j('next')}<ArrowRight size={16} /></button>}</>}>
       {entries.filter(entry => currentDetails.visited.includes(entry.id)).map(entry => {
-        const { id, dose, phase } = entry; const exercise = exercises[id]; const done = !!progress[exerciseKey(active.day, id)];
+        const { id, dose, phase } = entry; const exercise = exercises[id]; const done = !!progress[exerciseKey(active.day, id)]; const completion = completionView(active.day, id);
         return <section key={`${scope}-${id}`} hidden={currentDetails.id !== id} data-phase={phase} data-testid={currentDetails.id === id ? 'current-exercise' : undefined} className="exercise-card space-y-4">
           {preparation(id, dose.preparation)}
-          <button type="button" aria-label={exercise.name} aria-pressed={done} disabled={busy || date > today} onClick={() => onToggle(active.day, id)} className="flex items-center gap-3 text-sm text-sky-700 disabled:opacity-40">{done ? <CheckCircle2 size={24} /> : <Circle size={24} />}{j(done ? 'markedDone' : 'markDone')}</button>
+          <button type="button" aria-label={exercise.name} aria-pressed={completion.done} disabled={completionDisabled || completion.pending || date > today} onClick={() => onToggle(active.day, id)} className="flex items-center gap-3 text-sm text-sky-700 disabled:opacity-40">{completion.done ? <CheckCircle2 size={24} /> : <Circle size={24} />}{j(completion.done ? 'markedDone' : 'markDone')}</button>
+          {completion.status && <p role={completion.failed ? 'alert' : 'status'} className={`text-sm ${completion.failed ? 'text-red-700' : 'text-sky-700'}`}>{completion.status}</p>}
           {doseGrid(dose, phase)}<p className="text-sm text-slate-600 leading-relaxed">{exercise.tip}</p>
           {phase === 'warmup' && <p className="text-sm text-slate-500">{active.warmupNote || t(active.sessionType === 'recovery' ? 'recoveryWarmupNote' : 'warmupSequenceNote')}</p>}
           {phase === 'cooldown' && <p className="text-sm text-slate-500">{active.cooldownNote || t('cooldownSequenceNote')}</p>}

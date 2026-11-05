@@ -35,3 +35,5 @@ await run(['scripts/planner-requests-smoke.mjs']);
 await run(['scripts/coach-guided-smoke.mjs']);
 
 await run(['scripts/performance-smoke.mjs']);
+
+await run(['scripts/completion-feedback-smoke.mjs']);
