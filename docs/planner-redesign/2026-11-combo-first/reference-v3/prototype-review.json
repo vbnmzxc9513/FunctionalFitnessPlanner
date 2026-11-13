@@ -1,0 +1,59 @@
+{
+  "type": "automated prototype walkthrough; not representative user testing",
+  "results": [
+    {
+      "width": 320,
+      "checks": [
+        "no horizontal overflow",
+        "search keyboard not automatically opened",
+        "continuous combo addition",
+        "duplicate retained and announced",
+        "undo last addition",
+        "8 separate warmups",
+        "no empty phase sections",
+        "save selected subset and pin",
+        "local draft survives reload",
+        "empty search and clear",
+        "single exercise addition",
+        "review clearly identifies prototype"
+      ],
+      "pageErrors": []
+    },
+    {
+      "width": 390,
+      "checks": [
+        "no horizontal overflow",
+        "search keyboard not automatically opened",
+        "continuous combo addition",
+        "duplicate retained and announced",
+        "undo last addition",
+        "8 separate warmups",
+        "no empty phase sections",
+        "save selected subset and pin",
+        "local draft survives reload",
+        "empty search and clear",
+        "single exercise addition",
+        "review clearly identifies prototype"
+      ],
+      "pageErrors": []
+    },
+    {
+      "width": 1440,
+      "checks": [
+        "no horizontal overflow",
+        "search keyboard not automatically opened",
+        "continuous combo addition",
+        "duplicate retained and announced",
+        "undo last addition",
+        "8 separate warmups",
+        "no empty phase sections",
+        "save selected subset and pin",
+        "local draft survives reload",
+        "empty search and clear",
+        "single exercise addition",
+        "review clearly identifies prototype"
+      ],
+      "pageErrors": []
+    }
+  ]
+}
