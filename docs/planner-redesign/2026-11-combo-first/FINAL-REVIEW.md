@@ -8,14 +8,18 @@
 
 正式樣式依 reference-v5 重做：淡紫常用列、單面動作日誌、清單式加入面板與一組底部主要操作。保留實際產品導覽、帳號、藍紫色系與資料契約。沒有搬入原型的示例身份、品牌或簡化資料處理。
 
+## 色彩修正
+
+2026-11-15依使用者回饋恢復藍色主調，保留新版排版；紫色不再作主色。色彩版build與四尺寸正式流程已通過。下列主要畫面連結已改為藍色修正版；歷史implementation-review圖片保留供對照。
+
 ## 實際畫面
 
 以下來自正式 React App 的隔離未登入流程，並非 prototype.html。資料為測試草稿。
 
-- [手機已有內容](implementation-review/04-populated-day-390-zh.png)：390×844 首屏完整三個動作，第四個開始露出；成功提示三秒後收起，撤銷仍可從更多選單使用。
-- [手機加入面板](implementation-review/02-add-combos-390-zh.png)：預設只顯示名稱、動作數及加入，詳情展開。
-- [桌面已有內容](implementation-review/04-populated-day-1440-zh.png)：內容為主、常用組合側欄。
-- [確認套用](implementation-review/05-review-390-zh.png)：清楚顯示指定日期、內容及實際儲存位置。
+- [手機已有內容](blue-correction/04-populated-day-390-zh.png)：390×844 首屏完整三個動作，第四個開始露出；成功提示三秒後收起，撤銷仍可從更多選單使用。
+- [手機加入面板](blue-correction/02-add-combos-390-zh.png)：預設只顯示名稱、動作數及加入，詳情展開。
+- [桌面已有內容](blue-correction/04-populated-day-1440-zh.png)：內容為主、常用組合側欄。
+- [確認套用](blue-correction/05-review-390-zh.png)：清楚顯示指定日期、內容及實際儲存位置。
 - 320px、中英文、收藏與套用後畫面同存於 implementation-review。
 
 ## 重點修正與證據

@@ -1,9 +1,11 @@
+/* Preserve the app blue for this planning dialog. */
+.combo-save-workout { --workout-purple:#0369a1; }
 .combo-save-workout .combo-save-selection { border: 0; padding: 0; margin: 0; min-width: 0; }
 .combo-save-workout .combo-save-selection legend { display: flex; width: 100%; justify-content: space-between; gap: 12px; font-weight: 700; }
 .combo-save-workout .combo-save-selection legend span { color: #64748b; font-weight: 400; }
 .combo-save-select-actions { display: flex; gap: 16px; }
 .combo-save-workout .combo-save-exercise { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 10px 0; border-bottom: 1px solid #e2e8f0; cursor: pointer; }
-.combo-save-workout .combo-save-exercise input { flex: 0 0 20px; width: 20px; height: 20px; accent-color: #6366f1; }
+.combo-save-workout .combo-save-exercise input { flex: 0 0 20px; width: 20px; height: 20px; accent-color: #0369a1; }
 .combo-save-workout .combo-save-exercise span { min-width: 0; overflow-wrap: anywhere; }
 .combo-save-workout .combo-save-exercise strong { display: block; font-size: 15px; color: #334155; }
 .combo-save-workout .combo-save-exercise small { display: block; color: #64748b; font-size: 13px; margin-top: 3px; }

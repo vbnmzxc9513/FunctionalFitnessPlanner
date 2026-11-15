@@ -6,7 +6,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import puppeteer from 'puppeteer';
 import { createManualSession, manualDraftStorageKey } from '../src/domain/manualPlanner.js';
-const out='docs/planner-redesign/2026-11-combo-first/implementation-review';
+const out=process.env.COMBO_REVIEW_OUTPUT || 'docs/planner-redesign/2026-11-combo-first/implementation-review';
 await mkdir(out,{recursive:true});
 const port=Number(process.env.COMBO_REVIEW_PORT||5231),site=`http://127.0.0.1:${port}/FunctionalFitnessPlanner/`;
 const server=spawn(process.execPath,['scripts/smoke-server.mjs',String(port)],{stdio:'ignore',env:{...process.env,SMOKE_DISABLE_HMR:'1'}});

@@ -1,0 +1,75 @@
+{
+  "commit": "2bb2be9f28c774a4d2ad964f24bef15e95e85ef8",
+  "workingTree": " M scripts/combo-first-review.mjs\n M src/components/combo-assignment.css\n M src/components/combo-first.css\n M src/components/combo-save-workout.css\n?? docs/planner-redesign/2026-11-combo-first/blue-correction/\n",
+  "scope": "Real React, isolated device storage; not human usability or account-write validation",
+  "results": [
+    {
+      "width": 390,
+      "lang": "zh",
+      "passed": [
+        "retired entrances removed",
+        "continuous combo addition",
+        "undo most recent combo",
+        "subset favorite pinned and immediately visible",
+        "eight independent warmups",
+        "duplicate dose and phase retained",
+        "date isolation",
+        "single movement phase",
+        "preview does not persist",
+        "real signed-out apply"
+      ],
+      "pageErrors": []
+    },
+    {
+      "width": 320,
+      "lang": "zh",
+      "passed": [
+        "retired entrances removed",
+        "continuous combo addition",
+        "undo most recent combo",
+        "subset favorite pinned and immediately visible",
+        "eight independent warmups",
+        "duplicate dose and phase retained",
+        "date isolation",
+        "single movement phase",
+        "preview does not persist",
+        "real signed-out apply"
+      ],
+      "pageErrors": []
+    },
+    {
+      "width": 1440,
+      "lang": "zh",
+      "passed": [
+        "retired entrances removed",
+        "continuous combo addition",
+        "undo most recent combo",
+        "subset favorite pinned and immediately visible",
+        "eight independent warmups",
+        "duplicate dose and phase retained",
+        "date isolation",
+        "single movement phase",
+        "preview does not persist",
+        "real signed-out apply"
+      ],
+      "pageErrors": []
+    },
+    {
+      "width": 390,
+      "lang": "en",
+      "passed": [
+        "retired entrances removed",
+        "continuous combo addition",
+        "undo most recent combo",
+        "subset favorite pinned and immediately visible",
+        "eight independent warmups",
+        "duplicate dose and phase retained",
+        "date isolation",
+        "single movement phase",
+        "preview does not persist",
+        "real signed-out apply"
+      ],
+      "pageErrors": []
+    }
+  ]
+}

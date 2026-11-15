@@ -7,6 +7,8 @@ When working on manual scheduling, combo selection, or the planning UI, read:
 1. `docs/planner-redesign/2026-11-combo-first/STATE.md` — actual progress, missing work, next step.
 2. `docs/planner-redesign/2026-11-combo-first/DESIGN.md` — current product decisions and acceptance contract.
 
+Color requirement (2026-11-15): keep BLUE as the primary app color. The purple primary palette in reference-v5 was rejected by the user; use that reference for layout only. Current blue screenshots are under `blue-correction/` in the same design directory.
+
 The latest user instructions take precedence. Root `design.md` and earlier UX documents contain historical requirements; do not combine their retired phase-first navigation with the current design. The new direction is **compose a day using visible, reusable combos, with very little default text**.
 
 Before changing implementation, identify the acceptance IDs affected. After each coherent change, update STATE with touched files, actual verification, unresolved gaps, and the next executable step. Record facts rather than intended work as completed. This is the restart point after context compaction or a handoff.
