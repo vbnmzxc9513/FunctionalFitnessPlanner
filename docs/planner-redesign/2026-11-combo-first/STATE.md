@@ -1,6 +1,6 @@
 # 接續工作入口
 
-更新：2026-11-15。狀態：**P2/P3與本地工程驗收完成；整套browser exit 0。P5已解除寫入阻擋、推送main成功；GitHub Actions部署檢查中。**
+更新：2026-11-15。狀態：**P2/P3與本地工程驗收完成；整套browser exit 0。P5已推送main並確認Cloudflare主要網站藍色新版；GitHub Pages的Actions仍執行中。**
 
 ## 先讀這些，避免依聊天摘要猜測
 
@@ -28,15 +28,15 @@
 | P2 正式 UI 替換 | 本地完成 | ManualPlanner / SessionPlanEditor / QuickWorkoutPicker 正式流程已替換三來源與階段入口，已由root對照v5審查 |
 | P3 正式資料／同步整合 | 本地完成 | 沿用 preview/apply、prepareManualPreview 與既有套用保護；markUsed 背景同步，統一最新加入／移除 undo。收藏 hook 與儲存面板由獨立實作更新 |
 | P4 成品審查 | 工程驗收通過 | check 275單元＋build、67資料整合、11/15完整browser exit0、正式React四尺寸任務與畫面。真人／實機／人工讀屏未驗證 |
-| P5 發佈與讀回 | 權限阻擋 | 11/15 GitHub dry-run仍403，未推送／部署／線上讀回 |
+| P5 發佈與讀回 | 主要網站已上線 | 官方App授權更新後main推送成功；線上React新流程與藍色已讀回確認。GitHub Pages備援Actions仍在跑 |
 
 本地工程結論見FINAL-REVIEW；UX-10的部署讀回仍受阻，不能把本地通過等同已上線。prototype-review.json僅是舊原型證據。真人、實機p95與原生縮放／人工讀屏仍未驗證，不推定使用者試用結果。
 
 ## 下一個可執行步驟
 
-只剩P5：恢復GitHub對此repo的寫入權限後，先fetch核對遠端main是否有新變更，再依既有授權推送／合併、觀察CI及現有部署，確認canonical網站實際版本與主要任務。不要強推或覆蓋他人修改，不需重新詢問使用者是否要做已授權的改版。
+GitHub寫入權限已恢復，main已更新；不要再要求CLI登入或App重連。主要網站 https://badminton-functional-fitness-planner.pages.dev/?version=a73a7d2 已以隔離瀏覽器實際確認新版手動流程、常用組合、加入面板及藍色選取日（rgb 3,105,161）。讀回只更動隔離裝置草稿，未登入或寫入真帳號。
 
-不重啟設計或重做已通任務。除非source有修改、出現失敗或新的未解疑慮，不需重跑整套測試。以下帶日期的舊「待完成／不部署」段落是歷史工作紀錄，不是撤銷使用者原本的部署授權。
+GitHub Pages備援workflow：43676380076，source a73a7d2，檢查時仍在emulator/browser步驟；可後續讀其結果。較舊43676228253已取消，避免重複部署。後續若只需查狀態，不重跑設計與已通本地測試。下面舊403／未部署段落是歷史。
 
 ## 實作切入點
 
@@ -117,3 +117,7 @@
 ## GitHub已成功推送
 
 使用者更新官方App授權後，CLI成功把0563f53..62359a1推到origin/main；GitHub Actions已啟動。403阻擋已解除，勿再要求登入。部署檢查發現3個新增瀏覽器harness預設硬寫/usr/bin/chromium，已改為環境指定優先、有系統Chromium才用，否則使用Puppeteer內建瀏覽器，避免GitHub runner路徑差異。此修正不改產品功能。後續只觀察最新workflow與網站讀回。Cloudflare canonical目前讀回仍舊bundle，不能推定該站已更新；GitHub Pages部署由既有workflow處理。
+
+## 已解除GitHub阻擋並確認線上版本
+
+使用者更新官方GitHub App授權後，成功推送62359a1及CI瀏覽器路徑相容修正a73a7d2到main。Cloudflare Pages check對62359a1回報success；主要URL加version query讀回新資產（一般無query曾命中舊快取）。正式公開網站隔離瀏覽器走課表→手動→日期→加入，確認combo-add-daily-warmup、新流程與選取日深藍rgb(3,105,161)。主要站已更新；GH Pages備援CI尚在跑，不能宣稱其已PASS。此文件更新使用skip ci，不改產品code。
