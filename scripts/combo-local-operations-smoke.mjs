@@ -1,6 +1,7 @@
 // Deterministic component integration: delayed ancillary writes, account scope and undo.
 // This does not measure physical-device latency or write to a real account.
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import puppeteer from 'puppeteer';
 const port = Number(process.env.COMBO_OPERATIONS_PORT || 5238), site = `http://127.0.0.1:${port}/FunctionalFitnessPlanner/`;
@@ -8,7 +9,7 @@ const server = spawn(process.execPath, ['scripts/smoke-server.mjs', String(port)
 let browser;
 try {
   for (let n = 0; n < 100; n++) { try { if ((await fetch(site)).ok) break; } catch { /* starting */ } await new Promise(resolve => setTimeout(resolve, 100)); }
-  browser = await puppeteer.launch({ executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium', headless: true, args: ['--no-sandbox'] });
+  browser = await puppeteer.launch({ executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || (existsSync('/usr/bin/chromium') ? '/usr/bin/chromium' : undefined), headless: true, args: ['--no-sandbox'] });
   const page = await browser.newPage(); await page.setViewport({ width: 390, height: 844 });
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   await page.setRequestInterception(true); page.on('request', request => { const url = new URL(request.url()); if (['127.0.0.1', 'localhost'].includes(url.hostname) || ['data:', 'blob:'].includes(url.protocol)) request.continue(); else request.abort(); });

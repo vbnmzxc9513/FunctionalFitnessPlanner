@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { createServer } from 'vite';
@@ -32,7 +33,7 @@ const server = await createServer({ configFile: false, root: process.cwd(), cach
 let browser;
 try {
   await server.listen();
-  browser = await puppeteer.launch({ executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium', headless: true, args: ['--no-sandbox'] });
+  browser = await puppeteer.launch({ executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || (existsSync('/usr/bin/chromium') ? '/usr/bin/chromium' : undefined), headless: true, args: ['--no-sandbox'] });
   const page = await browser.newPage(), errors = [];page.on('pageerror', error => errors.push(error.message));
   await page.setViewport({ width: 390, height: 844 });
   await page.evaluateOnNewDocument(() => {

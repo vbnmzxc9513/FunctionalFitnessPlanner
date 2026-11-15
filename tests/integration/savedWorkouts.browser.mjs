@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
 import { createServer } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
@@ -63,7 +64,7 @@ const server = await createServer({ configFile: false, root: process.cwd(), base
   }); },
 }], server: { host: '127.0.0.1', port: 0, strictPort: false } });
 await server.listen();
-const browser = await puppeteer.launch({ executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium', headless: true, args: ['--no-sandbox'] });
+const browser = await puppeteer.launch({ executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || (existsSync('/usr/bin/chromium') ? '/usr/bin/chromium' : undefined), headless: true, args: ['--no-sandbox'] });
 try {
   const page = await browser.newPage(), errors = [];
   page.on('pageerror', error => errors.push(error.message));

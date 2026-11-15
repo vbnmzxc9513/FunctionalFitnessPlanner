@@ -1,6 +1,6 @@
 # 接續工作入口
 
-更新：2026-11-15。狀態：**P2/P3與本地工程驗收完成；整套browser exit 0。P5受GitHub寫入403阻擋，尚未上線。**
+更新：2026-11-15。狀態：**P2/P3與本地工程驗收完成；整套browser exit 0。P5已解除寫入阻擋、推送main成功；GitHub Actions部署檢查中。**
 
 ## 先讀這些，避免依聊天摘要猜測
 
@@ -113,3 +113,7 @@
 ## GitHub授權診斷更新
 
 使用者已完成GitHub CLI登入及明確repo scope refresh；兩次CLI均Authentication complete，帳號vbnmzxc9513、repo permissions含admin/push。但隔離環境GH_TOKEN並強制gh credential後，git push仍403；gh API create-ref亦Resource not accessible by integration。不要再讓使用者反覆做相同device-code登入。連接工具list_installations回傳空安裝列表，目前仍無可用寫入路徑。已公開API確認官方OpenAI app https://github.com/apps/chatgpt-codex-connector，owner=openai，其requested permissions包含contents/write、workflows/write。下一步是使用者在此官方App安裝／設定中把FunctionalFitnessPlanner納入授權，並更新此ChatGPT/Codex連線。遠端main仍0563f53，藍色版本本地8bf773b未推送；待連線修正後再fetch/push，不改已驗收程式、不重做CLI登入。
+
+## GitHub已成功推送
+
+使用者更新官方App授權後，CLI成功把0563f53..62359a1推到origin/main；GitHub Actions已啟動。403阻擋已解除，勿再要求登入。部署檢查發現3個新增瀏覽器harness預設硬寫/usr/bin/chromium，已改為環境指定優先、有系統Chromium才用，否則使用Puppeteer內建瀏覽器，避免GitHub runner路徑差異。此修正不改產品功能。後續只觀察最新workflow與網站讀回。Cloudflare canonical目前讀回仍舊bundle，不能推定該站已更新；GitHub Pages部署由既有workflow處理。
