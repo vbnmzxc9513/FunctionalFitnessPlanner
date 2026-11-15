@@ -109,3 +109,7 @@
 ## 2026-11-15 藍色修正
 
 使用者指出藍色不應改紫色。正式combo-first／assignment／收藏面板恢復藍色主色與淺藍底，中性文字；排版與流程不動。v5僅作排版參考，色彩以blue-correction正式截圖為準。既有四尺寸React流程與build已通過，root已檢視藍色正式畫面；不重跑未受影響的資料套件。色彩修正另有後續提交，最新版本以git log為準。部署仍因GitHub403受阻。
+
+## GitHub授權診斷更新
+
+使用者已完成GitHub CLI登入及明確repo scope refresh；兩次CLI均Authentication complete，帳號vbnmzxc9513、repo permissions含admin/push。但隔離環境GH_TOKEN並強制gh credential後，git push仍403；gh API create-ref亦Resource not accessible by integration。不要再讓使用者反覆做相同device-code登入。連接工具list_installations回傳空安裝列表，目前仍無可用寫入路徑。已公開API確認官方OpenAI app https://github.com/apps/chatgpt-codex-connector，owner=openai，其requested permissions包含contents/write、workflows/write。下一步是使用者在此官方App安裝／設定中把FunctionalFitnessPlanner納入授權，並更新此ChatGPT/Codex連線。遠端main仍0563f53，藍色版本本地8bf773b未推送；待連線修正後再fetch/push，不改已驗收程式、不重做CLI登入。
