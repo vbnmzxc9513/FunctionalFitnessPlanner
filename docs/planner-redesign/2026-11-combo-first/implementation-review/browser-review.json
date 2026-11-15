@@ -1,0 +1,75 @@
+{
+  "commit": "14c2cecc9582d77ea03e54ca1afb7e57e2feadf5",
+  "workingTree": " M docs/planner-redesign/2026-11-combo-first/DESIGN.md\n M docs/planner-redesign/2026-11-combo-first/STATE.md\n M scripts/integration.mjs\n M scripts/navigation-smoke.mjs\n M scripts/planner-redesign-smoke.mjs\n M scripts/ux-followup-review.mjs\n M scripts/workout-planner-smoke.mjs\n M src/App.jsx\n M src/components/ApplyWorkoutPlan.jsx\n M src/components/ManualPlanner.jsx\n M src/components/QuickWorkoutPicker.jsx\n M src/components/SaveWorkoutDialog.jsx\n M src/components/SessionPlanEditor.jsx\n M src/components/SharedWorkout.jsx\n M src/hooks/useSavedWorkouts.js\n M tests/integration/planShareDialog.browser.mjs\n M tests/integration/savedWorkouts.browser.mjs\n?? docs/planner-redesign/2026-11-combo-first/implementation-review/\n?? docs/planner-redesign/2026-11-combo-first/reference-v4/\n?? docs/planner-redesign/2026-11-combo-first/reference-v5/\n?? scripts/combo-first-review.mjs\n?? scripts/combo-local-operations-smoke.mjs\n?? src/components/combo-assignment.css\n?? src/components/combo-first.css\n?? src/components/combo-save-workout.css\n?? tests/integration/assignmentSafety.browser.mjs\n?? tests/unit/comboFirstContracts.test.js\n",
+  "scope": "Real React, isolated device storage; not human usability or account-write validation",
+  "results": [
+    {
+      "width": 390,
+      "lang": "zh",
+      "passed": [
+        "retired entrances removed",
+        "continuous combo addition",
+        "undo most recent combo",
+        "subset favorite pinned and immediately visible",
+        "eight independent warmups",
+        "duplicate dose and phase retained",
+        "date isolation",
+        "single movement phase",
+        "preview does not persist",
+        "real signed-out apply"
+      ],
+      "pageErrors": []
+    },
+    {
+      "width": 320,
+      "lang": "zh",
+      "passed": [
+        "retired entrances removed",
+        "continuous combo addition",
+        "undo most recent combo",
+        "subset favorite pinned and immediately visible",
+        "eight independent warmups",
+        "duplicate dose and phase retained",
+        "date isolation",
+        "single movement phase",
+        "preview does not persist",
+        "real signed-out apply"
+      ],
+      "pageErrors": []
+    },
+    {
+      "width": 1440,
+      "lang": "zh",
+      "passed": [
+        "retired entrances removed",
+        "continuous combo addition",
+        "undo most recent combo",
+        "subset favorite pinned and immediately visible",
+        "eight independent warmups",
+        "duplicate dose and phase retained",
+        "date isolation",
+        "single movement phase",
+        "preview does not persist",
+        "real signed-out apply"
+      ],
+      "pageErrors": []
+    },
+    {
+      "width": 390,
+      "lang": "en",
+      "passed": [
+        "retired entrances removed",
+        "continuous combo addition",
+        "undo most recent combo",
+        "subset favorite pinned and immediately visible",
+        "eight independent warmups",
+        "duplicate dose and phase retained",
+        "date isolation",
+        "single movement phase",
+        "preview does not persist",
+        "real signed-out apply"
+      ],
+      "pageErrors": []
+    }
+  ]
+}

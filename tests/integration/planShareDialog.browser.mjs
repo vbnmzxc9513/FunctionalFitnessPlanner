@@ -28,7 +28,7 @@ const server = await createServer({ configFile: false, root: process.cwd(), cach
     if (req.url !== '/__share-test.html') return next();
     res.setHeader('Content-Type', 'text/html'); res.end(await server.transformIndexHtml('/__share-test.html', html));
   }); },
-}], server: { host: '127.0.0.1', port: 0, strictPort: false } });
+}], server: { host: '127.0.0.1', port: 0, strictPort: false, hmr: false, watch: null } });
 let browser;
 try {
   await server.listen();
@@ -79,25 +79,55 @@ try {
   assert.equal(await page.$$eval('[data-testid="workout-plan-summary"]', els => els.length), 2);
   await click('選日期，匯入我的課表'); await page.waitForSelector('[data-testid="apply-workout-plan"]');
   assert.equal(await page.evaluate(() => window.exits || 0), 0, 'import opens date mapping instead of exiting');
-  await click('逐天指定日期');
+  await page.click('.assignment-modes button:nth-child(2)');
   await page.$eval('input[aria-label="第 2 天套用日期"]', el => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, '2026-10-27'); el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); });
   await page.waitForFunction(() => document.querySelector('input[aria-label="第 2 天套用日期"]').value === '2026-10-27');
   await click('保留原間隔');
-  await page.waitForFunction(() => document.querySelector('[data-testid="apply-workout-plan"]').innerText.includes('2026-10-21'));
-  assert.equal(await page.$eval('[data-testid="apply-workout-plan"]', el => el.innerText.includes('2026-10-27')), false, 'switching back to original intervals restores the original two-day gap');
+  await page.waitForFunction(() => document.querySelector('[data-testid="apply-workout-plan"]').innerText.includes('10/21'));
+  assert.equal(await page.$eval('[data-testid="apply-workout-plan"]', el => el.innerText.includes('10/27')), false, 'switching back to original intervals restores the original two-day gap');
 
-  await click('檢查日期並預覽'); await page.waitForSelector('[data-testid="assignment-apply"]');
+  await page.click('[data-testid="assignment-preview"]');
+  await page.waitForSelector('.assignment-error button');
+  assert.equal(await page.$('[data-testid="assignment-apply"]'), null, 'legacy movements that no longer meet the current profile cannot be applied');
+  await page.click('.assignment-error button'); await page.waitForSelector('[data-testid="manual-planner"]');
+  // Repair the real imported copies: retain their other movements and dates,
+  // replacing the retired walk/run warmup with the eight independent movements.
+  for (const date of ['2026-10-19', '2026-10-21']) {
+    await page.click(`[data-testid="manual-tab-${date}"]`);
+    await page.click('[data-exercise-id="bf_A01"] button');
+    await page.click('dialog[open] button[aria-label^="移除 "]');
+    await page.click('[data-testid="combo-add-daily-warmup"]');
+  }
+  // SharedWorkout exposes the same actual equipment controls for imported plans.
+  await page.click('[data-testid="manual-tab-2026-10-19"]');
+  await page.click('.combo-first-day-meta');
+  await page.waitForFunction(() => document.querySelector('#manual-configuration').open && document.querySelector('#manual-configuration').closest('.manual-more').open);
+  const bandCheckbox = (await page.$$('#manual-configuration input[type="checkbox"]'))[1];
+  await bandCheckbox.evaluate(input => input.closest('label').scrollIntoView({ block: 'center', behavior: 'instant' }));
+  await bandCheckbox.click(); await bandCheckbox.dispose();
+  await page.waitForFunction(() => document.querySelectorAll('#manual-configuration input[type="checkbox"]')[1].checked);
+  await page.click('[data-testid="manual-add-content"]');
+  await page.waitForSelector('[data-testid="quick-workout-picker"]');
+  await click('單一動作');
+  await page.type('[data-testid="combo-search"]', 'B03');
+  await page.waitForSelector('[data-testid="single-add-bf_B03"]',{visible:true});
+  await page.click('[data-testid="single-add-bf_B03"]');
+  await page.click('[data-testid="combo-panel-done"]');
+  await page.click('[data-testid="manual-review"]'); await page.waitForSelector('[data-testid="assignment-apply"]');
   await page.click('[data-testid="assignment-apply"]');
   await page.waitForFunction(() => [...document.querySelectorAll('h1')].some(el => el.innerText === '課表已匯入'));
   assert.ok(await page.evaluate(() => !!window.savedPeriod), 'completion follows a real device save');
+  assert.ok(await page.evaluate(() => window.savedPeriod.profile.context.equipment.includes('band')), 'shared import retains equipment configured through its repair editor');
+  assert.ok(await page.evaluate(() => window.savedPeriod.sessionsByDate['2026-10-19'].routine.includes('bf_B03')), 'the repaired import passes the configured equipment gate without dropping its selected movement');
+  assert.deepEqual(await page.evaluate(() => Object.keys(window.savedPeriod.sessionsByDate).sort()), ['2026-10-19', '2026-10-21'], 'original two-day gap is preserved in the actual saved dates');
   assert.equal(await page.evaluate(() => window.exits || 0), 0, 'completion waits for explicit exit');
   await click('查看我的課表'); assert.equal(await page.evaluate(() => window.exits), 1);
   await page.evaluate(() => window.renderOldShared());
   await page.waitForFunction(() => [...document.querySelectorAll('h1')].some(el => el.innerText === '分享的羽球體能課表'));
   await click('選日期，匯入我的課表'); await page.waitForSelector('[data-testid="assignment-preview"]');
   await page.click('[data-testid="assignment-preview"]');
-  await page.waitForFunction(() => [...document.querySelectorAll('button')].some(el => el.innerText === '先編輯這份副本'));
-  await click('先編輯這份副本'); await page.waitForSelector('[data-testid="manual-planner"]');
+  await page.waitForSelector('.assignment-error button');
+  await page.click('.assignment-error button'); await page.waitForSelector('[data-testid="manual-planner"]');
   assert.ok((await page.$eval('[data-testid="manual-planner"]', el => el.innerText)).includes('分腿蹲'), 'an incomplete legacy copy keeps its motion in the repair editor');
   assert.deepEqual(errors, []);
   console.log('Public sharing: 320/390/1440px, snapshot isolation, embedded URL, clipboard/native share, length/sign-in fallback, English unsupported state, v1 phases/repair, auth-loading gate and v2 confirmed device import passed.');

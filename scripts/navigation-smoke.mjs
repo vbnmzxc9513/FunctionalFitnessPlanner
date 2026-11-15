@@ -6,7 +6,7 @@ import { auth } from '../src/services/firebase.js';
 import { createSharedPlan } from '../src/services/sharedPlanRepository.js';
 import { createPlanPayload, encodePlanPayload } from '../src/domain/sharedPlans.js';
 import { createSharePayload, encodeSharePayload } from '../src/domain/sharing.js';
-import { DEFAULT_SCHEDULE_I18N } from '../src/locale.js';
+import { getQuickWorkout } from '../src/domain/quickWorkouts.js';
 
 if (process.env.NODE_ENV !== 'test' || process.env.VITE_USE_FIREBASE_EMULATORS !== 'true' || process.env.VITE_FIREBASE_PROJECT_ID !== 'demo-fitness-planner') throw new Error('This test requires the demo-fitness-planner Auth/Firestore emulators; run through scripts/integration.mjs.');
 
@@ -19,7 +19,9 @@ try {
     try { if ((await fetch(site)).ok) break; } catch { /* Server is starting. */ }
     await new Promise(resolve => setTimeout(resolve, 100));
   }
-  const days = DEFAULT_SCHEDULE_I18N.zh.slice(0, 1);
+  // Use the current active bodyweight recipe. Historical default bf_A01 is
+  // intentionally unavailable under the current eligibility gate.
+  const days = [{ ...getQuickWorkout('daily-warmup', 'zh'), sessionType: 'recovery' }];
   const payload = createPlanPayload(days, { name: 'Navigation A' });
   const user = (await signInAnonymously(auth)).user;
   const id = await createSharedPlan(user.uid, payload);
@@ -93,15 +95,16 @@ try {
   await page.goto(site, { waitUntil: 'networkidle2' });
   await clickText('課表'); await click('[data-testid="open-manual-planner"]');
   await click('[data-testid^="manual-date-"]:not([disabled])'); await click('[data-testid="manual-start"]');
-  await click('[data-testid="manual-common-workouts"]'); await click('[data-testid="quick-view-daily-warmup"]');
-  await back(); assert.ok(await page.$('[data-testid="quick-view-daily-warmup"]'), 'Back from quick preview returns to picker without adding');
-  await click('[data-testid="quick-view-daily-warmup"]'); await click('[data-testid="quick-workout-add"]');
+  await click('[data-testid="manual-add-content"]');
+  await click('dialog [data-testid="combo-detail-daily-warmup"]');
+  await back(); assert.equal(await page.$('dialog.combo-first-picker[open]'), null, 'Back closes the local add panel without adding');
+  await click('[data-testid="manual-add-content"]'); await click('dialog [data-testid="combo-add-daily-warmup"]'); await click('[data-testid="combo-panel-done"]');
   assert.equal(await page.$$eval('[data-testid="session-plan-editor"] [data-exercise-id]', items => items.length), 8, 'All eight independent warmups remain visible');
   await click('[data-exercise-id="bf_A16"] button');
   await page.waitForSelector('dialog[open]');
   await back(); assert.equal(await page.$('dialog[open]'), null, 'Back closes exercise modal first');
-  await click('[data-testid="manual-add-strength"]');
-  await back(); assert.equal(await page.$('[data-testid="batch-exercise-picker"]'), null, 'Back closes picker');
+  await click('[data-testid="manual-add-content"]');
+  await back(); assert.equal(await page.$('dialog.combo-first-picker[open]'), null, 'Back closes picker');
   assert.ok(await page.$('[data-testid="session-plan-editor"]'), 'draft day remains open');
   const draft = await page.evaluate(() => Object.entries(localStorage).find(([key]) => key.startsWith('fitness_manual'))?.[1]);
   await back(); await page.waitForSelector('[data-testid="planner-actions"]');

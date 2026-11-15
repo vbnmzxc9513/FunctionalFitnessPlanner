@@ -91,42 +91,23 @@ try {
     await fits('empty editor');
 
     step = `${layout}: equipment, full warmup and cross-filter batch`;
-    await clickSelector('[data-testid="manual-common-workouts"]'); await clickSelector('[data-testid="quick-view-daily-warmup"]');
-    assert.equal(await period(), null, `${layout}: preview does not apply a date`);
-    await clickSelector('[data-testid="quick-workout-add"]');
-    const equipment = await page.evaluateHandle(() => [...document.querySelectorAll('[data-testid="manual-planner"] summary')].find(item => item.innerText.startsWith('時間與器材')));
-    await tap(equipment.asElement());
-    await fill('[data-testid="manual-daily-time"]', '120');
+    await clickSelector('[data-testid="manual-add-content"]'); await clickSelector('dialog [data-testid="combo-add-daily-warmup"]');
+    assert.equal(await period(), null, `${layout}: adding a draft does not apply a date`);
+    await clickSelector('[data-testid="combo-panel-done"]');
+    await clickSelector('.combo-first-day-meta'); await fill('[data-testid="manual-daily-time"]', '120');
     const dumbbell = await page.evaluateHandle(() => [...document.querySelectorAll('[data-testid="manual-planner"] details label')].find(item => item.innerText === '啞鈴'));
-    await tap(dumbbell.asElement());
-    assert.equal(await page.$$eval('[data-testid="session-plan-editor"] [data-exercise-id]', items => items.length), 8, `${layout}: eight warmup movements have eight independent rows`);
-    assert.equal(await page.$$eval('[data-testid="session-plan-editor"] [data-exercise-id="bf_A13"]', items => items.length), 0, `${layout}: new warmup never uses the legacy sequence ID`);
-    await clickSelector('[data-testid="manual-add-strength"]');
-    const cart = await page.$eval('[data-testid="batch-picker-actions"]', item => { const box = item.getBoundingClientRect(); return { top: box.top, bottom: box.bottom, height: innerHeight }; });
-    assert.ok(cart.top >= 0 && cart.bottom <= cart.height, `${layout}: batch selection count and add action are visible before scrolling results`);
-    await click('腿'); await clickSelector('[data-testid="batch-option-bf_B01"]');
-    await click('胸'); await clickSelector('[data-testid="batch-option-bf_C11"]');
-    await click('腿'); await clickSelector('[data-testid="batch-option-bf_B05"]');
-    await click('核心'); await clickSelector('[data-testid="batch-option-bf_D03"]');
-    assert.ok((await page.$eval('[data-testid="batch-exercise-picker"]', item => item.innerText)).includes('已選 4 個'), `${layout}: selection survives region change`);
-    await fits('batch picker');
-    await page.screenshot({ path: `/tmp/planner-manual-${layout}.png`, fullPage: false });
-    await clickSelector('[data-testid="batch-picker-add"]');
-    await page.waitForFunction(() => document.activeElement?.dataset.testid === 'manual-add-strength');
-    await clickSelector('[data-testid="session-plan-editor"] > .manual-secondary-details > summary');
-    assert.ok((await page.$eval('[data-testid="session-plan-editor"]', item => item.innerText)).includes('輕量準備組'), `${layout}: first lift preparation is available in expanded timing details`);
-    await clickSelector('[data-testid="session-plan-editor"] > .manual-secondary-details > summary');
-    await clickSelector('[data-testid="manual-add-strength"]');
-    await click('腿');
-    assert.equal(await page.$eval('[data-testid="batch-option-bf_B01"]', item => item.disabled), true, `${layout}: existing exercise cannot be duplicated`);
-    await clickSelector('[data-testid="batch-picker-cancel"]');
-
-    await clickSelector('[data-testid="manual-add-cooldown"]');
-    for (const id of ['bf_H01', 'bf_H03']) { await fill('[data-testid="batch-picker-search"]', id); await clickSelector(`[data-testid="batch-option-${id}"]`); }
-    await clickSelector('[data-testid="batch-picker-add"]');
-    assert.equal(await page.$$eval('[data-testid="session-plan-editor"] [data-exercise-id]', items => items.length), 14, `${layout}: eight warmups plus four training and two cooldowns fit without loss`);
-
+    await tap(dumbbell.asElement()); await clickSelector('.manual-more > summary');
+    assert.equal(await page.$$eval('[data-testid="session-plan-editor"] [data-exercise-id]', items => items.length), 8, `${layout}: eight independent warmups`);
+    await clickSelector('[data-testid="manual-add-content"]'); await click('單一動作');
+    const cart = await page.$eval('.combo-first-panel-footer', item => { const box = item.getBoundingClientRect(); return { top: box.top, bottom: box.bottom, height: innerHeight }; });
+    assert.ok(cart.top >= 0 && cart.bottom <= cart.height, `${layout}: panel footer stays visible`);
+    for (const id of ['bf_B01', 'bf_C11', 'bf_B05', 'bf_D03', 'bf_H01', 'bf_H03']) { await fill('[data-testid="combo-search"]', id); await clickSelector(`[data-testid="single-add-${id}"]`); }
+    await fits('single exercise picker'); await page.screenshot({ path: `/tmp/planner-manual-${layout}.png` });
+    assert.equal(await page.$eval('[data-testid="single-add-bf_H03"]', item => item.disabled), true, 'Existing single cannot be added twice');
+    await clickSelector('[data-testid="combo-panel-done"]');
+    assert.equal(await page.$$eval('[data-testid="session-plan-editor"] [data-exercise-id]', items => items.length), 14, `${layout}: no selected movement lost`);
     step = `${layout}: edit the exact exercise and restore draft`;
+    await clickSelector('.manual-session-heading summary');
     await fill('[data-testid="manual-session-name"]', `腿部 A 課 ${layout}`);
     const edit = await page.evaluateHandle(() => document.querySelector('[data-exercise-id="bf_C11"] button[aria-label^="編輯"]'));
     await tap(edit.asElement());
@@ -134,6 +115,7 @@ try {
     await fill(`${form} input[type="number"]`, '3');
     await fill(`${form} input:not([type])`, '8');
     await fill(`${form} input[type="number"]:not([max="5"])`, '45');
+    await clickSelector(`${form} .manual-secondary-details > summary`);
     await page.$$eval(`${form} select`, items => { items[1].value = 'accessory'; items[1].dispatchEvent(new Event('change', { bubbles: true })); });
     await click('儲存草稿修改');
     await page.waitForFunction(key => JSON.parse(localStorage.getItem(key)).sessions[0].prescriptions.some(dose => dose.id === 'bf_C11' && dose.phase === 'accessory' && dose.restSeconds === 45), {}, manualDraftStorageKey());
@@ -150,7 +132,7 @@ try {
     step = `${layout}: review and apply`;
     await clickSelector('[data-testid="manual-review"]'); await visible('[data-testid="apply-workout-plan"]');
     assert.equal(await period(), null, `${layout}: review is not application`);
-    await visible('[data-testid="assignment-apply"]'); await click('查看內容');
+    await visible('[data-testid="assignment-apply"]'); await click('查看動作');
     assert.ok((await page.$eval('[data-testid="apply-workout-plan"]', item => item.innerText)).includes('準備'), `${layout}: preview includes preparation`);
     await clickSelector('[data-testid="assignment-apply"]');
     await page.waitForFunction(date => JSON.parse(localStorage.getItem('fitness_date_period_v1') || '{}').sessionsByDate?.[date], {}, firstDate);
@@ -168,10 +150,10 @@ try {
     step = `${layout}: full strength workout quick reuse restores preparation and region discovery`;
     await clickSelector('[data-testid="open-manual-planner"]');
     for (let attempt = 0; !await page.$(`[data-testid="manual-date-${thirdDate}"]`) && attempt < 3; attempt++) await clickSelector('button[aria-label="下一個月"]');
-    await clickSelector(`[data-testid="manual-date-${thirdDate}"]`); await clickSelector('[data-testid="manual-start"]'); await clickSelector('.manual-empty-day > button:nth-of-type(2)');
-    await visible('.quick-workout-card'); await click('髖');
-    assert.equal(await page.$$eval('.quick-workout-card', cards => cards.length), 1, `${layout}: saved workout with purpose-only metadata is found by its actual hip movements`);
-    await click('查看'); await clickSelector('[data-testid="quick-workout-add"]');
+    await clickSelector(`[data-testid="manual-date-${thirdDate}"]`); await clickSelector('[data-testid="manual-start"]'); await clickSelector('[data-testid="manual-add-content"]');
+    await visible('dialog .combo-first-card'); await click('髖');
+    const savedAdd = await page.evaluateHandle(() => [...document.querySelectorAll('dialog .combo-first-card')].find(item => item.innerText.includes('手動排課煙霧測試'))?.querySelector('.combo-first-plus'));
+    await tap(savedAdd.asElement()); await clickSelector('[data-testid="combo-panel-done"]');
     await page.waitForFunction(key => JSON.parse(localStorage.getItem(key))?.sessions[0].routine.length === 14, {}, manualDraftStorageKey());
     const quickReused = await page.evaluate(key => JSON.parse(localStorage.getItem(key)).sessions[0], manualDraftStorageKey());
     assert.equal(quickReused.routine.length, 14); assert.ok(quickReused.prescriptions.find(dose => dose.phase === 'strength').preparation.instruction.length > 0, `${layout}: safe generic preparation instruction is restored from saved snapshot`);
@@ -182,7 +164,7 @@ try {
     await clickSelector('[data-testid="open-saved-workouts"]'); await visible('[data-testid="saved-workout-open"]'); await clickSelector('[data-testid="saved-workout-open"]');
     await visible('[data-testid="saved-workout-detail"]');
     assert.equal(await page.$eval('[data-testid="saved-workouts"] h2', item => item.innerText), `手動排課煙霧測試 ${layout}`);
-    await click('選日期套用'); await click('逐天指定日期'); await fill('input[aria-label="第 1 天套用日期"]', secondDate);
+    await click('選日期套用'); await click('逐天指定'); await fill('input[aria-label="第 1 天套用日期"]', secondDate);
     await clickSelector('[data-testid="assignment-preview"]'); await clickSelector('[data-testid="assignment-apply"]');
     await page.waitForFunction(date => JSON.parse(localStorage.getItem('fitness_date_period_v1')).sessionsByDate[date], {}, secondDate);
     const reused = await period();
@@ -228,7 +210,17 @@ try {
     };
     await recipientClick('選日期，匯入我的課表');
     await recipient.waitForSelector('[data-testid="assignment-preview"]');
-    await recipientClick('檢查日期並預覽');
+    await recipientClick('檢查課表');
+    await recipient.waitForSelector('.assignment-error');
+    assert.equal(await recipient.evaluate(() => localStorage.getItem('fitness_date_period_v1')), null, 'Missing recipient equipment blocks import without writing');
+    await recipientClick('返回編輯');
+    await recipient.waitForSelector('[data-testid="manual-planner"]');
+    await recipient.click('.combo-first-day-meta');
+    await recipient.waitForFunction(() => { const input = [...document.querySelectorAll('#manual-configuration label')].find(item => item.innerText === '啞鈴')?.querySelector('input'); return input && input.getClientRects().length > 0; });
+    const recipientDumbbell = (await recipient.evaluateHandle(() => [...document.querySelectorAll('#manual-configuration label')].find(item => item.innerText === '啞鈴')?.querySelector('input'))).asElement();
+    await recipientDumbbell.click();
+    await recipient.$eval('[data-testid="manual-daily-time"]', input => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, '120'); input.dispatchEvent(new Event('input', { bubbles: true })); input.dispatchEvent(new Event('change', { bubbles: true })); });
+    await recipient.click('.manual-more > summary'); await recipient.click('[data-testid="manual-review"]');
     await recipient.waitForSelector('[data-testid="assignment-apply"]');
     await recipient.click('[data-testid="assignment-apply"]');
     await recipient.waitForFunction(() => document.body.innerText.includes('課表已匯入'));

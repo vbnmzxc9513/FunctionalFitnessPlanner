@@ -1,0 +1,14 @@
+{
+  "screenshots": "390×844 and 1440×1000",
+  "warmup": "· 8 個動作",
+  "combined": "· 10 個動作",
+  "duplicate": "已加入 2 個動作 · 1 個重複保留原設定撤銷",
+  "stayedOpen": true,
+  "exerciseCount": 10,
+  "emptyNextDay": 0,
+  "preserved": 10,
+  "overflow": false,
+  "overflow320": false,
+  "errors": [],
+  "scope": "Standalone visual prototype. No Firebase writes, production integration, human test, or clinical validation."
+}

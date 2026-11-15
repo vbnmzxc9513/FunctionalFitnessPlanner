@@ -1,16 +1,15 @@
 import { useBackNavigation } from '../hooks/useBackNavigation.js';
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ChevronLeft, ChevronRight, Copy } from 'lucide-react';
-import BatchExercisePicker from './BatchExercisePicker.jsx';
+import { ArrowLeft, ChevronLeft, ChevronRight, Copy, CalendarDays } from 'lucide-react';
 import QuickWorkoutPicker from './QuickWorkoutPicker.jsx';
 import { undoQuickWorkout } from '../domain/quickWorkoutDraft.js';
 import SessionPlanEditor from './SessionPlanEditor.jsx';
 import './manual-planner.css';
+import './combo-first.css';
 import { localDate } from '../domain/dates.js';
-import { estimateSessionMinutes } from '../domain/sessions.js';
 import { EQUIPMENT } from '../domain/exerciseCatalog.js';
 import {
-  MANUAL_MAX_EXERCISES, addManualExercises, clearManualDraft, copyManualSession, createManualSession, hydrateManualSession,
+  clearManualDraft, copyManualSession, createManualSession, hydrateManualSession,
   loadManualDraft, manualDraftStorageKey, manualPlannerErrorMessage, prepareManualPreview,
   saveManualDraft, shiftManualDate, validateManualDates,
 } from '../domain/manualPlanner.js';
@@ -35,7 +34,7 @@ export default function ManualPlanner(props) {
 }
 
 function ManualPlannerWorkspace({ uid, today = localDate(), lang = 'zh', t, exercises = {}, eligibleExercises = {}, profile,
-  onPreview, onCancel, onSaveWorkout, onShare, workoutStore, onContextChange, onProfileChange, initialSessions, initialActiveDate, onOrganize, canManage = false, onSignIn }) {
+  onPreview, onCancel, onSaveWorkout, onShare, workoutStore, onContextChange, onProfileChange, initialSessions, initialActiveDate }) {
   const en = lang === 'en';
   const [initial] = useState(() => initialDraft({ uid, initialSessions, exercises, lang }));
   const [sessions, setSessions] = useState(initial.sessions);
@@ -45,15 +44,17 @@ function ManualPlannerWorkspace({ uid, today = localDate(), lang = 'zh', t, exer
   const [calendarMonth, setCalendarMonth] = useState(() => (initial.sessions[0]?.date || today).slice(0, 7));
   const [activeDate, setActiveDate] = useState(initial.sessions.some(value => value.date === initialActiveDate) ? initialActiveDate : initial.sessions[0]?.date || '');
   const [picker, setPicker] = useState(null);
-  const [quickTab, setQuickTab] = useState(null);
-  const [blankDates, setBlankDates] = useState([]);
+  const [selectedCombo, setSelectedCombo] = useState(null);
   const [lastOperation, setLastOperation] = useState(null);
-  const [selected, setSelected] = useState([]);
   const [error, setError] = useState(initial.error ? manualPlannerErrorMessage(initial.error, lang, exercises) : '');
-  const [notice, setNotice] = useState('');
+  const [noticeState, setNoticeState] = useState({ text: '', version: 0 });
+  const [noticeCollapsed, setNoticeCollapsed] = useState(false);
+  const notice = noticeState.text;
+  const setNotice = text => { setNoticeState(current => ({ text, version: current.version + 1 })); setNoticeCollapsed(false); };
   const [stored, setStored] = useState(null);
   const [busy, setBusy] = useState(false);
   const [copyTarget, setCopyTarget] = useState('');
+  const [copyConfirmed, setCopyConfirmed] = useState(false);
   const errorBox = useRef(null);
   const heading = useRef(null);
   const openedBy = useRef(null);
@@ -66,6 +67,7 @@ function ManualPlannerWorkspace({ uid, today = localDate(), lang = 'zh', t, exer
     requestAnimationFrame(() => errorBox.current?.focus({ preventScroll: false }));
   };
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  useEffect(() => { if (!noticeState.text) return; const timer = setTimeout(() => setNoticeCollapsed(true), 3000); return () => clearTimeout(timer); }, [noticeState]);
   useEffect(() => {
     if (stage !== 'edit' || !sessions.length) return;
     let active = true, success = true;
@@ -73,9 +75,9 @@ function ManualPlannerWorkspace({ uid, today = localDate(), lang = 'zh', t, exer
     Promise.resolve().then(() => { if (active) setStored(success); });
     return () => { active = false; };
   }, [uid, sessions, stage]);
-  const update = next => {
+  const update = (next, operation = null) => {
     setSessions(current => current.map(value => value.date === next.date ? next : value));
-    setNotice(''); setLastOperation(null);
+    setNotice(operation ? en ? 'Removed from this draft.' : '已從草稿移除。' : ''); setLastOperation(operation);
   };
   const dateLabel = date => new Intl.DateTimeFormat(en ? 'en' : 'zh-TW', { month: 'numeric', day: 'numeric', weekday: 'short', timeZone: 'UTC' }).format(new Date(`${date}T12:00:00Z`)).replace(/[（）()]/g, '').replace(/週([一二三四五六日])/, '（$1）');
   const startEditing = () => {
@@ -108,41 +110,42 @@ function ManualPlannerWorkspace({ uid, today = localDate(), lang = 'zh', t, exer
     } catch (problem) { if (mounted.current) report(problem); }
     finally { if (mounted.current) setBusy(false); }
   };
-  const openPicker = phase => {
+  const openPicker = (workout = null) => {
     openedBy.current = document.activeElement;
-    setPicker(phase); setSelected([]); setError(''); setNotice(''); setLastOperation(null);
+    setSelectedCombo(workout); setPicker(true); setError('');
   };
   const closePicker = () => {
-    const phase = picker;
-    setPicker(null); setSelected([]); setError('');
+    setPicker(null); setSelectedCombo(null); setError('');
     requestAnimationFrame(() => {
-      const target = openedBy.current?.isConnected ? openedBy.current : heading.current?.closest('section')?.querySelector(`[data-testid="manual-add-${phase}"]`);
+      const target = openedBy.current?.isConnected ? openedBy.current : heading.current;
       target?.focus();
     });
   };
   useBackNavigation(!!picker, closePicker, 60);
   useBackNavigation(stage === 'edit', saveAndExit, 30);
-  const addSelected = ids => {
-    try {
-      const next = addManualExercises(session, ids, { exercises, eligibleExercises, phase: picker, lang });
-      update(next); closePicker(); setNotice(en ? `Added ${ids.length} exercises to ${session.date}'s draft.` : `已加入 ${ids.length} 個動作到 ${session.date} 的草稿。`);
-    } catch (problem) { report(problem); }
+  const applyOperation = operation => {
+    update(operation.session); setLastOperation(operation);
+    setNotice(en ? `Added ${operation.addedCount}${operation.keptCount ? ` · ${operation.keptCount} duplicates kept` : ''}${operation.replacedCount ? ` · ${operation.replacedCount} doses updated` : ''}` : `新增 ${operation.addedCount}${operation.keptCount ? `，${operation.keptCount} 個重複保留原設定` : ''}${operation.replacedCount ? `，更新 ${operation.replacedCount} 項劑量` : ''}`);
   };
+  const undoAddition = () => { if (!lastOperation || lastOperation.session.date !== session.date) return; update(undoQuickWorkout(lastOperation)); setNotice(en ? 'Last draft change undone.' : '已撤銷最近一次草稿變更。'); };
   const reusableAction = callback => callback ? async value => {
     try { const [clean] = prepareManualPreview([value], { today, exercises, eligibleExercises, dailyTime }); await callback(clean); }
     catch (problem) { report(problem); }
   } : undefined;
   const copyDay = () => {
-    if (!copyTarget) return;
+    if (!copyTarget || !copyConfirmed) return;
     update(copyManualSession(session, copyTarget, { exercises, lang }));
     setCopyTarget(''); setNotice(en ? 'Copied into the target draft day. Existing schedules have not changed.' : '已取代目的日期的草稿，既有正式課表尚未變動。');
   };
-  const timeControls = session && (session.routine.length > 0 || blankDates.includes(session.date)) && (onContextChange || onProfileChange) && stage !== 'unreadable' && <details className="manual-configuration"><summary className="flex min-h-11 cursor-pointer items-center font-semibold text-sky-800">{en ? 'Available time and equipment' : '時間與器材'} · {`${profile?.context?.equipment?.length || 0} ${en ? 'equipment' : '種器材'}`}</summary>{onProfileChange && <label className="my-3 block text-sm font-medium text-slate-700">{en ? 'Daily time limit (5–240 minutes)' : '每日時間上限（5–240 分鐘）'}<input data-testid="manual-daily-time" type="number" min="5" max="240" step="1" value={profile?.time ?? '240'} onChange={event => onProfileChange({ ...profile, time: event.target.value })} className={input} /></label>}{!validTime && <p role="status" className="text-sm text-amber-800">{en ? 'Enter a time from 5 to 240 minutes before reviewing.' : '請填入 5–240 分鐘後再檢查課表。'}</p>}<p className="my-3 text-sm text-slate-600">{en ? 'Equipment changes the available exercise list. Partner, experience and treatment restrictions still apply. No equipment selected means bodyweight choices only. Doses will not be changed automatically to fit your time.' : '器材會影響可加入動作；搭檔、經驗與治療限制仍會保留。未勾選器材時，只會列出徒手可用的動作。改時間不會自動變更你的組次。'}</p><div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{EQUIPMENT.map(value => <label key={value} className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700"><input type="checkbox" checked={profile?.context?.equipment?.includes(value) || false} onChange={event => { const context = { ...(profile?.context || {}), equipment: event.target.checked ? [...new Set([...(profile?.context?.equipment || []), value])] : (profile?.context?.equipment || []).filter(item => item !== value) }; if (onContextChange) onContextChange(context); else onProfileChange({ ...profile, context }); }} className="h-5 w-5 accent-sky-600" />{t?.(`equipment_${value}`) || value}</label>)}</div></details>;
-  if (quickTab && session) return <QuickWorkoutPicker {...{ session, exercises, eligibleExercises, lang, dailyTime }} context={profile?.context || {}} store={workoutStore} initialTab={quickTab} onCancel={() => { setQuickTab(null); requestAnimationFrame(() => heading.current?.focus()); }} onLibrary={phase => { setQuickTab(null); openPicker(phase); }} onApply={operation => { update(operation.session); setLastOperation(operation); setQuickTab(null); setNotice(en ? `Added ${operation.addedCount} exercises${operation.replacedCount ? ` · ${operation.replacedCount} doses replaced` : ''}${operation.keptCount ? ` · ${operation.keptCount} kept` : ''}.` : `已加入 ${operation.addedCount} 個動作${operation.replacedCount ? ` · 更新 ${operation.replacedCount} 項` : ''}${operation.keptCount ? ` · 保留 ${operation.keptCount} 項` : ''}`); requestAnimationFrame(() => heading.current?.focus()); }} />;
-  if (picker && session) return <section data-testid="manual-planner" className="manual-workspace manual-picker-workspace">
-    {error && <p ref={errorBox} tabIndex="-1" role="alert" className="rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-800">{error}</p>}
-    <BatchExercisePicker key={`${session.date}-${picker}`} {...{ exercises, eligibleExercises, lang, t, onOrganize, canManage, onSignIn }} selectedIds={selected} onSelectionChange={setSelected} existingIds={session.routine} remainingCapacity={Math.max(0, MANUAL_MAX_EXERCISES - session.routine.length)} phase={picker} date={session.date} onAdd={addSelected} onCancel={closePicker} />
-  </section>;
+  const configure = () => {
+    closePicker(); requestAnimationFrame(() => {
+      const target = document.getElementById('manual-configuration');
+      if (target) { const menu = target.closest('.manual-more'); if (menu) menu.open = true; target.open = true; target.querySelector('summary')?.focus(); target.scrollIntoView({ block: 'center' }); }
+    });
+  };
+  const dayActions = session && <>{lastOperation && <button type="button" data-testid="manual-undo-change" className="manual-text-action" onClick={undoAddition}>{en ? 'Undo last change' : '撤銷最近一次變更'}</button>}<div className="manual-more-actions">{onSaveWorkout && <button type="button" data-testid="manual-save-day" className={button} onClick={() => onSaveWorkout(session)}>{en ? 'Save as combo' : '收藏成組合'}</button>}{onShare && <button type="button" className={button} onClick={() => reusableAction(onShare)(session)}>{en ? 'Share draft' : '分享草稿'}</button>}</div>{sessions.length > 1 && <details className="manual-secondary-details"><summary>{en ? 'Copy this day' : '複製這天'}</summary><label className="block text-sm text-slate-700">{en ? 'Copy this day into another draft date' : '複製這天到其他草稿日期'}<select value={copyTarget} onChange={event => { setCopyTarget(event.target.value); setCopyConfirmed(false); }} className={input}><option value="">{en ? 'Choose target date' : '選擇目的日期'}</option>{sessions.filter(value => value.date !== session.date).map(value => <option key={value.date} value={value.date}>{dateLabel(value.date)}</option>)}</select></label><p className="my-2 text-xs text-slate-500">{en ? 'This replaces the target draft day, including its exercises and doses. Scheduled sessions are untouched.' : '這會取代目的日期的草稿動作與組次，尚不更動正式課表。'}</p>{copyTarget && <div className="quick-conflict"><strong>{en ? 'Content to remove' : '將移除的目的草稿內容'}</strong>{sessions.find(value => value.date === copyTarget)?.prescriptions.map(dose => <p key={dose.id}>{exercises[dose.id]?.name || dose.id} · {dose.sets} × {dose.value}</p>)}<strong>{en ? 'Replacement content' : '取代後內容'}</strong>{session.prescriptions.map(dose => <p key={dose.id}>{exercises[dose.id]?.name || dose.id} · {dose.sets} × {dose.value}</p>)}<label className="quick-check"><input type="checkbox" checked={copyConfirmed} onChange={event => setCopyConfirmed(event.target.checked)} />{en ? 'Replace this target draft with the current day' : '確認以目前這天取代目的草稿'}</label></div>}<button type="button" disabled={!copyTarget || !copyConfirmed} className={button} onClick={copyDay}><Copy size={16} aria-hidden="true" />{en ? 'Copy and replace target draft' : '複製並取代目的草稿'}</button></details>}
+        <div className="manual-leave-row"><button type="button" className="manual-text-action" disabled={busy} onClick={saveAndExit}>{en ? 'Save draft and leave' : '保留草稿後離開'}</button></div></>;
+  const timeControls = session && (onContextChange || onProfileChange) && stage !== 'unreadable' && <details id="manual-configuration" className="manual-configuration"><summary className="flex min-h-11 cursor-pointer items-center font-semibold text-sky-800">{en ? 'Available time and equipment' : '時間與器材'} · {`${profile?.context?.equipment?.length || 0} ${en ? 'equipment' : '種器材'}`}</summary>{onProfileChange && <label className="my-3 block text-sm font-medium text-slate-700">{en ? 'Daily time limit (5–240 minutes)' : '每日時間上限（5–240 分鐘）'}<input data-testid="manual-daily-time" type="number" min="5" max="240" step="1" value={profile?.time ?? '240'} onChange={event => onProfileChange({ ...profile, time: event.target.value })} className={input} /></label>}{!validTime && <p role="status" className="text-sm text-amber-800">{en ? 'Enter a time from 5 to 240 minutes before reviewing.' : '請填入 5–240 分鐘後再檢查課表。'}</p>}<p className="my-3 text-sm text-slate-600">{en ? 'Equipment changes the available exercise list. Partner, experience and treatment restrictions still apply. No equipment selected means bodyweight choices only. Doses will not be changed automatically to fit your time.' : '器材會影響可加入動作；搭檔、經驗與治療限制仍會保留。未勾選器材時，只會列出徒手可用的動作。改時間不會自動變更你的組次。'}</p><div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{EQUIPMENT.map(value => <label key={value} className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700"><input type="checkbox" checked={profile?.context?.equipment?.includes(value) || false} onChange={event => { const context = { ...(profile?.context || {}), equipment: event.target.checked ? [...new Set([...(profile?.context?.equipment || []), value])] : (profile?.context?.equipment || []).filter(item => item !== value) }; if (onContextChange) onContextChange(context); else onProfileChange({ ...profile, context }); }} className="h-5 w-5 accent-sky-600" />{t?.(`equipment_${value}`) || value}</label>)}</div></details>;
   let availableDates = [], rangeValid = true;
   try {
     validateManualDates(range.from === range.to ? [range.from] : [range.from, range.to], { today });
@@ -158,11 +161,16 @@ function ManualPlannerWorkspace({ uid, today = localDate(), lang = 'zh', t, exer
     const next = new Date(`${monthStart}T12:00:00Z`); next.setUTCMonth(next.getUTCMonth() + offset); setCalendarMonth(next.toISOString().slice(0, 7));
   };
   return <section data-testid="manual-planner" className={`manual-workspace ${stage === 'edit' ? 'manual-edit-workspace' : ''}`}>
-    <div className="manual-topline"><button type="button" className="manual-back" disabled={busy} onClick={saveAndExit}><ArrowLeft size={16} aria-hidden="true" />{en ? 'Back to planner' : '返回本週安排'}</button></div>
-    <header className="manual-intro">{stage === 'dates' && <ol className="manual-steps" aria-label={en ? 'Planning steps' : '排課步驟'}>{[en ? '1 Dates' : '1 日期', en ? '2 Build a draft' : '2 安排草稿', en ? '3 Review' : '3 檢查'].map((label, index) => <li key={label} aria-current={index === (stage === 'dates' ? 0 : 1) ? 'step' : undefined}>{label}</li>)}</ol>}<div className="manual-title-row"><h1 ref={heading} tabIndex="-1">{stage === 'dates' ? en ? 'Which days are you planning?' : '要安排哪幾天？' : en ? `Plan ${dateLabel(session?.date || today)}` : `安排 ${dateLabel(session?.date || today)}`}</h1>{stage === 'edit' && <button type="button" className="manual-change-dates" disabled={!!picker || busy} onClick={() => { setStage('dates'); setDates(sessions.map(value => value.date)); setError(''); setNotice(''); setLastOperation(null); }}>{en ? 'Change dates' : '調整日期'}</button>}</div>{stage === 'dates' && <p>{en ? 'Choose dates, then build each day. Review before applying to your schedule.' : '先選日期，再安排每天的內容。檢查並確認後才套用到課表。'}</p>}</header>
+    <div className="manual-topline"><button type="button" className="manual-back" disabled={busy} onClick={saveAndExit}><ArrowLeft size={16} aria-hidden="true" />{en ? 'My plan' : '我的課表'}</button></div>
+    {stage === 'edit' && session ? <header className="combo-first-day-header">
+      <div className="combo-first-month"><span>{new Intl.DateTimeFormat(en ? 'en' : 'zh-TW', { year: 'numeric', month: 'long', timeZone: 'UTC' }).format(new Date(`${session.date}T12:00:00Z`))}</span><button type="button" onClick={() => { setStage('dates'); setDates(sessions.map(value => value.date)); setError(''); setNotice(''); setLastOperation(null); }}>{en ? 'Change dates' : '調整日期'}<CalendarDays size={15} aria-hidden="true" /></button></div>
+      <div className="manual-dates" aria-label={en ? 'Draft dates' : '切換草稿日期'}>{sessions.map(value => <button type="button" key={value.date} data-testid={`manual-tab-${value.date}`} aria-pressed={session.date === value.date} aria-label={dateLabel(value.date)} onClick={() => { setActiveDate(value.date); setError(''); setCopyTarget(''); setCopyConfirmed(false); setNotice(''); setLastOperation(null); }} className="manual-date-tab"><span>{new Intl.DateTimeFormat(en ? 'en' : 'zh-TW', { weekday: 'narrow', timeZone: 'UTC' }).format(new Date(`${value.date}T12:00:00Z`))}</span><strong>{Number(value.date.slice(8))}</strong>{value.routine.length > 0 && <i aria-hidden="true" />}</button>)}</div>
+      <h1 ref={heading} tabIndex={-1}>{new Intl.DateTimeFormat(en ? 'en' : 'zh-TW', { month: 'long', day: 'numeric', timeZone: 'UTC' }).format(new Date(`${session.date}T12:00:00Z`))}<span>{new Intl.DateTimeFormat(en ? 'en' : 'zh-TW', { weekday: 'short', timeZone: 'UTC' }).format(new Date(`${session.date}T12:00:00Z`))}</span></h1>
+      <button type="button" className="combo-first-day-meta" onClick={configure}><i aria-hidden="true" />{en ? 'Not applied' : '尚未套用'}<span>·</span>{dailyTime} {en ? 'min limit' : '分鐘上限'}</button>
+    </header> : <header className="manual-intro">{stage === 'dates' && <ol className="manual-steps" aria-label={en ? 'Planning steps' : '排課步驟'}>{[en ? '1 Dates' : '1 日期', en ? '2 Build a draft' : '2 安排草稿', en ? '3 Review' : '3 檢查'].map((label, index) => <li key={label} aria-current={index === (stage === 'dates' ? 0 : 1) ? 'step' : undefined}>{label}</li>)}</ol>}<div className="manual-title-row"><h1 ref={heading} tabIndex="-1">{stage === 'dates' ? en ? 'Which days are you planning?' : '要安排哪幾天？' : en ? `Plan ${dateLabel(session?.date || today)}` : `安排 ${dateLabel(session?.date || today)}`}</h1>{stage === 'edit' && <button type="button" className="manual-change-dates" disabled={!!picker || busy} onClick={() => { setStage('dates'); setDates(sessions.map(value => value.date)); setError(''); setNotice(''); setLastOperation(null); }}>{en ? 'Change dates' : '調整日期'}</button>}</div></header>}
 
     {error && <p ref={errorBox} tabIndex="-1" role="alert" className="rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-800 focus-visible:outline-2 focus-visible:outline-red-500">{error}</p>}
-    {notice && <div role="status" className="manual-operation-notice"><p>{notice}</p>{lastOperation && <button type="button" className="manual-text-action" onClick={() => { const restored = undoQuickWorkout(lastOperation); update(restored); setNotice(en ? 'Last draft addition undone.' : '已撤銷這次草稿變更。'); }}>{en ? 'Undo' : '撤銷'}</button>}{lastOperation?.addedCount > 0 && <button type="button" data-testid="manual-continue-training" className="manual-text-action" onClick={() => openPicker('strength')}>{en ? 'Continue adding training' : '繼續加入訓練'}</button>}</div>}
+    {notice && <div role="status" className="manual-operation-notice" data-collapsed={noticeCollapsed}><p>{notice}</p>{lastOperation && <button type="button" className="manual-text-action" onClick={undoAddition}>{en ? 'Undo' : '撤銷'}</button>}</div>}
     {stage === 'unreadable' ? <button type="button" className={button} onClick={() => {
       try { clearManualDraft(uid); setSessions([]); setDates([]); setStage('dates'); setError(''); } catch { report(new Error('MANUAL_STORAGE_UNAVAILABLE')); }
     }}>{en ? 'Discard unreadable draft and start again' : '捨棄無法讀取的草稿並重新開始'}</button> : stage === 'dates' ? <>
@@ -177,21 +185,17 @@ function ManualPlannerWorkspace({ uid, today = localDate(), lang = 'zh', t, exer
         catch (problem) { report(problem); }
       }}>{en ? 'Quick select: Mon / Wed / Fri' : '快速選取此期間：一、三、五'}</button>
       <details className="manual-secondary-details"><summary data-testid="manual-range-options">{en ? 'Adjust displayed period' : '調整顯示期間'}</summary><div className="grid gap-3 sm:grid-cols-2"><label className="min-w-0 text-sm text-slate-700">{en ? 'Show dates from' : '顯示開始日期'}<input data-testid="manual-range-from" type="date" min={today} value={range.from} onChange={event => { setRange({ ...range, from: event.target.value }); if (/^\d{4}-\d{2}-\d{2}$/.test(event.target.value)) setCalendarMonth(event.target.value.slice(0, 7)); }} className={input} /></label><label className="min-w-0 text-sm text-slate-700">{en ? 'Show dates through' : '顯示結束日期'}<input data-testid="manual-range-to" type="date" min={range.from || today} max={range.from ? (() => { try { return shiftManualDate(range.from, 27); } catch { return undefined; } })() : undefined} value={range.to} onChange={event => setRange({ ...range, to: event.target.value })} className={input} /></label></div>{!rangeValid && <p role="status" className="text-sm text-amber-800">{en ? 'Use valid dates, in order, covering at most 28 days.' : '請填有效、先後順序正確且不超過 28 天的期間。'}</p>}<button type="button" className="manual-text-action" disabled={!rangeValid} onClick={() => { try { setDates(validateManualDates(availableDates.filter(date => [1, 3, 5].includes(new Date(`${date}T12:00:00Z`).getUTCDay())), { today, allowEmpty: true })); setError(''); } catch (problem) { report(problem); } }}>{en ? 'Select Mon / Wed / Fri in this window' : '選取此期間的每週一、三、五'}</button></details>
-      <p className="manual-selection-hint">{en ? 'Build a draft first, then review and apply. Existing schedules and training records remain unchanged. Select nonconsecutive dates within a 28-day span.' : '先排成草稿，再確認套用。選日期不會立即更動既有課表；已有訓練紀錄的日期會保留。可選不連續日期，首尾最多 28 天。'}</p>
+
       {dates.length > 0 && <details className="manual-secondary-details"><summary>{en ? 'Review selected dates' : '檢查已選日期'}</summary><div className="flex flex-wrap gap-2">{dates.map(date => <button type="button" key={date} aria-label={`${en ? 'Remove date' : '取消日期'} ${date}`} onClick={() => toggleDate(date)} className={button}>{dateLabel(date)} ×</button>)}</div></details>}
       <footer className="manual-fixed-actions"><div className="manual-fixed-inner"><div><strong>{en ? `${dates.length} dates selected` : `已選 ${dates.length} 天`}</strong><p>{dates.slice(0, 3).map(date => `${Number(date.slice(5, 7))}/${Number(date.slice(8))}`).join('、')}{dates.length > 3 && '…'}</p></div><button type="button" data-testid="manual-start" disabled={!dates.length} onClick={startEditing} className="manual-primary">{en ? `Build ${dates.length} days` : `開始安排 ${dates.length} 天`}</button></div></footer>
     </> : session && <>
-      <div className="manual-workbench"><aside className="manual-date-rail"><div className="manual-dates" aria-label={en ? 'Draft dates' : '切換草稿日期'}>{sessions.map(value => {
-        let minutes = 0; try { minutes = estimateSessionMinutes(value, exercises); } catch { /* Review will explain invalid content. */ }
-        return <button type="button" key={value.date} data-testid={`manual-tab-${value.date}`} aria-pressed={session.date === value.date} onClick={() => { setActiveDate(value.date); setError(''); setCopyTarget(''); setNotice(''); setLastOperation(null); }} className="manual-date-tab"><span>{dateLabel(value.date)}</span><span>{value.date === session.date ? en ? 'Editing now' : '目前編輯' : value.routine.length ? `${value.routine.length} ${en ? 'exercises' : '動作'} · ${minutes} ${en ? 'min' : '分'}` : en ? 'Not planned' : '尚未安排'}</span></button>;
-      })}</div></aside><div className="manual-day-content">
-      {picker ? <BatchExercisePicker key={`${session.date}-${picker}`} {...{ exercises, eligibleExercises, lang, t, onOrganize, canManage, onSignIn }} selectedIds={selected} onSelectionChange={setSelected} existingIds={session.routine} remainingCapacity={Math.max(0, MANUAL_MAX_EXERCISES - session.routine.length)} phase={picker} date={session.date} onAdd={addSelected} onCancel={closePicker} /> : <>
-        {!session.routine.length && !blankDates.includes(session.date) ? <section className="manual-empty-day"><h2>{session.explicitRest ? en ? 'This is a rest day' : '這一天已明確安排休息' : en ? 'How would you like to plan this day?' : '這一天想怎麼安排？'}</h2><p>{en ? 'Add a quick combo or a saved favorite, then build your daily workout.' : '加入快速組合或我的收藏，再安排成當日課表。'}</p><button type="button" className="manual-primary" data-testid="manual-common-workouts" onClick={() => setQuickTab('common')}><span><strong>{en ? 'Choose a quick combo' : '選快速組合'}</strong><small>{en ? 'Hip rotation, foot arch, shoulder blade and daily warm-up' : '髖內旋、足弓、肩胛與每日暖身'}</small></span><span aria-hidden="true">›</span></button><button type="button" className={button} onClick={() => setQuickTab('mine')}><span><strong>{en ? 'Choose my favorites' : '選我的收藏'}</strong><small>{en ? 'Add your saved day or workout segment' : '加入自己保存的整天或訓練片段'}</small></span><span aria-hidden="true">›</span></button><button type="button" className="manual-text-action" onClick={() => setBlankDates([...blankDates, session.date])}><span><strong>{en ? 'Start from blank' : '從空白開始'}</strong><small>{en ? 'Choose warm-up, training and cooldown exercises' : '自己選暖身、訓練與收操動作'}</small></span><span aria-hidden="true">›</span></button></section> : <><SessionPlanEditor key={session.date} {...{ session, exercises, eligibleExercises, lang, t }} onChange={update} onAddExercises={openPicker} onSaveWorkout={onSaveWorkout} dailyTime={dailyTime} timeControls={timeControls} onAddWorkout={() => setQuickTab('common')} /> </>}
-
-        {!session.routine.length && <div className="manual-empty-options"><button type="button" className="manual-text-action" onClick={() => update({ ...session, explicitRest: true })}>{en ? 'Explicitly plan a rest day' : '明確安排為休息日'}</button>{sessions.length > 1 && <button type="button" className="manual-text-action" onClick={() => { setSessions(sessions.filter(value => value.date !== session.date)); setActiveDate(sessions.find(value => value.date !== session.date).date); setNotice(''); setLastOperation(null); }}>{en ? 'Remove this draft date' : '移除這個草稿日期'}</button>}</div>}{session.routine.length > 0 && <details className="manual-secondary-details manual-more"><summary>{en ? 'More: copy / share draft' : '更多：複製到其他天／分享草稿'}</summary><div className="manual-more-actions">{onShare && <button type="button" className={button} onClick={() => reusableAction(onShare)(session)}>{en ? 'Share draft' : '分享草稿'}</button>}</div>{sessions.length > 1 && <details className="manual-secondary-details"><summary>{en ? 'Copy this day' : '複製這天'}</summary><label className="block text-sm text-slate-700">{en ? 'Copy this day into another draft date' : '複製這天到其他草稿日期'}<select value={copyTarget} onChange={event => setCopyTarget(event.target.value)} className={input}><option value="">{en ? 'Choose target date' : '選擇目的日期'}</option>{sessions.filter(value => value.date !== session.date).map(value => <option key={value.date} value={value.date}>{dateLabel(value.date)}</option>)}</select></label><p className="my-2 text-xs text-slate-500">{en ? 'This replaces the target draft day, including its exercises and doses. Scheduled sessions are untouched.' : '這會取代目的日期的草稿動作與組次，尚不更動正式課表。'}</p><button type="button" disabled={!copyTarget} className={button} onClick={copyDay}><Copy size={16} aria-hidden="true" />{en ? 'Copy and replace target draft' : '複製並取代目的草稿'}</button></details>}
-        <div className="manual-leave-row"><button type="button" className="manual-text-action" disabled={busy} onClick={saveAndExit}>{en ? 'Save draft and leave' : '保留草稿後離開'}</button></div></details>}
-        <footer className="manual-fixed-actions"><div className="manual-fixed-inner"><div className="manual-draft-state" role="status"><strong>{stored === false ? en ? 'Draft not saved' : '草稿尚未成功保存' : en ? 'Draft saved on device' : '草稿已保留在此裝置'}</strong><p>{stored === false ? en ? 'Keep this page open and retry. Not applied.' : '請保持此頁開啟再重試，尚未套用。' : en ? 'Not applied to dates' : '尚未套用到日期'}</p></div>{(session.routine.length > 0 || session.explicitRest) && <button type="button" data-testid="manual-review" className="manual-primary" disabled={busy || !validTime} onClick={preview}>{en ? `Review ${sessions.length} days` : `檢查並套用 ${sessions.length} 天`}</button>}</div></footer>
-      </>}
-    </div></div></>}
+      <div className="manual-workbench"><div className="manual-day-content">
+      <>
+        <QuickWorkoutPicker compact key={`common-${session.date}`} {...{ session, exercises, eligibleExercises, lang, dailyTime }} context={profile?.context || {}} store={workoutStore} onApply={applyOperation} onOpen={openPicker} />
+        <SessionPlanEditor key={session.date} {...{ session, exercises, eligibleExercises, lang, t }} onChange={update} dailyTime={dailyTime} timeControls={timeControls} moreControls={dayActions} />
+        {!session.routine.length && <div className="manual-empty-options"><button type="button" className="manual-text-action" onClick={() => update({ ...session, explicitRest: true })}>{en ? 'Explicitly plan a rest day' : '明確安排為休息日'}</button>{sessions.length > 1 && <button type="button" className="manual-text-action" onClick={() => { setSessions(sessions.filter(value => value.date !== session.date)); setActiveDate(sessions.find(value => value.date !== session.date).date); setNotice(''); setLastOperation(null); }}>{en ? 'Remove this draft date' : '移除這個草稿日期'}</button>}</div>}
+        <footer className="manual-fixed-actions"><div className="manual-fixed-inner"><div className="manual-draft-state" role="status"><strong>{stored === false ? en ? 'Draft not saved' : '草稿尚未成功保存' : en ? 'Device draft' : '此裝置草稿'}</strong><p>{stored === false ? en ? 'Keep this page open and retry. Not applied.' : '請保持此頁開啟再重試，尚未套用。' : ''}</p></div><button type="button" data-testid="manual-add-content" className="manual-primary" onClick={() => openPicker()}>{en ? '+ Add content' : '＋ 加入內容'}</button>{<button type="button" data-testid="manual-review" className="manual-review-button" disabled={busy || !validTime || !session.routine.length && !session.explicitRest} onClick={preview}>{en ? 'Review plan' : '檢查課表'}</button>}</div></footer>
+      </>
+    </div></div>{picker && <QuickWorkoutPicker key={`picker-${session.date}`} {...{ session, exercises, eligibleExercises, lang, dailyTime }} context={profile?.context || {}} store={workoutStore} initialSelected={selectedCombo} onCancel={closePicker} onApply={applyOperation} onUndo={undoAddition} canUndo={!!lastOperation} onConfigure={configure} />}</>}
   </section>;
 }

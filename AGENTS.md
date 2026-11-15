@@ -11,7 +11,7 @@ The latest user instructions take precedence. Root `design.md` and earlier UX do
 
 Before changing implementation, identify the acceptance IDs affected. After each coherent change, update STATE with touched files, actual verification, unresolved gaps, and the next executable step. Record facts rather than intended work as completed. This is the restart point after context compaction or a handoff.
 
-`reference-v3/` under the design directory is an immutable reference snapshot, not production code. Generate implementation screenshots separately. If a reference must change, record the reason and create a new reference version; do not silently overwrite the baseline to make an implementation appear compliant.
+`reference-v5/` is the current visual baseline; `reference-v3/` and `reference-v4/` are historical snapshots. These references are not production code and must not be overwritten to fit the implementation. Generate implementation screenshots separately. If a reference must change, record the reason and create a new reference version; do not silently overwrite the baseline to make an implementation appear compliant.
 
 Review behavior, appearance, and data preservation separately. A prototype browser check does not validate Firebase writes, production performance, or human usability. Keep those statuses distinct. Do not call the redesign finished while the old workflow is still the user-facing route.
 

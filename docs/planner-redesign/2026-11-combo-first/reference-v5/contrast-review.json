@@ -1,0 +1,40 @@
+{
+  "method": "WCAG sRGB relative luminance; visible direct text nodes, resolved nearest opaque background. No image/gradient text backgrounds in these layouts. Dialog checks exclude inert background.",
+  "results": [
+    {
+      "width": 390,
+      "state": "empty",
+      "minimum": 4.52,
+      "below4_5": [],
+      "checked": 36
+    },
+    {
+      "width": 390,
+      "state": "filled",
+      "minimum": 4.52,
+      "below4_5": [],
+      "checked": 72
+    },
+    {
+      "width": 390,
+      "state": "picker",
+      "minimum": 4.75,
+      "below4_5": [],
+      "checked": 67
+    },
+    {
+      "width": 1440,
+      "state": "filled",
+      "minimum": 4.52,
+      "below4_5": [],
+      "checked": 81
+    },
+    {
+      "width": 1440,
+      "state": "picker-filled",
+      "minimum": 4.75,
+      "below4_5": [],
+      "checked": 68
+    }
+  ]
+}

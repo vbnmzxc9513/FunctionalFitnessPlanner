@@ -1,8 +1,12 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import ExerciseDetails from './ExerciseDetails.jsx';
 import { createWorkoutSnapshot, workoutName } from '../domain/savedWorkouts.js';
 import { SAVED_WORKOUTS_TEXT, savedWorkoutError } from '../savedWorkoutsLocale.js';
 import './workout-sharing.css';
+import './combo-save-workout.css';
+
+const scopePhases = { warmup: ['warmup'], training: ['skill', 'strength', 'accessory'], cooldown: ['recovery', 'cooldown'] };
+const doseText = (dose, en) => `${dose.sets}${en ? ' × ' : '組 × '}${dose.value} ${{ reps: en ? 'reps' : '下', seconds: en ? 'sec' : '秒', minutes: en ? 'min' : '分', breaths: en ? 'breaths' : '次呼吸' }[dose.unit]}${dose.perSide ? en ? ' / side' : '／側' : ''}`;
 
 function SaveWorkoutForm({ store, day, exercises, level = 1, lang, onClose, onSaved, sourceItem }) {
   const t = SAVED_WORKOUTS_TEXT[lang] || SAVED_WORKOUTS_TEXT.zh, en = lang === 'en';
@@ -10,48 +14,62 @@ function SaveWorkoutForm({ store, day, exercises, level = 1, lang, onClose, onSa
   const [name, setName] = useState(sourceItem?.name || '');
   const [saveMode, setSaveMode] = useState('new');
   let baseSnapshot;
-  try { baseSnapshot = createWorkoutSnapshot(day, exercises, level); } catch { /* Reported by the scoped snapshot validation below. */ }
+  try { baseSnapshot = createWorkoutSnapshot(day, exercises, level); } catch { /* Scoped validation below retains the error. */ }
   const sourceDoses = day.prescriptions || baseSnapshot?.prescriptions || [];
-  const [scope, setScope] = useState(sourceItem?.scope || 'day');
+  const [scope, setScope] = useState(sourceItem?.scope || 'selection');
   const [selectedIds, setSelectedIds] = useState(day.routine);
   const [tags, setTags] = useState(sourceItem?.tags || []);
-  const scopePhases = { warmup: ['warmup'], training: ['skill', 'strength', 'accessory'], cooldown: ['recovery', 'cooldown'] };
-  const prescriptions = sourceDoses.filter(dose => scope === 'day' || scope === 'selection' ? scope !== 'selection' || selectedIds.includes(dose.id) : scopePhases[scope].includes(dose.phase));
+  const prescriptions = sourceDoses.filter(dose => scope === 'day' || scope === 'selection' ? scope !== 'selection' || selectedIds.includes(dose.id) : scopePhases[scope]?.includes(dose.phase));
   const scopedDay = { ...day, prescriptions, routine: prescriptions.map(dose => dose.id), sessionType: prescriptions.some(dose => ['skill', 'strength', 'accessory'].includes(dose.phase)) ? 'training' : prescriptions.length ? 'recovery' : 'rest' };
   const [error, setError] = useState(null);
   const [pending, setPending] = useState(false);
+  const live = useRef(false), running = useRef(false);
+  useEffect(() => { live.current = true; return () => { live.current = false; }; }, []);
   let snapshot, invalid;
   try { snapshot = createWorkoutSnapshot(scopedDay, exercises, level); } catch (value) { invalid = value; }
   const submit = async event => {
     event.preventDefault();
-    if (pending || store.busy || invalid) return;
-    setError(null); setPending(true);
-    let item;
-    try { workoutName(name); item = saveMode === 'update' && sourceItem ? await store.update(sourceItem.id, { name, day: scopedDay, exercises, level, scope, tags, contentVersion: sourceItem.contentVersion || 1 }, sourceItem.revision) : await store.create({ name, day: scopedDay, exercises, level, scope, tags, contentVersion: 1 }); }
-    catch (value) { setError(value); setPending(false); return; }
-    setPending(false); onSaved?.(item); onClose();
+    if (running.current || invalid || !prescriptions.length || !store.loaded || store.error) return;
+    running.current = true; setError(null); setPending(true);
+    try {
+      workoutName(name);
+      const input = { name, day: scopedDay, exercises, level, scope, tags, pinned: true, contentVersion: sourceItem?.contentVersion || 1 };
+      const item = saveMode === 'update' && sourceItem ? await store.update(sourceItem.id, input, sourceItem.revision) : await store.create(input);
+      if (!live.current) return;
+      setPending(false); running.current = false;
+      onSaved?.(item); onClose();
+    } catch (value) {
+      if (!live.current) return;
+      setError(value); setPending(false); running.current = false;
+    }
+  };
+  const toggle = (id, checked) => {
+    setSelectedIds(checked ? [...prescriptions.map(dose => dose.id), id] : prescriptions.filter(dose => dose.id !== id).map(dose => dose.id));
+    setScope('selection'); setError(null);
   };
   const issue = invalid || error;
   const nameError = ['INVALID_WORKOUT_NAME', 'DUPLICATE_WORKOUT_NAME'].includes(error?.message);
-  const counts = snapshot?.prescriptions.reduce((result, dose) => { const group = dose.phase === 'warmup' ? 'warmup' : dose.phase === 'cooldown' ? 'cooldown' : dose.phase === 'recovery' ? 'recovery' : 'training'; result[group] = (result[group] || 0) + 1; return result; }, {}) || {};
-  return <div className="save-workout-ui workout-ui">
-    <ExerciseDetails open title={en ? 'Save to my favorites' : '存入我的收藏'} closeLabel={t.close} onClose={() => { if (!pending) onClose(); }}
-      footer={<><div className="save-workout-footer-copy"><strong>{en ? 'A reusable copy' : '建立可重複使用的副本'}</strong><p>{en ? 'Scheduled dates stay unchanged' : '不更動原日期安排'}</p></div><button type="submit" form={formId} data-testid="save-workout-confirm" className="workout-ui-primary" disabled={pending || store.busy || !store.loaded || !!store.error || !!invalid || !prescriptions.length}>{pending ? t.saving : en ? 'Save to my favorites' : '存入我的收藏'}</button></>}>
+  const selected = new Set(prescriptions.map(dose => dose.id));
+  return <div className="save-workout-ui workout-ui combo-save-workout">
+    <ExerciseDetails open title={en ? 'Save combo' : '收藏成組合'} closeLabel={t.close} onClose={() => { if (!running.current) onClose(); }}
+      footer={<><div className="save-workout-footer-copy"><strong>{en ? `${prescriptions.length} exercises` : `${prescriptions.length} 個動作`}</strong><p>{en ? 'Dates stay unchanged' : '不更動日期課表'}</p></div><button type="submit" form={formId} data-testid="save-workout-confirm" className="workout-ui-primary" disabled={pending || !store.loaded || !!store.error || !!invalid || !prescriptions.length}>{pending ? t.saving : saveMode === 'update' ? en ? 'Update and pin' : '更新並釘選' : en ? 'Save and pin' : '收藏並釘選'}</button></>}>
       <form id={formId} onSubmit={submit} className="workout-ui-form">
-        {sourceItem && <fieldset className="save-workout-scopes"><legend>{en ? 'Save this edited copy' : '保存修改後的副本'}</legend><label><input type="radio" name={`${formId}-mode`} checked={saveMode === 'new'} onChange={() => setSaveMode('new')} />{en ? 'Save as a new favorite' : '另存新收藏'}</label><label><input type="radio" name={`${formId}-mode`} checked={saveMode === 'update'} onChange={() => setSaveMode('update')} />{en ? `Update ${sourceItem.name}` : `更新這份收藏：${sourceItem.name}`}</label><p className="workout-ui-muted">{en ? 'Scheduled dates and shared copies stay independent.' : '已安排日期與分享副本保持獨立，不會連動更新。'}</p></fieldset>}
-        <fieldset className="save-workout-scopes"><legend>{en ? 'Save scope' : '保存範圍'}</legend>{[['day', en ? 'Full day' : '整天'], ['warmup', en ? 'Warm-up' : '暖身'], ['training', en ? 'Training' : '訓練'], ['cooldown', en ? 'Cooldown' : '收操'], ['selection', en ? 'Select exercises' : '勾選動作']].map(([value, label]) => <label key={value}><input type="radio" name={`${formId}-scope`} value={value} checked={scope === value} onChange={() => setScope(value)} />{label}</label>)}</fieldset>
-        {scope === 'selection' && <fieldset><legend>{en ? 'Exercises to save' : '要保存的動作'}</legend>{sourceDoses.map(dose => <label key={dose.id} className="quick-check"><input type="checkbox" checked={selectedIds.includes(dose.id)} onChange={event => setSelectedIds(event.target.checked ? [...selectedIds, dose.id] : selectedIds.filter(id => id !== dose.id))} />{exercises[dose.id]?.name || dose.id}</label>)}</fieldset>}
-        {!prescriptions.length && <p role="status" className="workout-ui-error">{en ? 'Choose at least one exercise to save.' : '請選擇至少一個動作保存。'}</p>}
-        <p className="workout-ui-muted">{en ? 'For example: Full-body strength A, or pre-court warm-up.' : '例如：全身肌力 A、球日前動態暖身。'}</p>
-        <div><label htmlFor={nameId}>{t.name}</label>
-          <input id={nameId} value={name} onChange={event => { setName(event.target.value); setError(null); }} required maxLength={80} disabled={pending}
+        <div><label htmlFor={nameId}>{en ? 'Combo name' : '組合名稱'}</label>
+          <input id={nameId} data-testid="save-workout-name" value={name} onChange={event => { setName(event.target.value); setError(null); }} required maxLength={80} disabled={pending} placeholder={en ? 'My lower-body strength' : '我的下肢肌力'}
             aria-invalid={nameError || undefined} aria-describedby={`${hintId}${nameError ? ` ${errorId}` : ''}`} />
-          <p id={hintId} className="save-workout-name-hint">{t.nameHint}<span>{Array.from(name).length}/40</span></p></div>
-        <fieldset className="save-workout-tags"><legend>{en ? 'Purpose tags' : '目的標籤'}</legend>{['活動度', '控制', '肌力'].map(tag => <label key={tag}><input type="checkbox" checked={tags.includes(tag)} disabled={!tags.includes(tag) && tags.length >= 6} onChange={event => setTags(event.target.checked ? [...tags, tag] : tags.filter(value => value !== tag))} />{en ? { 活動度: 'Mobility', 控制: 'Control', 肌力: 'Strength' }[tag] : tag}</label>)}</fieldset>
-        <p className="workout-ui-info">{store.scope === 'account' ? en ? 'Will save and sync to this account after success.' : '成功後儲存並同步到目前帳號。' : en ? 'Will save on this device.' : '將儲存在這台裝置。'}</p>
-        <section className="workout-ui-card"><h4>{en ? 'Saved together' : '會一起保存'}</h4><div className="workout-ui-tags">{Object.entries(counts).map(([key, count]) => <span key={key}>{{ warmup: en ? 'Warm-up' : '暖身', training: en ? 'Training' : '訓練', recovery: en ? 'Recovery' : '恢復', cooldown: en ? 'Cool-down' : '收操' }[key]} {count} {en ? '' : '項'}</span>)}</div><p className="workout-ui-muted">{t.privacy}</p></section>
-        <p className="workout-ui-info">{en ? 'This is an independent copy. Later changes to the scheduled day will not change it, and saving does not mark it complete.' : '收藏是一份獨立副本。這天之後改課表，不會連動修改收藏；收藏也不會被標成已完成。'}</p>
-        <details className="workout-ui-fineprint"><summary>{en ? 'Storage location' : '儲存位置'}</summary><p>{store.scope === 'account' ? t.account : t.device}</p>{snapshot?.exercises.some(exercise => exercise.custom) && <p>{t.custom}</p>}</details>
+          <p id={hintId} className="save-workout-name-hint"><span>{Array.from(name).length}/40</span></p></div>
+        <fieldset className="combo-save-selection" disabled={pending}><legend>{en ? 'Exercises' : '動作'}<span>{prescriptions.length}/{sourceDoses.length}</span></legend>
+          <div className="combo-save-select-actions"><button type="button" className="workout-ui-link" onClick={() => { setScope('selection'); setSelectedIds(sourceDoses.map(dose => dose.id)); }}>{en ? 'Select all' : '全選'}</button><button type="button" className="workout-ui-link" onClick={() => { setScope('selection'); setSelectedIds([]); }}>{en ? 'Clear' : '清除'}</button></div>
+          {sourceDoses.map(dose => <label key={dose.id} className="combo-save-exercise"><input type="checkbox" data-testid={`save-workout-exercise-${dose.id}`} checked={selected.has(dose.id)} onChange={event => toggle(dose.id, event.target.checked)} /><span><strong>{exercises[dose.id]?.name || dose.id}</strong><small>{doseText(dose, en)}</small></span></label>)}
+        </fieldset>
+        {!prescriptions.length && <p role="status" className="workout-ui-error">{en ? 'Choose at least one exercise.' : '請至少勾選一個動作。'}</p>}
+        <details className="workout-ui-fineprint combo-save-advanced"><summary>{en ? 'More options' : '更多選項'}</summary>
+          <fieldset disabled={pending} className="combo-save-options"><label>{en ? 'Save scope' : '保存範圍'}<select value={scope} onChange={event => setScope(event.target.value)}>{[['selection', en ? 'Selected exercises' : '勾選的動作'], ['day', en ? 'Full day' : '整天'], ['warmup', en ? 'Warm-up' : '暖身'], ['training', en ? 'Training' : '訓練'], ['cooldown', en ? 'Cooldown' : '收操']].map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label></fieldset>
+          {sourceItem && <fieldset disabled={pending} className="save-workout-scopes"><legend>{en ? 'Edited favorite' : '修改後的收藏'}</legend><label><input type="radio" name={`${formId}-mode`} checked={saveMode === 'new'} onChange={() => setSaveMode('new')} />{en ? 'Save as new' : '另存新收藏'}</label><label><input type="radio" name={`${formId}-mode`} checked={saveMode === 'update'} onChange={() => setSaveMode('update')} />{en ? `Update ${sourceItem.name}` : `更新：${sourceItem.name}`}</label></fieldset>}
+          <fieldset disabled={pending} className="save-workout-tags"><legend>{en ? 'Purpose tags' : '目的標籤'}</legend>{[...new Set(['活動度', '控制', '肌力', ...tags])].map(tag => <label key={tag}><input type="checkbox" checked={tags.includes(tag)} disabled={!tags.includes(tag) && tags.length >= 6} onChange={event => setTags(event.target.checked ? [...tags, tag] : tags.filter(value => value !== tag))} />{en ? { 活動度: 'Mobility', 控制: 'Control', 肌力: 'Strength' }[tag] || tag : tag}</label>)}</fieldset>
+          <p className="workout-ui-muted">{store.scope === 'account' ? en ? 'Saved to this account. Scheduled dates stay unchanged.' : '存入目前帳號，不更動已安排日期。' : en ? 'Saved on this device. Scheduled dates stay unchanged.' : '保存在此裝置，不更動已安排日期。'}</p>
+          {snapshot?.exercises.some(exercise => exercise.custom) && <p className="workout-ui-muted">{t.custom}</p>}
+        </details>
         {!store.loaded && <p role="status">{t.loading}</p>}
         {(issue || store.error) && <p id={errorId} role="alert" className="workout-ui-error">{savedWorkoutError(issue || store.error, lang)}</p>}
         {store.error && <button type="button" onClick={store.reload} disabled={pending} className="workout-ui-link">{t.retry}</button>}
@@ -62,5 +80,6 @@ function SaveWorkoutForm({ store, day, exercises, level = 1, lang, onClose, onSa
 
 export default function SaveWorkoutDialog(props) {
   if (!props.day) return null;
-  return <SaveWorkoutForm key={`${props.store.scopeKey || props.store.uid || 'device'}:${props.day.date || props.day.day || ''}`} {...props} />;
+  const identity = JSON.stringify([props.store.scopeKey || props.store.uid || 'device', props.day, props.sourceItem?.id]);
+  return <SaveWorkoutForm key={identity} {...props} />;
 }

@@ -90,7 +90,7 @@ function SharedWorkoutContent({ payload, lang = 'zh', onExit, uid, today = local
     onProfileChange={setEditProfile}
     onContextChange={context => setEditProfile(value => ({ ...value, context: normalizePlanningContext(context) }))}
     onPreview={sessions => { setEditedDays(sessions); setEditing(null); setApplying(true); }} onCancel={() => { setEditing(null); setApplying(true); }} /></main>;
-  if (applying && days.length && !authLoading) return <main className="max-w-3xl mx-auto px-4 py-8" aria-label={t.title}><ApplyWorkoutPlan {...{ days, name, uid, today, exercises, lang, localPeriod, onLocalPeriod }} initialDates={editedDays?.map(day => day.date)} onEdit={sessions => { setApplying(false); setEditing(sessions); }} onApplied={() => { setApplying(false); setApplied(true); }} onCancel={() => setApplying(false)} /></main>;
+  if (applying && days.length && !authLoading) return <main className="max-w-3xl mx-auto px-4 py-8" aria-label={t.title}><ApplyWorkoutPlan {...{ days, name, uid, today, exercises, lang, localPeriod, onLocalPeriod }} profile={editProfile} initialDates={editedDays?.map(day => day.date)} onEdit={sessions => { setApplying(false); setEditing(sessions); }} onApplied={() => { setApplying(false); setApplied(true); }} onCancel={() => setApplying(false)} /></main>;
   if (applied) return <main className="max-w-2xl mx-auto px-4 py-8 space-y-5" aria-label={t.title}><section className="panel space-y-4"><h1 className="screen-title">{t.done}</h1><p role="status">{t.doneHint}</p><button type="button" className="button-primary min-h-11" onClick={onExit}>{t.view}</button></section></main>;
   const en = lang === 'en';
   const duration = days.map(value => estimateSessionMinutes(value, exercises));

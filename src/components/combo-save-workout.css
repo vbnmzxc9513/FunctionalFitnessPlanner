@@ -1,0 +1,14 @@
+.combo-save-workout .combo-save-selection { border: 0; padding: 0; margin: 0; min-width: 0; }
+.combo-save-workout .combo-save-selection legend { display: flex; width: 100%; justify-content: space-between; gap: 12px; font-weight: 700; }
+.combo-save-workout .combo-save-selection legend span { color: #64748b; font-weight: 400; }
+.combo-save-select-actions { display: flex; gap: 16px; }
+.combo-save-workout .combo-save-exercise { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 10px 0; border-bottom: 1px solid #e2e8f0; cursor: pointer; }
+.combo-save-workout .combo-save-exercise input { flex: 0 0 20px; width: 20px; height: 20px; accent-color: #6366f1; }
+.combo-save-workout .combo-save-exercise span { min-width: 0; overflow-wrap: anywhere; }
+.combo-save-workout .combo-save-exercise strong { display: block; font-size: 15px; color: #334155; }
+.combo-save-workout .combo-save-exercise small { display: block; color: #64748b; font-size: 13px; margin-top: 3px; }
+.combo-save-workout .combo-save-advanced summary { min-height: 44px; align-content: center; }
+.combo-save-workout .combo-save-options { border: 0; padding: 0; margin: 12px 0; min-width: 0; }
+.combo-save-workout .combo-save-options select { display: block; width: 100%; min-height: 44px; margin-top: 6px; border: 1px solid #cbd5e1; border-radius: 10px; padding: 8px; background: white; font-size: 16px; }
+.combo-save-workout .combo-save-select-actions button { min-height: 44px; min-width: 44px; }
+.combo-save-workout .save-workout-name-hint { justify-content: flex-end; }

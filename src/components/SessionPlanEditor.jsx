@@ -1,5 +1,5 @@
 import { useId, useRef, useState } from 'react';
-import { ArrowDown, ArrowUp, ChevronDown, Plus, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronRight, MoreHorizontal, Trash2 } from 'lucide-react';
 import { SESSION_PHASES } from '../domain/phases.js';
 import { estimateSessionMinutes } from '../domain/sessions.js';
 import { manualPlannerErrorMessage, removeManualExercise, reorderManualExercise, updateManualPrescription } from '../domain/manualPlanner.js';
@@ -15,7 +15,7 @@ const UNIT = { zh: { reps: '下', seconds: '秒', minutes: '分鐘', breaths: '�
 const control = 'min-h-11 rounded-xl border border-slate-300 bg-white px-3 py-2 text-base focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600';
 const action = 'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm text-sky-700 disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600';
 
-export default function SessionPlanEditor({ session, exercises = {}, eligibleExercises = {}, lang = 'zh', t, onChange, onAddExercises, onAddWorkout, onSaveWorkout, timeControls, dailyTime = 240 }) {
+export default function SessionPlanEditor({ session, exercises = {}, eligibleExercises = {}, lang = 'zh', t, onChange, timeControls, moreControls, dailyTime = 240 }) {
   const en = lang === 'en';
   const unit = UNIT[en ? 'en' : 'zh'];
   const phaseName = phase => t?.(`phase_${phase}`) || PHASES[en ? 'en' : 'zh'][phase];
@@ -23,17 +23,16 @@ export default function SessionPlanEditor({ session, exercises = {}, eligibleExe
   const [form, setForm] = useState(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const [undo, setUndo] = useState(null);
   const id = useId();
-  const heading = useRef(null);
+  const heading = useRef(null), workspace = useRef(null);
   let minutes = 0;
   try { minutes = estimateSessionMinutes(session, exercises); } catch { /* Invalid restored content is retained and flagged below. */ }
   const run = (operation, message) => {
-    try { const next = operation(); onChange(next); setError(''); setNotice(message || ''); setUndo(null); }
+    try { const next = operation(); onChange(next); setError(''); setNotice(message || ''); }
     catch (problem) { setError(manualPlannerErrorMessage(problem, lang, exercises)); }
   };
-  const begin = dose => { setEditId(dose.id); setForm(structuredClone(dose)); setError(''); setUndo(null); };
-  const close = () => { setEditId(null); setForm(null); setError(''); };
+  const begin = dose => { setEditId(dose.id); setForm(structuredClone(dose)); setError(''); };
+  const close = () => { const value = editId; setEditId(null); setForm(null); setError(''); requestAnimationFrame(() => { const target = workspace.current?.querySelector(`[data-exercise-id="${CSS.escape(value || '')}"] button`) || heading.current; target?.focus({ preventScroll: true }); }); };
   const submitDose = event => {
     event.preventDefault();
     const changes = { ...form, sets: Number(form.sets), value: String(form.value).trim(), restSeconds: Number(form.restSeconds) };
@@ -43,7 +42,7 @@ export default function SessionPlanEditor({ session, exercises = {}, eligibleExe
   };
   const remove = value => {
     try {
-      const before = structuredClone(session); onChange(removeManualExercise(session, value, { exercises, lang })); setUndo(before); close(); setNotice(en ? 'Removed from this draft.' : '已從這份草稿移除。');
+      const next = removeManualExercise(session, value, { exercises, lang }); onChange(next, { session: next, undo: structuredClone(session), kind: 'remove' }); close(); setNotice('');
       requestAnimationFrame(() => heading.current?.focus());
     } catch (problem) { setError(manualPlannerErrorMessage(problem, lang, exercises)); }
   };
@@ -52,11 +51,6 @@ export default function SessionPlanEditor({ session, exercises = {}, eligibleExe
     { phase: 'strength', label: en ? 'Training' : '訓練', phases: ['skill', 'strength', 'accessory'] },
     { phase: 'cooldown', label: en ? 'Cooldown' : '收操', phases: ['recovery', 'cooldown'] },
   ];
-  const jumpToPhase = phase => {
-    const target = document.getElementById(`${id}-${phase}`);
-    target?.focus({ preventScroll: true });
-    target?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' });
-  };
   const editingDose = session.prescriptions.find(dose => dose.id === editId);
   const exercise = exercises[editId];
   const name = exercise?.name || editId;
@@ -64,31 +58,27 @@ export default function SessionPlanEditor({ session, exercises = {}, eligibleExe
   const skillOnly = ['power', 'footwork', 'reaction'].includes(exercise?.category);
   const samePhase = editingDose ? session.prescriptions.filter(dose => dose.phase === editingDose.phase) : [];
   const position = samePhase.findIndex(dose => dose.id === editId);
-  const preparation = session.prescriptions.filter(dose => dose.preparation);
-  return <section data-testid="session-plan-editor" aria-label={`${session.date} ${en ? 'draft editor' : '草稿編輯'}`} className="manual-session">
-    <div className="manual-session-heading"><div className="manual-name-actions"><label htmlFor={`${id}-name`} className="manual-name-label">{en ? 'Daily workout name' : '當日課表名稱'}</label>{onSaveWorkout && session.routine.length > 0 && <button type="button" data-testid="manual-save-day" className="manual-text-action" onClick={() => onSaveWorkout(session)}>{en ? 'Save this day' : '收藏這天'}</button>}</div><input id={`${id}-name`} ref={heading} data-testid="manual-session-name" value={session.theme} maxLength={160} onChange={event => { setUndo(null); onChange({ ...session, theme: event.target.value }); }} className="manual-session-name" /></div>
-    <div className="manual-time-settings"><p className="manual-day-time">{en ? `Estimated ${minutes} min / available ${dailyTime} min` : `預估 ${minutes} 分鐘／可用 ${dailyTime} 分鐘`}</p>{minutes > dailyTime && <p role="alert" className="quick-conflict">{en ? `${minutes - dailyTime} min over your available time. No exercises were removed.` : `超出可用時間 ${minutes - dailyTime} 分鐘，沒有自動刪減動作。`}</p>}{timeControls}</div>
-    <nav data-testid="manual-day-overview" className="manual-day-overview" aria-label={en ? 'Daily workout overview; jump to a phase' : '當日課表概覽，點選前往階段'}>{groups.map(group => {
-      const count = session.prescriptions.filter(dose => group.phases.includes(dose.phase)).length;
-      return <button type="button" key={group.phase} data-testid={`manual-jump-${group.phase}`} aria-controls={`${id}-${group.phase}`} onClick={() => jumpToPhase(group.phase)}><strong>{group.label}<ChevronDown size={16} aria-hidden="true" /></strong><span>{count ? en ? `${count} exercises` : `${count} 個動作` : en ? 'Not planned' : '尚未安排'}</span></button>;
-    })}</nav>
-    {onAddWorkout && <div className="manual-workout-entry"><button type="button" data-testid="manual-add-workout" className="manual-add-workout" onClick={onAddWorkout}>{en ? '+ Add a quick combo' : '＋ 加入快速組合'}</button></div>}
+  return <section ref={workspace} data-testid="session-plan-editor" aria-label={`${session.date} ${en ? 'draft editor' : '草稿編輯'}`} className="manual-session">
+    <header className="combo-first-content-heading"><h2 ref={heading} tabIndex={-1}>{en ? 'Daily workout' : '當天內容'}<small>{session.routine.length ? `${session.routine.length} ${en ? 'exercises' : '動作'}` : ''}</small></h2><div className="manual-session-heading"><details className="manual-more"><summary aria-label={en ? 'More workout actions' : '課表更多選項'}><MoreHorizontal size={20} aria-hidden="true" /></summary><div className="combo-first-day-menu"><label>{en ? 'Workout name' : '課表名稱'}<input aria-label={en ? 'Daily workout name' : '當日課表名稱'} data-testid="manual-session-name" value={session.theme} maxLength={160} onChange={event => onChange({ ...session, theme: event.target.value })} className="manual-session-name" /></label>{timeControls}{moreControls}</div></details></div></header>
+    {minutes > dailyTime && <p role="alert" className="quick-conflict">{en ? `${minutes - dailyTime} min over your available time. No exercises were removed.` : `超出可用時間 ${minutes - dailyTime} 分鐘，沒有自動刪減動作。`}</p>}
     {error && !editId && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-800">{error}</p>}
-    {notice && <div role="status" className="flex flex-wrap items-center gap-2 text-sm text-sky-800"><p>{notice}</p>{undo && <button type="button" className={action} onClick={() => { onChange(undo); setUndo(null); setNotice(en ? 'Restored.' : '已復原。'); }}>{en ? 'Undo removal' : '復原移除'}</button>}</div>}
+    {notice && <p role="status" className="text-sm text-sky-800">{notice}</p>}
+    {!session.routine.length && <div className="combo-first-empty">{session.explicitRest ? en ? 'Rest day' : '休息日' : en ? 'No exercises yet' : '尚未加入動作'}</div>}
     {groups.map(group => {
       const doses = session.prescriptions.filter(dose => group.phases.includes(dose.phase));
+      if (!doses.length) return null;
       const phaseMinutes = doses.length ? estimateSessionMinutes({ ...session, prescriptions: doses, routine: doses.map(dose => dose.id) }, exercises) : 0;
       return <section key={group.phase} data-phase={group.phase} aria-labelledby={`${id}-${group.phase}`} className="manual-phase-card">
-        <header><h3 id={`${id}-${group.phase}`} tabIndex={-1}>{group.label}<span className="manual-phase-count"> · {doses.length ? `${doses.length} ${en ? 'exercises' : '個動作'} · ${en ? 'about ' : '約 '}${phaseMinutes} ${en ? 'min' : '分鐘'}` : en ? 'Not planned' : '尚未安排'}</span></h3><button type="button" data-testid={`manual-add-${group.phase}`} onClick={() => onAddExercises(group.phase)} className="manual-text-action"><Plus size={17} aria-hidden="true" />{en ? 'Add exercises' : '加入動作'}</button></header>
+        <header><h3 id={`${id}-${group.phase}`} tabIndex={-1}>{group.label}<span className="manual-phase-count"> · {doses.length} {en ? 'exercises' : '個動作'} · {phaseMinutes} {en ? 'min' : '分'}</span></h3></header>
         <ol>{doses.map((dose, index) => {
           const rowExercise = exercises[dose.id], rowName = rowExercise?.name || dose.id;
-          return <li key={dose.id} data-exercise-id={dose.id} className="manual-exercise-row" onPointerDown={event => { if (event.target.closest('button')) return; event.currentTarget._hold = setTimeout(() => begin(dose), 550); }} onPointerUp={event => clearTimeout(event.currentTarget._hold)} onPointerCancel={event => clearTimeout(event.currentTarget._hold)} onPointerLeave={event => clearTimeout(event.currentTarget._hold)}>
-            <span className="manual-row-number">{index + 1}</span><div className="min-w-0 flex-1"><h4>{rowName}</h4><p>{dose.sets}{en ? ' sets' : '組'} × {dose.value} {unit[dose.unit] || dose.unit}{dose.perSide ? en ? ' / side' : '／側' : ''}</p>{!eligibleExercises[dose.id] && <p className="mt-2 text-sm text-red-700">{en ? 'No longer eligible. Remove or replace before reviewing.' : '目前已不符合可加入條件；請移除或更換後再檢查。'}</p>}</div><button type="button" aria-label={`${en ? 'Edit' : '編輯'} ${rowName}`} onClick={() => begin(dose)} className="manual-edit-action">{en ? 'Details' : '詳情'}</button>
-          </li>;
+          return <li key={dose.id} data-exercise-id={dose.id} className="manual-exercise-row"><button type="button" className="manual-exercise-open" aria-label={`${en ? 'Edit' : '編輯'} ${rowName}`} onClick={() => begin(dose)}>
+            <span className="manual-row-number">{String(index + 1).padStart(2, '0')}</span><span className="manual-exercise-info"><strong>{rowName}</strong><small>{dose.sets}{en ? ' sets' : '組'} × {dose.value} {unit[dose.unit] || dose.unit}{dose.perSide ? en ? ' / side' : '／側' : ''}</small>{!eligibleExercises[dose.id] && <span className="text-sm text-red-700">{en ? 'Unavailable. Remove or replace before reviewing.' : '目前無法加入；請移除或更換。'}</span>}</span><ChevronRight size={15} aria-hidden="true" />
+          </button></li>;
+
         })}</ol>
       </section>;
     })}
-    <details className="manual-secondary-details"><summary>{en ? 'More training phases and timing' : '更多訓練階段與時間說明'}</summary><p>{en ? 'The three cards keep warm-up, skill, strength, accessory, recovery and cooldown phases in their original order. Edit an exercise to change its phase. Preparation, both sides and rests count toward the estimate.' : '三區保留暖身、技能、肌力、輔助、恢復與收操的原始階段與順序。點動作編輯可調整階段；預估時間包含準備組、左右側與休息。'}</p>{preparation.length > 0 && <div className="manual-preparation"><h4>{en ? 'Main-exercise preparation sets' : '主項輕量準備組'}</h4>{preparation.map(dose => <p key={dose.id}>{exercises[dose.id]?.name || dose.id}：{dose.preparation.sets} × {dose.preparation.value} {unit[dose.preparation.unit]}{dose.preparation.perSide ? en ? ' / side' : '／側' : ''} · {en ? 'rest ' : '休息 '}{dose.preparation.restSeconds} {en ? 'sec' : '秒'}。{dose.preparation.instruction}</p>)}</div>}<div className="flex flex-wrap gap-2 mt-3">{['skill', 'accessory', 'recovery'].map(phase => <button type="button" key={phase} data-testid={`manual-add-${phase}`} onClick={() => onAddExercises(phase)} className={action}><Plus size={16} aria-hidden="true" />{phaseName(phase)}</button>)}</div></details>
     <ExerciseDetails open={!!editingDose && !!form} title={name || ''} subtitle={en ? 'Edit draft exercise' : '編輯草稿動作'} closeLabel={en ? 'Close' : '關閉'} onClose={close}>
       {editingDose && form && <form onSubmit={submitDose} aria-label={`${en ? 'Edit dose' : '編輯組次'} ${name}`} className="space-y-4">
         {error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-800">{error}</p>}

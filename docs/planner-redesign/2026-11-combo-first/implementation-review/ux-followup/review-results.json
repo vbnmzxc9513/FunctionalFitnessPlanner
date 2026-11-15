@@ -1,0 +1,65 @@
+{
+  "fixture": {
+    "today": "2026-11-13",
+    "dates": [
+      "2026-11-16",
+      "2026-11-18",
+      "2026-11-20"
+    ]
+  },
+  "results": [
+    {
+      "width": 320,
+      "lang": "zh",
+      "metrics": {
+        "frequentNames": [
+          "每日全身暖身",
+          "髖內旋活動與控制"
+        ],
+        "exerciseCount": 11
+      },
+      "tasksPassed": true,
+      "runtimeErrors": []
+    },
+    {
+      "width": 390,
+      "lang": "zh",
+      "metrics": {
+        "frequentNames": [
+          "每日全身暖身",
+          "髖內旋活動與控制"
+        ],
+        "exerciseCount": 11
+      },
+      "tasksPassed": true,
+      "runtimeErrors": []
+    },
+    {
+      "width": 1440,
+      "lang": "zh",
+      "metrics": {
+        "frequentNames": [
+          "每日全身暖身",
+          "髖內旋活動與控制"
+        ],
+        "exerciseCount": 11
+      },
+      "tasksPassed": true,
+      "runtimeErrors": []
+    },
+    {
+      "width": 390,
+      "lang": "en",
+      "metrics": {
+        "frequentNames": [
+          "Daily whole-body warm-up",
+          "Hip internal rotation and control"
+        ],
+        "exerciseCount": 11
+      },
+      "tasksPassed": true,
+      "runtimeErrors": []
+    }
+  ],
+  "humanUsabilityTesting": "PENDING"
+}

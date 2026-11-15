@@ -7,8 +7,12 @@ import { applyPeriodPlan, loadPeriodState } from '../services/periodRepository.j
 import { auth } from '../services/firebase.js';
 import { readPeriodDraft } from '../domain/periodDraft.js';
 import { estimateSessionMinutes } from '../domain/sessions.js';
+import { DEFAULT_PLANNING_CONTEXT } from '../domain/planning.js';
+import { manualPlanningExercises } from '../domain/templatePlanner.js';
+import { manualPlannerErrorMessage, prepareManualPreview } from '../domain/manualPlanner.js';
 import WorkoutPlanSummary from './WorkoutPlanSummary.jsx';
 import '../plannerVisual.css';
+import './combo-assignment.css';
 
 export default function ApplyWorkoutPlan({ days, name, initialDates, uid, today, exercises, lang = 'zh', localPeriod, onLocalPeriod, fallbackPlans = {}, profile = {}, onApplied, onCancel, onEdit }) {
   const en = lang === 'en';
@@ -25,11 +29,11 @@ export default function ApplyWorkoutPlan({ days, name, initialDates, uid, today,
   const [conflictState, setConflictState] = useState(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  useBackNavigation(stage === 'review' || busy, () => { if (!busy) setStage('dates'); }, 35);
+  useBackNavigation(stage === 'review' || busy, () => { if (!busy) { if (initialDates) returnToEditing(); else setStage('dates'); } }, 35);
   const [expanded, setExpanded] = useState(null);
   const heading = useRef(null);
   const running = useRef(false);
-  const snapshot = JSON.stringify({ uid, localPeriod, fallbackPlans, days, dates, replacements, today, exercises, profile });
+  const snapshot = JSON.stringify({ uid, localPeriod, fallbackPlans, days, name, dates, replacements, today, exercises, profile, lang });
   const live = useRef(snapshot);
   useEffect(() => { live.current = snapshot; }, [snapshot]);
   useEffect(() => { heading.current?.focus({ preventScroll: true }); }, [stage]);
@@ -38,6 +42,23 @@ export default function ApplyWorkoutPlan({ days, name, initialDates, uid, today,
   const conflicts = conflictState ? assignmentConflicts(conflictState, dates) : [];
   const unresolved = conflicts.some(item => item.protected || item.existing && !replacements.includes(item.date));
   const stale = preview && preview.fingerprint !== snapshot;
+  const returnToEditing = () => {
+    if (initialDates && onEdit) onEdit(days.map((day, index) => ({ ...day, date: dateError ? initialDates[index] : dates[index] })));
+    else onCancel();
+  };
+  const validateCurrentProfile = sessions => {
+    const dailyTime = profile.time === undefined ? 240 : Number(profile.time);
+    if (!Number.isFinite(dailyTime) || dailyTime < 5 || dailyTime > 240) throw new Error('INVALID_PLANNING_TIME');
+    // Assignment materialization has already validated empty source rest days.
+    // Keep that explicit choice while reusing the manual dose and context gate.
+    prepareManualPreview(sessions.map(session => {
+      const source = days[dates.indexOf(session.date)];
+      return { ...session, explicitRest: source?.sessionType === 'rest' && source.routine?.length === 0 };
+    }), {
+      today, exercises, dailyTime, eligibleExercises: manualPlanningExercises(exercises, profile.context || DEFAULT_PLANNING_CONTEXT),
+    });
+  };
+  const profileError = cause => /^(MANUAL_|INVALID_PLANNING_TIME|AI_SESSION_TOO_LONG)/.test(cause.message) ? manualPlannerErrorMessage(cause, lang, exercises) : null;
   const change = next => { setDates(next); setPreview(null); setConflictState(null); setReplacements([]); setError(''); };
   const inspect = async () => {
     if (running.current || dateError) return;
@@ -45,18 +66,21 @@ export default function ApplyWorkoutPlan({ days, name, initialDates, uid, today,
     const captured = snapshot;
     try {
       const sessions = materializeAssignments(days, dates, { name, exercises, lang, today });
+      validateCurrentProfile(sessions);
       const state = uid ? await loadPeriodState(uid, range, { today, exercises, fallbackPlans }) : localPeriodState(localPeriod, range, today);
       if (captured !== live.current) return;
+      if (uid ? auth.currentUser?.uid !== uid : !!auth.currentUser) throw new Error('SESSION_CHANGED');
       setConflictState(state);
       validateAssignmentConsent(state, dates, replacements);
       setPreview({ range, dates: [...dates].sort(), selectedDates: [...dates], replaceDates: [...replacements], sessions, expectedState: state.expectedState,
         weeklySummaries: assignmentSummary(sessions, exercises, profile.focus), profile: periodProfile(profile), conclusion: name, fingerprint: captured });
       setStage('review'); window.scrollTo({ top: 0 });
     } catch (cause) {
-      setError(cause.message === 'DATE_PROTECTED' ? en ? 'A target date has training records. Choose another date.' : '目的日期已有訓練紀錄，請改日期，原紀錄會保留。'
+      if (captured !== live.current) return;
+      setError(profileError(cause) || (cause.message === 'DATE_PROTECTED' ? en ? 'A date has training records. Nothing has been applied. Reschedule it, or return to editing to remove that date.' : '有日期已有訓練紀錄，本次尚未套用。請改期，或返回編輯移除該日期。'
         : cause.message === 'DATE_CONFLICT' ? en ? 'Review existing plans below. Change dates or explicitly replace an unstarted plan.' : '下方日期已有課表，請改日期，或明確勾選替換尚未開始的課表。'
           : cause.message === 'SESSION_CHANGED' ? en ? 'Your account changed. Reopen this preview.' : '帳號已變更，請重新開啟預覽。'
-            : en ? 'Could not prepare this plan. Check exercises, warm-up, preparation sets and doses, then retry.' : '無法預覽。請確認動作、暖身、準備組與劑量完整，或先編輯這份課表。');
+            : en ? 'Could not prepare this plan. Check exercises, warm-up, preparation sets and doses, then retry.' : '無法預覽。請確認動作、暖身、準備組與劑量完整，或先編輯這份課表。'));
     } finally { running.current = false; setBusy(false); }
   };
   const initialInspection = useRef(false);
@@ -67,10 +91,11 @@ export default function ApplyWorkoutPlan({ days, name, initialDates, uid, today,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const apply = async () => {
-    if (running.current || !preview || stale) return;
+    if (running.current || !preview || preview.fingerprint !== live.current || stale) return;
     running.current = true; setBusy(true); setError('');
     try {
       let applied;
+      validateCurrentProfile(preview.sessions);
       if (uid) {
         if (auth.currentUser?.uid !== uid) throw new Error('SESSION_CHANGED');
         const result = await applyPeriodPlan(uid, preview);
@@ -84,45 +109,48 @@ export default function ApplyWorkoutPlan({ days, name, initialDates, uid, today,
         if (localPeriod?.periodId === 'legacy_public' ? stored !== null : JSON.stringify(stored) !== JSON.stringify(normalizePeriodDraft(localPeriod))) throw new Error('PERIOD_CHANGED');
         validateAssignmentConsent(localPeriodState(localPeriod, range, today), dates, replacements);
         const next = applyLocalPeriod(localPeriod, preview, today);
+        if (preview.sessions.some(session => JSON.stringify(next.sessionsByDate[session.date]?.prescriptions) !== JSON.stringify(session.prescriptions) || JSON.stringify(next.sessionsByDate[session.date]?.routine) !== JSON.stringify(session.routine))) throw new Error('PERIOD_CHANGED');
         if (!writePeriodDraft(next)) throw new Error('LOCAL_STORAGE_FAILED');
         onLocalPeriod(next); applied = { ...preview, periodId: next.periodId };
       }
       setStage('done'); onApplied?.(applied);
     } catch (cause) {
       setPreview(null); setStage('dates'); setConflictState(null);
-      setError(cause.message === 'LOCAL_STORAGE_FAILED' ? en ? 'Device storage is unavailable. Nothing was saved.' : '裝置無法儲存，尚未套用；請釋放空間或使用帳號後再試。'
-        : en ? 'Plans, records or your account changed. Inspect these dates again before applying.' : '課表、紀錄或帳號已變更。請重新檢查日期後再套用，沒有覆蓋既有紀錄。');
+      setError(profileError(cause) || (cause.message === 'LOCAL_STORAGE_FAILED' ? en ? 'Device storage is unavailable. Nothing was saved.' : '裝置無法儲存，尚未套用；請釋放空間或使用帳號後再試。'
+        : en ? 'Plans, records or your account changed. Inspect these dates again before applying.' : '課表、紀錄或帳號已變更。請重新檢查日期後再套用，沒有覆蓋既有紀錄。'));
     } finally { running.current = false; setBusy(false); }
   };
-  return <section className={`assignment-flow ${stage === 'review' ? 'assignment-review-flow' : ''}`} data-testid="apply-workout-plan">
-    <div className="assignment-top"><button disabled={busy} type="button" onClick={onCancel}><ArrowLeft size={18} />{stage === 'review' && initialDates ? en ? 'Back to daily draft' : '返回每日編輯' : en ? 'Back to preview' : '回到預覽'}</button>{stage !== 'done' && <button disabled={busy} type="button" onClick={onCancel}>{en ? 'Cancel' : '取消套用'}</button>}</div>
-    {stage === 'dates' && <div className="assignment-steps"><span data-active={stage === 'dates'}>1 {en ? 'Dates' : '選日期'}</span><i /><span data-active={stage === 'review'}>2 {en ? 'Review and apply' : '檢查並套用'}</span></div>}
-    <header className="assignment-heading"><h2 ref={heading} tabIndex={-1}>{stage === 'dates' ? en ? 'Where should these days go?' : `這 ${days.length} 天，要排在哪天？` : stage === 'review' ? en ? 'Review before applying' : '檢查並套用' : en ? 'Plan applied' : '課表已套用'}</h2><p>{stage === 'dates' ? en ? 'Each source day maps to one of your dates.' : '每個來源日都會明確對應你的日期。' : `${name} · ${days.length} ${en ? 'days' : '天課表'}`}</p></header>
-    {error && <div role="alert" className="assignment-error">{error}{onEdit && <button onClick={() => onEdit(days.map((day, index) => ({ ...day, date: dates[index] })))}>{en ? 'Edit this copy first' : '先編輯這份副本'}</button>}</div>}
+  const editCopy = date => { if (!busy) onEdit?.(days.map((day, index) => ({ ...day, date: dates[index] })), date); };
+  const dateLabel = date => new Intl.DateTimeFormat(en ? 'en' : 'zh-TW', { month: 'numeric', day: 'numeric', weekday: 'short', timeZone: 'UTC' }).format(new Date(`${date}T12:00:00Z`));
+  const comparison = (existing, next) => <details className="assignment-comparison">
+    <summary>{en ? 'Compare original and new plan' : '查看原課表與新內容'}</summary>
+    <div className="assignment-comparison-columns"><section><h4>{en ? 'Original · will be removed' : '原課表 · 將被取代'}</h4><p>{existing.theme || existing.name}</p><WorkoutPlanSummary day={existing} {...{ exercises, lang }} /></section><section><h4>{en ? 'New plan' : '新內容'}</h4><p>{sourceTitle(next)}</p><WorkoutPlanSummary day={next} {...{ exercises, lang }} /></section></div>
+  </details>;
+  const back = () => { if (!busy) { if (stage === 'review' && !initialDates) setStage('dates'); else returnToEditing(); } };
+  return <section className={`assignment-flow combo-assignment ${stage === 'review' ? 'assignment-review-flow' : ''}`} data-testid="apply-workout-plan" aria-busy={busy}>
+    <div className="assignment-top"><button disabled={busy} type="button" onClick={back}><ArrowLeft size={18} />{initialDates ? en ? 'Back to editing' : '返回編輯' : stage === 'review' ? en ? 'Dates' : '調整日期' : en ? 'Back' : '返回'}</button></div>
+    <header className="assignment-heading"><h2 ref={heading} tabIndex={-1}>{stage === 'done' ? en ? 'Plan applied' : '已套用課表' : stage === 'review' || initialDates && busy ? en ? 'Review plan' : '檢查課表' : en ? 'Choose dates' : '安排日期'}</h2>{name && <p>{name}</p>}</header>
+    {error && <div role="alert" className="assignment-error">{error}{onEdit && <button disabled={busy} type="button" onClick={() => editCopy()}>{en ? 'Return to editing' : '返回編輯'}</button>}</div>}
     {stage === 'dates' && <>
-      <div className="assignment-modes" role="group" aria-label={en ? 'Date mapping' : '日期安排方式'}><button type="button" disabled={busy} aria-pressed={mode === 'gaps'} onClick={() => { try { change(offsets.map(offset => shiftPlanDate(dates[0] || today, offset))); setMode('gaps'); } catch { change(days.map(() => '')); setMode('gaps'); } }}>{en ? 'Keep intervals' : '保留原間隔'}</button><button type="button" disabled={busy} aria-pressed={mode === 'individual'} onClick={() => setMode('individual')}>{en ? 'Choose each date' : '逐天指定日期'}</button></div>
-      {mode === 'gaps' && <div className="assignment-start"><label>{en ? 'Day 1 starts on' : '第 1 天，從哪天開始？'}<input type="date" min={today} value={dates[0]} disabled={busy} onChange={event => { try { change(offsets.map(offset => shiftPlanDate(event.target.value, offset))); } catch { change(days.map(() => '')); } }} /></label><p>{en ? 'The other days follow the original intervals. To move days separately, choose each date.' : '改開始日，其他日期會按原間隔一起移動。想單獨改，請選「逐天指定日期」。'}</p></div>}
-      <div className="assignment-date-list">{days.map((day, index) => { const conflict = conflicts[index]; return <section key={index} className="assignment-date-card"><header><span className="assignment-number">{index + 1}</span><div><h3>{en ? 'Day' : '第'} {index + 1}{en ? '' : ' 天'}{sourceTitle(day) && ` · ${sourceTitle(day)}`}</h3><p>{estimateSessionMinutes(day, exercises)} {en ? 'min' : '分鐘'} · {day.routine.length} {en ? 'exercises' : '個動作'}</p></div></header>
-        {mode === 'individual' ? <label>{en ? 'Apply to date' : '套用到日期 ↓'}<input aria-label={`${en ? 'Day' : '第'} ${index + 1} ${en ? 'target date' : '天套用日期'}`} type="date" min={today} value={dates[index]} disabled={busy} onChange={event => change(dates.map((date, i) => i === index ? event.target.value : date))} /></label> : <p className="assignment-target"><span>{en ? 'Apply to ↓' : '套用到 ↓'}</span><strong>{dates[index] || (en ? 'Choose a date' : '請選日期')}</strong></p>}
-        {conflict?.protected ? <p className="assignment-warning">{en ? 'Training records exist. Change this date; records cannot be replaced.' : '已有訓練紀錄，不能覆蓋。請替這天改日期。'}</p> : conflict?.existing ? <div className="assignment-warning"><p>{en ? 'Existing plan' : '已有課表'}：{conflict.existing.theme || conflict.existing.name}</p><label className="assignment-replace"><input type="checkbox" checked={replacements.includes(dates[index])} disabled={busy} onChange={event => { setReplacements(previous => event.target.checked ? [...previous, dates[index]] : previous.filter(date => date !== dates[index])); setError(''); }} />{en ? 'Replace this unstarted plan at final confirmation' : '最後確認時，替換這份尚未開始的課表'}</label></div> : <p className="assignment-date-state">{conflictState ? en ? '✓ Available' : '✓ 可安排' : en ? 'Check before confirming' : '確認前檢查日期'}</p>}
+      {!initialDates && <div className="assignment-modes" role="group" aria-label={en ? 'Date mapping' : '日期安排方式'}><button type="button" disabled={busy} aria-pressed={mode === 'gaps'} onClick={() => { try { change(offsets.map(offset => shiftPlanDate(dates[0] || today, offset))); setMode('gaps'); } catch { change(days.map(() => '')); setMode('gaps'); } }}>{en ? 'Keep intervals' : '保留原間隔'}</button><button type="button" disabled={busy} aria-pressed={mode === 'individual'} onClick={() => setMode('individual')}>{en ? 'Choose each date' : '逐天指定'}</button></div>}
+      {mode === 'gaps' && <div className="assignment-start"><label>{en ? 'Start date' : '開始日期'}<input type="date" min={today} value={dates[0]} disabled={busy} onChange={event => { try { change(offsets.map(offset => shiftPlanDate(event.target.value, offset))); } catch { change(days.map(() => '')); } }} /></label></div>}
+      <div className="assignment-date-list">{days.map((day, index) => { const conflict = conflicts[index]; return <section key={index} className="assignment-date-card"><header><span className="assignment-number">{index + 1}</span><div><h3>{sourceTitle(day) || (en ? `Day ${index + 1}` : `第 ${index + 1} 天`)}</h3><p>{day.routine.length} {en ? 'exercises' : '個動作'} · {estimateSessionMinutes(day, exercises)} {en ? 'min' : '分鐘'}</p></div></header>
+        {mode === 'individual' ? <label>{en ? 'Date' : '日期'}<input aria-label={`${en ? 'Day' : '第'} ${index + 1} ${en ? 'target date' : '天套用日期'}`} type="date" min={today} value={dates[index]} disabled={busy} onChange={event => change(dates.map((date, i) => i === index ? event.target.value : date))} /></label> : <p className="assignment-target"><strong>{dates[index] ? dateLabel(dates[index]) : en ? 'Choose a date' : '請選日期'}</strong></p>}
+        {conflict?.protected ? <p className="assignment-warning">{en ? 'Training records exist. Reschedule this day or return to editing to remove it.' : '已有訓練紀錄。請改期，或返回編輯移除這一天。'}</p> : conflict?.existing ? <div className="assignment-warning"><p>{en ? 'This date already has a plan.' : '這天已有課表。'}</p>{comparison(conflict.existing, day)}<label className="assignment-replace"><input type="checkbox" checked={replacements.includes(dates[index])} disabled={busy} onChange={event => { setReplacements(previous => event.target.checked ? [...previous, dates[index]] : previous.filter(date => date !== dates[index])); setPreview(null); setError(''); }} />{en ? 'Replace the original plan on this date' : '取代這個日期的原課表'}</label></div> : null}
       </section>; })}</div>
       {dateError && <p role="alert" className="assignment-warning">{dateError}</p>}
-      <p className="assignment-storage">{uid ? en ? 'Will save to your signed-in account.' : '確認後儲存到目前登入帳號。' : en ? 'Will save on this device. Importing never marks training complete.' : '確認後儲存在這台裝置；套用不會標記訓練完成。'}</p>
-      <footer className="assignment-actions"><div><strong>{en ? `Apply ${days.length} days` : `要套用 ${days.length} 天`}</strong><span>{en ? 'One source day per date' : '每一天對應一個日期'}</span></div><button type="button" data-testid="assignment-preview" disabled={busy || !!dateError || unresolved} onClick={inspect} className="button-primary">{busy && <Loader2 className="animate-spin" size={17} />}{en ? 'Check dates and preview' : '檢查日期並預覽'}</button></footer>
+      <footer className="assignment-actions"><div><strong>{days.length} {en ? 'days' : '天'}</strong></div><button type="button" data-testid="assignment-preview" disabled={busy || !!dateError || unresolved} onClick={inspect} className="button-primary">{busy && <Loader2 className="animate-spin" size={17} />}{busy ? en ? 'Checking…' : '檢查中…' : en ? 'Review plan' : '檢查課表'}</button></footer>
     </>}
     {stage === 'review' && preview && <>
-      <div className="assignment-review-list">{preview.sessions.map(day => <section key={day.date}><header><span className="assignment-source-label">{new Intl.DateTimeFormat(en ? 'en' : 'zh-TW', { month: 'numeric', day: 'numeric', weekday: 'short', timeZone: 'UTC' }).format(new Date(`${day.date}T12:00:00Z`))}</span>{onEdit && <button type="button" className="assignment-modify-day text-link" onClick={() => onEdit(days.map((source, index) => ({ ...source, date: dates[index] })), day.date)}>{en ? 'Modify' : '修改'}</button>}</header><h3>{day.theme}</h3><p className="assignment-review-date">{en ? 'Estimated ' : '預估 '}{estimateSessionMinutes(day, exercises)} {en ? 'min' : '分鐘'}</p>
-        <p className="assignment-phase-counts">{en ? 'Warm-up' : '暖身'} {day.prescriptions.filter(dose => dose.phase === 'warmup').length} · {en ? 'Training' : '訓練'} {day.prescriptions.filter(dose => ['skill', 'strength', 'accessory'].includes(dose.phase)).length} · {en ? 'Cooldown' : '收操'} {day.prescriptions.filter(dose => ['recovery', 'cooldown'].includes(dose.phase)).length}</p>
-        {Number(profile.time) > 0 && estimateSessionMinutes(day, exercises) > Number(profile.time) && <p className="assignment-warning">{en ? `Exceeds your ${profile.time}-minute availability. Edit this copy if needed.` : `超出你設定的 ${profile.time} 分鐘；請確認時間，或先編輯副本。`}</p>}
-        {replacements.includes(day.date) && <p className="assignment-warning">{en ? 'Original' : '原課表'}：{conflictState.sessionsByDate[day.date]?.theme || conflictState.sessionsByDate[day.date]?.name}</p>}
-        <button type="button" aria-expanded={expanded === day.date} onClick={() => setExpanded(expanded === day.date ? null : day.date)} className="text-link">{en ? 'Details' : '查看內容'}</button>{expanded === day.date && <WorkoutPlanSummary {...{ day, exercises, lang }} />}
+      <div className="assignment-review-list">{preview.sessions.map(day => <section key={day.date}><header><h3 className="assignment-source-label">{dateLabel(day.date)}</h3>{onEdit && <button type="button" disabled={busy} className="assignment-modify-day text-link" onClick={() => editCopy(day.date)}>{en ? 'Edit' : '修改'}</button>}</header>
+        <div className="assignment-day-summary"><div><h4>{day.theme}</h4><p>{day.routine.length} {en ? 'exercises' : '個動作'} · {estimateSessionMinutes(day, exercises)} {en ? 'min' : '分鐘'}</p></div><span className={replacements.includes(day.date) ? 'assignment-replace-tag' : 'assignment-new-tag'}>{replacements.includes(day.date) ? en ? 'Replace' : '取代' : en ? 'Add' : '新增'}</span></div>
+        {Number(profile.time) > 0 && estimateSessionMinutes(day, exercises) > Number(profile.time) && <p className="assignment-warning">{en ? `Exceeds your ${profile.time}-minute limit. Edit to adjust.` : `超出設定的 ${profile.time} 分鐘，可返回修改。`}</p>}
+        {replacements.includes(day.date) ? comparison(conflictState.sessionsByDate[day.date], day) : <><button type="button" disabled={busy} aria-expanded={expanded === day.date} aria-controls={`assignment-details-${day.date}`} onClick={() => setExpanded(expanded === day.date ? null : day.date)} className="text-link">{expanded === day.date ? en ? 'Hide exercises' : '收起動作' : en ? 'View exercises' : '查看動作'}</button>{expanded === day.date && <div id={`assignment-details-${day.date}`}><WorkoutPlanSummary {...{ day, exercises, lang }} /></div>}</>}
       </section>)}</div>
-      <p role="status" className="assignment-success">{en ? '✓ Existing training records will be retained.' : '✓ 既有訓練紀錄會保留。'}{replacements.length === 0 && (en ? ' No existing plans will be replaced.' : '不覆蓋任何既有課表。')}</p>
-      <details className="assignment-date-options"><summary>{en ? 'Change target dates' : '調整套用日期'}</summary><button type="button" className="text-link" onClick={() => setStage('dates')}>{en ? 'Change dates and check conflicts again' : '修改日期並重新檢查衝突'}</button></details>
-      <p className="assignment-storage">{uid ? en ? 'Saves to your signed-in account.' : '將儲存到目前登入帳號。' : en ? 'Saves to this device.' : '將儲存在這台裝置。'}{en ? ' Your source and actual records stay unchanged.' : '來源與實際訓練紀錄保持完整。'}</p>
-      {stale && <p role="alert" className="assignment-warning">{en ? 'Plan changed. Review the dates again.' : '資料已變更，請返回重新檢查。'}</p>}
-      <footer className="assignment-actions"><div><strong>{en ? 'Add' : '新增'} {dates.length - replacements.length} {en ? 'days' : '天'}{replacements.length > 0 && ` · ${en ? 'Replace' : '替換'} ${replacements.length} ${en ? 'days' : '天'}`}</strong><span>{en ? 'Only changes after confirmation' : '確認後才更新我的課表'}</span></div><button type="button" data-testid="assignment-apply" disabled={busy || stale} onClick={apply} className="button-primary">{busy ? <Loader2 size={17} className="animate-spin" /> : <Check size={17} />}{en ? `Confirm ${dates.length} days` : `確認套用到 ${dates.length} 天`}</button></footer>
+      <button type="button" disabled={busy} className="assignment-change-dates text-link" onClick={() => { setStage('dates'); setPreview(null); }}>{en ? 'Change dates' : '調整日期'}</button>
+      {stale && <p role="alert" className="assignment-warning">{en ? 'Plan changed. Check these dates again.' : '資料已變更，請重新檢查日期。'}</p>}
+      <footer className="assignment-actions"><div><strong>{dates.length} {en ? 'days' : '天'}{replacements.length > 0 && ` · ${en ? 'Replace' : '取代'} ${replacements.length}`}</strong><span>{uid ? en ? 'Your account' : '目前帳號' : en ? 'This device' : '這台裝置'}</span></div><button type="button" data-testid="assignment-apply" disabled={busy || stale} onClick={apply} className="button-primary">{busy ? <Loader2 size={17} className="animate-spin" /> : <Check size={17} />}{busy ? en ? 'Applying…' : '套用中…' : en ? 'Apply to dates' : '套用到日期'}</button></footer>
     </>}
-    {stage === 'done' && <div role="status" className="assignment-success">{en ? 'Saved to your selected dates.' : '已儲存到所選日期。'}<button className="button-primary" onClick={onCancel}>{en ? 'View my plans' : '查看我的課表'}</button></div>}
+    {stage === 'done' && <div role="status" className="assignment-success">{en ? 'Saved to your selected dates.' : '已儲存到所選日期。'}<button type="button" className="button-primary" onClick={onCancel}>{en ? 'View my plans' : '查看我的課表'}</button></div>}
   </section>;
 }

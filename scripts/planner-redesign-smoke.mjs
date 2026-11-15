@@ -9,7 +9,7 @@ const server = spawn(process.execPath, ['scripts/smoke-server.mjs', String(port)
 let browser, page, step = '';
 try {
   for (let n = 0; n < 150; n++) { try { if ((await fetch(site)).ok) break; } catch { /* starting */ } await new Promise(resolve => setTimeout(resolve, 100)); }
-  browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
+  browser = await puppeteer.launch({ headless: true, executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium', args: ['--no-sandbox'] });
   for (const width of (process.env.REDESIGN_SMOKE_WIDTHS || '320,390,768,1440').split(',').map(Number)) {
     const context = await browser.createBrowserContext(); page = await context.newPage();
     const runtimeErrors = []; page.on('pageerror', error => { runtimeErrors.push(error.message); console.error(error.message); }); page.on('console', message => { if (message.type() === 'error') console.error(message.text()); });
@@ -29,31 +29,32 @@ try {
     await page.goto(site, { waitUntil: 'networkidle2' }); await textClick('課表'); await visible('[data-testid="period-plan-preview"]'); await shot('week'); await click('[data-testid="open-manual-planner"]'); await visible('[data-testid="manual-planner"]'); await shot('dates');
     const date = shiftManualDate(new Date().toISOString().slice(0, 10), 1);
     for (let n = 0; !await page.$(`[data-testid="manual-date-${date}"]`) && n < 3; n++) await click('button[aria-label="下一個月"]');
-    await click(`[data-testid="manual-date-${date}"]`); await click('[data-testid="manual-start"]'); await visible('.manual-empty-day'); await shot('empty');
-    assert.equal(await page.$$eval('[data-testid="session-plan-editor"]', nodes => nodes.length), 0, 'Empty day shows choices before empty phase cards');
-    step = `${width} common full preview then add`;
-    await click('[data-testid="manual-common-workouts"]'); await shot('picker'); assert.equal(await page.$$eval('.quick-workout-card', nodes => nodes.length), 4);
-    await click('[data-testid="quick-view-daily-warmup"]'); await shot('detail'); assert.equal((await draft()).routine.length, 0, 'Preview does not mutate draft');
-    assert.equal(await page.$$eval('.quick-preview-list li', nodes => nodes.length), 8);
-    await click('[data-testid="quick-workout-add"]'); await visible('[data-testid="session-plan-editor"]'); await shot('day');
+    await click(`[data-testid="manual-date-${date}"]`); await click('[data-testid="manual-start"]'); await visible('.combo-first-empty'); await shot('empty');
+    assert.equal(await page.$$eval('.manual-phase-card', nodes => nodes.length), 0, 'Empty day has no phase tasks');
+    step = `${width} compact combos then direct continuous add`;
+    await click('[data-testid="manual-add-content"]'); await shot('picker'); assert.equal(await page.$$eval('dialog.combo-first-picker .combo-first-card', nodes => nodes.length), 4);
+    await click('dialog [data-testid="combo-detail-daily-warmup"]'); await shot('detail'); assert.equal((await draft()).routine.length, 0, 'Expanding detail does not mutate draft');
+    assert.equal(await page.$$eval('dialog [data-combo-id="daily-warmup"] li', nodes => nodes.length), 8);
+    await click('dialog [data-testid="combo-detail-daily-warmup"]');
+    await click('dialog [data-testid="combo-add-daily-warmup"]');
     assert.equal((await draft()).routine.length, 8); assert.equal(new Set((await draft()).routine).size, 8); assert.ok(!(await draft()).routine.includes('bf_A13'));
+    const originalHip = (await draft()).prescriptions.find(dose => dose.id === 'bf_A15');
+    await click('dialog [data-testid="combo-add-hip-internal-rotation"]'); assert.equal((await draft()).routine.length, 10);
+    assert.deepEqual((await draft()).prescriptions.find(dose => dose.id === 'bf_A15'), originalHip, 'Duplicate preserves dose and phase');
+    await shot('conflict'); await click('dialog .combo-first-panel-footer button.manual-text-action'); assert.equal((await draft()).routine.length, 8, 'Undo in the panel only reverts latest addition');
+    await click('[data-testid="combo-panel-done"]'); await shot('day');
     assert.equal(await page.$$eval('[data-phase="warmup"] [data-exercise-id]', nodes => nodes.length), 8);
-    step = `${width} dedup then undo`;
-    await click('[data-testid="manual-add-workout"]'); await click('[data-testid="quick-view-hip-internal-rotation"]'); await shot('conflict');
-    assert.equal(await page.$$eval('.quick-conflict input[type="radio"]:checked', nodes => nodes.length), 1); // one existing hip transition defaults keep
-    await click('[data-testid="quick-workout-add"]'); await visible('[data-testid="session-plan-editor"]'); assert.equal((await draft()).routine.length, 10);
-    await textClick('撤銷'); assert.equal((await draft()).routine.length, 8);
     step = `${width} edit, scoped save, reload and mine`;
     await click('[data-exercise-id="bf_A16"] button'); await visible('dialog[open] form');
     await fill('dialog[open] form input[type="number"]', '2'); await textClick('儲存草稿修改');
     assert.equal((await draft()).prescriptions.find(dose => dose.id === 'bf_A16').sets, 2);
-    await click('[data-testid="manual-save-day"]'); await visible('dialog[open] form');
-    await page.click('input[value="warmup"]'); await fill('dialog[open] input:not([type])', `暖身測試 ${width}`); await shot('save'); await click('[data-testid="save-workout-confirm"]');
+    await click('.manual-more > summary'); await click('[data-testid="manual-save-day"]'); await visible('dialog[open] form');
+    await fill('dialog[open] input:not([type])', `暖身測試 ${width}`); await shot('save'); await click('[data-testid="save-workout-confirm"]');
     await page.waitForFunction(() => !document.querySelector('dialog[open]'));
     await page.reload({ waitUntil: 'networkidle2' }); await textClick('課表'); await click('[data-testid="open-manual-planner"]'); await visible('[data-testid="session-plan-editor"]'); assert.equal((await draft()).routine.length, 8);
-    await click('[data-testid="manual-add-workout"]'); await textClick('我的收藏'); await visible('.quick-workout-card'); await shot('mine');
-    await textClick('查看'); await visible('.quick-preview-list'); assert.equal(await page.$eval('[data-testid="quick-workout-add"]', node => node.disabled), true, 'All duplicates preserved; do not claim 8 new additions');
-    await textClick('返回組合選擇'); await textClick('返回今日草稿');
+    await click('[data-testid="manual-add-content"]'); await visible('dialog .combo-first-card'); await shot('mine');
+    const saved = await page.$$('dialog .combo-first-card'); assert.ok(saved.length >= 5, 'Saved combo shares the same list');
+    await click('[data-testid="combo-panel-done"]');
     step = `${width} review apply`;
     await click('[data-testid="manual-review"]'); await visible('[data-testid="assignment-apply"]'); await shot('review');
     assert.equal(await page.evaluate(() => localStorage.getItem('fitness_date_period_v1')), null, 'Review is not apply');
