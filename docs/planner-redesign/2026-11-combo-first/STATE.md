@@ -103,3 +103,5 @@
 - navigation/native8 fixture與workout非同步器材選單等待均已修正，整套同一輪通過；沒有跳過先前失敗的套件。
 - root四尺寸React截圖／任務全通；390首屏3筆完整動作；CSS200%冒煙主要按鈕仍可見（不冒充原生瀏覽器縮放）；完整log及限制見FINAL-REVIEW與implementation-review。
 - GitHub寫入仍403；未推送未上線。下一步僅權限恢復後發布及線上讀回，不再返回P1／P2重做。
+
+- 本地正式實作commit：`a742b56`，branch `design/combo-first-v3`；後續文件提交僅保存最終驗收紀錄。root已完成版本保存，請勿以14c2cec作為最新實作版本。

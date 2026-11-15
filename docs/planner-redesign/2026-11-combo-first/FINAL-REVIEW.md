@@ -48,3 +48,5 @@
 本地工程驗收與產品試用分開。正式介面可供試用；真人上手度、實機效能、原生200%縮放與人工讀屏尚未取得證據。沒有以agent模擬充當真人反饋。
 
 GitHub CLI dry-run及connector寫入皆曾回覆403，11/15重新檢查CLI仍相同；因此未推送、未部署，也沒有線上版本讀回證據。恢復repository寫入權限後，可依使用者既有授權推送、執行CI及部署驗證，不必重新詢問是否要做這次改版。
+
+正式src與測試已保存為本地commit `a742b56`（branch `design/combo-first-v3`）。完整最後一輪瀏覽器輸出見 [browser-suite.txt](implementation-review/browser-suite.txt)。`early-test-failure.png` 是早期失敗輪次，並非最後畫面。

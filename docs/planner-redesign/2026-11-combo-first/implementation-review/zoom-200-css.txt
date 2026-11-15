@@ -1,0 +1,17 @@
+CSS200 [
+  {
+    label: '＋ 加入內容',
+    left: 48,
+    right: 175.109375,
+    top: 644,
+    bottom: 810
+  },
+  {
+    label: '檢查課表',
+    left: 195.109375,
+    right: 342,
+    top: 665,
+    bottom: 789
+  }
+]
+[{"width":390,"lang":"zh","passed":["retired entrances removed","continuous combo addition","undo most recent combo","subset favorite pinned and immediately visible","eight independent warmups","duplicate dose and phase retained","date isolation","single movement phase","preview does not persist","real signed-out apply"],"pageErrors":[]}]

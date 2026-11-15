@@ -1,0 +1,47 @@
+Public sharing: 320/390/1440px, snapshot isolation, embedded URL, clipboard/native share, length/sign-in fallback, English unsupported state, v1 phases/repair, auth-loading gate and v2 confirmed device import passed.
+Saved workouts browser checks passed: persistence/reload, duplicate retry, stable rename, quota failure, confirmed deletion, external callbacks, scope masking, bilingual content and 44px controls at 320/390/1440; hook snapshot/write/delete ordering, stale revision/account isolation, arbitrary pinned subsets, modal callback isolation and advanced source updates.
+Assignment safety passed: real App date-entry review/back preserves ten movements and changed dose/date; profile time/equipment/health blocks inspect and final apply; repair retains content; explicit source rest saves and invalid empty training stays blocked.
+Navigation browser smoke passed: cold/warm #plan/#program/#workout, share exit, import cancellation, modal/picker/draft/week/root Back.
+narrow: manual → dates → batch → edit → reload → preview → apply → named save → reuse → share → recipient import passed
+mobile: manual → dates → batch → edit → reload → preview → apply → named save → reuse → share → recipient import passed
+desktop: manual → dates → batch → edit → reload → preview → apply → named save → reuse → share → recipient import passed
+320: quick preview → 8 independent rows → duplicate keep → undo → dose edit → scoped save → reload → my workouts → review → apply passed
+390: quick preview → 8 independent rows → duplicate keep → undo → dose edit → scoped save → reload → my workouts → review → apply passed
+768: quick preview → 8 independent rows → duplicate keep → undo → dose edit → scoped save → reload → my workouts → review → apply passed
+1440: quick preview → 8 independent rows → duplicate keep → undo → dose edit → scoped save → reload → my workouts → review → apply passed
+Delayed/failed markUsed, store.busy independence, continuous add, latest undo, removal undo, edit invalidation and account isolation passed.
+320/zh: visible combos, continuous add, single search, arbitrary subset save, immediate reuse, reload, dates and apply passed
+390/zh: visible combos, continuous add, single search, arbitrary subset save, immediate reuse, reload, dates and apply passed
+1440/zh: visible combos, continuous add, single search, arbitrary subset save, immediate reuse, reload, dates and apply passed
+390/en: visible combos, continuous add, single search, arbitrary subset save, immediate reuse, reload, dates and apply passed
+desktop: legacy restore/reload/share/adoption, editing/picker/restore, feedback, library groups/eligibility, restricted BYOK preview, native ten-dose BYOK/protection/reload, records/body metrics, rollover, logout, English passed
+mobile: legacy restore/reload/share/adoption, editing/picker/restore, feedback, library groups/eligibility, restricted BYOK preview, native ten-dose BYOK/protection/reload, records/body metrics, rollover, logout, English passed
+desktop: actual logs/date, range exports/CSV/copy/share/privacy, private sharing, readiness preview/apply, completed-dose reload, next-day feedback, atomic guest adoption, async load and language persistence passed
+mobile: actual logs/date, range exports/CSV/copy/share/privacy, private sharing, readiness preview/apply, completed-dose reload, next-day feedback, atomic guest adoption, async load and language persistence passed
+desktop: weekly selection, draft reload, preview/back/apply, library/favorite separation, eight-choice limit, clinical priority, English and week rollover passed
+mobile: weekly selection, draft reload, preview/back/apply, library/favorite separation, eight-choice limit, clinical priority, English and week rollover passed
+desktop: verified browser Firestore project demo-fitness-planner
+desktop: date-first validation, custom partial cross-week/weekend preview/back/apply, actual logs/execution, reload, protected facts, stale rollover and English passed; signed-in account isolation/save/reload also passed
+mobile: verified browser Firestore project demo-fitness-planner
+mobile: date-first validation, custom partial cross-week/weekend preview/back/apply, actual logs/execution, reload, protected facts, stale rollover and English passed; signed-in account isolation/save/reload also passed
+desktop: compact full list, hold/cancel/scroll, keyboard/Escape/focus, eight independent warm-up rows, preparation, draft retention, factual save/reload and 320px passed
+mobile: compact full list, hold/cancel/scroll, keyboard/Escape/focus, eight independent warm-up rows, preparation, draft retention, factual save/reload and 320px passed
+desktop/hard: equipment, explicit recovery reason, regional rotation and unchanged actuals passed
+desktop/mixed: equipment, explicit recovery reason, regional rotation and unchanged actuals passed
+mobile/hard: equipment, explicit recovery reason, regional rotation and unchanged actuals passed
+mobile/mixed: equipment, explicit recovery reason, regional rotation and unchanged actuals passed
+desktop/normal: real questionnaire, court/recovery summary, fixed stretching, complementary work, saved conditions and unchanged actuals passed
+desktop/reduce: real questionnaire, court/recovery summary, fixed stretching, complementary work, saved conditions and unchanged actuals passed
+desktop/recover: real questionnaire, court/recovery summary, fixed stretching, complementary work, saved conditions and unchanged actuals passed
+mobile/normal: real questionnaire, court/recovery summary, fixed stretching, complementary work, saved conditions and unchanged actuals passed
+mobile/reduce: real questionnaire, court/recovery summary, fixed stretching, complementary work, saved conditions and unchanged actuals passed
+mobile/recover: real questionnaire, court/recovery summary, fixed stretching, complementary work, saved conditions and unchanged actuals passed
+desktop: grouped four-target selection, cap/uncheck, draft reload, real serratus work, honest preview, saved priorities and 320px passed
+mobile: grouped four-target selection, cap/uncheck, draft reload, real serratus work, honest preview, saved priorities and 320px passed
+desktop: 40-minute dose, honest short-court recovery, no running recommendation, seven actual choices, eight regions, saved plan and daily time passed
+mobile: 40-minute dose, honest short-court recovery, no running recommendation, seven actual choices, eight regions, saved plan and daily time passed
+[{"width":390,"lang":"zh","strength40":2,"adjustedMinutes":[20,8,16,8,8,0,0],"result":"passed"},{"width":320,"lang":"zh","strength40":2,"adjustedMinutes":[20,8,16,8,8,0,0],"result":"passed"},{"width":390,"lang":"en","strength40":2,"adjustedMinutes":[20,8,16,8,8,0,0],"result":"passed"},{"width":1280,"lang":"en","strength40":2,"adjustedMinutes":[20,8,16,8,8,0,0],"result":"passed"}]
+{"mode":"legacy-weekly","cpuSlowdown":4,"idleCommits":0,"idleWrites":0,"libraryNavigationMs":685,"searchable":true}
+{"mode":"native-dates","cpuSlowdown":4,"idleCommits":0,"idleWrites":0,"libraryNavigationMs":652,"searchable":true}
+{"lang":"zh","feedbackMs":118,"heldNetworkMs":1200,"sequentialTaps":"passed","failureUndoAndRetry":"passed","persistedReload":"passed"}
+{"lang":"en","feedbackMs":105,"heldNetworkMs":1200,"sequentialTaps":"passed","failureUndoAndRetry":"passed","persistedReload":"passed"}
