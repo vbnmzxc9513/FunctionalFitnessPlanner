@@ -101,6 +101,9 @@ export function applyWeeklyChoices(day, available, ids, used, lang = 'zh', minut
       const existing = available[dose.id];
       return patterns.length ? classifyBalanceExercise(dose.id, existing).patterns.some(pattern => patterns.includes(pattern)) : existing?.category === exercise.category;
     });
+    // Explicit power choices can use a skill slot even when their strength
+    // patterns differ from the default footwork drill. Keep selected work locked.
+    if (index < 0 && !recovery && phase === 'skill' && exercise.category === 'power') index = day.prescriptions.findIndex(dose => dose.phase === 'skill' && !locked.has(dose.id) && !selected.includes(dose.id));
     if (index < 0 && !recovery && phase === 'strength') index = day.prescriptions.findIndex(dose => dose.phase === 'accessory' && !selected.includes(dose.id));
     // The fixed flow stays intact. Explicit single stretches can use a spare
     // mobility/finish slot rather than being silently ignored by the flow.

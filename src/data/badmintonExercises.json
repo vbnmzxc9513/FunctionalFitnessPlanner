@@ -3718,5 +3718,112 @@
     "active": true,
     "jumpContacts": 0,
     "betweenRepsSeconds": 0
+  },
+  {
+    "id": "bf_E11",
+    "catalogCode": "E11",
+    "name": "啞鈴火箭推",
+    "nameEn": "Dumbbell thruster",
+    "aliases": [
+      "啞鈴深蹲推舉",
+      "深蹲接推舉",
+      "火箭推",
+      "dumbbell squat to press",
+      "thruster"
+    ],
+    "purpose": "下肢蹬伸接上肢推舉的全身力量傳導",
+    "purposeEn": "Whole-body force transfer from leg drive into an overhead press",
+    "cue": "輕啞鈴放肩旁，下蹲後以腿臀站起，順勢推舉；肋骨不外翻，不跳起，不用拱腰頂重量。",
+    "cueEn": "Hold light dumbbells at the shoulders, squat and stand through the legs into a press. Keep ribs controlled; do not jump or arch the back.",
+    "easier": "先分開練徒手深蹲與輕啞鈴肩推；抬手不適時停止此版本。",
+    "easierEn": "Practice bodyweight squats and light shoulder presses separately; stop this version if arm elevation hurts.",
+    "harder": "先維持連貫與控制，再小幅加重，不追求力竭。",
+    "harderEn": "Keep the movement coordinated and controlled before adding a small load; avoid failure.",
+    "dose": "2 組 × 5 次",
+    "doseEn": "2 sets × 5 reps",
+    "advanced": false,
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0,
+    "restrictionTags": [
+      "overhead"
+    ],
+    "prescription": {
+      "sets": 2,
+      "value": "5",
+      "unit": "reps",
+      "restSeconds": 90,
+      "perSide": false
+    },
+    "category": "power",
+    "type": "power",
+    "equipment": "輕啞鈴、平坦防滑地面與足夠空間",
+    "equipmentEn": "Light dumbbells, a non-slip surface and clear space",
+    "equipmentOptions": [
+      [
+        "dumbbell"
+      ]
+    ],
+    "rest": "90 秒；每次重置",
+    "restEn": "90 seconds; reset between reps",
+    "level": "基礎",
+    "priority": false,
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "active": true,
+    "contentVersion": 1
+  },
+  {
+    "id": "bf_E12",
+    "catalogCode": "E12",
+    "name": "啞鈴原地跳轉",
+    "nameEn": "Dumbbell rotational jump and stick",
+    "aliases": [
+      "啞鈴原地轉向跳",
+      "啞鈴跳轉",
+      "負重轉向跳停",
+      "dumbbell jump turn",
+      "rotational jump"
+    ],
+    "purpose": "小幅轉向起跳、雙腳落地控制與軀幹穩定",
+    "purposeEn": "Small-angle rotational jumping, landing control and trunk stability",
+    "cue": "極輕啞鈴垂放身側，低跳轉約 45 度；腳、髖與胸一起轉，雙腳落地定住 2–3 秒再重置，左右分開練。",
+    "cueEn": "Hold very light dumbbells at the sides, jump low and turn about 45 degrees. Turn feet, hips and chest together, stick the two-foot landing for 2–3 seconds and reset. Train each direction separately.",
+    "easier": "先做徒手小角度跳轉定住；仍不穩時改成不跳的轉身跨步。",
+    "easierEn": "First use an unloaded small-angle jump and stick; regress to a grounded turning step if unstable.",
+    "harder": "落地穩定後一次只調整一項；不自動增加重量、轉角或連跳。",
+    "harderEn": "Change only one variable after stable landings; do not automatically increase load, turn angle or consecutive jumps.",
+    "dose": "2 組 × 每方向 3 次",
+    "doseEn": "2 sets × 3 reps per direction",
+    "advanced": true,
+    "jumpContacts": 1,
+    "betweenRepsSeconds": 3,
+    "restrictionTags": [
+      "jump",
+      "rotation"
+    ],
+    "prescription": {
+      "sets": 2,
+      "value": "3",
+      "unit": "reps",
+      "restSeconds": 90,
+      "perSide": true
+    },
+    "category": "power",
+    "type": "power",
+    "equipment": "輕啞鈴、平坦防滑地面與足夠空間",
+    "equipmentEn": "Light dumbbells, a non-slip surface and clear space",
+    "equipmentOptions": [
+      [
+        "dumbbell"
+      ]
+    ],
+    "rest": "90 秒；每次重置",
+    "restEn": "90 seconds; reset between reps",
+    "level": "進階",
+    "priority": false,
+    "requiresPartner": false,
+    "shoulderLoaded": true,
+    "active": true,
+    "contentVersion": 1
   }
 ]

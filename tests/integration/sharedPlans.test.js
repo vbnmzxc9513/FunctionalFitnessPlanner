@@ -9,6 +9,7 @@ import { auth, appId } from '../../src/services/firebase.js';
 import { createPlanPayload, rebuildPlanDays } from '../../src/domain/sharedPlans.js';
 import { createSharedPlan, loadSharedPlan, buildSharedPlanUrl, buildEmbeddedPlanUrl } from '../../src/services/sharedPlanRepository.js';
 import { DEFAULT_SCHEDULE_I18N } from '../../src/locale.js';
+import { catalogExercises } from '../../src/domain/exerciseCatalog.js';
 
 let environment, uid;
 const path = id => `artifacts/${appId}/sharedPlans/${id}`;
@@ -34,6 +35,15 @@ before(async () => {
 });
 beforeEach(async () => { await environment.clearFirestore(); if (!auth.currentUser) uid = (await signInAnonymously(auth)).user.uid; });
 after(async () => { await signOut(auth); await environment.cleanup(); });
+
+test('new dumbbell power movements publish and reload through a real anonymous short link', async () => {
+  const exercises = catalogExercises(), routine = ['bf_E11', 'bf_E12'];
+  const payload = createPlanPayload([{ routine, prescriptions: routine.map(id => ({ id, ...exercises[id].prescription, phase: 'skill' })) }], { name: '啞鈴力量傳導', exercises });
+  const id = await createSharedPlan(uid, payload);
+  await signOut(auth);
+  assert.deepEqual(await loadSharedPlan(id), payload);
+  assert.deepEqual(rebuildPlanDays(payload)[0].routine, routine);
+});
 
 test('a real short link anonymously reconstructs the exact bounded public copy and hides the registry', async () => {
   const payload = fixture(), id = await createSharedPlan(uid, payload);

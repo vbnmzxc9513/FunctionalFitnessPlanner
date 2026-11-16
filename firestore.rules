@@ -417,7 +417,7 @@ service cloud.firestore {
     }
     function publicCatalogId(id) {
       return id is string && (id in ['bulgarian', 'dead_bug']
-        || id.matches('^bf_(A(0[1-9]|1[0-9])|B(0[1-9]|1[013-7])|C(0[1-9]|1[0-3])|D0[2-9]|E(0[1-9]|10)|F0[1-6]|G0[1-8]|H(0[1-9]|1[0-2])|I0[1-4])$'));
+        || id.matches('^bf_(A(0[1-9]|1[0-9])|B(0[1-9]|1[013-7])|C(0[1-9]|1[0-3])|D0[2-9]|E(0[1-9]|1[0-2])|F0[1-6]|G0[1-8]|H(0[1-9]|1[0-2])|I0[1-4])$'));
     }
     function publicRoutine(ids, maximum) {
       return ids is list && ids.size() <= maximum && ids.toSet().size() == ids.size()

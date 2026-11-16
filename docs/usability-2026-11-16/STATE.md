@@ -30,3 +30,11 @@ Release verification (2026-11-16):
 - Isolated 390px production browser verified Today → Add opens the single-exercise picker directly, chest and serratus are selectable, chest movements render with tags, there is no date wizard or horizontal overflow, and Plan shows the compact week plus manual/automatic actions. No page errors. These checks did not write any production account data.
 - Production captures: `screens/live-chest-picker-390.png`, `screens/live-plan-390.png`.
 - Separate GitHub Pages workflow started as run `43808466867`; its hosted CI is independent of the verified canonical Cloudflare deployment.
+
+## Requested dumbbell power additions
+
+- Added `bf_E11` 啞鈴火箭推 (dumbbell thruster: squat into grounded press) and `bf_E12` 啞鈴原地跳轉 (small-angle rotational jump and stick), with bilingual names/aliases, guides, conservative starting doses and full shared body tags. Existing identities are unchanged. Both are training/skill movements, not stretching warmups.
+- E12 is the explicitly requested active advanced movement; it remains excluded for beginner experience, unavailable equipment and treatment restrictions. Existing advanced movements remain disabled by default. Jump contacts and per-direction counts are explicit.
+- Explicit power selections can replace an unselected skill slot even when their strength patterns differ from default footwork; no extra session or slot is added, and existing dose/time/recovery protections remain in force.
+- Verified: `npm run check` (283 unit tests, lint, production build); all 11 shared-plan emulator tests including new IDs; isolated 390px browser searched both names, added them with eight warmups, saved all ten on the same day with correct skill phases and no page errors.
+- `firestore.rules` expands public E codes only through E12; emulator publication/reload succeeds. Production rules deploy attempted for `myfitnessapp-c4aba` and failed before changes with “Failed to authenticate, have you run firebase login?”. Firebase CLI currently has no usable authorization. Client catalog/manual/free planning and embedded share/import work; server short links containing the new IDs require the pending rules publication. After Firebase authentication, run `firebase deploy --only firestore:rules --project myfitnessapp-c4aba`. Do not claim these production rules are deployed.

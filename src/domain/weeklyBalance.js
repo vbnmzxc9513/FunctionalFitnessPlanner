@@ -14,12 +14,12 @@ const MOBILITY_CODES = {
   shoulder: ['A09', 'A12', 'A13', 'H07'],
 };
 const PATTERN_CODES = {
-  squat_lunge: ['B01', 'B02', 'B10', 'B12', 'B18'],
+  squat_lunge: ['E11', 'B01', 'B02', 'B10', 'B12', 'B18'],
   hinge: ['B03', 'B04', 'B05', 'B06', 'B11'],
-  push: ['C02', 'C03', 'C11', 'C15'],
+  push: ['E11', 'C02', 'C03', 'C11', 'C15'],
   pull: ['C01', 'C04', 'C06', 'C10', 'C14', 'C16'],
-  core: ['D01', 'D02', 'D03', 'D04', 'D05', 'D06', 'D07', 'D08', 'C16'],
-  footwork_reaction: ['F01', 'F02', 'F03', 'F04', 'F05', 'F06', 'G01', 'G02', 'G03', 'G04', 'G05', 'G06', 'G07', 'G08', 'I02'],
+  core: ['E11', 'E12', 'D01', 'D02', 'D03', 'D04', 'D05', 'D06', 'D07', 'D08', 'C16'],
+  footwork_reaction: ['E12', 'F01', 'F02', 'F03', 'F04', 'F05', 'F06', 'G01', 'G02', 'G03', 'G04', 'G05', 'G06', 'G07', 'G08', 'I02'],
 };
 const LEGACY = {
   thoracic: { mobility: ['thoracic'], patterns: [] },

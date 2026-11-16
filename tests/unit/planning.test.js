@@ -20,12 +20,12 @@ const include = (plan, id, dose = catalog[id].prescription) => {
   return plan;
 };
 
-test('curated catalog has 102 bilingual entries, nine categories and controlled jump doses', () => {
-  assert.equal(Object.keys(catalog).length, 102);
+test('curated catalog has 104 bilingual entries, nine categories and controlled jump doses', () => {
+  assert.equal(Object.keys(catalog).length, 104);
   assert.deepEqual([...new Set(Object.values(catalog).map(item => item.category))].sort(), [...EXERCISE_CATEGORIES].sort());
   assert.deepEqual(Object.keys(catalog), Object.keys(catalogExercises('en')));
   assert.ok(Object.values(catalogExercises('en')).every(item => item.name && item.tip && !/[\u4e00-\u9fff]/.test(item.name + item.tip)));
-  for (const item of Object.values(catalog).filter(item => item.advanced)) assert.equal(item.active, false);
+  for (const item of Object.values(catalog).filter(item => item.advanced && item.id !== 'bf_E12')) assert.equal(item.active, false);
   assert.equal(catalog.bulgarian.catalogCode, 'B12');
   assert.equal(catalog.dead_bug.catalogCode, 'D01');
   assert.ok(Object.values(catalog).every(item => !item.equipmentOptions.flat().includes('medicine_ball')));
