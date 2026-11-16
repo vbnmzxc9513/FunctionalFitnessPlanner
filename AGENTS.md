@@ -1,6 +1,10 @@
 # Project continuity
 
-## Active manual-planner redesign
+## Current usability correction
+
+Read `docs/usability-2026-11-16/DESIGN.md` first for the latest task. Single-day editing must open the selected day directly; Add opens the exercise picker without choosing a date. Today, Plan and Records each have a primary task. Body-part filters and exercise tags share `src/domain/exerciseTags.js`; chest must be directly selectable. Keep blue and preserve existing recorded facts. The old combo-first work is historical context, not a reason to route daily maintenance through a new multi-day planning flow.
+
+## Previous manual-planner redesign
 
 When working on manual scheduling, combo selection, or the planning UI, read:
 

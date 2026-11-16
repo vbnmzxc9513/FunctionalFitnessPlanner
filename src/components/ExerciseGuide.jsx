@@ -1,3 +1,4 @@
+import ExerciseTags from './ExerciseTags.jsx';
 import { getExerciseGuide } from '../data/exerciseGuides.js';
 import { getExerciseSource } from '../data/exerciseSources.js';
 
@@ -6,7 +7,7 @@ export default function ExerciseGuide({ id, exercise = {}, lang = 'zh' }) {
   const source = getExerciseSource(id || exercise.id);
   return <details open={['bf_A12', 'bf_A13'].includes(id || exercise.id) ? true : undefined} className="mt-4 border-t border-slate-100 pt-2" data-testid={`exercise-guide-${id || exercise.id || 'custom'}`}>
     <summary className="cursor-pointer text-sm font-medium text-sky-800">{text.title}</summary>
-    <div className="mt-3 space-y-3 text-sm text-slate-600 leading-relaxed">
+    <div className="mt-3 space-y-3 text-sm text-slate-600 leading-relaxed"><ExerciseTags id={id} exercise={exercise} lang={lang} />
       {guide ? <>
         <p><strong className="text-slate-800">{text.start}：</strong>{guide.start}</p>
         <div><p className="font-semibold text-slate-800">{text.steps}</p><ol className="list-decimal pl-5 space-y-1">{guide.steps.map(step => <li key={step}>{step}</li>)}</ol></div>

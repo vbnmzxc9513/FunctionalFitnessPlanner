@@ -1,3 +1,4 @@
+import { openAutomaticPlanning } from './planner-flow-helpers.mjs';
 import { DAILY_WARMUP_IDS, isDailyWarmupComplete } from '../src/domain/quickWorkouts.js';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
@@ -33,7 +34,7 @@ try {
     };
     const fill = async (selector, value) => { const el = await page.waitForSelector(selector, { visible: true }); await el.evaluate((item, value) => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(item, value); item.dispatchEvent(new Event('input', { bubbles: true })); }, value); await el.dispose(); };
     const group = async label => { const button = await page.evaluateHandle(label => [...document.querySelectorAll('[data-testid="weekly-exercise-choices"] button')].find(item => item.innerText.trim() === label), label); await button.evaluate(item => item.scrollIntoView({ block: 'center', behavior: 'instant' })); await button.click(); await button.dispose(); };
-    await page.goto(site, { waitUntil: 'networkidle2' }); await fill('[data-testid="planning-range"] input:first-of-type', '2026-10-19');
+    await page.goto(site, { waitUntil: 'networkidle2' }); await openAutomaticPlanning(page); await fill('[data-testid="planning-range"] input:first-of-type', '2026-10-19');
     await page.$$eval('[data-testid="planning-range"] input', inputs => { const el = inputs[1]; Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, '2026-10-23'); el.dispatchEvent(new Event('input', { bubbles: true })); });
     await click('[data-testid="planning-range-continue"]'); await fill('[data-testid="planner-form"] input[type="number"]', '40');
     if (!await page.$eval('[data-testid="quiz-schedule"]', item => item.open)) await click('[data-testid="quiz-schedule"] > summary');
@@ -64,12 +65,12 @@ try {
     await click('[data-testid="period-mobility-overview"] > summary');
     assert.ok(await page.$$eval('[data-testid="period-mobility-overview"] dd', items => items.length === 8 && items.every(item => item.innerText.includes('10/'))));
     await click('[data-testid="period-day-2026-10-19"]');
-    await click('[data-testid="period-day-detail"] > details > summary');
+    await click('[data-testid="period-day-detail"] > .period-secondary > summary');
     assert.ok(await page.$eval('[data-testid="period-day-detail"] [data-testid="session-time-summary"]', item => /40/.test(item.innerText)), 'preview shows the actual available time');
     for (const id of DAILY_WARMUP_IDS) assert.ok(await page.$(`[data-testid="exercise-open-${id}"]`), `preview lists independent warm-up ${id}`);
     await click('[data-testid="period-day-detail"] > button');
     await click('[data-testid="period-day-2026-10-20"]');
-    await click('[data-testid="period-day-detail"] > details > summary');
+    await click('[data-testid="period-day-detail"] > .period-secondary > summary');
     const courtSummary = await page.$eval('[data-testid="period-day-detail"] [data-testid="session-time-summary"]', item => item.innerText);
     assert.ok(courtSummary.includes('40') && courtSummary.includes(lang === 'en' ? 'Court day' : '羽球日'), `${layout}: selected court day shows its available time and recovery reason: ${courtSummary}`);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
@@ -87,7 +88,8 @@ try {
     assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('fitness_date_period_v1')).profile.context.weeklyExerciseIds), ids);
     const today = await page.evaluateHandle(lang => [...document.querySelectorAll('button')].find(item => item.innerText.trim() === (lang === 'en' ? 'Today' : '今天') && item.getClientRects().length), lang);
     await today.click(); await today.dispose(); await page.waitForSelector('[data-testid="session-hero"]');
-    assert.ok(await page.$eval('[data-testid="session-hero"] [data-testid="session-time-summary"]', item => item.innerText.includes('40')));
+    await click('.day-more > summary'); await click('.day-time-details > summary');
+    assert.ok(await page.$eval('.day-more [data-testid="session-time-summary"]', item => item.innerText.includes('40')));
     if (layout === 'mobile') { await page.setViewport({ width: 320, height: 844, isMobile: true, hasTouch: true }); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false); }
     assert.deepEqual(errors, []);
     console.log(`${layout}: 40-minute dose, honest short-court recovery, no running recommendation, seven actual choices, eight regions, saved plan and daily time passed`);

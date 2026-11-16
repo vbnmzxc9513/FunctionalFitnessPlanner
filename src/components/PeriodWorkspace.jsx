@@ -15,7 +15,7 @@ import { auth } from '../services/firebase.js';
 import { periodQuestionnaireText } from '../periodLocale.js';
 
 export default function PeriodWorkspace({ uid, today, lang, t, exercises, profile, setProfile, available, onToggleWeekly,
-  localPeriod, onLocalPeriod, onApplied, onClose, overview, refreshToken = 0, fallbackPlans = {}, onToday, preserveCurrentChoices = false, history = {}, onSaveWorkout, onShare, onEditWorkout, onPlanDate, onOverviewLoaded }) {
+  localPeriod, onLocalPeriod, onApplied, onClose, overview, refreshToken = 0, fallbackPlans = {}, onToday, preserveCurrentChoices = false, history = {}, onSaveWorkout, onShare, onEditWorkout, onPlanDate, onOverviewLoaded, onAddToDay }) {
   const scope = uid || 'signed-out';
   const questionnaireT = periodQuestionnaireText(lang, t);
   const storageKey = `fitness_period_questionnaire_${scope}`;
@@ -141,7 +141,7 @@ export default function PeriodWorkspace({ uid, today, lang, t, exercises, profil
       <Onboarding range={range} lang={lang} t={questionnaireT} exercises={exercises} available={available} onToggleWeekly={onToggleWeekly} step={step} onStepChange={setStep}
         context={profile.context} setContext={value => update('context', value)} focus={profile.focus} setFocus={value => update('focus', value)} time={profile.time} setTime={value => update('time', value)} goal={profile.goal} setGoal={value => update('goal', value)} message={message} setMessage={setMessage} generating={busy} onGenerate={generate} />
     </>}
-    {(stage === 'preview' || stage === 'overview') && preview && <PeriodPlanPreview onAdjust={stage === 'preview' ? next => { setPreview(null); setStage('questionnaire'); setStep(next); window.scrollTo({ top: 0 }); } : undefined} preview={preview} choiceReport={choiceReport} choiceSummary={choiceSummary} lang={lang} t={t} exercises={exercises} today={today} onBack={stage === 'preview' ? () => { setStage('questionnaire'); setStep(2); } : undefined} onApply={stage === 'preview' ? apply : undefined} onSaveWorkout={onSaveWorkout} onShare={onShare} onEditWorkout={onEditWorkout} onPlanDate={onPlanDate} busy={busy} stale={stage === 'preview' && preview.fingerprint !== fingerprint} />}
+    {(stage === 'preview' || stage === 'overview') && preview && <PeriodPlanPreview onAdjust={stage === 'preview' ? next => { setPreview(null); setStage('questionnaire'); setStep(next); window.scrollTo({ top: 0 }); } : undefined} preview={preview} choiceReport={choiceReport} choiceSummary={choiceSummary} lang={lang} t={t} exercises={exercises} today={today} onBack={stage === 'preview' ? () => { setStage('questionnaire'); setStep(2); } : undefined} onApply={stage === 'preview' ? apply : undefined} onSaveWorkout={onSaveWorkout} onShare={onShare} onEditWorkout={onEditWorkout} onPlanDate={onPlanDate} onAddToDay={onAddToDay} busy={busy} stale={stage === 'preview' && preview.fingerprint !== fingerprint} />}
     {stage === 'overview' && <div className="flex gap-3 mt-5"><button className="button-primary" onClick={replan}>{lang === 'zh' ? '規劃另一段日期' : 'Plan another date range'}</button>{onToday && <button className="button-secondary" onClick={onToday}>{lang === 'zh' ? '回到今日訓練' : 'Go to Today'}</button>}</div>}
   </section>;
 }

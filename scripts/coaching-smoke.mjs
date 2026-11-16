@@ -220,13 +220,12 @@ try {
     await click('紀錄'); await waitText('訓練紀錄');
     assert.equal(await page.evaluate(() => [...document.querySelectorAll('button')].some(item => item.innerText.trim() === '翌日沒有惡化')), false, `${layout}: no same-day follow-up`);
     await page.evaluate(() => { sessionStorage.setItem('__coachingTestNow', String(Date.now() + 86400000)); window.dispatchEvent(new Event('focus')); });
-    await page.waitForFunction(() => [...document.querySelectorAll('button')].some(item => item.innerText.trim() === '翌日沒有惡化'));
-    await click('翌日沒有惡化');
+    await openSummary('待回報的翌日反應'); await click('翌日沒有惡化');
     await page.waitForFunction(() => JSON.parse(sessionStorage.getItem('fitness_public_preview_v1')).publicDraft.logs[0].nextDay === 'good');
     await click('今天'); await openSummary('本分頁暫存'); await click('免註冊，儲存至匿名帳號');
     await page.waitForFunction(() => !JSON.parse(sessionStorage.getItem('fitness_public_preview_v1') || '{}').pendingDraft && !JSON.parse(sessionStorage.getItem('fitness_public_preview_v1') || '{}').publicDraft);
-    await click('紀錄'); await page.waitForSelector('[data-testid="latest-training-logs"]', { visible: true }); await waitText('PRIVATE_VARIANT_TEST');
-    await page.reload({ waitUntil: 'networkidle2' }); await click('紀錄'); await page.waitForSelector('[data-testid="latest-training-logs"]', { visible: true }); await waitText('PRIVATE_VARIANT_TEST');
+    await click('紀錄'); await page.waitForSelector('[data-testid="latest-training-logs"]', { visible: true }); await page.$eval('[data-testid="latest-training-logs"] .training-log-row > summary', summary => summary.click()); await waitText('PRIVATE_VARIANT_TEST');
+    await page.reload({ waitUntil: 'networkidle2' }); await click('紀錄'); await page.waitForSelector('[data-testid="latest-training-logs"]', { visible: true }); await page.$eval('[data-testid="latest-training-logs"] .training-log-row > summary', summary => summary.click()); await waitText('PRIVATE_VARIANT_TEST');
     await verifyExport('cloud');
     await click('課表'); await selectDay('週一'); await openExerciseDetails(page, id); await page.waitForSelector(logSelector);
     await page.$eval(`${logSelector} > details > summary`, item => { if (!item.parentElement.open) item.click(); });

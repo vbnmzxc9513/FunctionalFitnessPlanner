@@ -1,5 +1,5 @@
 import { closeExerciseDetails } from './exercise-details-helpers.mjs';
-import { closePlanningFlow } from './planner-flow-helpers.mjs';
+import { closePlanningFlow, openAutomaticPlanning } from './planner-flow-helpers.mjs';
 import assert from 'node:assert/strict';
 import { writeFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
@@ -62,7 +62,7 @@ try {
       assert.equal(projectId, 'demo-fitness-planner');
       console.log(`${layout}: verified browser Firestore project ${projectId}`);
     }
-    await visible('[data-testid="first-plan"] [data-testid="planning-range"]');
+    await visible('[data-testid="first-plan"]'); await openAutomaticPlanning(page);
     assert.equal(await page.$('[data-testid="planner-form"]'), null, `${layout}: dates precede questionnaire`);
     await fill('[data-testid="planning-range"] input:first-of-type', shift(-1));
     assert.equal(await page.$eval('[data-testid="planning-range-continue"]', item => item.disabled), true, `${layout}: past start blocked`);
@@ -161,7 +161,7 @@ try {
       assert.ok(await page.$eval('[data-testid="period-equipment-summary"]', item => item.innerText.includes('Dumbbell')), `${layout}: a newer cloud timestamp cannot discard the matching equipment snapshot`);
       assert.deepEqual(await draft(), beforeStale, `${layout}: applying an account plan never overwrites device actuals`);
       await click('Records');
-      assert.equal(await page.$$eval('[data-testid="latest-training-logs"] article', items => items.length), 0, `${layout}: account history does not silently import local actuals`);
+      assert.equal(await page.$$eval('[data-testid="latest-training-logs"] .training-log-row', items => items.length), 0, `${layout}: account history does not silently import local actuals`);
       await click('Today'); await click('Start today’s session'); await visible('[data-testid="current-exercise"]');
       const cloudCompletion = await visible('[data-testid="current-exercise"] button[aria-label][aria-pressed]');
       const cloudCompletedName = await cloudCompletion.evaluate(item => item.getAttribute('aria-label'));

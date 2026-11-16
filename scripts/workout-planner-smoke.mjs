@@ -143,7 +143,7 @@ try {
     assert.equal(await page.evaluate(key => localStorage.getItem(key), manualDraftStorageKey()), null, `${layout}: successful apply clears saved manual draft`);
 
     step = `${layout}: save a named workout and reuse it on another day`;
-    await visible('[data-testid="period-plan-preview"]'); await page.screenshot({ path: `/tmp/planner-overview-${layout}.png`, fullPage: false }); await clickSelector(`[data-testid="period-day-${firstDate}"]`); await clickSelector('[data-testid="save-period-day"]');
+    await visible('[data-testid="period-plan-preview"]'); await page.screenshot({ path: `/tmp/planner-overview-${layout}.png`, fullPage: false }); await clickSelector(`[data-testid="period-day-${firstDate}"]`); await page.$eval('.period-day-tools > summary',summary=>summary.click()); await clickSelector('[data-testid="save-period-day"]');
     await fill('dialog[open] form input:not([type])', `手動排課煙霧測試 ${layout}`); await clickSelector('[data-testid="save-workout-confirm"]');
     await page.waitForFunction(() => !document.querySelector('dialog[open]'));
     await click('返回課表');
@@ -151,7 +151,7 @@ try {
     await clickSelector('[data-testid="open-manual-planner"]');
     for (let attempt = 0; !await page.$(`[data-testid="manual-date-${thirdDate}"]`) && attempt < 3; attempt++) await clickSelector('button[aria-label="下一個月"]');
     await clickSelector(`[data-testid="manual-date-${thirdDate}"]`); await clickSelector('[data-testid="manual-start"]'); await clickSelector('[data-testid="manual-add-content"]');
-    await visible('dialog .combo-first-card'); await click('髖');
+    await visible('dialog .combo-first-card'); await page.select('[data-testid="combo-body-part"]', 'hip');
     const savedAdd = await page.evaluateHandle(() => [...document.querySelectorAll('dialog .combo-first-card')].find(item => item.innerText.includes('手動排課煙霧測試'))?.querySelector('.combo-first-plus'));
     await tap(savedAdd.asElement()); await clickSelector('[data-testid="combo-panel-done"]');
     await page.waitForFunction(key => JSON.parse(localStorage.getItem(key))?.sessions[0].routine.length === 14, {}, manualDraftStorageKey());

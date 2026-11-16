@@ -1,3 +1,4 @@
+import { openAutomaticPlanning } from './planner-flow-helpers.mjs';
 import { DAILY_WARMUP_IDS, isDailyWarmupComplete } from '../src/domain/quickWorkouts.js';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
@@ -25,7 +26,7 @@ try {
     page.on('request', request => { const url = new URL(request.url()); if (['127.0.0.1', 'localhost'].includes(url.hostname) || ['data:', 'blob:'].includes(url.protocol)) request.continue(); else { external++; request.abort(); } });
     const click = async selector => { const el = await page.waitForSelector(selector, { visible: true }); await el.evaluate(item => item.scrollIntoView({ block: 'center', behavior: 'instant' })); await el.click(); await el.dispose(); };
     const fill = async (selector, value) => { const el = await page.waitForSelector(selector, { visible: true }); await el.evaluate((item, value) => { const prototype = item.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype; Object.getOwnPropertyDescriptor(prototype, 'value').set.call(item, value); item.dispatchEvent(new Event('input', { bubbles: true })); item.dispatchEvent(new Event('change', { bubbles: true })); }, value); await el.dispose(); };
-    await page.goto(site, { waitUntil: 'networkidle2' }); await page.waitForSelector('[data-testid="planning-range"]');
+    await page.goto(site, { waitUntil: 'networkidle2' }); await openAutomaticPlanning(page); await page.waitForSelector('[data-testid="planning-range"]');
     await fill('[data-testid="planning-range"] input:first-of-type', '2026-10-19');
     await page.$$eval('[data-testid="planning-range"] input', inputs => { const item = inputs[1]; Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(item, '2026-10-23'); item.dispatchEvent(new Event('input', { bubbles: true })); });
     await click('[data-testid="planning-range-continue"]'); await fill('[data-testid="planner-form"] input[type="number"]', '35');
@@ -43,7 +44,7 @@ try {
     await click('[data-testid="period-plan-conditions"] > summary');
     assert.ok(await page.$eval('[data-testid="planning-conditions"]', item => item.innerText.includes('90')));
     await click('[data-testid="period-day-2026-10-19"]');
-    await click('[data-testid="period-day-detail"] > details > summary');
+    await click('[data-testid="period-day-detail"] > .period-secondary > summary');
     assert.ok(await page.$eval('[data-testid="period-day-reason"]', item => item.innerText.trim().length > 0));
     for (const id of DAILY_WARMUP_IDS) assert.ok(await page.$(`[data-testid="exercise-open-${id}"]`), `independent warm-up row ${id}`);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);

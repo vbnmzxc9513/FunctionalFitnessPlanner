@@ -1,3 +1,4 @@
+import { openAutomaticPlanning } from './planner-flow-helpers.mjs';
 import { DAILY_WARMUP_IDS } from '../src/domain/quickWorkouts.js';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
@@ -22,7 +23,7 @@ try {
     const click = async selector => { const el = await page.waitForSelector(selector, { visible: true }); await el.evaluate(item => item.scrollIntoView({ block: 'center', behavior: 'instant' })); await el.click(); await el.dispose(); };
     const fill = async (selector, value) => { const el = await page.waitForSelector(selector, { visible: true }); await el.evaluate((item, value) => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(item, value); item.dispatchEvent(new Event('input', { bubbles: true })); }, value); await el.dispose(); };
     const targets = ['serratus', 'rotator_cuff', 'glutes', 'calves'];
-    await page.goto(site, { waitUntil: 'networkidle2' }); await fill('[data-testid="planning-range"] input:first-of-type', '2026-10-19');
+    await page.goto(site, { waitUntil: 'networkidle2' }); await openAutomaticPlanning(page); await fill('[data-testid="planning-range"] input:first-of-type', '2026-10-19');
     await page.$$eval('[data-testid="planning-range"] input', inputs => { const el = inputs[1]; Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, '2026-10-23'); el.dispatchEvent(new Event('input', { bubbles: true })); });
     await click('[data-testid="planning-range-continue"]');
     await click('[data-testid="coach-targets"] > summary');
@@ -41,7 +42,7 @@ try {
     for (const index of [1, 2, 3]) await click(`[data-testid="quiz-equipment"] label:nth-of-type(${index})`);
     await click('[data-testid="setup-next"]'); await page.select('[data-testid="recovery-state"]', 'normal'); await click('[data-testid="setup-next"]');
     assert.ok(await page.$eval('[data-testid="review-planning-conditions"]', (item, lang) => item.innerText.includes(lang === 'en' ? 'Serratus anterior' : '前鋸肌'), lang));
-    await page.reload({ waitUntil: 'networkidle2' }); await click('[data-testid="planning-range-continue"]');
+    await page.reload({ waitUntil: 'networkidle2' }); await openAutomaticPlanning(page); await click('[data-testid="planning-range-continue"]');
     for (const region of targets) assert.equal(await page.$eval(`input[data-target-region="${region}"]`, item => item.checked), true, 'four targets survive questionnaire reload');
     await click('[data-testid="setup-next"]'); await click('[data-testid="setup-next"]'); await click('[data-testid="plan-preview-create"]');
     await click('[data-testid="period-plan-conditions"] > summary');

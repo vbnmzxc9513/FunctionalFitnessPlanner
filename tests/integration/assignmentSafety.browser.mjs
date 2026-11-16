@@ -42,14 +42,14 @@ try {
     localStorage.setItem('planning_preferences_signed-out',JSON.stringify({time:'40',context:{healthStatus:'unrestricted',equipment:['band'],trainingDays:[1,3,5]}}));
   });
   await page.setRequestInterception(true);page.on('request', request => ['localhost','127.0.0.1'].includes(new URL(request.url()).hostname) ? request.continue() : request.abort());
-  const click = async selector => { const handle=await page.waitForSelector(selector,{visible:true});await handle.click();await handle.dispose(); };
-  const fill = async (selector,value) => { await page.$eval(selector,(input,value)=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,value);input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));},value); };
-  const textClick = async text => {const handle=(await page.evaluateHandle(text=>[...document.querySelectorAll('button')].find(button=>button.innerText.trim()===text&&button.getClientRects().length),text)).asElement();assert.ok(handle,text);await handle.click();await handle.dispose();};
+  const click = async selector => { const handle=await page.waitForSelector(selector,{visible:true});await handle.evaluate(element=>element.scrollIntoView({block:'center',behavior:'instant'}));await handle.asLocator().click();await handle.dispose(); };
+  const fill = async (selector,value) => { await page.waitForSelector(selector,{visible:true});await page.$eval(selector,(input,value)=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,value);input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));},value); };
+  const textClick = async text => {await page.waitForFunction(text=>[...document.querySelectorAll('button')].some(button=>button.innerText.trim()===text&&button.getClientRects().length),{},text);const handle=(await page.evaluateHandle(text=>[...document.querySelectorAll('button')].find(button=>button.innerText.trim()===text&&button.getClientRects().length),text)).asElement();assert.ok(handle,text);await handle.click();await handle.dispose();};
   await page.goto(`http://127.0.0.1:${server.httpServer.address().port}/__assignment-safety.html`);
   await page.waitForFunction(()=>[...document.querySelectorAll('button')].some(button=>button.innerText.trim()==='課表'));
   await textClick('課表');await click('[data-testid="period-day-2026-11-16"]');
-  await click('[data-testid="combo-add-daily-warmup"]');await click('[data-testid="combo-add-hip-internal-rotation"]');
-  await click('[data-exercise-id="bf_A15"] button');
+  await textClick('組合');await click('[data-testid="combo-add-daily-warmup"]');await click('[data-testid="combo-add-hip-internal-rotation"]');
+  await click('[data-testid="combo-panel-done"]');await click('[data-exercise-id="bf_A15"] button');
   await fill('dialog[open] input[type="number"]','2');
   await fill('dialog[open] input[inputmode="decimal"]','6');
   await click('dialog[open] form button[type="submit"]');
@@ -58,9 +58,10 @@ try {
   assert.equal(await page.$$eval('.manual-exercise-row',rows=>rows.length),10,'date-entry initialSessions survives review/back with all new exercises');
   assert.match(await page.$eval('[data-exercise-id="bf_A15"]',row=>row.innerText),/2組 × 6/,'new dose survives returning from review');
   await click('[data-testid="manual-review"]');await page.waitForSelector('[data-testid="assignment-apply"]');
-  await textClick('調整日期');await fill('input[type="date"]','2026-11-17');await click('.assignment-top button');
-  await page.waitForSelector('[data-testid="manual-tab-2026-11-17"]');
-  assert.match(await page.$eval('[data-exercise-id="bf_A15"]',row=>row.innerText),/2組 × 6/,'changed assignment date returns the latest dose to the correct date');
+  assert.equal(await page.$('.assignment-change-dates'),null,'editing a chosen day does not ask for dates again');
+  await click('.assignment-top button');
+  assert.equal(await page.$$eval('.manual-date-tab',rows=>rows.length),0,'chosen day stays fixed after review/back');
+  assert.match(await page.$eval('[data-exercise-id="bf_A15"]',row=>row.innerText),/2組 × 6/,'latest dose survives fixed-day review/back');
 
   const render = async (time,equipment,key,kind='band',extra={}) => { await page.evaluate(({time,equipment,key,kind,extra})=>window.renderAssignment({time,context:{...window.defaultContext,equipment,...extra}},key,kind),{time,equipment,key,kind,extra}); await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))); };
   const blocked = async pattern => {await page.waitForFunction(pattern=>new RegExp(pattern).test(document.querySelector('.assignment-error')?.innerText||''),{},pattern.source);await page.waitForSelector('.assignment-error button');assert.match(await page.$eval('.assignment-error',node=>node.innerText),pattern);assert.equal(await page.$('[data-testid="assignment-apply"]'),null);assert.equal(await page.evaluate(()=>window.assignmentApplied),null);};
@@ -76,5 +77,5 @@ try {
   await render('5',[],'rest','rest');await page.waitForSelector('[data-testid="assignment-apply"]');await click('[data-testid="assignment-apply"]');
   await page.waitForFunction(()=>window.assignmentApplied?.sessionsByDate['2026-11-16']?.sessionType==='rest');
   assert.deepEqual(errors,[]);
-  console.log('Assignment safety passed: real App date-entry review/back preserves ten movements and changed dose/date; profile time/equipment/health blocks inspect and final apply; repair retains content; explicit source rest saves and invalid empty training stays blocked.');
+  console.log('Assignment safety passed: real App date-entry review/back preserves ten movements and changed dose on its fixed date; profile time/equipment/health blocks inspect and final apply; repair retains content; explicit source rest saves and invalid empty training stays blocked.');
 } finally {await browser?.close();await server.close();await rm(cacheDir,{recursive:true,force:true});}

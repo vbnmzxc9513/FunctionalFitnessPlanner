@@ -1,3 +1,4 @@
+import ExerciseTags from './ExerciseTags.jsx';
 import { useBackNavigation } from '../hooks/useBackNavigation.js';
 import { useId, useState } from 'react';
 import { ArrowLeft, ChevronRight, Pin, Share2, Trash2 } from 'lucide-react';
@@ -29,7 +30,7 @@ function WorkoutContents({ item, t, exercises, en }) {
     <h3>{group.name}</h3><ol>{item.snapshot.prescriptions.filter(dose => group.phases.includes(dose.phase)).map((dose, index) => {
       const stored = item.snapshot.exercises.find(exercise => exercise.id === dose.id);
       const exercise = stored.custom ? stored : exercises?.[dose.id] || stored;
-      return <li key={dose.id}><span className="workout-ui-number">{index + 1}</span><div><h4>{exercise.name}</h4><p>{dose.sets} {t.sets} × {dose.value} {t.units[dose.unit]}{dose.perSide ? ` / ${t.side}` : ''}</p></div><button type="button" className="workout-ui-link" aria-label={`${en ? 'Details' : '詳情'} ${exercise.name}`} onClick={() => setDetail({ exercise, dose })}>{en ? 'Details' : '詳情'}</button></li>;
+      return <li key={dose.id}><span className="workout-ui-number">{index + 1}</span><div><h4>{exercise.name}</h4><ExerciseTags id={dose.id} exercise={exercise} lang={en ? 'en' : 'zh'} compact /><p>{dose.sets} {t.sets} × {dose.value} {t.units[dose.unit]}{dose.perSide ? ` / ${t.side}` : ''}</p></div><button type="button" className="workout-ui-link" aria-label={`${en ? 'Details' : '詳情'} ${exercise.name}`} onClick={() => setDetail({ exercise, dose })}>{en ? 'Details' : '詳情'}</button></li>;
     })}</ol>
   </section>)}{!groups.length && <p>{t.restDay}</p>}</div>
     <ExerciseDetails open={!!detail} title={detail?.exercise.name || ''} closeLabel={t.close} onClose={() => setDetail(null)}>

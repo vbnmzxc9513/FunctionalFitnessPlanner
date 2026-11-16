@@ -5,6 +5,7 @@ import { estimateSessionMinutes } from '../domain/sessions.js';
 import { manualPlannerErrorMessage, removeManualExercise, reorderManualExercise, updateManualPrescription } from '../domain/manualPlanner.js';
 import ExerciseDetails from './ExerciseDetails.jsx';
 import ExerciseGuide from './ExerciseGuide.jsx';
+import ExerciseTags from './ExerciseTags.jsx';
 import './manual-planner.css';
 
 const PHASES = {
@@ -73,7 +74,7 @@ export default function SessionPlanEditor({ session, exercises = {}, eligibleExe
         <ol>{doses.map((dose, index) => {
           const rowExercise = exercises[dose.id], rowName = rowExercise?.name || dose.id;
           return <li key={dose.id} data-exercise-id={dose.id} className="manual-exercise-row"><button type="button" className="manual-exercise-open" aria-label={`${en ? 'Edit' : '編輯'} ${rowName}`} onClick={() => begin(dose)}>
-            <span className="manual-row-number">{String(index + 1).padStart(2, '0')}</span><span className="manual-exercise-info"><strong>{rowName}</strong><small>{dose.sets}{en ? ' sets' : '組'} × {dose.value} {unit[dose.unit] || dose.unit}{dose.perSide ? en ? ' / side' : '／側' : ''}</small>{!eligibleExercises[dose.id] && <span className="text-sm text-red-700">{en ? 'Unavailable. Remove or replace before reviewing.' : '目前無法加入；請移除或更換。'}</span>}</span><ChevronRight size={15} aria-hidden="true" />
+            <span className="manual-row-number">{String(index + 1).padStart(2, '0')}</span><span className="manual-exercise-info"><strong>{rowName}</strong><small>{dose.sets}{en ? ' sets' : '組'} × {dose.value} {unit[dose.unit] || dose.unit}{dose.perSide ? en ? ' / side' : '／側' : ''}</small><ExerciseTags id={dose.id} exercise={rowExercise} lang={lang} compact />{!eligibleExercises[dose.id] && <span className="text-sm text-red-700">{en ? 'Unavailable. Remove or replace before reviewing.' : '目前無法加入；請移除或更換。'}</span>}</span><ChevronRight size={15} aria-hidden="true" />
           </button></li>;
 
         })}</ol>

@@ -1,3 +1,4 @@
+import { openAutomaticPlanning } from './planner-flow-helpers.mjs';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -26,13 +27,9 @@ try {
     const shot = async name => { assert.equal(await page.$$eval('[data-testid="period-workspace"]', els => els.length), 1, 'exactly one planning workspace is mounted'); await page.evaluate(() => { document.activeElement?.blur(); scrollTo(0, 0); }); await page.screenshot({ path: `${out}/${width}-${lang}-${name}.png`, fullPage: true }); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${name}: no horizontal overflow`); };
     const generate = async () => { await click('[data-testid="plan-preview-create"]'); await page.waitForSelector('[data-testid="coach-plan-brief"]', { visible: true }); assert.equal(await page.evaluate(() => localStorage.getItem('fitness_date_period_v1')), null, 'preview and adjustments do not apply dates'); };
     await page.goto(site, { waitUntil: 'networkidle2' });
-    if (width < 1000) {
-      await page.waitForFunction(() => [...document.querySelectorAll('button')].some(button => ['課表', 'Plan'].includes(button.innerText.trim())));
-      await page.evaluate(() => [...document.querySelectorAll('button')].find(button => ['課表', 'Plan'].includes(button.innerText.trim())).click());
-      await click('[data-testid="open-auto-planner"]');
-    }
+    await openAutomaticPlanning(page);
     await page.waitForSelector('[data-testid="planning-range"]');
-    assert.equal(await page.$$eval('[data-testid="period-workspace"]', els => els.length), 1, 'both Today and Plan entry show only one wizard');
+    assert.equal(await page.$$eval('[data-testid="period-workspace"]', els => els.length), 1, 'the explicit Plan entry shows only one wizard');
     await click('[data-testid="planning-range-continue"]');
     await click('[data-testid="coach-time-40"]');
     await click('[data-testid="quiz-schedule"] > summary');

@@ -1,5 +1,5 @@
 import { closeExerciseDetails } from './exercise-details-helpers.mjs';
-import { closePlanningFlow } from './planner-flow-helpers.mjs';
+import { closePlanningFlow, openAutomaticPlanning } from './planner-flow-helpers.mjs';
 import assert from 'node:assert/strict';
 import { writeFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
@@ -69,7 +69,7 @@ try {
       await open('[data-testid="weekly-choice-report"]');
     };
     await page.goto(site, { waitUntil: 'networkidle2' }); await visible('[data-testid="first-plan"]');
-    await click('課表'); await click('動作庫'); await visible('.exercise-library'); await clickSelector('.exercise-library .button-primary'); await clickSelector('[data-testid="planning-range-continue"]');
+    await click('課表'); await click('動作庫'); await visible('.exercise-library'); await clickSelector('[data-testid="library-auto-plan"]'); await clickSelector('[data-testid="planning-range-continue"]');
     await open('[data-testid="coach-targets"]');
     await visible('[data-testid="planner-form"] fieldset:not([hidden]) [data-regions="targetRegions"]');
     await page.select('[data-testid="planner-form"] select', 'stability');
@@ -82,7 +82,7 @@ try {
     const selected = [await choose('B03'), await choose('D01'), await choose('A06', '暖身'), await choose('H03', '收操')];
     assert.equal(await draft(), null, `${layout}: choosing movements does not create a plan`);
     await page.reload({ waitUntil: 'networkidle2' }); await visible('[data-testid="first-plan"]');
-    assert.deepEqual(await choices(), selected, `${layout}: questionnaire choices survive reload in the same week`);
+    assert.deepEqual(await choices(), selected, `${layout}: questionnaire choices survive reload in the same week`); await openAutomaticPlanning(page);
     await clickSelector('[data-testid="planning-range-continue"]'); await click('下一步'); await click('下一步'); await preview();
     assert.equal(await draft(), null, `${layout}: preview remains unapplied`);
     assert.equal(await page.$$eval('[data-testid="period-plan-preview"] [data-testid^="exercise-log-"]', elements => elements.length), 0, `${layout}: preview has no factual logging controls`);
@@ -102,7 +102,7 @@ try {
     await clickSelector(`[data-testid="library-weekly-${selected[1]}"]`); await page.waitForFunction(id => document.querySelector(`[data-testid="library-weekly-${id}"]`)?.getAttribute('aria-pressed') === 'false', {}, selected[1]);
     assert.equal(await page.$eval(`[data-testid="favorite-${selected[1]}"]`, button => button.textContent), favoriteBefore, `${layout}: weekly choices do not change favorites`);
     assert.deepEqual(await draft(), beforeLibrary, `${layout}: library choices leave the applied plan and completion facts intact`);
-    await clickSelector('.exercise-library .button-primary'); await clickSelector('[data-testid="planning-range-continue"]'); await click('下一步'); await click('下一步'); await open('[data-testid="coach-exercise-options"]'); await visible('[data-testid="weekly-exercise-choices"]');
+    await clickSelector('[data-testid="library-auto-plan"]'); await clickSelector('[data-testid="planning-range-continue"]'); await click('下一步'); await click('下一步'); await open('[data-testid="coach-exercise-options"]'); await visible('[data-testid="weekly-exercise-choices"]');
     for (const code of ['B01', 'B11', 'B05', 'D02', 'D04', 'C01']) await choose(code);
     assert.equal((await choices()).length, 8);
     await click('主要訓練'); await open('[data-testid="weekly-choice-search"]');

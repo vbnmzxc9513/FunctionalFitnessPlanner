@@ -1,3 +1,4 @@
+import { openAutomaticPlanning } from './planner-flow-helpers.mjs';
 import { closeExerciseDetails, openExerciseDetails } from './exercise-details-helpers.mjs';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
@@ -328,7 +329,7 @@ try {
     await click('設定'); await click('登出'); await visibleElement('[data-testid="first-plan"]'); await click('設定'); await waitText('登入');
     assert.equal(await visibleCount('section[data-phase] button[aria-pressed="true"]'), 0, `${layout} logout clears progress`);
     assert.equal(await page.evaluate(() => sessionStorage.getItem('fitness_public_preview_v1')), null, `${layout} logout clears preview cache`);
-    await click('🌐 English'); await click('Today'); await visibleElement('[data-testid="planning-range"]');
+    await click('🌐 English'); await click('Today'); await visibleElement('[data-testid="today-create-workout"]'); assert.equal(await visibleCount('[data-testid="planning-range"]'),0,'Today does not embed the multi-day questionnaire'); await openAutomaticPlanning(page);
     assert.equal(await page.evaluate(() => document.documentElement.lang), 'en');
     assert.deepEqual(errors, [], `${layout} has no runtime errors`);
     console.log(`${layout}: legacy restore/reload/share/adoption, editing/picker/restore, feedback, library groups/eligibility, restricted BYOK preview, native ten-dose BYOK/protection/reload, records/body metrics, rollover, logout, English passed`);

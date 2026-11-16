@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { CheckCircle2, Plus, Search } from 'lucide-react';
 import { exercisePhase, SESSION_PHASES } from '../domain/phases.js';
 import { matchesLibraryPurpose } from '../domain/library.js';
+import ExerciseTags, { BodyPartFilter } from './ExerciseTags.jsx';
+import { matchesBodyPart, matchesExerciseQuery } from '../domain/exerciseTags.js';
 
 const messages = {
   zh: {
@@ -31,14 +33,15 @@ export default function ExercisePicker({ t, lang = 'zh', exercises = {}, exclude
   const [phase, setPhase] = useState('warmup');
   const [scope, setScope] = useState('all');
   const [query, setQuery] = useState('');
+  const [bodyPart, setBodyPart] = useState('all');
   const [limit, setLimit] = useState(12);
   const purpose = phase === 'warmup' ? 'warmup' : ['recovery', 'cooldown'].includes(phase) ? 'cooldown' : 'training';
   const excluded = new Set(excludedIds);
   const candidates = Object.entries(exercises).filter(([id, exercise]) => {
-    if (exercise.active === false || exercise.deleted || excluded.has(id) || !matchesLibraryPurpose(id, exercise, purpose, scope)) return false;
+    if (!matchesBodyPart(id, exercise, bodyPart) || exercise.active === false || exercise.deleted || excluded.has(id) || !matchesLibraryPurpose(id, exercise, purpose, scope)) return false;
     const recommended = exercisePhase({}, id, exercise);
     if (recommended === 'skill' && phase !== 'skill') return false;
-    return [exercise.name, exercise.nameEn, exercise.catalogCode, ...(exercise.aliases || [])].filter(Boolean).join(' ').toLocaleLowerCase().includes(query.trim().toLocaleLowerCase());
+    return matchesExerciseQuery(id, exercise, query, lang);
   }).sort(([aId, a], [bId, b]) => Number(exercisePhase({}, bId, b) === phase) - Number(exercisePhase({}, aId, a) === phase));
   const chosen = candidates.find(([id]) => id === selected);
   const resetSelection = () => { setSelected(''); setLimit(12); };
@@ -50,10 +53,12 @@ export default function ExercisePicker({ t, lang = 'zh', exercises = {}, exclude
     </div>
     <p className="text-xs text-slate-500">{copy.phaseHint(t('phase_skill'))}</p>
     <label className="block text-sm text-slate-600">{copy.search}<div className="relative mt-1"><Search size={16} className="absolute left-3 top-3 text-slate-400" aria-hidden="true" /><input data-testid="picker-search" type="search" value={query} disabled={busy} onChange={event => { setQuery(event.target.value); resetSelection(); }} className="block w-full rounded-lg border border-sky-200 py-2 pl-9 pr-3 text-sm" /></div></label>
+    <BodyPartFilter lang={lang} value={bodyPart} onChange={value => { setBodyPart(value); resetSelection(); }} testId="picker-body-part" />
     <p className="text-xs text-slate-500" aria-live="polite">{copy.count(candidates.length)}</p>
     <div className="grid sm:grid-cols-2 gap-2" aria-label={copy.title}>{candidates.slice(0, limit).map(([id, exercise]) => <button key={id} type="button" data-testid={`picker-option-${id}`} aria-pressed={selected === id} disabled={busy} onClick={() => setSelected(selected === id ? '' : id)} className={`rounded-xl border p-3 text-left disabled:opacity-50 ${selected === id ? 'border-sky-500 bg-sky-50' : 'border-slate-200 bg-white'}`}>
       <span className="flex items-start gap-2"><span className="flex-1 font-semibold text-sm text-slate-800">{exercise.name}</span>{selected === id && <CheckCircle2 size={18} className="shrink-0 text-sky-600" />}</span>
       <span className="block text-xs mt-1 text-slate-500">{exercise.catalogCode && `${exercise.catalogCode} · `}{copy.recommended}: {t(`phase_${exercisePhase({}, id, exercise)}`)}</span>
+      <ExerciseTags id={id} exercise={exercise} lang={lang} compact />
       <span className="block mt-2 text-xs text-sky-700">{selected === id ? copy.selected : copy.choose}</span>
     </button>)}</div>
     {!candidates.length && <div className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600"><p>{scope === 'mine' ? copy.emptyMine : copy.empty}</p>{scope === 'mine' && <button type="button" disabled={busy} onClick={() => { setScope('all'); resetSelection(); }} className="mt-2 text-sky-700 underline underline-offset-4">{copy.switchAll}</button>}</div>}
