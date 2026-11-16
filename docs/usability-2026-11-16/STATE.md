@@ -20,6 +20,13 @@ Verification:
 
 Limitations: single-day editing does not replace dates with existing completion/log records; the original facts stay protected. Unknown custom exercise anatomy is visibly unclassified. Tags describe navigation metadata, not measured muscle load or training adequacy.
 
-Local implementation and review complete. Release verification is recorded below after publishing.
+Local implementation and review complete.
 
 Screenshots are implementation captures, not replacement design references. No human usability test has been claimed.
+
+Release verification (2026-11-16):
+- Source commit `b2cb8db` pushed to GitHub `main`.
+- Canonical Cloudflare site is live: https://badminton-functional-fitness-planner.pages.dev/ ; production entry asset `/assets/index-AJRr1cNw.js`.
+- Isolated 390px production browser verified Today → Add opens the single-exercise picker directly, chest and serratus are selectable, chest movements render with tags, there is no date wizard or horizontal overflow, and Plan shows the compact week plus manual/automatic actions. No page errors. These checks did not write any production account data.
+- Production captures: `screens/live-chest-picker-390.png`, `screens/live-plan-390.png`.
+- Separate GitHub Pages workflow started as run `43808466867`; its hosted CI is independent of the verified canonical Cloudflare deployment.
