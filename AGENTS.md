@@ -1,5 +1,9 @@
 # Project continuity
 
+## Current navigation work (2026-11-18)
+
+Read `docs/navigation-library-2026-11-18/DESIGN.md` and STATE for the latest navigation change. Library is a primary destination: Today / Plan / Library / Records. Preserve direct selected-day Add and immersive editor protections.
+
 ## Current exercise library work (2026-11-18)
 
 Read `docs/exercise-library-2026-11-18/DESIGN.md` and its STATE first. Make basic chest/shoulder movements discoverable, show eligibility reasons instead of hiding them, provide manual custom creation without an AI key from both the picker and library, and use the refreshed blue selection cards. Preserve exact dates and all existing eligibility/history protections.

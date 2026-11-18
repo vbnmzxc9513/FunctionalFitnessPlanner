@@ -1,0 +1,35 @@
+[
+  {
+    "width": 390,
+    "oneClickAdd": true,
+    "chestFilter": true,
+    "tagged": true,
+    "sameDateSaved": true,
+    "emptyDateDirect": true,
+    "otherDatePreserved": true,
+    "protectedPreserved": true,
+    "pageErrors": []
+  },
+  {
+    "width": 320,
+    "oneClickAdd": true,
+    "chestFilter": true,
+    "tagged": true,
+    "sameDateSaved": true,
+    "emptyDateDirect": true,
+    "otherDatePreserved": true,
+    "protectedPreserved": true,
+    "pageErrors": []
+  },
+  {
+    "width": 1440,
+    "oneClickAdd": true,
+    "chestFilter": true,
+    "tagged": true,
+    "sameDateSaved": true,
+    "emptyDateDirect": true,
+    "otherDatePreserved": true,
+    "protectedPreserved": true,
+    "pageErrors": []
+  }
+]

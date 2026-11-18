@@ -1,0 +1,46 @@
+[
+  {
+    "width": 320,
+    "lang": "zh",
+    "fourTabs": true,
+    "oneClickLibrary": true,
+    "search": true,
+    "create": true,
+    "automaticEntry": true,
+    "noOverflow": true,
+    "pageErrors": []
+  },
+  {
+    "width": 390,
+    "lang": "zh",
+    "fourTabs": true,
+    "oneClickLibrary": true,
+    "search": true,
+    "create": true,
+    "automaticEntry": true,
+    "noOverflow": true,
+    "pageErrors": []
+  },
+  {
+    "width": 1440,
+    "lang": "zh",
+    "fourTabs": true,
+    "oneClickLibrary": true,
+    "search": true,
+    "create": true,
+    "automaticEntry": true,
+    "noOverflow": true,
+    "pageErrors": []
+  },
+  {
+    "width": 320,
+    "lang": "en",
+    "fourTabs": true,
+    "oneClickLibrary": true,
+    "search": true,
+    "create": true,
+    "automaticEntry": true,
+    "noOverflow": true,
+    "pageErrors": []
+  }
+]
