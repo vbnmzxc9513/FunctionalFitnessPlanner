@@ -1,0 +1,78 @@
+/* Exercise selection is one search surface; availability never hides a movement. */
+.quick-workout-picker.combo-first-picker { background:#f6f8fc; }
+.quick-workout-picker.combo-first-picker .combo-first-panel-heading { padding:24px 22px 16px; border-bottom:1px solid #e8edf4; }
+.quick-workout-picker.combo-first-picker .combo-first-panel-heading h2 { font-size:23px; letter-spacing:-.5px; }
+.combo-first-picker .exercise-browser-body { padding:0 20px 20px; }
+.exercise-browser-tools { position:sticky; top:0; z-index:3; padding:16px 0 10px; background:#f6f8fc; }
+.combo-first-picker .exercise-browser-tools .quick-tabs { display:flex; gap:4px; margin:0 0 14px; padding:4px; border:1px solid #e1e8f0; border-radius:13px; background:#eaf0f6; }
+.combo-first-picker .exercise-browser-tools .quick-tabs button { flex:1; display:flex; gap:8px; align-items:center; justify-content:center; min-height:44px; border-radius:9px; font-size:13px; }
+.combo-first-picker .exercise-browser-tools .quick-tabs button[aria-pressed=true] { background:white; color:#0369a1; box-shadow:0 2px 7px #16314b0b; }
+.combo-first-picker .exercise-browser-tools .quick-tabs button[aria-pressed=true]:after { display:none; }
+.combo-first-picker .exercise-browser-tools .manual-search { background:white; border:1px solid #dce5ef; min-height:48px; border-radius:12px; }
+.combo-first-picker .exercise-browser-tools .manual-search input { min-height:48px; font-size:14px; }
+.exercise-part-shortcuts { display:flex; gap:5px; overflow-x:auto; scrollbar-width:none; padding:12px 0 4px; }
+.exercise-part-shortcuts button { flex:none; min-width:44px; min-height:44px; padding:8px 13px; border-radius:20px; border:1px solid transparent; color:#64748b; font-size:13px; cursor:pointer; }
+.exercise-part-shortcuts button[aria-pressed=true] { background:#e0f2fe; border-color:#b9e1f8; color:#0369a1; font-weight:650; }
+.exercise-browser-filter-row { display:flex; gap:10px; align-items:center; justify-content:space-between; }
+.exercise-browser-filter-row .body-part-filter { flex:1; min-width:0; margin:5px 0; gap:6px; font-size:12px; }
+.exercise-browser-filter-row .body-part-filter>span { display:none; }
+.exercise-browser-filter-row .body-part-filter select { min-height:44px; font-size:12px; background:transparent; border-color:#dce5ef; }
+.exercise-create-entry { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:44px; padding:9px 12px; border:1px solid #bae1f5; border-radius:11px; background:white; color:#0369a1; font-size:13px; font-weight:600; white-space:nowrap; cursor:pointer; }
+.exercise-create-entry:disabled { opacity:.5; }
+.exercise-results-heading { display:flex; justify-content:space-between; align-items:center; gap:10px; margin:9px 0 12px; color:#718096; font-size:12px; }
+.exercise-results-heading h3 { font-size:13px; font-weight:650; color:#475569; }
+.exercise-choice-list { display:grid; gap:10px; }
+.exercise-choice-card { display:flex; gap:12px; align-items:center; padding:15px 12px; border:1px solid #e1e8f1; border-radius:16px; background:white; }
+.exercise-choice-icon { display:grid; place-items:center; flex:none; width:42px; height:48px; border-radius:12px; background:#edf6fd; color:#4486ad; }
+.exercise-choice-content { flex:1; min-width:0; }
+.exercise-choice-name { display:flex; align-items:center; gap:5px; text-align:left; min-height:44px; padding:0; color:#18304b; font-size:14px; line-height:1.45; font-weight:650; overflow-wrap:anywhere; cursor:pointer; }
+.exercise-choice-name svg { flex:none; color:#94a3b8; }
+.exercise-choice-equipment { margin-top:3px; font-size:11px; line-height:1.45; color:#738399; overflow-wrap:anywhere; }
+.exercise-choice-card .exercise-tags { margin-top:6px; }
+.exercise-choice-card .exercise-tags>span { font-size:10px; padding:2px 5px; background:#f0f4f8; color:#607085; }
+.exercise-choice-add { display:grid; place-items:center; flex:none; width:44px; height:44px; padding:0; border:1px solid #c7e8f9; border-radius:13px; background:#e8f5ff; color:#0879b0; cursor:pointer; }
+.exercise-choice-add:hover:not(:disabled) { background:#cfeeff; }
+.exercise-choice-add:disabled { background:#f1f5f9; color:#9cabbc; border-color:#e5eaf0; cursor:default; }
+.exercise-choice-card[data-added=true] .exercise-choice-add { background:#e9f5ef; color:#397c61; border-color:#cfe5d9; }
+.exercise-choice-card[data-available=false] .exercise-choice-icon { background:#f1f3f6; color:#98a4b4; }
+.exercise-choice-reason { margin-top:6px; font-size:11px; line-height:1.5; color:#946b31; }
+.exercise-show-more { display:block; min-height:44px; width:100%; margin:14px 0; color:#0369a1; font-size:13px; }
+.combo-first-picker .combo-first-panel-footer { padding:12px 20px max(16px,env(safe-area-inset-bottom)); box-shadow:0 -6px 20px #18304b04; }
+.combo-first-picker .combo-first-cards .combo-first-card { margin:10px 0; padding:12px; border:1px solid #e1e8f1; border-radius:16px; background:white; }
+.combo-first-picker button:focus-visible,.exercise-create-entry:focus-visible,.create-exercise-form :focus-visible { outline:3px solid #0284c7; outline-offset:3px; }
+.create-exercise-form { display:grid; gap:18px; color:#334155; }
+.create-exercise-form fieldset { display:grid; gap:18px; min-width:0; }
+.create-exercise-form label { display:grid; gap:8px; font-size:13px; font-weight:550; }
+.create-exercise-form input:not([type=checkbox]),.create-exercise-form select,.create-exercise-form textarea { width:100%; min-width:0; min-height:46px; border:1px solid #cfdbe7; border-radius:10px; padding:10px 12px; background:white; color:#18304b; font-size:16px; font-weight:400; }
+.create-exercise-purposes { display:flex; gap:6px; padding:4px; border-radius:12px; background:#eef3f8; }
+.create-exercise-purposes button { flex:1; min-height:44px; border-radius:9px; color:#64748b; font-size:13px; cursor:pointer; }
+.create-exercise-purposes button[aria-pressed=true] { color:#0369a1; background:white; box-shadow:0 2px 6px #18304b08; font-weight:650; }
+.create-exercise-form summary { min-height:44px; display:list-item; align-content:center; cursor:pointer; font-size:13px; color:#52667d; }
+.create-exercise-equipment>div { display:grid; grid-template-columns:1fr 1fr; gap:6px; padding-top:8px; }
+.create-exercise-equipment label { display:flex; align-items:center; gap:8px; min-height:44px; padding:8px; border:1px solid #e1e8f1; border-radius:9px; font-size:12px; font-weight:400; }
+.create-exercise-equipment input { width:18px; height:18px; accent-color:#0284c7; }
+.create-exercise-more p { font-size:12px; line-height:1.7; color:#738399; margin-top:10px; }
+.create-exercise-submit { display:flex; align-items:center; justify-content:center; gap:7px; min-height:48px; border-radius:12px; background:#0369a1; color:white; font-size:14px; font-weight:650; cursor:pointer; }
+.create-exercise-submit:disabled { opacity:.45; }
+.create-exercise-error { background:#fff1f2; padding:12px; border-radius:10px; color:#9f1239; font-size:13px; }
+.library-custom-delete { min-height:44px; color:#b45353; font-size:12px; }
+@media(min-width:760px) {
+  .quick-workout-picker.combo-first-picker { inset:0; margin:auto; width:min(800px,calc(100% - 64px)); height:min(88dvh,900px); max-height:88dvh; border-radius:24px; box-shadow:0 24px 80px #0f213244; }
+  .quick-workout-picker.combo-first-picker .combo-first-panel-heading { padding:23px 28px 17px; }
+  .combo-first-picker .exercise-browser-body { padding-left:28px; padding-right:28px; }
+  .exercise-choice-list { grid-template-columns:1fr 1fr; align-items:start; }
+  .exercise-choice-card { min-height:114px; }
+  .exercise-part-shortcuts { gap:8px; }
+  .exercise-browser-filter-row .body-part-filter { flex:0 1 230px; }
+}
+@media(max-width:350px) {
+  .combo-first-picker .exercise-browser-body { padding-left:14px; padding-right:14px; }
+  .exercise-choice-card { gap:9px; padding:12px 10px; }
+  .exercise-choice-icon { width:34px; height:42px; }
+  .exercise-choice-name { font-size:13px; }
+  .exercise-part-shortcuts button { padding-left:11px; padding-right:11px; min-width:44px; }
+}
+.exercise-details-footer>.create-exercise-submit { width:100%; }
+.create-dose-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px; }
+.create-exercise-form .create-per-side { display:flex; gap:9px; align-items:center; min-height:44px; margin-top:10px; }
+.create-per-side input { width:18px; height:18px; accent-color:#0284c7; }

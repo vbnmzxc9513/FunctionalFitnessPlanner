@@ -34,7 +34,7 @@ export default function ManualPlanner(props) {
 }
 
 function ManualPlannerWorkspace({ uid, today = localDate(), lang = 'zh', t, exercises = {}, eligibleExercises = {}, profile,
-  onPreview, onCancel, onSaveWorkout, onShare, workoutStore, onContextChange, onProfileChange, initialSessions, initialActiveDate, singleDay = false, initialAdd = false }) {
+  onPreview, onCancel, onSaveWorkout, onShare, workoutStore, onContextChange, onProfileChange, initialSessions, initialActiveDate, singleDay = false, initialAdd = false, onCreateExercise, createScope }) {
   const en = lang === 'en';
   const [initial] = useState(() => initialDraft({ uid, initialSessions, exercises, lang }));
   const [sessions, setSessions] = useState(initial.sessions);
@@ -196,6 +196,6 @@ function ManualPlannerWorkspace({ uid, today = localDate(), lang = 'zh', t, exer
         {!session.routine.length && <div className="manual-empty-options"><button type="button" className="manual-text-action" onClick={() => update({ ...session, explicitRest: true })}>{en ? 'Explicitly plan a rest day' : '明確安排為休息日'}</button>{sessions.length > 1 && <button type="button" className="manual-text-action" onClick={() => { setSessions(sessions.filter(value => value.date !== session.date)); setActiveDate(sessions.find(value => value.date !== session.date).date); setNotice(''); setLastOperation(null); }}>{en ? 'Remove this draft date' : '移除這個草稿日期'}</button>}</div>}
         <footer className="manual-fixed-actions"><div className="manual-fixed-inner"><div className="manual-draft-state" role="status"><strong>{singleDay ? en ? 'Unsaved changes' : '修改尚未儲存' : stored === false ? en ? 'Draft not saved' : '草稿尚未成功保存' : en ? 'Device draft' : '此裝置草稿'}</strong><p>{stored === false ? en ? 'Keep this page open and retry. Not applied.' : '請保持此頁開啟再重試，尚未套用。' : ''}</p></div><button type="button" data-testid="manual-add-content" className="manual-primary" onClick={() => openPicker()}>{en ? '+ Add content' : '＋ 加入內容'}</button>{<button type="button" data-testid="manual-review" className="manual-review-button" disabled={busy || !validTime || !session.routine.length && !session.explicitRest} onClick={preview}>{singleDay ? en ? 'Review changes' : '確認修改' : en ? 'Review plan' : '檢查課表'}</button>}</div></footer>
       </>
-    </div></div>{picker && <QuickWorkoutPicker key={`picker-${session.date}`} {...{ session, exercises, eligibleExercises, lang, dailyTime }} context={profile?.context || {}} store={workoutStore} initialSelected={selectedCombo} initialTab={singleDay ? 'exercises' : 'combos'} onCancel={closePicker} onApply={applyOperation} onUndo={undoAddition} canUndo={!!lastOperation} onConfigure={configure} />}</>}
+    </div></div>{picker && <QuickWorkoutPicker key={`picker-${session.date}`} {...{ session, exercises, eligibleExercises, lang, dailyTime }} context={profile?.context || {}} store={workoutStore} t={t} onCreateExercise={onCreateExercise} createScope={createScope} initialSelected={selectedCombo} initialTab={singleDay ? 'exercises' : 'combos'} onCancel={closePicker} onApply={applyOperation} onUndo={undoAddition} canUndo={!!lastOperation} onConfigure={configure} />}</>}
   </section>;
 }

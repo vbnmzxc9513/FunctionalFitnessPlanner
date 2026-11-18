@@ -16,6 +16,7 @@ await run(['tests/integration/planShareDialog.browser.mjs']);
 await run(['tests/integration/savedWorkouts.browser.mjs']);
 await run(['tests/integration/assignmentSafety.browser.mjs']);
 await run(['scripts/usability-direct-day.mjs']);
+await run(['scripts/exercise-browser-smoke.mjs']);
 await run(['scripts/navigation-smoke.mjs']);
 await run(['scripts/workout-planner-smoke.mjs']);
 await run(['scripts/planner-redesign-smoke.mjs']);

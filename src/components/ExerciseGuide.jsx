@@ -2,10 +2,10 @@ import ExerciseTags from './ExerciseTags.jsx';
 import { getExerciseGuide } from '../data/exerciseGuides.js';
 import { getExerciseSource } from '../data/exerciseSources.js';
 
-export default function ExerciseGuide({ id, exercise = {}, lang = 'zh' }) {
+export default function ExerciseGuide({ id, exercise = {}, lang = 'zh', expanded = false }) {
   const { text, guide, tip } = getExerciseGuide(id, exercise, lang);
   const source = getExerciseSource(id || exercise.id);
-  return <details open={['bf_A12', 'bf_A13'].includes(id || exercise.id) ? true : undefined} className="mt-4 border-t border-slate-100 pt-2" data-testid={`exercise-guide-${id || exercise.id || 'custom'}`}>
+  return <details open={expanded || ['bf_A12', 'bf_A13'].includes(id || exercise.id) ? true : undefined} className="mt-4 border-t border-slate-100 pt-2" data-testid={`exercise-guide-${id || exercise.id || 'custom'}`}>
     <summary className="cursor-pointer text-sm font-medium text-sky-800">{text.title}</summary>
     <div className="mt-3 space-y-3 text-sm text-slate-600 leading-relaxed"><ExerciseTags id={id} exercise={exercise} lang={lang} />
       {guide ? <>

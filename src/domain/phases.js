@@ -6,7 +6,7 @@ export function exercisePhase(day, id, exercise = {}) {
   if (SESSION_PHASES.includes(explicit)) return explicit;
   if (day.sessionType === 'recovery') return 'recovery';
   if (exercise.catalogCode === 'D09') return 'cooldown';
-  if (['B07', 'B08', 'B09', 'C05', 'C06', 'C07', 'C08', 'C09'].includes(exercise.catalogCode)) return 'accessory';
+  if (['B07', 'B08', 'B09', 'C05', 'C06', 'C07', 'C08', 'C09', 'C18', 'C19', 'C20', 'C21'].includes(exercise.catalogCode)) return 'accessory';
   if (exercise.category === 'warmup') return 'warmup';
   if (['footwork', 'reaction', 'power'].includes(exercise.category) || exercise.type === 'power') return 'skill';
   if (exercise.category === 'recovery') return 'cooldown';

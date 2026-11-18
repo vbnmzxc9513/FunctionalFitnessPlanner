@@ -1,5 +1,10 @@
 # Project continuity
 
+## Current exercise library work (2026-11-18)
+
+Read `docs/exercise-library-2026-11-18/DESIGN.md` and its STATE first. Make basic chest/shoulder movements discoverable, show eligibility reasons instead of hiding them, provide manual custom creation without an AI key from both the picker and library, and use the refreshed blue selection cards. Preserve exact dates and all existing eligibility/history protections.
+
+
 ## Current usability correction
 
 Read `docs/usability-2026-11-16/DESIGN.md` first for the latest task. Single-day editing must open the selected day directly; Add opens the exercise picker without choosing a date. Today, Plan and Records each have a primary task. Body-part filters and exercise tags share `src/domain/exerciseTags.js`; chest must be directly selectable. Keep blue and preserve existing recorded facts. The old combo-first work is historical context, not a reason to route daily maintenance through a new multi-day planning flow.

@@ -38,7 +38,7 @@ export function buildPlanningPrompt({ lastWeekData, currentLevel, lastWeekFeedba
     ...(exercise.advanced ? { advanced: true } : {}), ...(exercise.priority ? { priority: true } : {}),
     ...(exercise.requiresPartner ? { requiresPartner: true } : {}), shoulderLoaded: exercise.shoulderLoaded ?? '未分類',
     ...(exercise.restrictionTags?.length ? { restrictionTags: exercise.restrictionTags } : {}),
-    starterDose: exercise.prescription || null, cue: exercise.tip, ...(specificTargets(id, exercise).length ? { trainingTargets: specificTargets(id, exercise) } : {}),
+    starterDose: exercise.prescription ? ['sets','value','unit','restSeconds','perSide'].map(key => exercise.prescription[key] ?? null) : null, cue: exercise.tip, ...(specificTargets(id, exercise).length ? { trainingTargets: specificTargets(id, exercise) } : {}),
     regression: exercise.easier || null,
   }));
   return `你是一位羽球功能性體能教練，為使用者排出可恢復、可追蹤的本週午休／體能課。以到位、煞車、回位、協調和力量傳遞為目的，避免用汗量、痠痛或動作數量評價效果。
@@ -110,7 +110,7 @@ mobilityHistory 只摘要已載入資訊；recorded_training 表示有實做／�
 6. 肩部限制也適用於暖身、準備組和收尾；不能借準備組加入候選之外的肩部負重或揮拍。輕鬆／無痛不代表治療後已放行。
 
 【可用候選動作；ID 必須完全相同】
-省略的 advanced／priority／requiresPartner 旗標為 false；器材或肩部資訊未知時仍明示未知，不推定可用。restrictionTags 表示需核對的姿勢或支撐限制，不是個人治療放行。
+starterDose 依序為 [sets,value,unit,restSeconds,perSide]，保持原處方數值。省略的 advanced／priority／requiresPartner 旗標為 false；器材或肩部資訊未知時仍明示未知，不推定可用。restrictionTags 表示需核對的姿勢或支撐限制，不是個人治療放行。
 ${JSON.stringify(exercises)}
 
 【輸出要求】

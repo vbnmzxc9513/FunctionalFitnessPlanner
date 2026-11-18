@@ -12,7 +12,7 @@ import { exerciseKey } from '../src/domain/training.js';
 if (process.env.NODE_ENV !== 'test' || process.env.VITE_USE_FIREBASE_EMULATORS !== 'true' || process.env.VITE_FIREBASE_PROJECT_ID !== 'demo-fitness-planner') throw new Error('Requires demo-fitness-planner Auth/Firestore emulators.');
 const candidateExercises = prompt => {
   const section = prompt.split('【可用候選動作；ID 必須完全相同】')[1].split('【輸出要求】')[0];
-  return JSON.parse(section.slice(section.indexOf('['), section.lastIndexOf(']') + 1));
+  return JSON.parse(section.slice(section.indexOf('\n[') + 1, section.lastIndexOf(']') + 1));
 };
 
 const server = spawn(process.execPath, ['scripts/smoke-server.mjs', '5174'], { env: process.env, stdio: ['ignore', 'pipe', 'pipe'] });

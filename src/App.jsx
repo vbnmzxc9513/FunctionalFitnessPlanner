@@ -1,4 +1,6 @@
 import './usability.css';
+import './exercise-browser.css';
+import { createCustomExercise, customExerciseForStorage, hydrateCustomExercise, readDeviceExercises, writeDeviceExercise, DEVICE_EXERCISES_KEY } from './domain/customExercises.js';
 import { useCompletionQueue } from './hooks/useCompletionQueue.js';
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, BarChart3, CalendarDays, Feather, Info, Loader2, ChevronLeft, ChevronRight, Pencil, Sparkles, Bookmark, Library, LogOut, Settings as SettingsIcon } from 'lucide-react';
@@ -6,7 +8,7 @@ import { getDoc, setDoc } from 'firebase/firestore';
 import { TRANSLATIONS, EXERCISES_I18N, DEFAULT_SCHEDULE_I18N, LEGACY_DEFAULT_SCHEDULE_I18N } from './locale.js';
 import { auth } from './services/firebase.js';
 import { savePlan, saveFeedback, setCompletion, saveMeasurement, userDoc } from './services/repository.js';
-import { checkAvailableModels, generateAIPlan, generateExerciseDetails } from './services/gemini.js';
+import { checkAvailableModels, generateAIPlan } from './services/gemini.js';
 import { replaceNavigationLocation, useBackNavigation } from './hooks/useBackNavigation.js';
 import { useAuth } from './hooks/useAuth.js';
 import { useCalendar } from './hooks/useCalendar.js';
@@ -154,11 +156,13 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
   const activeDate = dateForWeekDay(currentWeek, activeDay);
   const readiness = readinessRecords.find(record => record.date === activeDate) || null;
   const defaultSchedule = DEFAULT_SCHEDULE_I18N[lang];
+  const [deviceCustom, setDeviceCustom] = useState(() => { try { return !user ? readDeviceExercises() : {}; } catch { return {}; } });
+  useEffect(() => { if (user) return; const changed = event => { if (event.key === DEVICE_EXERCISES_KEY) { try { setDeviceCustom(readDeviceExercises()); } catch { /* Keep usable in-memory definitions; do not overwrite corrupt storage. */ } } }; window.addEventListener('storage', changed); return () => window.removeEventListener('storage', changed); }, [user]);
   const exercises = useMemo(() => {
     const merged = { ...EXERCISES_I18N[lang] };
-    for (const [id, custom] of Object.entries(data.exercises)) merged[id] = { ...merged[id], ...custom };
+    for (const [id, custom] of Object.entries(user ? data.exercises : deviceCustom)) merged[id] = { ...merged[id], ...hydrateCustomExercise(custom) };
     return merged;
-  }, [lang, data.exercises]);
+  }, [lang, data.exercises, deviceCustom, user]);
   const allProgress = useMemo(() => user ? data.progress : localPeriod ? localPeriodProgressView(localPeriod, exercises) : data.progress, [user, data.progress, localPeriod, exercises]);
   const [publicProgress, setPublicProgress] = useState(() => publicDraft?.completed || {});
   const progress = user || localPeriod ? allProgress[currentWeek]?.completed || {} : publicProgress;
@@ -198,7 +202,6 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
   const [draft, setDraft] = useState(null);
   const [draftRevision, setDraftRevision] = useState(0);
   const [selected, setSelected] = useState('');
-  const [newName, setNewName] = useState('');
   const [adding, setAdding] = useState(false);
   const [metricForm, setMetricForm] = useState(() => emptyMetrics(today));
   const preferencesKey = `planning_preferences_${user?.uid || 'signed-out'}`;
@@ -518,25 +521,31 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
     } catch (err) { showToast(t(['PLAN_CHANGED', 'PROGRESS_CHANGED'].includes(err.message) ? 'choiceStale' : err.code === 'permission-denied' ? 'planPermissionDenied' : 'toastSaveFail')); }
     finally { setSavingPlan(false); }
   };
-  const addExercise = async () => {
-    if (!requireUser() || adding || !newName.trim()) return;
-    if (!apiKey) { showToast(t('toastNoKeyExercise')); return; }
+  const addExercise = async input => {
+    if (adding) throw new Error('CUSTOM_BUSY');
+    const uid = user?.uid || null;
+    if ((auth.currentUser?.uid || null) !== uid) throw new Error('SESSION_CHANGED');
+    const exercise = createCustomExercise(input);
+    const id = `custom_${crypto.randomUUID().replaceAll('-', '_')}`;
     setAdding(true);
     try {
-      const details = await generateExerciseDetails(newName, apiKey);
-      if (auth.currentUser?.uid !== user.uid) return;
-      const id = `custom_${crypto.randomUUID().replaceAll('-', '_')}`;
-      await setDoc(userDoc(user.uid, 'exercises', 'custom'), { exercises: { [id]: { name: newName.trim(), ...details, active: true } } }, { merge: true });
-      setNewName(''); showToast(t('toastExerciseAdded'));
-    } catch (err) { console.error('Exercise creation failed', err); showToast(t('toastExerciseFail')); }
-    finally { setAdding(false); }
+      if (uid) {
+        await setDoc(userDoc(uid, 'exercises', 'custom'), { exercises: { [id]: customExerciseForStorage(exercise) } }, { merge:true });
+        if (auth.currentUser?.uid !== uid) throw new Error('SESSION_CHANGED');
+      } else {
+        const next = writeDeviceExercise(id, exercise);
+        setDeviceCustom(next);
+      }
+      showToast(t('toastExerciseAdded'));
+      return { id, exercise };
+    } finally { setAdding(false); }
   };
   const organizeExercise = (id, groups) => operation(async () => {
     if (!exercises[id] || exercises[id].deleted || !Array.isArray(groups) || groups.some(group => !['warmup', 'training', 'cooldown'].includes(group))) throw new Error('INVALID_LIBRARY_GROUPS');
     await setDoc(userDoc(user.uid, 'exercises', 'custom'), { exercises: { [id]: { libraryGroups: [...new Set(groups)] } } }, { merge: true });
   });
   const toggleActive = id => operation(() => setDoc(userDoc(user.uid, 'exercises', 'custom'), { exercises: { [id]: { active: exercises[id].active === false } } }, { merge: true }));
-  const deleteExercise = id => { if (window.confirm(t('confirmDeleteExercise'))) operation(() => setDoc(userDoc(user.uid, 'exercises', 'custom'), { exercises: { [id]: { deleted: true, active: false } } }, { merge: true }), 'toastExerciseDeleted'); };
+  const deleteExercise = id => { if (!user && id.startsWith('custom_')) { if (window.confirm(t('confirmDeleteExercise'))) { try { setDeviceCustom(writeDeviceExercise(id, { ...exercises[id], deleted:true, active:false })); } catch { showToast(t('toastExerciseFail')); } } return; } if (window.confirm(t('confirmDeleteExercise'))) operation(() => setDoc(userDoc(user.uid, 'exercises', 'custom'), { exercises: { [id]: { deleted: true, active: false } } }, { merge: true }), 'toastExerciseDeleted'); };
   const metricDateRequest = useRef(0);
   const changeMetric = async event => {
     const { name, value } = event.target;
@@ -672,7 +681,7 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
       {activeTab === 'plan' && planView === 'week' && planScreen === 'overview' && !periodCreating && plannerActions}
       {showPlanArea && planLoaded && !hasCurrentPlan && !pendingDraft && activeTab === 'train' && !['manual', 'saved', 'assign', 'legacy-ai', 'legacy-preview'].includes(planScreen) && firstPlan}
       <Suspense fallback={<p role="status" className="p-6">{t('loadingPlan')}</p>}>
-        {activeTab === 'plan' && planScreen === 'manual' && <ManualPlanner workoutStore={workoutStore} uid={user?.uid} today={today} lang={lang} t={t} exercises={exercises} eligibleExercises={weeklyAvailable} profile={profile} initialSessions={manualInput} initialActiveDate={manualActiveDate} singleDay={!!singleDayEdit} initialAdd={!!singleDayEdit?.add} onOrganize={organizeExercise} canManage={!!user} onSignIn={() => navigate('settings')} onContextChange={setPlanningContext} onProfileChange={setProfile} onCancel={() => { if (singleDayEdit) { setActiveTab(singleDayEdit.returnTab); setActiveDay(singleDayEdit.returnDay); setPlanScreen(singleDayEdit.returnScreen || 'overview'); } else setPlanScreen('overview'); }} onSaveWorkout={setSaveWorkoutDay} onShare={shareDays} onPreview={sessions => { setManualInput(sessions); if (singleDayEdit) setSingleDayEdit({ ...singleDayEdit, add: false }); setAssignment({ editOrigin: singleDayEdit, days: sessions, initialDates: sessions.map(day => day.date), name: lang === 'zh' ? '我的手動課表' : 'My manual plan', returnScreen: 'manual' }); setPlanScreen('assign'); }} />}
+        {activeTab === 'plan' && planScreen === 'manual' && <ManualPlanner workoutStore={workoutStore} uid={user?.uid} today={today} lang={lang} t={t} exercises={exercises} eligibleExercises={weeklyAvailable} profile={profile} initialSessions={manualInput} initialActiveDate={manualActiveDate} onCreateExercise={addExercise} createScope={user ? 'account' : 'device'} singleDay={!!singleDayEdit} initialAdd={!!singleDayEdit?.add} onOrganize={organizeExercise} canManage={!!user} onSignIn={() => navigate('settings')} onContextChange={setPlanningContext} onProfileChange={setProfile} onCancel={() => { if (singleDayEdit) { setActiveTab(singleDayEdit.returnTab); setActiveDay(singleDayEdit.returnDay); setPlanScreen(singleDayEdit.returnScreen || 'overview'); } else setPlanScreen('overview'); }} onSaveWorkout={setSaveWorkoutDay} onShare={shareDays} onPreview={sessions => { setManualInput(sessions); if (singleDayEdit) setSingleDayEdit({ ...singleDayEdit, add: false }); setAssignment({ editOrigin: singleDayEdit, days: sessions, initialDates: sessions.map(day => day.date), name: lang === 'zh' ? '我的手動課表' : 'My manual plan', returnScreen: 'manual' }); setPlanScreen('assign'); }} />}
         {activeTab === 'plan' && planScreen === 'saved' && <SavedWorkouts onEdit={item => openManual([{ ...savedWorkoutDay(item, lang), date: today }], item)} store={workoutStore} exercises={exercises} lang={lang} onUse={useWorkout} onShare={item => shareDays(savedWorkoutDay(item, lang), item.name)} onClose={() => setPlanScreen('overview')} />}
         {activeTab === 'plan' && planScreen === 'assign' && assignment && <ApplyWorkoutPlan key={JSON.stringify(assignment)} {...assignment} singleDayEdit={!!assignment.editOrigin} uid={user?.uid} today={today} exercises={exercises} lang={lang} localPeriod={publicPeriodBase} onLocalPeriod={onLocalPeriod} fallbackPlans={data.plans} profile={profile} onCancel={() => setPlanScreen(assignment.returnScreen)} onEdit={(days, activeDate) => openManual(days, assignment.returnScreen === 'manual' ? manualSavedSource : null, activeDate, assignment.editOrigin ? { ...assignment.editOrigin, single: true, add: false } : {})} onApplied={preview => { if (assignment.returnScreen === 'manual' && !assignment.editOrigin) clearManualDraft(user?.uid); setAssignment(null); periodApplied(preview); if (assignment.editOrigin) { setActiveTab(assignment.editOrigin.returnTab); setActiveDay(assignment.editOrigin.returnDay); setTrainingMode(assignment.editOrigin.returnTab === 'train' ? 'today' : 'plan'); setPlanScreen(assignment.editOrigin.returnScreen || 'overview'); } }} />}
         {saveWorkoutDay && <SaveWorkoutDialog sourceItem={planScreen === 'manual' ? manualSavedSource : null} store={workoutStore} day={saveWorkoutDay} exercises={exercises} level={difficultyLevel} lang={lang} onClose={() => setSaveWorkoutDay(null)} onSaved={() => { setSaveWorkoutDay(null); showToast(lang === 'zh' ? '已存入我的收藏，下次排課可直接加入。' : 'Saved to my favorites. Add it to your next draft.'); }} />}
@@ -700,7 +709,7 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
       </div>}
       {showPlanArea && hasCurrentPlan && (activeTab === 'train' || !['settings', 'saved', 'manual', 'assign'].includes(planScreen)) && !user && (publicDraft || localPeriod) && <details className="save-panel"><summary className="cursor-pointer text-sky-800">{t('localPreview')} · {localPeriod ? (lang === 'zh' ? '登入後重新預覽' : 'Sign in and re-preview') : t('saveAccount')}</summary><p className="mt-2 text-slate-600">{localPeriod ? (lang === 'zh' ? '登入後需要重新預覽並套用日期課表。這台裝置的暫存實際紀錄會保留，可在設定匯出，不會自動存入帳號。' : 'After signing in, preview and apply your date plan again. Temporary actual records stay on this device and can be exported in Settings; they are not automatically saved to your account.') : t('localPreviewHint')}</p><div className="flex flex-wrap gap-2 mt-3"><button disabled={account.busy} onClick={account.guestLogin} className="bg-indigo-600 text-white px-3 py-2 rounded-lg">{localPeriod ? (lang === 'zh' ? '訪客登入後重新預覽' : 'Guest sign-in and re-preview') : t('savePreviewGuest')}</button><button disabled={account.busy} onClick={account.googleLogin} className="bg-white text-sky-800 px-3 py-2 rounded-lg">{localPeriod ? (lang === 'zh' ? 'Google 登入後重新預覽' : 'Google sign-in and re-preview') : t('savePreviewGoogle')}</button></div></details>}
       <Suspense fallback={<div role="status" className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>}>
-        {activeTab === 'plan' && planView === 'library' && <ExerciseLibrary weeklyExerciseIds={planningContext.weeklyExerciseIds} weeklyAvailable={weeklyAvailable} planningContext={planningContext} onToggleWeekly={toggleWeeklyChoice} onOpenWeeklySelection={openWeeklySelection} t={periodQuestionnaireText(lang, t)} lang={lang} canManage={!!user} onOrganize={organizeExercise} onSignIn={() => navigate('settings')} exercises={exercises} name={newName} setName={setNewName} adding={adding} onAdd={addExercise} onToggle={toggleActive} onDelete={deleteExercise} busy={busy} />}
+        {activeTab === 'plan' && planView === 'library' && <ExerciseLibrary weeklyExerciseIds={planningContext.weeklyExerciseIds} weeklyAvailable={weeklyAvailable} planningContext={planningContext} onToggleWeekly={toggleWeeklyChoice} onOpenWeeklySelection={openWeeklySelection} t={periodQuestionnaireText(lang, t)} lang={lang} canManage={!!user} onOrganize={organizeExercise} onSignIn={() => navigate('settings')} exercises={exercises} createScope={user ? 'account' : 'device'} adding={adding} onAdd={addExercise} onToggle={toggleActive} onDelete={deleteExercise} busy={busy} />}
         {activeTab === 'records' && <div className="max-w-3xl"><div className="screen-header"><p className="eyebrow">{t('recordsEyebrow')}</p><h2 className="screen-title">{t('navRecords')}</h2></div>{subnav([['training', 'trainingRecordsTab'], ['body', 'bodyRecordsTab']], recordsView, setRecordsView, t('navRecords'))}
           {recordsView === 'body' ? (!user ? login : <Metrics t={t} form={metricForm} onChange={changeMetric} onSave={saveMetrics} history={data.metrics} saving={busy} hasMore={data.metrics.length >= metricLimit} onLoadMore={() => setMetricLimit(previous => previous + 365)} />)
             : !user && !publicDraft && !localPeriod ? login : stats && <History t={t} lang={lang} exportUid={user?.uid} publicDraft={localPeriod ? { ...publicDraft, periodDraft: localPeriod, logs: localPeriod.logs } : publicDraft} exportProgress={allProgress} exportDisabled={coachingBusy || busy || savingPlan || generating || editing || !!pendingDraft || (!!user && (!trainingData.loaded || !data.loaded.progress || !data.loaded.exercises))} previewOnly={!user} exercises={exercises} stats={stats} months={months} weeks={heatmapWeeks} logs={exerciseLogs} onUpdateNextDay={recordNextDay} loggingBusy={coachingBusy || busy || savingPlan || generating || editing || !!pendingDraft || (!!user && !trainingData.loaded)} today={today} hasMore={data.hasMoreProgress} onLoadMore={() => setWeekLimit(previous => previous + 104)} />}

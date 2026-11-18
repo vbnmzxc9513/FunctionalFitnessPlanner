@@ -16,7 +16,7 @@ const CURATED = catalogExercises();
 export function weeklyChoicePhase(id, exercise) {
   if (!exercise || CURATED[id]?.catalogCode !== exercise.catalogCode || !exercise.prescription) return null;
   if (exercise.catalogCode === 'D09') return 'cooldown';
-  if (['A07', 'A08', 'A18', 'B07', 'B08', 'B13', 'B14', 'B15', 'B16', 'B17', 'C05', 'C06', 'C07', 'C08', 'C09', 'C12', 'C13'].includes(exercise.catalogCode)) return 'accessory';
+  if (['A07', 'A08', 'A18', 'B07', 'B08', 'B13', 'B14', 'B15', 'B16', 'B17', 'C05', 'C06', 'C07', 'C08', 'C09', 'C12', 'C13', 'C18', 'C19', 'C20', 'C21'].includes(exercise.catalogCode)) return 'accessory';
   if (['power', 'footwork', 'reaction'].includes(exercise.category)) return 'skill';
   if (['lower', 'upper'].includes(exercise.category)) return 'strength';
   if (exercise.category === 'core') return exercise.type === 'mobility' ? 'cooldown' : 'accessory';

@@ -2,8 +2,8 @@ export const LIBRARY_TEXT = {
   zh: {
     all: '全部動作', mine: '我的常用', purposeAll: '全部', warmup: '暖身', training: '主訓練', cooldown: '收操',
     purposes: '依用途瀏覽', scope: '動作清單', moreFilters: '更多篩選', manage: '管理動作', done: '完成管理',
-    manageHint: '新增自訂動作，或調整哪些動作可用於排課。停用不會刪除既有訓練紀錄。',
-    loginHint: '登入後可儲存自己的常用動作；現在可先依用途瀏覽與閱讀教學。', login: '前往設定登入',
+    manageHint: '調整哪些動作可用於排課，或刪除自訂動作。停用不會刪除既有訓練紀錄。',
+    loginHint: '本機可新增動作；登入後可管理帳號動作與常用。', login: '前往設定登入',
     details: '器材與參考組次', doseHint: '以下為參考；訓練時以當天課表為準。', disabled: '已停用',
     favorite: '加入常用', favoriteLogin: '加入常用（需登入）', removeFavorite: '移出常用', organize: '整理常用用途',
     groupHint: '可同時選多個用途，變更後立即儲存；全部取消即移出常用。這不會改變課表或排課啟用狀態。',
@@ -15,8 +15,8 @@ export const LIBRARY_TEXT = {
   en: {
     all: 'All movements', mine: 'My favorites', purposeAll: 'All', warmup: 'Warm-up', training: 'Main training', cooldown: 'Cool-down',
     purposes: 'Browse by purpose', scope: 'Movement list', moreFilters: 'More filters', manage: 'Manage exercises', done: 'Finish managing',
-    manageHint: 'Add a custom exercise or choose which movements are available for planning. Disabling a movement keeps existing training records.',
-    loginHint: 'Sign in to save your favorite movements. You can browse by purpose and read guides now.', login: 'Open settings to sign in',
+    manageHint: 'Choose which movements are available for planning, or delete custom movements. Disabling keeps existing training records.',
+    loginHint: 'Create movements on this device, or sign in to manage account movements and favorites.', login: 'Open settings to sign in',
     details: 'Equipment and reference dose', doseHint: 'These are reference values. Follow your daily plan when training.', disabled: 'Disabled',
     favorite: 'Add to favorites', favoriteLogin: 'Add to favorites (sign in)', removeFavorite: 'Remove from favorites', organize: 'Organize favorite uses',
     groupHint: 'Select multiple uses. Changes save immediately; clear all to remove the favorite. This does not change the plan or planning eligibility.',

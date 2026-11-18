@@ -1,0 +1,32 @@
+[
+  {
+    "width": 390,
+    "basicsVisible": true,
+    "equipmentReason": true,
+    "customCreatedAndAdded": true,
+    "savedAndReloaded": true,
+    "libraryCreate": true,
+    "aiCalls": 0,
+    "pageErrors": []
+  },
+  {
+    "width": 320,
+    "basicsVisible": true,
+    "equipmentReason": true,
+    "customCreatedAndAdded": true,
+    "savedAndReloaded": true,
+    "libraryCreate": true,
+    "aiCalls": 0,
+    "pageErrors": []
+  },
+  {
+    "width": 1440,
+    "basicsVisible": true,
+    "equipmentReason": true,
+    "customCreatedAndAdded": true,
+    "savedAndReloaded": true,
+    "libraryCreate": true,
+    "aiCalls": 0,
+    "pageErrors": []
+  }
+]

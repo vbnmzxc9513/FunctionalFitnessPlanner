@@ -7,6 +7,7 @@ import { GoogleAuthProvider, linkWithCredential, signInAnonymously, signInWithCr
 import { auth } from '../../src/services/firebase.js';
 import { userDoc, userCollection, weekHistoryQuery, captureGuestData, setCompletion, saveFeedback, savePlan, saveMeasurement, importGuestData } from '../../src/services/repository.js';
 import { LEGACY_DEFAULT_SCHEDULE_I18N, DEFAULT_SCHEDULE_I18N, EXERCISES_I18N } from '../../src/locale.js';
+import { createCustomExercise, customExerciseForStorage, hydrateCustomExercise } from '../../src/domain/customExercises.js';
 
 const week = '2026-W40';
 const plan = { conclusion: 'test', schedule: LEGACY_DEFAULT_SCHEDULE_I18N.zh, source: 'manual' };
@@ -18,6 +19,16 @@ before(async () => {
 });
 beforeEach(async () => { await environment.clearFirestore(); });
 after(async () => { await signOut(auth); await environment.cleanup(); });
+
+test('manual custom exercises persist complete declared metadata only in their owner account', async () => {
+  const exercise = createCustomExercise({ name:'我的胸推', purpose:'training', bodyParts:['chest'], equipment:['dumbbell'], description:'控制回程' });
+  await assertSucceeds(setDoc(userDoc(uid,'exercises','custom'), { exercises:{ custom_manual:customExerciseForStorage(exercise) } }));
+  const stored = (await getDoc(userDoc(uid,'exercises','custom'))).data().exercises.custom_manual;
+  assert.equal(stored.equipmentOptions,undefined);
+  assert.deepEqual(stored.equipmentRequired,['dumbbell']);
+  assert.deepEqual(hydrateCustomExercise(stored),exercise);
+  await assertFails(getDoc(doc(environment.authenticatedContext('stranger').firestore(), `artifacts/my-fitness-app-yp/users/${uid}/exercises/custom`)));
+});
 
 test('anonymous owners can read/write their records; strangers and signed-out users cannot', async () => {
   await assertSucceeds(setDoc(userDoc(uid, 'metrics', '2026-10-13'), { date: '2026-10-13', weight: 70 }));

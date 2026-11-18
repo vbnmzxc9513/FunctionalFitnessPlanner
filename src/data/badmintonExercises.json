@@ -1043,7 +1043,14 @@
     },
     "active": true,
     "jumpContacts": 0,
-    "betweenRepsSeconds": 0
+    "betweenRepsSeconds": 0,
+    "aliases": [
+      "胸推",
+      "滑輪胸推",
+      "站姿胸推",
+      "單手胸推",
+      "cable chest press"
+    ]
   },
   {
     "id": "bf_C03",
@@ -1361,7 +1368,14 @@
     },
     "active": true,
     "jumpContacts": 0,
-    "betweenRepsSeconds": 0
+    "betweenRepsSeconds": 0,
+    "aliases": [
+      "胸推",
+      "啞鈴胸推",
+      "地板胸推",
+      "dumbbell chest press",
+      "floor chest press"
+    ]
   },
   {
     "id": "dead_bug",
@@ -3588,7 +3602,11 @@
     "aliases": [
       "站姿肩推",
       "肩推",
-      "overhead press"
+      "overhead press",
+      "啞鈴肩推",
+      "肩上推舉",
+      "dumbbell overhead press",
+      "shoulder press"
     ],
     "equipment": "啞鈴",
     "equipmentEn": "Dumbbells",
@@ -3824,6 +3842,302 @@
     "requiresPartner": false,
     "shoulderLoaded": true,
     "active": true,
+    "contentVersion": 1
+  },
+  {
+    "id": "bf_C17",
+    "catalogCode": "C17",
+    "name": "啞鈴平板臥推",
+    "nameEn": "Dumbbell bench press",
+    "category": "upper",
+    "type": "upper_push",
+    "equipmentOptions": [
+      [
+        "dumbbell",
+        "platform"
+      ]
+    ],
+    "equipment": "啞鈴、可完整支撐背部的穩固平板訓練椅",
+    "equipmentEn": "Dumbbells and a stable full-length flat training bench",
+    "aliases": [
+      "胸推",
+      "啞鈴胸推",
+      "啞鈴臥推",
+      "平板臥推",
+      "bench press"
+    ],
+    "purpose": "胸部推舉肌力",
+    "purposeEn": "Chest pressing strength",
+    "cue": "平板訓練椅完整支撐背部，雙腳踩地；手肘在舒服角度下降，再穩定推回，不反彈。",
+    "cueEn": "Use a stable full-length bench with feet on the floor; lower with comfortable elbow alignment and press steadily without bouncing.",
+    "easier": "改為啞鈴地板推胸。",
+    "easierEn": "Use a dumbbell floor press.",
+    "harder": "姿勢穩定後再小幅增加阻力。",
+    "harderEn": "Increase resistance slightly only after stable controlled repetitions.",
+    "dose": "2 組 × 8 次",
+    "doseEn": "2 sets × 8 reps",
+    "rest": "60–90 秒",
+    "restEn": "60–90 seconds",
+    "prescription": {
+      "sets": 2,
+      "value": "8",
+      "unit": "reps",
+      "restSeconds": 90,
+      "perSide": false
+    },
+    "active": true,
+    "advanced": false,
+    "shoulderLoaded": true,
+    "requiresPartner": false,
+    "priority": false,
+    "level": "基礎",
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0,
+    "contentVersion": 1
+  },
+  {
+    "id": "bf_C18",
+    "catalogCode": "C18",
+    "name": "啞鈴側平舉",
+    "nameEn": "Dumbbell lateral raise",
+    "category": "upper",
+    "type": "upper_push",
+    "equipmentOptions": [
+      [
+        "dumbbell"
+      ]
+    ],
+    "equipment": "輕啞鈴",
+    "equipmentEn": "Light dumbbells",
+    "aliases": [
+      "側平舉",
+      "肩側平舉",
+      "lateral raise"
+    ],
+    "purpose": "肩部側向抬舉控制",
+    "purposeEn": "Controlled shoulder abduction",
+    "cue": "用輕重量，手肘微彎，手臂在身體稍前側抬起，只到舒服高度；不甩動或硬聳肩。",
+    "cueEn": "Use light weights and slightly bent elbows; raise a little forward of the sides to a comfortable height without swinging or forcing a shrug.",
+    "easier": "減輕重量、縮小幅度或不持重。",
+    "easierEn": "Use lighter weights, less range or no load.",
+    "harder": "姿勢穩定後再小幅增加阻力。",
+    "harderEn": "Increase resistance slightly only after stable controlled repetitions.",
+    "dose": "2 組 × 8 次",
+    "doseEn": "2 sets × 8 reps",
+    "rest": "60–90 秒",
+    "restEn": "60–90 seconds",
+    "prescription": {
+      "sets": 2,
+      "value": "8",
+      "unit": "reps",
+      "restSeconds": 60,
+      "perSide": false
+    },
+    "active": true,
+    "advanced": false,
+    "shoulderLoaded": true,
+    "requiresPartner": false,
+    "priority": false,
+    "level": "基礎",
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0,
+    "contentVersion": 1
+  },
+  {
+    "id": "bf_C19",
+    "catalogCode": "C19",
+    "name": "啞鈴二頭彎舉",
+    "nameEn": "Dumbbell biceps curl",
+    "category": "upper",
+    "type": "upper_pull",
+    "equipmentOptions": [
+      [
+        "dumbbell"
+      ]
+    ],
+    "equipment": "啞鈴",
+    "equipmentEn": "Dumbbells",
+    "aliases": [
+      "二頭彎舉",
+      "彎舉",
+      "二頭肌",
+      "biceps curl",
+      "dumbbell curl"
+    ],
+    "purpose": "手肘屈曲肌力",
+    "purposeEn": "Elbow flexion strength",
+    "cue": "手肘靠近身側，手腕穩定；彎舉後控制下降，不後仰或甩動。",
+    "cueEn": "Keep elbows near the sides and wrists steady; curl and lower under control without leaning back or swinging.",
+    "easier": "減輕重量，可背靠牆保持穩定。",
+    "easierEn": "Use lighter weights and stand against a wall if helpful.",
+    "harder": "姿勢穩定後再小幅增加阻力。",
+    "harderEn": "Increase resistance slightly only after stable controlled repetitions.",
+    "dose": "2 組 × 8 次",
+    "doseEn": "2 sets × 8 reps",
+    "rest": "60–90 秒",
+    "restEn": "60–90 seconds",
+    "prescription": {
+      "sets": 2,
+      "value": "8",
+      "unit": "reps",
+      "restSeconds": 60,
+      "perSide": false
+    },
+    "active": true,
+    "advanced": false,
+    "shoulderLoaded": true,
+    "requiresPartner": false,
+    "priority": false,
+    "level": "基礎",
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0,
+    "contentVersion": 1
+  },
+  {
+    "id": "bf_C20",
+    "catalogCode": "C20",
+    "name": "滑輪三頭下壓",
+    "nameEn": "Cable triceps pushdown",
+    "category": "upper",
+    "type": "upper_push",
+    "equipmentOptions": [
+      [
+        "cable"
+      ]
+    ],
+    "equipment": "高位滑輪與握把／繩索",
+    "equipmentEn": "High pulley and a handle or rope attachment",
+    "aliases": [
+      "三頭下壓",
+      "三頭肌",
+      "繩索下壓",
+      "triceps pushdown",
+      "cable pushdown"
+    ],
+    "purpose": "手肘伸展肌力",
+    "purposeEn": "Elbow extension strength",
+    "cue": "面向高位滑輪，手肘在身側；伸直手肘再控制回程，不靠身體壓重量。",
+    "cueEn": "Face a high pulley with elbows at your sides; extend the elbows and control the return without using bodyweight to push the handle down.",
+    "easier": "減輕重量並縮小無痛活動範圍。",
+    "easierEn": "Use less resistance and a comfortable range.",
+    "harder": "姿勢穩定後再小幅增加阻力。",
+    "harderEn": "Increase resistance slightly only after stable controlled repetitions.",
+    "dose": "2 組 × 8 次",
+    "doseEn": "2 sets × 8 reps",
+    "rest": "60–90 秒",
+    "restEn": "60–90 seconds",
+    "prescription": {
+      "sets": 2,
+      "value": "8",
+      "unit": "reps",
+      "restSeconds": 60,
+      "perSide": false
+    },
+    "active": true,
+    "advanced": false,
+    "shoulderLoaded": true,
+    "requiresPartner": false,
+    "priority": false,
+    "level": "基礎",
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0,
+    "contentVersion": 1
+  },
+  {
+    "id": "bf_C21",
+    "catalogCode": "C21",
+    "name": "啞鈴過頭三頭伸展",
+    "nameEn": "Dumbbell overhead triceps extension",
+    "category": "upper",
+    "type": "upper_push",
+    "equipmentOptions": [
+      [
+        "dumbbell"
+      ]
+    ],
+    "equipment": "輕啞鈴",
+    "equipmentEn": "Light dumbbell",
+    "aliases": [
+      "三頭伸展",
+      "過頭伸展",
+      "overhead triceps extension"
+    ],
+    "purpose": "過頭位置的手肘伸展肌力",
+    "purposeEn": "Elbow extension strength with the arms overhead",
+    "cue": "雙手穩握輕啞鈴，肋骨保持穩定；手肘在舒服角度屈伸，不拱腰追求深度。",
+    "cueEn": "Secure one light dumbbell with both hands and keep ribs steady; bend and extend the elbows within a comfortable range without arching for depth.",
+    "easier": "改用滑輪三頭下壓；抬手不適時不做過頭版本。",
+    "easierEn": "Use a triceps pushdown instead; avoid the overhead version if arm elevation hurts.",
+    "harder": "姿勢穩定後再小幅增加阻力。",
+    "harderEn": "Increase resistance slightly only after stable controlled repetitions.",
+    "dose": "2 組 × 8 次",
+    "doseEn": "2 sets × 8 reps",
+    "rest": "60–90 秒",
+    "restEn": "60–90 seconds",
+    "prescription": {
+      "sets": 2,
+      "value": "8",
+      "unit": "reps",
+      "restSeconds": 60,
+      "perSide": false
+    },
+    "active": true,
+    "advanced": false,
+    "shoulderLoaded": true,
+    "requiresPartner": false,
+    "priority": false,
+    "level": "基礎",
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0,
+    "contentVersion": 1
+  },
+  {
+    "id": "bf_B19",
+    "catalogCode": "B19",
+    "name": "啞鈴臀推",
+    "nameEn": "Dumbbell hip thrust",
+    "category": "lower",
+    "type": "lower",
+    "equipmentOptions": [
+      [
+        "dumbbell",
+        "platform"
+      ]
+    ],
+    "equipment": "啞鈴、穩固訓練椅與軟墊",
+    "equipmentEn": "Dumbbell, stable training bench and padding",
+    "aliases": [
+      "臀推",
+      "負重臀推",
+      "hip thrust"
+    ],
+    "purpose": "髖伸展與臀部肌力",
+    "purposeEn": "Hip extension and glute strength",
+    "cue": "上背靠穩固訓練椅，啞鈴墊在髖前並穩握；推起至軀幹與大腿接近一直線，不拱腰。",
+    "cueEn": "Support the upper back on a stable training bench and secure a padded dumbbell over the hips; extend until the trunk and thighs align without arching the back.",
+    "easier": "改為地板徒手臀橋。",
+    "easierEn": "Use a bodyweight floor glute bridge.",
+    "harder": "姿勢穩定後再小幅增加阻力。",
+    "harderEn": "Increase resistance slightly only after stable controlled repetitions.",
+    "dose": "2 組 × 8 次",
+    "doseEn": "2 sets × 8 reps",
+    "rest": "60–90 秒",
+    "restEn": "60–90 seconds",
+    "prescription": {
+      "sets": 2,
+      "value": "8",
+      "unit": "reps",
+      "restSeconds": 90,
+      "perSide": false
+    },
+    "active": true,
+    "advanced": false,
+    "shoulderLoaded": false,
+    "requiresPartner": false,
+    "priority": false,
+    "level": "基礎",
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0,
     "contentVersion": 1
   }
 ]
