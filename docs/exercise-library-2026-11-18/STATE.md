@@ -22,4 +22,9 @@ Known limits:
 - User-defined movements are for manual planning; do not present them as broken curated automatic-planner choices. Existing public-sharing restrictions for custom content are preserved and surfaced rather than silently dropping it.
 - Production public-catalog rules publication was retried on 2026-11-18 and failed before changes: Firebase CLI authentication is missing. New custom account storage uses the existing private map rule and requires no rules migration. Additional built-in short links need `firebase deploy --only firestore:rules --project myfitnessapp-c4aba` after authentication. Full embedded links remain available for built-in movements.
 
-Implementation and local review are complete. Release verification will be appended after pushing and checking the canonical site. No human usability trial or physical-device performance test is claimed.
+Implementation and local review are complete. No human usability trial or physical-device performance test is claimed.
+
+Release verification (2026-11-18):
+- Source `bfa89bb` pushed to GitHub main. Canonical Cloudflare site live at https://badminton-functional-fitness-planner.pages.dev/ with entry asset `/assets/index-B34vqSkG.js`.
+- Isolated production 390px browser verified chest search with missing-equipment reasons, manual custom creation/add, actual device-only day save plus eight warmups, and reload with the custom movement intact. Zero AI calls, zero page errors, zero production account writes.
+- Live captures: `screens/live-picker-390.png`, `screens/live-create-390.png`. Firebase production public rules remain pending as described above; private custom metadata uses the existing deployed owner map rule.
