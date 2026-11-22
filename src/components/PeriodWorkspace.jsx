@@ -12,7 +12,7 @@ import { estimateSessionMinutes } from '../domain/sessions.js';
 import { buildWeeklyChoiceReport } from '../domain/weeklyChoices.js';
 import { manualPlanningExercises } from '../domain/templatePlanner.js';
 import { auth } from '../services/firebase.js';
-import { periodQuestionnaireText } from '../periodLocale.js';
+import { periodQuestionnaireText } from '../i18n/period.js';
 
 export default function PeriodWorkspace({ uid, today, lang, t, exercises, profile, setProfile, available, onToggleWeekly,
   localPeriod, onLocalPeriod, onApplied, onClose, overview, refreshToken = 0, fallbackPlans = {}, onToday, preserveCurrentChoices = false, history = {}, onSaveWorkout, onShare, onEditWorkout, onPlanDate, onOverviewLoaded, onAddToDay }) {

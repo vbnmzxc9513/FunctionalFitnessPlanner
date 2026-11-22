@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { DEFAULT_SCHEDULE_I18N, EXERCISES_I18N } from '../../src/locale.js';
 import { createWorkoutSnapshot, normalizedWorkoutName, readSavedWorkout, readWorkoutPayload, savedWorkoutDay,
   savedWorkoutExercises, validateWorkoutSnapshot, workoutName, workoutNameKey, workoutPayload } from '../../src/domain/savedWorkouts.js';
-import { SAVED_WORKOUTS_TEXT } from '../../src/savedWorkoutsLocale.js';
+import { SAVED_WORKOUTS_TEXT } from '../../src/i18n/savedWorkouts.js';
 
 const day = () => structuredClone(DEFAULT_SCHEDULE_I18N.zh[0]);
 const snapshot = () => createWorkoutSnapshot(day(), EXERCISES_I18N.zh);

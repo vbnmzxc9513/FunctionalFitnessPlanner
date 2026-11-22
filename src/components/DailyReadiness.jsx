@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { coachText } from '../coachLocale.js';
+import { coachText } from '../i18n/coach.js';
 import { readinessForm, readinessInput, readinessMissing, readinessChanges } from '../domain/logForms.js';
 import { evaluateReadiness, validateReadiness } from '../domain/coaching.js';
 import { estimateSessionMinutes } from '../domain/sessions.js';

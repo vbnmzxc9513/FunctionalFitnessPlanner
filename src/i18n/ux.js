@@ -1,4 +1,4 @@
-import { SELECTION_TRANSLATIONS } from './selectionLocale.js';
+import { SELECTION_TRANSLATIONS } from './selection.js';
 
 export const UX_TRANSLATIONS = {
   zh: {

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { defaultLoadBasis, emptySet, optionalNumber, readinessInput, readinessForm, readinessMissing, readinessChanges, trainingLogInput } from '../../src/domain/logForms.js';
-import { coachText } from '../../src/coachLocale.js';
+import { coachText } from '../../src/i18n/coach.js';
 
 const form = { variant: 'bodyweight', loadBasis: 'none', loadKg: '', resistanceLabel: '', sets: [emptySet()], rir: '', quality: 'unknown', symptoms: 'unknown', nextDay: 'pending' };
 

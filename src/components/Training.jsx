@@ -3,7 +3,7 @@ import { useBackNavigation } from '../hooks/useBackNavigation.js';
 import SessionTimeSummary from './SessionTimeSummary.jsx';
 import { useState } from 'react';
 import { ArrowDown, ArrowRight, ArrowUp, Brain, CheckCircle2, Circle, Edit2, Feather, Loader2, Save, Trash2, X } from 'lucide-react';
-import { journeyText } from '../journeyLocale.js';
+import { journeyText } from '../i18n/journey.js';
 import { dateForWeekDay, getDateForWeekDay, localDate } from '../domain/dates.js';
 import { exerciseKey } from '../domain/training.js';
 import { SESSION_PHASES } from '../domain/phases.js';

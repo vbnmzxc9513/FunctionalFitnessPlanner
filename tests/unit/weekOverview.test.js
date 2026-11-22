@@ -10,7 +10,7 @@ import { estimateSessionMinutes } from '../../src/domain/sessions.js';
 import { createSharePayload } from '../../src/domain/sharing.js';
 import { normalizeTrialInput } from '../../functions/core.js';
 import { EQUIPMENT } from '../../src/domain/exerciseCatalog.js';
-import { WEEK_PLAN_TEXT } from '../../src/weekPlanLocale.js';
+import { WEEK_PLAN_TEXT } from '../../src/i18n/weekPlan.js';
 import { DAILY_WARMUP_IDS, isDailyWarmupComplete } from '../../src/domain/quickWorkouts.js';
 import { MAX_DAY_EXERCISES } from '../../src/domain/plannerLimits.js';
 

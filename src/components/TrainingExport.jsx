@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Copy, Download, Loader2, Share2 } from 'lucide-react';
-import { exportText } from '../exportLocale.js';
+import { exportText } from '../i18n/export.js';
 import { buildTrainingReport, exportPreset, reportNotes, trainingReportCsv, trainingReportText, validateExportRange } from '../domain/trainingExport.js';
 import { loadTrainingExport } from '../services/trainingExport.js';
 import { copyExportText, downloadExportCsv } from '../services/exportFiles.js';

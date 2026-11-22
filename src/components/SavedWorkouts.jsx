@@ -5,7 +5,7 @@ import { ArrowLeft, ChevronRight, Pin, Share2, Trash2 } from 'lucide-react';
 import ExerciseDetails from './ExerciseDetails.jsx';
 import { workoutName, savedWorkoutDay } from '../domain/savedWorkouts.js';
 import { estimateSessionMinutes } from '../domain/sessions.js';
-import { SAVED_WORKOUTS_TEXT, savedWorkoutError } from '../savedWorkoutsLocale.js';
+import { SAVED_WORKOUTS_TEXT, savedWorkoutError } from '../i18n/savedWorkouts.js';
 import './workout-sharing.css';
 
 function PhaseTags({ item, en }) {

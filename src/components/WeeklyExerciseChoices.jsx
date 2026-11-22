@@ -5,7 +5,7 @@ import { recommendWeeklyChoices, weeklyChoicePhase, weeklyChoiceCoverage, weekly
 import { classifyBalanceExercise } from '../domain/weeklyBalance.js';
 import { libraryGroups, suggestedUses } from '../domain/library.js';
 import { matchesTrainingTarget } from '../domain/trainingTargets.js';
-import { weeklyBalanceText } from '../weeklyBalanceLocale.js';
+import { weeklyBalanceText } from '../i18n/weeklyBalance.js';
 import ExerciseGuide from './ExerciseGuide.jsx';
 
 export default function WeeklyExerciseChoices({ t, lang, context, focus, exercises, available, onToggle, disabled }) {

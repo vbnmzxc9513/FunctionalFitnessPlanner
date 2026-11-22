@@ -1,5 +1,5 @@
 import { planningGuidance } from '../domain/coachBrief.js';
-import { coachPlanningText } from '../coachPlanningLocale.js';
+import { coachPlanningText } from '../i18n/coachPlanning.js';
 import { CoachGuidance } from './CoachBrief.jsx';
 import PlanningConditions from './PlanningConditions.jsx';
 import { RECOVERY_STATES } from '../domain/recovery.js';
@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
 import { RegionChoices } from './WeeklyPreferences.jsx';
 import WeeklyExerciseChoices from './WeeklyExerciseChoices.jsx';
-import { periodText } from '../periodLocale.js';
+import { periodText } from '../i18n/period.js';
 import { EQUIPMENT } from '../domain/exerciseCatalog.js';
 import { TARGET_REGIONS, STIFFNESS_REGIONS, SORENESS_REGIONS } from '../domain/trainingPreferences.js';
 

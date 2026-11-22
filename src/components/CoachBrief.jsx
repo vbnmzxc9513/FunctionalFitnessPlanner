@@ -1,5 +1,5 @@
 import { MOBILITY_LABELS } from '../domain/mobility.js';
-import { coachPlanningText } from '../coachPlanningLocale.js';
+import { coachPlanningText } from '../i18n/coachPlanning.js';
 import { coachPlanFacts, planningGuidance } from '../domain/coachBrief.js';
 import './coach-guided.css';
 

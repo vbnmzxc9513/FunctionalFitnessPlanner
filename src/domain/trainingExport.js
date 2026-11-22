@@ -1,7 +1,7 @@
 import { isCalendarDate, localDate, dateForWeekDay, getWeekString } from './dates.js';
 import { validateTrainingLog, trainingLogId } from './coaching.js';
-import { coachText } from '../coachLocale.js';
-import { exportText } from '../exportLocale.js';
+import { coachText } from '../i18n/coach.js';
+import { exportText } from '../i18n/export.js';
 
 export function validateExportRange(from, to, today = localDate()) {
   if (![from, to, today].every(isCalendarDate) || from > to || to > today

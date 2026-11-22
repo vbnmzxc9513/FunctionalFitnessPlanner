@@ -6,7 +6,7 @@ import { generateTemplatePlan } from '../../src/domain/templatePlanner.js';
 import { planningExercises, validateGeneratedPlan } from '../../src/domain/planning.js';
 import { estimateSessionMinutes } from '../../src/domain/sessions.js';
 import { buildPlanningPrompt } from '../../src/domain/coachingPrompt.js';
-import { WEEKLY_BALANCE_TEXT, weeklyBalanceText } from '../../src/weeklyBalanceLocale.js';
+import { WEEKLY_BALANCE_TEXT, weeklyBalanceText } from '../../src/i18n/weeklyBalance.js';
 import { DAILY_WARMUP_IDS, dailyWarmupPrescriptions, isDailyWarmupComplete } from '../../src/domain/quickWorkouts.js';
 import { MAX_DAY_EXERCISES } from '../../src/domain/plannerLimits.js';
 

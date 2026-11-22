@@ -9,7 +9,7 @@ import { questionnaireProfile, readQuestionnaireDraft, planningFingerprint } fro
 import { createSharePayload } from '../../src/domain/sharing.js';
 import { estimateSessionMinutes } from '../../src/domain/sessions.js';
 import { normalizeTrialInput } from '../../functions/core.js';
-import { SELECTION_TRANSLATIONS } from '../../src/selectionLocale.js';
+import { SELECTION_TRANSLATIONS } from '../../src/i18n/selection.js';
 import { DAILY_WARMUP_IDS, isDailyWarmupComplete } from '../../src/domain/quickWorkouts.js';
 import { MAX_DAY_EXERCISES } from '../../src/domain/plannerLimits.js';
 

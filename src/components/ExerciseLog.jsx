@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { coachText } from '../coachLocale.js';
+import { coachText } from '../i18n/coach.js';
 import { defaultLoadBasis, emptySet, trainingLogForm, trainingLogInput } from '../domain/logForms.js';
 import { validateTrainingLog, recommendExercise, plannedSnapshot, VALUE_LIMITS } from '../domain/coaching.js';
 import { localDate } from '../domain/dates.js';

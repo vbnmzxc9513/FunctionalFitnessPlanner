@@ -10,11 +10,11 @@ import { sessionSections, estimateSessionMinutes } from '../domain/sessions.js';
 import { enumeratePeriodDates } from '../domain/periodPlanning.js';
 import { competitionDaysAway } from '../domain/planning.js';
 import { getWeekString } from '../domain/dates.js';
-import { periodText } from '../periodLocale.js';
+import { periodText } from '../i18n/period.js';
 import ExerciseGuide from './ExerciseGuide.jsx';
 import ExerciseRow from './ExerciseRow.jsx';
 import ExerciseDetails from './ExerciseDetails.jsx';
-import { journeyText } from '../journeyLocale.js';
+import { journeyText } from '../i18n/journey.js';
 import './PeriodPlanPreview.css';
 
 export default function PeriodPlanPreview({ preview, lang = 'zh', t = key => key, exercises = {}, today, onBack, onApply, busy = false, stale = false, onSaveWorkout, onShare, onEditWorkout, onPlanDate, choiceReport, choiceSummary, onAdjust, onAddToDay }) {

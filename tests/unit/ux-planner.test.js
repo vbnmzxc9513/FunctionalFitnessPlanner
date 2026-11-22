@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { UX_TRANSLATIONS } from '../../src/uxLocale.js';
+import { UX_TRANSLATIONS } from '../../src/i18n/ux.js';
 import { TRANSLATIONS } from '../../src/locale.js';
-import { PROMOTION_TRANSLATIONS } from '../../src/promotionLocale.js';
+import { PROMOTION_TRANSLATIONS } from '../../src/i18n/promotion.js';
 
 test('planning and account entry text resolves in both languages without internal keys', async () => {
   const sources = await Promise.all(['Onboarding', 'Coach', 'LoginPrompt', 'WeeklyPreferences'].map(name => readFile(new URL(`../../src/components/${name}.jsx`, import.meta.url), 'utf8')));

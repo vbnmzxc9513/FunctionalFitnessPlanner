@@ -2,7 +2,7 @@ import MobilityOverview from './MobilityOverview.jsx';
 import { ArrowRight, CalendarDays, Dumbbell, Footprints, Moon, MoveUpRight, Target } from 'lucide-react';
 import { buildWeekOverview } from '../domain/weekOverview.js';
 import { createWeeklyIntent } from '../domain/trainingPreferences.js';
-import { WEEK_PLAN_TEXT } from '../weekPlanLocale.js';
+import { WEEK_PLAN_TEXT } from '../i18n/weekPlan.js';
 
 const icons = { strength: Dumbbell, skill: MoveUpRight, training: Dumbbell, recovery: Footprints, rest: Moon, unplanned: Moon };
 export default function WeekOverview({ schedule, exercises, week, plan, context, focus, time, level, lang, t, onEdit, onSelectDay, currentDate, children, editLabel, compact = false }) {

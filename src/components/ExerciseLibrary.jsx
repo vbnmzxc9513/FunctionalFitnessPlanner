@@ -2,7 +2,7 @@ import { Loader2, Star, Trash2, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { EXERCISE_CATEGORIES } from '../domain/exerciseCatalog.js';
 import { LIBRARY_PURPOSES, libraryGroups, matchesLibraryPurpose, suggestedUses } from '../domain/library.js';
-import { LIBRARY_TEXT } from '../libraryLocale.js';
+import { LIBRARY_TEXT } from '../i18n/library.js';
 import CreateExerciseDialog from './CreateExerciseDialog.jsx';
 import ExerciseGuide from './ExerciseGuide.jsx';
 import ExerciseTags, { BodyPartFilter } from './ExerciseTags.jsx';

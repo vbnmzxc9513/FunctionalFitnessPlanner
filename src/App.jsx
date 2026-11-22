@@ -32,18 +32,17 @@ import { manualPlanningExercises } from './domain/templatePlanner.js';
 import { MAX_WEEKLY_CHOICES } from './domain/trainingPreferences.js';
 import { buildWeeklyChoiceReport, weeklyChoiceBlockReason } from './domain/weeklyChoices.js';
 import { recordPromotionEvent, readPromotionDrafts, writePromotionDrafts, normalizePromotionDraft } from './domain/promotion.js';
-import { trialEnabled } from './services/aiTrial.js';
-import { TRANSLATIONS, EXERCISES_I18N, DEFAULT_SCHEDULE_I18N, LEGACY_DEFAULT_SCHEDULE_I18N } from './locale.js';
-import { PROMOTION_TRANSLATIONS } from './promotionLocale.js';
-import { UX_TRANSLATIONS } from './uxLocale.js';
-import { periodQuestionnaireText } from './periodLocale.js';
+import { trialEnabled } from './services/aiTrialFlag.js';
+import { EXERCISES_I18N, DEFAULT_SCHEDULE_I18N, LEGACY_DEFAULT_SCHEDULE_I18N } from './locale.js';
+import { createTranslator } from './i18n/index.js';
+import { periodQuestionnaireText } from './i18n/period.js';
 import LoginPrompt from './components/LoginPrompt.jsx';
 import Training from './components/Training.jsx';
 import WeeklyChoiceReport from './components/WeeklyChoiceReport.jsx';
 import './plannerVisual.css';
 
-import PeriodWorkspace from './components/PeriodWorkspace.jsx';
-import Settings from './components/Settings.jsx';
+const PeriodWorkspace = lazy(() => import('./components/PeriodWorkspace.jsx'));
+const Settings = lazy(() => import('./components/Settings.jsx'));
 
 const SharedWorkout = lazy(() => import('./components/SharedWorkout.jsx'));
 const ManualPlanner = lazy(() => import('./components/ManualPlanner.jsx'));
@@ -111,7 +110,7 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
   const { currentWeek, lastWeek, today } = calendar;
   const [lang, setLang] = useState(readLanguage);
   useEffect(() => { document.documentElement.lang = lang === 'zh' ? 'zh-Hant' : 'en'; }, [lang]);
-  const t = useCallback(key => { const value = UX_TRANSLATIONS[lang][key] ?? PROMOTION_TRANSLATIONS[lang][key] ?? TRANSLATIONS[lang][key] ?? TRANSLATIONS.zh[key] ?? key; return key === 'dayShort' && Array.isArray(value) && value.length < 7 ? [...value, ...(lang === 'zh' ? ['週六', '週日'] : ['Sat', 'Sun'])] : value; }, [lang]);
+  const t = useMemo(() => createTranslator(lang), [lang]);
 
   const [nav, dispatchNav] = useReducer(navigationReducer, { today, currentWeek }, createNavigationState);
   const { activeTab, planScreen, periodCreating, trainingMode, activeDay, recordsView, manualInput, manualActiveDate, manualSavedSource, singleDayEdit, assignment, saveWorkoutDay, shareRequest, selectedPeriodId, localBrowseWeek } = nav;

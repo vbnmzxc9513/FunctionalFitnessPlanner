@@ -1,8 +1,8 @@
-import { coachPlanningText } from '../coachPlanningLocale.js';
+import { coachPlanningText } from '../i18n/coachPlanning.js';
 import { ArrowRight } from 'lucide-react';
 import { defaultPlanningRange, enumeratePeriodDates, normalizePlanningRange } from '../domain/periodPlanning.js';
 import { isCalendarDate, localDate } from '../domain/dates.js';
-import { periodText } from '../periodLocale.js';
+import { periodText } from '../i18n/period.js';
 
 export default function PlanningRange({ range, onChange, today = localDate(), disabled = false, onContinue, lang = 'zh' }) {
   const p = periodText(lang);

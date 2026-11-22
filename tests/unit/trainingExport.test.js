@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildTrainingReport, csvCell, exportPreset, reportNotes, trainingReportCsv, trainingReportText, validateExportRange } from '../../src/domain/trainingExport.js';
-import { EXPORT_TEXT } from '../../src/exportLocale.js';
+import { EXPORT_TEXT } from '../../src/i18n/export.js';
 
 const log = (overrides = {}) => ({ week: '2026-W40', day: 1, exerciseId: 'bf_B01', date: '2026-10-14', variant: 'dumbbell', loadKg: 5, loadBasis: 'per_dumbbell', resistanceLabel: 'PRIVATE_RESISTANCE_NOTE', unit: 'reps', perSide: true,
   sets: [{ value: 6, otherSide: 5 }, { value: 0, otherSide: 2 }], rir: 0, quality: 'unknown', symptoms: 'worse', nextDay: 'pending',

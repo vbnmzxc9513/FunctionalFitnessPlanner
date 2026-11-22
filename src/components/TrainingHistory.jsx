@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { coachText } from '../coachLocale.js';
+import { coachText } from '../i18n/coach.js';
 import { localDate } from '../domain/dates.js';
 
 export function LogSummary({ log, lang = 'zh' }) {

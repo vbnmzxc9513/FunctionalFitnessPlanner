@@ -1,5 +1,5 @@
 import { analyzeWeeklyBalance } from '../domain/weeklyBalance.js';
-import { weeklyBalanceText } from '../weeklyBalanceLocale.js';
+import { weeklyBalanceText } from '../i18n/weeklyBalance.js';
 
 export default function WeeklyBalance({ schedule = [], exercises = {}, context = {}, week, lang = 'zh', currentDate }) {
   const balance = analyzeWeeklyBalance(schedule, exercises, context, { week, currentDate });

@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import ExerciseDetails from './ExerciseDetails.jsx';
 import { createWorkoutSnapshot, workoutName } from '../domain/savedWorkouts.js';
-import { SAVED_WORKOUTS_TEXT, savedWorkoutError } from '../savedWorkoutsLocale.js';
+import { SAVED_WORKOUTS_TEXT, savedWorkoutError } from '../i18n/savedWorkouts.js';
 import './workout-sharing.css';
 import './combo-save-workout.css';
 

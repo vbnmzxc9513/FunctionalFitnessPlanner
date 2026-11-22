@@ -19,9 +19,12 @@ export default defineConfig(({ mode }) => {
     }],
     build: {
       rollupOptions: { output: { manualChunks(id) {
+        if (id.includes('/node_modules/react/') || id.includes('/node_modules/react-dom/') || id.includes('/node_modules/scheduler/')) return 'react-vendor';
         if (id.includes('/node_modules/firebase/') || id.includes('/node_modules/@firebase/')) return 'firebase';
         if (id.includes('/node_modules/recharts/') || id.includes('/node_modules/d3-') || id.includes('/node_modules/@reduxjs/') || id.includes('/node_modules/redux')) return 'charts';
         if (id.includes('/node_modules/react-markdown/') || id.includes('/node_modules/remark-') || id.includes('/node_modules/rehype-') || id.includes('/node_modules/micromark')) return 'markdown';
+        if (id.includes('/src/data/badmintonExercises.json')) return 'catalog';
+        if (id.includes('/src/data/exerciseGuides.js')) return 'guides';
       } } },
     },
   };

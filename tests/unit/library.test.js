@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { libraryGroups, suggestedUses, matchesLibraryPurpose } from '../../src/domain/library.js';
-import { LIBRARY_TEXT } from '../../src/libraryLocale.js';
+import { LIBRARY_TEXT } from '../../src/i18n/library.js';
 import { catalogExercises } from '../../src/domain/exerciseCatalog.js';
 import { generateTemplatePlan } from '../../src/domain/templatePlanner.js';
 
