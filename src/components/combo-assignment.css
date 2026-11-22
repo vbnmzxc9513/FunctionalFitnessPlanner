@@ -1,9 +1,9 @@
 /* Review is the final decision, with details available beside each affected day. */
 .combo-assignment { width:100%; min-width:0; padding-bottom:calc(150px + env(safe-area-inset-bottom)); overflow-wrap:anywhere; }
 .combo-assignment *, .combo-assignment *::before, .combo-assignment *::after { box-sizing:border-box; }
-.combo-assignment button { min-height:44px; }
+.combo-assignment button { min-height:var(--touch-min); }
 .combo-assignment button:disabled { opacity:.55; cursor:wait; }
-.combo-assignment button:focus-visible, .combo-assignment input:focus-visible, .combo-assignment summary:focus-visible { outline:3px solid #0284c7; outline-offset:3px; }
+.combo-assignment button:focus-visible, .combo-assignment input:focus-visible, .combo-assignment summary:focus-visible { outline:var(--focus-ring); outline-offset:3px; }
 .combo-assignment .assignment-top { margin-bottom:12px; }
 .combo-assignment .assignment-heading { margin-bottom:20px; }
 .combo-assignment .assignment-heading h2 { font-size:26px; letter-spacing:-.4px; }
@@ -23,21 +23,19 @@
 .combo-assignment .assignment-day-summary h4 { font-weight:650; font-size:16px; }
 .combo-assignment .assignment-day-summary p { color:#53667c; font-size:14px; margin-top:4px; }
 .combo-assignment .assignment-day-summary > span { flex-shrink:0; }
-.combo-assignment .text-link { display:inline-flex; align-items:center; color:#0369a1; padding:8px 0; font-size:14px; text-align:left; }
+.combo-assignment .text-link { display:inline-flex; align-items:center; color:var(--brand-primary); padding:8px 0; font-size:14px; text-align:left; }
 .combo-assignment .assignment-comparison { margin-top:8px; font-size:14px; }
-.combo-assignment .assignment-comparison > summary { min-height:44px; cursor:pointer; color:#0369a1; padding:10px 0; }
-.combo-assignment .assignment-comparison-columns { display:grid; grid-template-columns:minmax(0,1fr); gap:16px; padding:12px; background:#f0f9ff; border-radius:10px; color:#172b43; }
+.combo-assignment .assignment-comparison > summary { min-height:var(--touch-min); cursor:pointer; color:var(--brand-primary); padding:10px 0; }
+.combo-assignment .assignment-comparison-columns { display:grid; grid-template-columns:minmax(0,1fr); gap:16px; padding:12px; background:var(--brand-tint); border-radius:10px; color:#172b43; }
 .combo-assignment .assignment-comparison-columns > section { min-width:0; }
 .combo-assignment .assignment-comparison h4 { font-size:14px; font-weight:750; margin-bottom:6px; }
 .combo-assignment .assignment-comparison section > p { margin-bottom:10px; }
 .combo-assignment .assignment-replace { align-items:center; padding:8px 0; font-size:14px; cursor:pointer; }
-.combo-assignment .assignment-replace input { width:20px; height:20px; flex-shrink:0; accent-color:#0369a1; }
+.combo-assignment .assignment-replace input { width:20px; height:20px; flex-shrink:0; accent-color:var(--brand-primary); }
 .combo-assignment .assignment-actions { flex-wrap:wrap; gap:8px 16px; padding:12px max(16px,calc((100vw - 740px)/2)) calc(12px + env(safe-area-inset-bottom)); }
 .combo-assignment .assignment-actions > div { flex:1 1 70px; }
-.combo-assignment .assignment-actions .button-primary { display:flex; align-items:center; justify-content:center; gap:7px; flex:1 1 160px; max-width:100%; min-width:0; min-height:48px; border-radius:12px; white-space:normal; }
+.combo-assignment .assignment-actions .button-primary { display:flex; align-items:center; justify-content:center; gap:7px; flex:1 1 160px; max-width:100%; min-width:0; min-height:var(--touch-primary); border-radius:12px; white-space:normal; background:var(--brand-primary); }
 .combo-assignment .assignment-actions strong { font-size:14px; }
 .combo-assignment .assignment-change-dates { margin-top:12px; }
 @media(min-width:640px) { .combo-assignment .assignment-date-list { grid-template-columns:repeat(2,minmax(0,1fr)); } .combo-assignment .assignment-comparison-columns { grid-template-columns:repeat(2,minmax(0,1fr)); } .combo-assignment .assignment-actions .button-primary { flex:0 1 250px; } }
 @media(prefers-reduced-motion:reduce) { .combo-assignment .animate-spin { animation:none; } }
-
-.combo-assignment .assignment-actions .button-primary { background:#0369a1; }

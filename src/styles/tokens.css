@@ -1,0 +1,31 @@
+:root {
+  /* Brand blue */
+  --brand-primary: #0369a1;
+  --brand-accent: #0284c7;
+  --brand-soft: #e0f2fe;
+  --brand-soft-border: #bae6fd;
+  --brand-tint: #f0f9ff;
+
+  /* Ink / neutral text */
+  --ink-strong: #18304b;
+  --ink-body: #334155;
+  --ink-secondary: #475569;
+  --ink-muted: #64748b;
+
+  /* Surfaces / borders */
+  --surface-card: #fff;
+  --surface-subtle: #f1f5f9;
+  --surface-page: #f6f8fc;
+  --border-subtle: #e2e8f0;
+  --border-input: #cbd5e1;
+
+  /* Status / feedback */
+  --status-warning: #9a4b13;
+  --status-danger: #9f1239;
+  --status-danger-bg: #fff1f2;
+
+  /* Touch / focus */
+  --touch-min: 44px;
+  --touch-primary: 48px;
+  --focus-ring: 3px solid var(--brand-accent);
+}
