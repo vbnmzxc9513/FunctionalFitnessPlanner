@@ -1,7 +1,4 @@
-import { getApp } from 'firebase/app';
 import { doc, onSnapshot } from 'firebase/firestore';
-import { connectFunctionsEmulator, getFunctions, httpsCallable } from 'firebase/functions';
-import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check';
 import { auth, db } from './firebase.js';
 
 const env = import.meta.env || globalThis.process?.env || {};
@@ -50,34 +47,42 @@ export function subscribeAiMembership(uid, onChange) {
   );
 }
 
-function getMemberFunctions() {
-  if (functionsInstance) return functionsInstance;
-  const emulating = env.DEV && env.VITE_USE_FIREBASE_EMULATORS === 'true';
-  if (!appCheckInitialized && !emulating && env.VITE_RECAPTCHA_ENTERPRISE_SITE_KEY) {
-    appCheckInitialized = true;
-    try {
-      initializeAppCheck(getApp(), {
-        provider: new ReCaptchaEnterpriseProvider(env.VITE_RECAPTCHA_ENTERPRISE_SITE_KEY),
-        isTokenAutoRefreshEnabled: true,
-      });
-    } catch {
-      /* App Check may already be initialized by aiTrial.js */
+async function getMemberFunctions() {
+  const [{ getApp }, { connectFunctionsEmulator, getFunctions, httpsCallable }] = await Promise.all([
+    import('firebase/app'),
+    import('firebase/functions'),
+  ]);
+  if (!functionsInstance) {
+    const emulating = env.DEV && env.VITE_USE_FIREBASE_EMULATORS === 'true';
+    if (!appCheckInitialized && !emulating && env.VITE_RECAPTCHA_ENTERPRISE_SITE_KEY) {
+      appCheckInitialized = true;
+      try {
+        const { initializeAppCheck, ReCaptchaEnterpriseProvider } = await import('firebase/app-check');
+        initializeAppCheck(getApp(), {
+          provider: new ReCaptchaEnterpriseProvider(env.VITE_RECAPTCHA_ENTERPRISE_SITE_KEY),
+          isTokenAutoRefreshEnabled: true,
+        });
+      } catch {
+        /* App Check may already be initialized by aiTrial.js */
+      }
     }
+    functionsInstance = getFunctions(getApp(), env.VITE_AI_TRIAL_REGION || 'asia-east1');
+    if (emulating) connectFunctionsEmulator(functionsInstance, '127.0.0.1', 5001);
   }
-  functionsInstance = getFunctions(getApp(), env.VITE_AI_TRIAL_REGION || 'asia-east1');
-  if (emulating) connectFunctionsEmulator(functionsInstance, '127.0.0.1', 5001);
-  return functionsInstance;
+  return { functions: functionsInstance, httpsCallable };
 }
 
-function getMemberCallable() {
+async function getMemberCallable() {
   if (memberCallable) return memberCallable;
-  memberCallable = httpsCallable(getMemberFunctions(), 'requestMemberAiPeriodChunk', { timeout: 65000 });
+  const { functions, httpsCallable } = await getMemberFunctions();
+  memberCallable = httpsCallable(functions, 'requestMemberAiPeriodChunk', { timeout: 65000 });
   return memberCallable;
 }
 
-function getMemberCoachCallable() {
+async function getMemberCoachCallable() {
   if (memberCoachCallable) return memberCoachCallable;
-  memberCoachCallable = httpsCallable(getMemberFunctions(), 'requestMemberAiCoachReply', { timeout: 65000 });
+  const { functions, httpsCallable } = await getMemberFunctions();
+  memberCoachCallable = httpsCallable(functions, 'requestMemberAiCoachReply', { timeout: 65000 });
   return memberCoachCallable;
 }
 
@@ -108,7 +113,7 @@ export async function requestMemberAiPeriodChunk({
     throw new Error('AI_MEMBER_SIGN_IN_REQUIRED');
   }
   try {
-    const callable = getMemberCallable();
+    const callable = await getMemberCallable();
     const { data } = await callable({ prompt, includeReport: !!includeReport, model });
     if (signal?.aborted) throw new Error('ABORTED');
     if (!data || typeof data !== 'object') throw new Error('AI_EMPTY_RESPONSE');
@@ -133,7 +138,7 @@ export async function requestMemberAiCoachReply({
     throw new Error('AI_MEMBER_SIGN_IN_REQUIRED');
   }
   try {
-    const callable = getMemberCoachCallable();
+    const callable = await getMemberCoachCallable();
     const { data } = await callable({ systemContext, messages, model });
     if (signal?.aborted) throw new Error('ABORTED');
     const reply = typeof data?.reply === 'string' ? data.reply.trim() : '';

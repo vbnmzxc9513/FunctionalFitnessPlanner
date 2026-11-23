@@ -2,7 +2,7 @@ import { completionKey } from '../domain/completionQueue.js';
 import { useBackNavigation } from '../hooks/useBackNavigation.js';
 import SessionTimeSummary from './SessionTimeSummary.jsx';
 import { lazy, Suspense, useState } from 'react';
-import { ArrowDown, ArrowRight, ArrowUp, Brain, Check, CheckCircle2, Circle, Edit2, Feather, Loader2, Plus, RotateCcw, Save, SlidersHorizontal, Trash2, X } from 'lucide-react';
+import { ArrowDown, ArrowRight, ArrowUp, Brain, Check, CheckCircle2, Circle, Edit2, Feather, Loader2, Plus, RotateCcw, Save, SlidersHorizontal, Sparkles, Trash2, X } from 'lucide-react';
 import { journeyText } from '../i18n/journey.js';
 import { dateForWeekDay, getDateForWeekDay, localDate } from '../domain/dates.js';
 import { exerciseKey } from '../domain/training.js';
@@ -113,7 +113,7 @@ export default function Training({ t, lang = 'zh', schedule, draft, activeDay, s
       {(onQuickSaveDay || onAddToDay) && <button type="button" data-testid="day-add-exercise" disabled={busy || saving || quickSaving || date < today} onClick={() => { if (onQuickSaveDay) { setQuickError(''); setQuickPickerOpen(true); } else { onAddToDay(active); } }} className="button-secondary"><Plus size={16} aria-hidden="true" />{en ? 'Add exercise' : '新增動作'}</button>}
       {onQuickSaveDay && !rest && <button type="button" data-testid="day-quick-edit" aria-pressed={quickEdit} disabled={busy || saving || quickSaving || date < today} onClick={() => { setQuickError(''); setQuickEditScope(quickEdit ? '' : scope); }} className={quickEdit ? 'button-primary' : 'button-secondary'}>{quickEdit ? <><Check size={16} aria-hidden="true" />{en ? 'Done' : '完成增減'}</> : <><SlidersHorizontal size={15} aria-hidden="true" />{en ? '+/- Exercises' : '± 增減動作'}</>}</button>}
       {onManualEdit && <button type="button" data-testid="day-edit" disabled={busy || saving || quickSaving || date < today} onClick={() => onManualEdit(active)} className="button-secondary">{en ? 'Edit doses' : '調整組次'}</button>}
-      {onOpenCoach && <button type="button" data-testid="open-ai-coach" disabled={busy || saving} onClick={onOpenCoach} className="button-secondary">{en ? '✨ Ask AI Coach' : '✨ 問 AI 教練'}</button>}
+      {onOpenCoach && <button type="button" data-testid="open-ai-coach" disabled={busy || saving} onClick={onOpenCoach} className="coach-inline-button"><Sparkles size={16} aria-hidden="true" />{en ? 'Ask AI Coach' : '問 AI 教練'}</button>}
       <details className="day-more"><summary>{en ? 'More' : '更多'}</summary><div><details className="day-time-details"><summary>{en ? 'Timing details' : '時間與安排說明'}</summary><SessionTimeSummary day={active} exercises={exercises} availableTime={plannedTime} context={coachingContext} lang={lang} /></details>{onSaveWorkout && <button type="button" data-testid="save-day-workout" disabled={busy || saving} onClick={() => onSaveWorkout(active)} className="text-link">{en ? 'Save workout' : '收藏這天'}</button>}{onShare && <button type="button" disabled={busy || saving} onClick={() => onShare(active)} className="text-link">{en ? 'Share workout' : '分享這天'}</button>}</div></details>
     </div>}
     {quickEdit && <div className="quick-edit-banner" role="status" data-testid="quick-edit-banner">

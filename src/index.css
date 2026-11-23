@@ -25,10 +25,15 @@
 @layer components {
   .app-shell { min-height: 100dvh; padding-bottom: calc(90px + env(safe-area-inset-bottom)); }
   .app-sidebar { background: #fff; border-bottom: 1px solid var(--color-sky-100); }
-  .app-brand { padding: 19px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-  .brand-lockup { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 750; letter-spacing: -.3px; }
-  .brand-mark { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 12px; color: white; background: var(--color-sky-600); }
-  .settings-button { display: flex; align-items: center; gap: 7px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--color-sky-100); border-radius: 12px; font-size: 13px; color: var(--color-slate-600); }
+  .app-brand { padding: 14px 16px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 12px; }
+  .brand-lockup { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 750; letter-spacing: -.3px; min-width: 0; }
+  .brand-mark { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 12px; color: white; background: var(--color-sky-600); flex-shrink: 0; }
+  .app-brand-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .coach-header-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 8px 13px; border: 1px solid var(--brand-soft-border); border-radius: 12px; background: var(--brand-soft); color: var(--brand-primary); font-size: 13px; font-weight: 700; white-space: nowrap; transition: background .15s, border-color .15s; }
+  .coach-header-button:hover:not(:disabled) { background: var(--brand-tint); border-color: var(--brand-accent); }
+  .coach-inline-button { display: inline-flex; justify-content: center; align-items: center; gap: 7px; min-height: 44px; padding: 10px 16px; border: 1px solid var(--brand-soft-border); border-radius: 12px; background: var(--brand-tint); color: var(--brand-primary); font-size: 14px; font-weight: 650; transition: background .15s, border-color .15s; }
+  .coach-inline-button:hover:not(:disabled) { background: var(--brand-soft); border-color: var(--brand-accent); }
+  .settings-button { display: flex; align-items: center; gap: 7px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--color-sky-100); border-radius: 12px; font-size: 13px; color: var(--color-slate-600); white-space: nowrap; }
   .app-nav { position: fixed; z-index: 30; bottom: 0; left: 0; right: 0; display: flex; background: #fff; border-top: 1px solid var(--color-sky-100); padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); }
   .app-nav button { display: flex; flex: 1; flex-direction: column; align-items: center; gap: 4px; padding: 8px; border-radius: 14px; color: var(--color-slate-500); font-size: 12px; min-height: 54px; }
   .app-nav button[aria-current="page"] { background: var(--color-sky-50); color: var(--color-sky-700); font-weight: 750; }
@@ -136,7 +141,9 @@
 @media (min-width: 1024px) {
   .app-shell { padding-bottom: 32px; padding-left: 232px; }
   .app-sidebar { position: fixed; inset: 0 auto 0 0; width: 232px; border-right: 1px solid var(--color-sky-100); border-bottom: 0; display: flex; flex-direction: column; }
-  .app-brand { padding: 32px 22px; flex-direction: column; align-items: flex-start; gap: 24px; }
+  .app-brand { padding: 28px 20px 18px; flex-direction: column; align-items: stretch; gap: 16px; }
+  .app-brand-actions { flex-direction: column; align-items: stretch; width: 100%; }
+  .coach-header-button, .settings-button { width: 100%; justify-content: flex-start; padding: 10px 14px; }
   .brand-lockup { font-size: 14px; }
   .app-nav { position: static; padding: 8px 14px; flex-direction: column; border: 0; gap: 6px; }
   .app-nav button { flex: none; flex-direction: row; justify-content: flex-start; gap: 13px; font-size: 14px; padding: 14px 18px; }

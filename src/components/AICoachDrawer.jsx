@@ -70,6 +70,12 @@ function coachErrorMessage(code, lang) {
     : '目前無法取得 AI 教練回覆，請稍後再試。';
 }
 
+function maskApiKey(key) {
+  const clean = String(key || '').trim();
+  if (clean.length <= 8) return clean ? '••••' : '';
+  return `${clean.slice(0, 4)}…${clean.slice(-4)}`;
+}
+
 export default function AICoachDrawer({
   open,
   onClose,
@@ -84,6 +90,7 @@ export default function AICoachDrawer({
   metrics = [],
   apiKey = '',
   onSaveKey,
+  onClearKey,
   model = 'gemini-2.5-flash',
   models = [],
   onSelectModel,
@@ -345,7 +352,9 @@ export default function AICoachDrawer({
             <div className="ai-coach-auth-row" data-testid="coach-byok-ready">
               <span className="ai-coach-byok-ready">
                 <KeyRound size={14} aria-hidden="true" />
-                {en ? 'Browser Google API Key ready' : '已連結本機 Google API Key'}
+                {en
+                  ? `Saved browser key (${maskApiKey(apiKey)})`
+                  : `使用本機已存 API Key（${maskApiKey(apiKey)}）`}
               </span>
               <select
                 data-testid="coach-model-select"
@@ -366,6 +375,21 @@ export default function AICoachDrawer({
               >
                 {en ? 'Change key' : '更換金鑰'}
               </button>
+              {onClearKey && (
+                <button
+                  type="button"
+                  data-testid="coach-clear-key"
+                  className="text-link text-xs min-h-11"
+                  disabled={busy}
+                  onClick={() => {
+                    onClearKey();
+                    setShowKeyEditor(false);
+                    setError('');
+                  }}
+                >
+                  {en ? 'Clear key' : '清除金鑰'}
+                </button>
+              )}
             </div>
           ) : (
             <div className="ai-coach-key-form" data-testid="coach-inline-key-box">

@@ -203,20 +203,24 @@ try {
     await page.evaluate(() => localStorage.clear());
     await page.reload({ waitUntil: 'networkidle2' });
 
-    // 1. Open AI Coach from Today
+    // 1. Verify persistent global AI Coach header button and open AI Coach from it
+    await page.waitForSelector('[data-testid="global-ai-coach"]', { visible: true });
     await page.waitForSelector('[data-testid="open-ai-coach"]', { visible: true });
-    await page.click('[data-testid="open-ai-coach"]');
+    await page.click('[data-testid="global-ai-coach"]');
     await page.waitForSelector('[data-testid="ai-coach-drawer"]', { visible: true });
 
     // Verify zero overflow with drawer open
     const overflowDrawerOpen = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
     assert.equal(overflowDrawerOpen, false, `Horizontal overflow with AI Coach drawer open at ${width}px`);
 
-    // Inline API key save inside AI Coach drawer
+    // Inline API key save inside AI Coach drawer & masked key display
     await page.waitForSelector('[data-testid="coach-inline-key-input"]', { visible: true });
     await page.type('[data-testid="coach-inline-key-input"]', 'AIzaCoachSmokeKey12345');
     await page.click('[data-testid="coach-inline-key-save"]');
     await page.waitForSelector('[data-testid="coach-byok-ready"]', { visible: true });
+    const byokReadyText = await page.$eval('[data-testid="coach-byok-ready"]', el => el.textContent);
+    assert.match(byokReadyText, /AIza…2345/);
+    await page.waitForSelector('[data-testid="coach-clear-key"]', { visible: true });
 
     // Click first quick prompt and verify rendered reply
     await page.waitForSelector('[data-testid="coach-quick-prompt-review"]', { visible: true });

@@ -82,7 +82,7 @@ export default function SessionPlanEditor({ session, exercises = {}, eligibleExe
             {isLocked ? (
               <span className="exercise-row-locked" title={en ? 'Recorded — preserved' : '已有紀錄，自動保留'}><Lock size={14} aria-hidden="true" /></span>
             ) : (
-              <button type="button" data-testid={`manual-quick-remove-${dose.id}`} className="manual-row-quick-remove" aria-label={`${en ? 'Remove' : '移除'} ${rowName}`} onClick={() => remove(dose.id)}><Minus size={17} aria-hidden="true" /></button>
+              <button type="button" data-testid={`manual-quick-remove-${dose.id}`} className="manual-row-quick-remove" aria-label={`${en ? 'Quick remove' : '快速移除'} ${rowName}`} onClick={() => remove(dose.id)}><Minus size={17} aria-hidden="true" /></button>
             )}
           </li>;
         })}</ol>

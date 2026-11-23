@@ -103,7 +103,8 @@ try {
     assert.ok(cart.top >= 0 && cart.bottom <= cart.height, `${layout}: panel footer stays visible`);
     for (const id of ['bf_B01', 'bf_C11', 'bf_B05', 'bf_D03', 'bf_H01', 'bf_H03']) { await fill('[data-testid="combo-search"]', id); await clickSelector(`[data-testid="single-add-${id}"]`); }
     await fits('single exercise picker'); await page.screenshot({ path: `/tmp/planner-manual-${layout}.png` });
-    assert.equal(await page.$eval('[data-testid="single-add-bf_H03"]', item => item.disabled), true, 'Existing single cannot be added twice');
+    assert.equal(await page.$('[data-testid="single-add-bf_H03"]'), null, 'Existing single cannot be added twice');
+    assert.ok(await page.$('[data-testid="single-remove-bf_H03"]'), 'Existing single switches to quick-remove toggle');
     await clickSelector('[data-testid="combo-panel-done"]');
     assert.equal(await page.$$eval('[data-testid="session-plan-editor"] [data-exercise-id]', items => items.length), 14, `${layout}: no selected movement lost`);
     step = `${layout}: edit the exact exercise and restore draft`;

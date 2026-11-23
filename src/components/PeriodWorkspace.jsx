@@ -645,7 +645,9 @@ export default function PeriodWorkspace({
                 <div className="period-ai-controls">
                   <span className="text-xs font-semibold text-sky-800 inline-flex items-center gap-1" data-testid="period-byok-ready">
                     <KeyRound size={14} />
-                    {en ? 'Google API Key saved in this browser' : '已連結本機 Google API Key'}
+                    {en
+                      ? `Saved browser key (${apiKey.trim().length > 8 ? `${apiKey.trim().slice(0, 4)}…${apiKey.trim().slice(-4)}` : '••••'})`
+                      : `已連結本機 API Key（${apiKey.trim().length > 8 ? `${apiKey.trim().slice(0, 4)}…${apiKey.trim().slice(-4)}` : '••••'}）`}
                   </span>
                   <select
                     data-testid="period-ai-model"
