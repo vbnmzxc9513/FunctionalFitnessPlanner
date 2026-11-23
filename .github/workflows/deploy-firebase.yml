@@ -1,0 +1,130 @@
+name: Deploy Firebase Functions & Rules
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Deploy target (部署範圍)'
+        type: choice
+        required: true
+        default: member_ai_and_rules
+        options:
+          - member_ai_and_rules
+          - rules_only
+          - all_functions_and_rules
+      sync_gemini_secret:
+        description: 'Sync GitHub Secret GEMINI_API_KEY to Firebase Secret Manager (FITNESS_TRIAL_GEMINI_KEY)'
+        type: boolean
+        required: false
+        default: true
+
+concurrency:
+  group: firebase-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  FIREBASE_PROJECT_ID: myfitnessapp-c4aba
+
+jobs:
+  deploy-firebase:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate required GitHub Secret
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT" ]; then
+            echo "::error::Missing GitHub Secret FIREBASE_SERVICE_ACCOUNT. See docs/ai-member-setup.md to add your Firebase Service Account JSON."
+            exit 1
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.14.0'
+          cache: npm
+
+      - name: Install root and Functions dependencies
+        run: |
+          npm ci
+          npm ci --prefix functions
+
+      - name: Build and verify Cloud Functions bundle
+        env:
+          GCLOUD_PROJECT: ${{ env.FIREBASE_PROJECT_ID }}
+        run: |
+          npm run build --prefix functions
+          node --input-type=module -e "
+            const mod = await import('./functions/index.js');
+            const names = Object.keys(mod).sort();
+            console.log('Verified exports:', names);
+            for (const required of ['requestMemberAiPeriodChunk', 'requestMemberAiCoachReply']) {
+              if (!names.includes(required)) throw new Error('Missing export: ' + required);
+            }
+          "
+          node --test tests/unit/aiMemberPeriod.test.js tests/unit/aiMemberCoach.test.js
+
+      - name: Prepare Service Account credentials
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          SA_PATH="${RUNNER_TEMP}/firebase-sa.json"
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$SA_PATH"
+          chmod 600 "$SA_PATH"
+          node -e "
+            const fs = require('node:fs');
+            const parsed = JSON.parse(fs.readFileSync(process.argv[1], 'utf8'));
+            if (!parsed.client_email || !parsed.private_key) {
+              throw new Error('FIREBASE_SERVICE_ACCOUNT is not a valid Firebase Service Account JSON key.');
+            }
+            console.log('Loaded service account:', parsed.client_email);
+          " "$SA_PATH"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$SA_PATH" >> "$GITHUB_ENV"
+
+      - name: Sync Gemini API Key to Firebase Secret Manager (optional)
+        if: ${{ inputs.sync_gemini_secret }}
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          if [ -z "$GEMINI_API_KEY" ]; then
+            echo "GitHub Secret GEMINI_API_KEY is not set; skipping Secret Manager sync and keeping existing FITNESS_TRIAL_GEMINI_KEY."
+            exit 0
+          fi
+          printf '%s' "$GEMINI_API_KEY" | npx firebase functions:secrets:set FITNESS_TRIAL_GEMINI_KEY \
+            --project "$FIREBASE_PROJECT_ID" \
+            --data-file - \
+            --non-interactive
+          echo "Updated Firebase Secret Manager secret FITNESS_TRIAL_GEMINI_KEY."
+
+      - name: Deploy Firebase targets
+        env:
+          DEPLOY_TARGET: ${{ inputs.target }}
+        run: |
+          case "$DEPLOY_TARGET" in
+            rules_only)
+              ONLY_ARG="firestore:rules"
+              ;;
+            all_functions_and_rules)
+              ONLY_ARG="firestore:rules,functions"
+              ;;
+            *)
+              ONLY_ARG="firestore:rules,functions:requestMemberAiPeriodChunk,functions:requestMemberAiCoachReply"
+              ;;
+          esac
+          echo "Deploying --only $ONLY_ARG to project $FIREBASE_PROJECT_ID"
+          npx firebase deploy \
+            --only "$ONLY_ARG" \
+            --project "$FIREBASE_PROJECT_ID" \
+            --force \
+            --non-interactive
+
+      - name: Clean up credentials
+        if: always()
+        run: rm -f "${RUNNER_TEMP}/firebase-sa.json"

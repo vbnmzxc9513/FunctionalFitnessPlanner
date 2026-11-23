@@ -11,7 +11,32 @@
 ### 1. 確認 Firebase 專案已開通 Blaze 方案
 Cloud Functions v2 與 Secret Manager 需要 Firebase Blaze 方案（按量計費，小型個人使用通常在免費額度內，建議同步在 Google Cloud Console 設定預算警示）。
 
-### 2. 將你的 Gemini API Key 存入 Firebase Secret Manager
+---
+
+### 方式 A（推薦）：GitHub Actions 一鍵自動部署（免在本機跑 CLI）
+
+#### A-1. 取得 Firebase Service Account JSON
+1. 開啟 [Firebase Console](https://console.firebase.google.com/project/myfitnessapp-c4aba/settings/serviceaccounts/adminsdk) → **專案設定 → 服務帳戶（Service accounts）**。
+2. 點選 **「產生新的私密金鑰（Generate new private key）」**，下載 `.json` 檔（請妥善保管，切勿提交到 Git）。
+   > 若使用自訂服務帳戶，需具備 Firebase Admin / Cloud Functions Admin / Secret Manager Admin / Service Account User 權限；使用預設 `firebase-adminsdk` 通常已涵蓋部署所需權限。
+
+#### A-2. 在 GitHub Repo 設定 2 個 Secrets
+前往 GitHub Repo → **Settings → Secrets and variables → Actions → New repository secret**，新增以下兩個 Secret：
+1. **`FIREBASE_SERVICE_ACCOUNT`**：貼上剛剛下載的 Service Account `.json` 檔案**完整內容**。
+2. **`GEMINI_API_KEY`**：貼上你的 Google AI Studio Gemini API Key（會由 Workflow 安全寫入 Firebase Secret Manager `FITNESS_TRIAL_GEMINI_KEY`，不會印在日誌也不會進前端）。
+
+#### A-3. 一鍵執行部署
+1. 前往 GitHub Repo → **Actions** → 左側選擇 **「Deploy Firebase Functions & Rules」**。
+2. 點右上角 **「Run workflow」**：
+   - `target` 保持預設 `member_ai_and_rules`（部署 `firestore:rules`、`requestMemberAiPeriodChunk`、`requestMemberAiCoachReply`）。
+   - `sync_gemini_secret` 保持勾選 `true`（將 `GEMINI_API_KEY` 同步寫入 Secret Manager）。
+3. 等待約 2–3 分鐘變成綠勾，即完成部署！以後每次改完後端或更換 API Key，都只要回來點一次 **Run workflow**。
+
+---
+
+### 方式 B（備用）：在本機使用 Firebase CLI 手動部署
+
+#### B-1. 將你的 Gemini API Key 存入 Firebase Secret Manager
 > 切勿將 API Key 寫在程式碼、`.env` 或 Firestore 文件中。
 
 ```bash
@@ -20,7 +45,7 @@ npx firebase functions:secrets:set FITNESS_TRIAL_GEMINI_KEY --project myfitnessa
 ```
 執行後貼上你的 Google AI Studio API Key 並按 Enter。
 
-### 3. 部署 Firestore 安全規則與會員雲端函式
+#### B-2. 部署 Firestore 安全規則與會員雲端函式
 ```bash
 npm ci --prefix functions
 npm run build --prefix functions
