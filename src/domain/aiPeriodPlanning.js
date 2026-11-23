@@ -7,7 +7,9 @@ import { DEFAULT_MAX_PROMPT_BYTES, selectPromptCandidates, utf8Bytes } from './p
 import { exerciseTrainingTargets } from './trainingTargets.js';
 import { estimateSessionMinutes, sessionSections } from './sessions.js';
 import { MAX_DAY_EXERCISES } from './plannerLimits.js';
-import { SESSION_PHASES, SESSION_TYPES } from './phases.js';
+import { exercisePhase, SESSION_PHASES, SESSION_TYPES } from './phases.js';
+import { validSequenceDose } from './exerciseCatalog.js';
+import { prescription } from './training.js';
 import { summarizeRecentPerformance } from './periodAnalytics.js';
 
 const isoDay = date => new Date(`${date}T12:00:00Z`).getUTCDay() || 7;
@@ -150,7 +152,7 @@ export function resolveChunkDayPolicies(weekDates, {
       ? Math.max(0, dailyTime - warmupMinutes - 1)
       : Math.max(0, dailyTime - 1);
 
-    return {
+    const policy = {
       date,
       day,
       week,
@@ -164,6 +166,8 @@ export function resolveChunkDayPolicies(weekDates, {
       remainingSlots: warmupMode === 'daily_warmup' ? MAX_DAY_EXERCISES - DAILY_WARMUP_IDS.length : MAX_DAY_EXERCISES,
       suggestedSessionType: expected?.sessionType || 'training',
     };
+    Object.defineProperty(policy, '_referenceSession', { value: expected || null, enumerable: false });
+    return policy;
   });
 }
 
@@ -272,7 +276,7 @@ ${JSON.stringify(editableDates)}
    - 若你將該日排為 sessionType="rest"：routine 與 prescriptions 必須皆為空陣列 []。
 2. 凡是 warmupMode === "custom" 的日期（短課／受限恢復／健康限制／未確認熟悉的賽前）：系統不鎖定八段暖身。若排 training 須自行包含至少 1 項安全 warmup 動作；若排 recovery 僅用 warmup/recovery/cooldown；若受限嚴重則排 rest。
 3. 凡是 warmupMode === "none"（非可訓練星期）：必須輸出 sessionType="rest"、routine=[]、prescriptions=[]。
-4. 若 warmupMode === "rest_recommended"：建議安排 rest 或極輕 recovery，並於 coachAdvice 說明原因。
+4. 若 warmupMode === "rest_recommended"：建議安排 sessionType="rest"（routine=[]）；若安排極輕 recovery，必須提供 1–2 項安全活動度／呼吸動作（不可留空陣列），並於 coachAdvice 說明原因。
 
 【學員資料、近 28 天真實紀錄與前期課表】
 ${JSON.stringify({
@@ -310,7 +314,7 @@ ${JSON.stringify({
    - 每個 training 日的第一個 strength 動作**必須提供 preparation 準備組**（sets 1–2、value "4–6" 或短秒數、restSeconds 0–120、具體輕量暖身指令 instruction）。
    - 額外 E 類跳躍單日總落地（sets × 最大次數 × 雙側2）上限 24 次，且不與跳繩 I04 同日。
    - 禁止使用舊序列 bf_A12、bf_A13，且不可用 bf_A01 當暖身或恢復。
-4. 所有時間皆含雙側、組間休息、準備組與動作轉換，不可超過每日上限 ${dailyTime} 分鐘。不足時減少組數或動作數，不硬塞。
+4. 所有時間皆含雙側、組間休息、準備組與動作轉換，不可超過每日上限 ${dailyTime} 分鐘；估時會對每個階段無條件進位，請預留 2–3 分鐘安全緩衝，不足時減少組數或動作數，不硬塞。
 5. 劑量限制：sets 1–5 整數；value 為數字或範圍如 "8–10"（reps/seconds/breaths 上限 120，minutes 上限 ${dailyTime}）；restSeconds 0–300 整數；preparation 的 value reps/breaths 上限 8、seconds 上限 30。
 6. 每天提供非空 theme（當日重點）、concept（與羽球動作的動力鏈連結）、coachAdvice（與球日銜接與當日體感提醒）、warmupNote（說明暖身與主項銜接）、cooldownNote（說明收尾安排或省略原因）。
 ${reportInstructions}${correctionBlock}
@@ -358,6 +362,383 @@ function normalizePhaseOrder(routine, prescriptions) {
   return { routine: orderedRoutine, prescriptions: orderedPrescriptions };
 }
 
+const VALID_DOSE_UNITS = new Set(['reps', 'seconds', 'minutes', 'breaths']);
+const VALID_PREP_UNITS = new Set(['reps', 'seconds', 'breaths']);
+const DISALLOWED_RECOVERY_CATEGORIES = new Set(['lower', 'upper', 'power', 'footwork', 'reaction']);
+const SKILL_CATEGORIES = new Set(['power', 'footwork', 'reaction']);
+
+function clampInt(value, min, max, fallback) {
+  const n = Math.round(Number(value));
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(min, Math.min(max, n));
+}
+
+function normalizeDoseValue(rawValue, unit, maxLimit, fallback = '8') {
+  const text = String(rawValue ?? '').trim();
+  const match = text.match(/(\d+)(?:\s*[–-]\s*(\d+))?/);
+  if (!match) {
+    const fb = Number(String(fallback).split(/[–-]/)[0]) || 8;
+    return String(Math.max(1, Math.min(maxLimit, Math.round(fb))));
+  }
+  const first = Math.max(1, Math.min(maxLimit, Number(match[1])));
+  if (!match[2]) return String(first);
+  const second = Math.max(1, Math.min(maxLimit, Number(match[2])));
+  const lo = Math.min(first, second);
+  const hi = Math.max(first, second);
+  return lo === hi ? String(lo) : `${lo}–${hi}`;
+}
+
+function defaultPreparation(perSide, lang) {
+  return {
+    sets: 1,
+    value: '5',
+    unit: 'reps',
+    restSeconds: 30,
+    perSide: !!perSide,
+    instruction: lang === 'en'
+      ? '1 light controlled warm-up set focusing on alignment and steady tempo.'
+      : '先做 1 組輕量可控熱身組，確認關節對齊與動作節奏。',
+  };
+}
+
+function normalizePreparation(rawPrep, perSideFallback, lang) {
+  if (!rawPrep || typeof rawPrep !== 'object') return defaultPreparation(perSideFallback, lang);
+  const unit = VALID_PREP_UNITS.has(rawPrep.unit) ? rawPrep.unit : 'reps';
+  const maxVal = unit === 'seconds' ? 30 : 8;
+  const sets = clampInt(rawPrep.sets, 1, 2, 1);
+  const value = normalizeDoseValue(rawPrep.value, unit, maxVal, unit === 'seconds' ? '15' : '5');
+  const restSeconds = clampInt(rawPrep.restSeconds, 0, 120, 30);
+  const perSide = typeof rawPrep.perSide === 'boolean' ? rawPrep.perSide : !!perSideFallback;
+  const instruction = typeof rawPrep.instruction === 'string' && rawPrep.instruction.trim()
+    ? rawPrep.instruction.trim().slice(0, 400)
+    : defaultPreparation(perSide, lang).instruction;
+  return { sets, value, unit, restSeconds, perSide, instruction };
+}
+
+function isRecoveryAllowedExercise(id, exercise) {
+  if (!exercise) return false;
+  if (id === 'bf_A01') return false;
+  if (DISALLOWED_RECOVERY_CATEGORIES.has(exercise.category)) return false;
+  if (exercise.category === 'conditioning' && exercise.catalogCode !== 'I01') return false;
+  return true;
+}
+
+function computeJumpContacts(prescriptions, eligible) {
+  let contacts = 0;
+  for (const dose of prescriptions) {
+    const ex = eligible[dose.id];
+    if (ex?.jumpContacts && dose.unit === 'reps') {
+      const maximum = Math.max(...String(dose.value).split(/[–-]/).map(Number));
+      contacts += ex.jumpContacts * dose.sets * maximum * (dose.perSide ? 2 : 1);
+    }
+  }
+  return contacts;
+}
+
+function buildRestDay(date, policy, aiDay, lang) {
+  return {
+    date,
+    week: policy.week,
+    day: policy.day,
+    name: typeof aiDay?.name === 'string' && aiDay.name.trim()
+      ? aiDay.name.trim().slice(0, 120)
+      : (lang === 'en' ? `Rest Day ${policy.day}` : `休息日 ${policy.day}`),
+    theme: typeof aiDay?.theme === 'string' && aiDay.theme.trim()
+      ? aiDay.theme.trim().slice(0, 200)
+      : (lang === 'en' ? 'Active recovery & rest' : '主動休息與恢復'),
+    concept: typeof aiDay?.concept === 'string' ? aiDay.concept.trim().slice(0, 1200) : '',
+    coachAdvice: typeof aiDay?.coachAdvice === 'string' ? aiDay.coachAdvice.trim().slice(0, 1200) : '',
+    sessionType: 'rest',
+    warmupNote: typeof aiDay?.warmupNote === 'string' && aiDay.warmupNote.trim()
+      ? aiDay.warmupNote.trim().slice(0, 1200)
+      : (lang === 'en' ? 'Rest day — no warm-up needed.' : '今日為休息日，不需額外暖身。'),
+    cooldownNote: typeof aiDay?.cooldownNote === 'string' && aiDay.cooldownNote.trim()
+      ? aiDay.cooldownNote.trim().slice(0, 1200)
+      : (lang === 'en' ? 'Rest day — focus on sleep and hydration.' : '今日為休息日，以睡眠與補水恢復為主。'),
+    routine: [],
+    prescriptions: [],
+  };
+}
+
+function sanitizeReferenceFallback(date, policy, eligible, dailyTime, lang) {
+  if (policy._referenceSession) {
+    try {
+      return sanitizePeriodSession(
+        { ...policy._referenceSession, date, week: policy.week, day: policy.day },
+        { exercises: eligible, dailyTime },
+      );
+    } catch { /* fall through to rest day */ }
+  }
+  return sanitizePeriodSession(buildRestDay(date, policy, null, lang), { exercises: eligible, dailyTime });
+}
+
+/**
+ * Deterministically repair minor LLM output slips (formatting, missing preparation,
+ * phase mislabels, ineligible/duplicate IDs, jump volume > 24, or mild duration overshoot)
+ * while strictly enforcing every domain safety invariant via sanitizePeriodSession.
+ */
+function reconcileAIPeriodDay(aiDay, { date, policy, eligible, dailyTime, lang }) {
+  if (policy.warmupMode === 'none') {
+    return sanitizePeriodSession(buildRestDay(date, policy, aiDay, lang), { exercises: eligible, dailyTime });
+  }
+  if (!aiDay || typeof aiDay !== 'object') {
+    return sanitizeReferenceFallback(date, policy, eligible, dailyTime, lang);
+  }
+
+  let sessionType = SESSION_TYPES.includes(aiDay.sessionType)
+    ? aiDay.sessionType
+    : (SESSION_TYPES.includes(policy.suggestedSessionType) ? policy.suggestedSessionType : 'training');
+
+  if (sessionType === 'rest') {
+    return sanitizePeriodSession(buildRestDay(date, policy, aiDay, lang), { exercises: eligible, dailyTime });
+  }
+
+  const lockedWarmupSet = new Set(DAILY_WARMUP_IDS);
+  const rawRoutine = Array.isArray(aiDay.routine) ? aiDay.routine : [];
+  const rawPrescriptions = Array.isArray(aiDay.prescriptions) ? aiDay.prescriptions : [];
+  const rawDoseById = new Map();
+  for (const dose of rawPrescriptions) {
+    if (dose && typeof dose.id === 'string' && !rawDoseById.has(dose.id)) rawDoseById.set(dose.id, dose);
+  }
+
+  // Filter routine to unique eligible exercises, excluding legacy warmups and locked duplicates on daily_warmup days.
+  const seen = new Set();
+  const filteredIds = [];
+  let hasSequence = false;
+  for (const id of rawRoutine) {
+    if (typeof id !== 'string' || seen.has(id) || !Object.hasOwn(eligible, id)) continue;
+    if (['bf_A12', 'bf_A13'].includes(id)) continue;
+    if (policy.warmupMode === 'daily_warmup' && lockedWarmupSet.has(id)) continue;
+    const ex = eligible[id];
+    if (sessionType === 'recovery' && !isRecoveryAllowedExercise(id, ex)) continue;
+    if (ex.sequenceMinutes) {
+      if (hasSequence) continue;
+      hasSequence = true;
+    }
+    seen.add(id);
+    filteredIds.push(id);
+  }
+
+  // Normalize each non-locked prescription strictly within domain bounds.
+  let extraPrescriptions = filteredIds.map(id => {
+    const ex = eligible[id];
+    const rawDose = rawDoseById.get(id);
+    const starter = ex.prescription || prescription(id, ex.type, 1, ex);
+
+    let phase = rawDose && SESSION_PHASES.includes(rawDose.phase)
+      ? rawDose.phase
+      : exercisePhase({ sessionType }, id, ex);
+
+    if (SKILL_CATEGORIES.has(ex.category)) phase = 'skill';
+    if (id === 'bf_A01' && ['warmup', 'recovery'].includes(phase)) phase = 'accessory';
+    if (sessionType === 'recovery') {
+      if (policy.warmupMode === 'daily_warmup') {
+        phase = phase === 'cooldown' ? 'cooldown' : 'recovery';
+      } else if (!['warmup', 'recovery', 'cooldown'].includes(phase)) {
+        phase = 'recovery';
+      }
+    }
+
+    if (ex.sequenceMinutes && (!rawDose || !validSequenceDose(id, rawDose))) {
+      return {
+        id,
+        sets: starter.sets ?? 1,
+        value: String(starter.value ?? '1'),
+        unit: VALID_DOSE_UNITS.has(starter.unit) ? starter.unit : 'minutes',
+        restSeconds: clampInt(starter.restSeconds, 0, 300, 0),
+        perSide: !!starter.perSide,
+        phase,
+      };
+    }
+
+    const unit = rawDose && VALID_DOSE_UNITS.has(rawDose.unit)
+      ? rawDose.unit
+      : (VALID_DOSE_UNITS.has(starter.unit) ? starter.unit : 'reps');
+    const maxVal = unit === 'minutes' ? dailyTime : 120;
+    const sets = clampInt(rawDose?.sets, 1, 5, clampInt(starter.sets, 1, 5, 2));
+    const value = normalizeDoseValue(rawDose?.value ?? starter.value, unit, maxVal, String(starter.value ?? '8'));
+    const restSeconds = clampInt(rawDose?.restSeconds, 0, 300, clampInt(starter.restSeconds, 0, 300, 45));
+    const perSide = typeof rawDose?.perSide === 'boolean' ? rawDose.perSide : !!starter.perSide;
+
+    const normalized = { id, sets, value, unit, restSeconds, perSide, phase };
+    if (rawDose?.preparation !== undefined && ['strength', 'accessory'].includes(phase)) {
+      normalized.preparation = normalizePreparation(rawDose.preparation, perSide, lang);
+    }
+    return normalized;
+  });
+
+  // Enforce jump volume <= 24 and no jump + jump-rope (I04) conflict.
+  const hasJumpContacts = extraPrescriptions.some(dose => eligible[dose.id]?.jumpContacts && dose.unit === 'reps');
+  if (hasJumpContacts) {
+    extraPrescriptions = extraPrescriptions.filter(dose => eligible[dose.id]?.catalogCode !== 'I04');
+  }
+  let guard = 0;
+  while (computeJumpContacts(extraPrescriptions, eligible) > 24 && guard < 40) {
+    guard += 1;
+    const jumpIndex = extraPrescriptions.findLastIndex(dose => eligible[dose.id]?.jumpContacts && dose.unit === 'reps');
+    if (jumpIndex < 0) break;
+    const target = extraPrescriptions[jumpIndex];
+    const maxVal = Math.max(...String(target.value).split(/[–-]/).map(Number));
+    if (target.sets > 1) {
+      target.sets -= 1;
+    } else if (maxVal > 4) {
+      target.value = String(Math.max(4, Math.floor(maxVal / 2)));
+    } else {
+      extraPrescriptions.splice(jumpIndex, 1);
+    }
+  }
+
+  // Build locked prefix on daily_warmup days, or ensure warmup on custom training days.
+  const isLockedWarmup = policy.warmupMode === 'daily_warmup';
+  const buildSession = (type, extras) => {
+    let locked = [];
+    if (isLockedWarmup && type !== 'rest') {
+      locked = dailyWarmupPrescriptions(type === 'recovery' ? 'recovery' : 'warmup');
+    }
+    const orderedExtras = normalizePhaseOrder(extras.map(d => d.id), extras).prescriptions;
+    // Keep locked 8-item dynamic warm-up pinned at indices 0..7.
+    const combinedPrescriptions = isLockedWarmup
+      ? [...locked, ...orderedExtras]
+      : normalizePhaseOrder(orderedExtras.map(d => d.id), orderedExtras).prescriptions;
+
+    // Ensure first strength exercise has a valid preparation set.
+    if (type === 'training') {
+      const firstStrength = combinedPrescriptions.find(dose => dose.phase === 'strength');
+      if (firstStrength && !firstStrength.preparation) {
+        firstStrength.preparation = defaultPreparation(firstStrength.perSide, lang);
+      }
+    }
+
+    return {
+      date,
+      week: policy.week,
+      day: policy.day,
+      name: typeof aiDay.name === 'string' && aiDay.name.trim()
+        ? aiDay.name.trim().slice(0, 120)
+        : (lang === 'en' ? `Day ${policy.day}` : `第 ${policy.day} 天`),
+      theme: typeof aiDay.theme === 'string' ? aiDay.theme.trim().slice(0, 200) : '',
+      concept: typeof aiDay.concept === 'string' ? aiDay.concept.trim().slice(0, 1200) : '',
+      coachAdvice: typeof aiDay.coachAdvice === 'string' ? aiDay.coachAdvice.trim().slice(0, 1200) : '',
+      sessionType: type,
+      warmupNote: typeof aiDay.warmupNote === 'string' && aiDay.warmupNote.trim()
+        ? aiDay.warmupNote.trim().slice(0, 1200)
+        : (lang === 'en' ? 'Begin with the 8-movement dynamic warm-up flow.' : '以標準八段動態暖身循序啟動關節與核心。'),
+      cooldownNote: typeof aiDay.cooldownNote === 'string' && aiDay.cooldownNote.trim()
+        ? aiDay.cooldownNote.trim().slice(0, 1200)
+        : (lang === 'en' ? 'Finish with relaxed breathing and gentle mobility.' : '訓練後配合緩慢呼吸與放鬆收尾。'),
+      routine: combinedPrescriptions.map(dose => dose.id),
+      prescriptions: combinedPrescriptions,
+    };
+  };
+
+  // On custom training days, guarantee at least 1 warmup-phase exercise.
+  if (!isLockedWarmup && sessionType === 'training' && !extraPrescriptions.some(dose => dose.phase === 'warmup')) {
+    const fallbackWarmupId = Object.keys(eligible).find(
+      id => !extraPrescriptions.some(d => d.id === id)
+        && id !== 'bf_A01'
+        && ['warmup', 'recovery'].includes(eligible[id]?.category)
+        && !eligible[id]?.sequenceMinutes,
+    );
+    if (fallbackWarmupId) {
+      const ex = eligible[fallbackWarmupId];
+      const starter = ex.prescription || { sets: 1, value: '6', unit: 'reps', restSeconds: 0, perSide: false };
+      extraPrescriptions.unshift({
+        id: fallbackWarmupId,
+        sets: 1,
+        value: normalizeDoseValue(starter.value, VALID_DOSE_UNITS.has(starter.unit) ? starter.unit : 'reps', 60, '6'),
+        unit: VALID_DOSE_UNITS.has(starter.unit) ? starter.unit : 'reps',
+        restSeconds: 0,
+        perSide: !!starter.perSide,
+        phase: 'warmup',
+      });
+    }
+  }
+
+  // Enforce MAX_DAY_EXERCISES cap before duration fitting.
+  const maxExtras = isLockedWarmup ? MAX_DAY_EXERCISES - DAILY_WARMUP_IDS.length : MAX_DAY_EXERCISES;
+  const trimPriority = ['cooldown', 'accessory', 'skill', 'recovery', 'strength', 'warmup'];
+  const dropOneExtra = list => {
+    for (const phase of trimPriority) {
+      for (let i = list.length - 1; i >= 0; i -= 1) {
+        if (list[i].phase === phase) {
+          list.splice(i, 1);
+          return true;
+        }
+      }
+    }
+    if (list.length) {
+      list.pop();
+      return true;
+    }
+    return false;
+  };
+
+  while (extraPrescriptions.length > maxExtras) {
+    if (!dropOneExtra(extraPrescriptions)) break;
+  }
+
+  // Progressively fit duration within dailyTime while preserving as much of AI's plan as possible.
+  let candidate = buildSession(sessionType, extraPrescriptions);
+  let fitGuard = 0;
+  while (estimateSessionMinutes(candidate, eligible) > dailyTime && extraPrescriptions.length > 0 && fitGuard < 80) {
+    fitGuard += 1;
+    let adjusted = false;
+
+    // Step 1: reduce long rest intervals on non-locked exercises.
+    const restTarget = extraPrescriptions.find(dose => dose.restSeconds > 30);
+    if (restTarget) {
+      restTarget.restSeconds = restTarget.restSeconds > 60 ? 60 : restTarget.restSeconds > 45 ? 45 : 30;
+      adjusted = true;
+    }
+
+    // Step 2: reduce preparation sets from 2 -> 1.
+    if (!adjusted) {
+      const prepTarget = extraPrescriptions.find(dose => dose.preparation?.sets > 1);
+      if (prepTarget) {
+        prepTarget.preparation = { ...prepTarget.preparation, sets: 1 };
+        adjusted = true;
+      }
+    }
+
+    // Step 3: reduce extra sets on lowest-priority phases first.
+    if (!adjusted) {
+      for (const phase of trimPriority) {
+        const setTarget = [...extraPrescriptions].reverse().find(dose => dose.phase === phase && dose.sets > 1);
+        if (setTarget) {
+          setTarget.sets -= 1;
+          adjusted = true;
+          break;
+        }
+      }
+    }
+
+    // Step 4: drop the lowest-priority non-locked exercise.
+    if (!adjusted) {
+      if (!dropOneExtra(extraPrescriptions)) break;
+    }
+
+    candidate = buildSession(sessionType, extraPrescriptions);
+  }
+
+  // Handle degenerate empty-extra outcomes safely.
+  if (isLockedWarmup && sessionType === 'training' && extraPrescriptions.length === 0) {
+    sessionType = 'recovery';
+    candidate = buildSession('recovery', []);
+  }
+  if (!isLockedWarmup && candidate.routine.length === 0) {
+    return sanitizePeriodSession(buildRestDay(date, policy, aiDay, lang), { exercises: eligible, dailyTime });
+  }
+
+  try {
+    if (isLockedWarmup && candidate.sessionType !== 'rest' && !isDailyWarmupComplete(candidate)) {
+      throw new Error(`AI_DAILY_WARMUP_MISSING:${date}`);
+    }
+    return sanitizePeriodSession(candidate, { exercises: eligible, dailyTime });
+  } catch {
+    return sanitizeReferenceFallback(date, policy, eligible, dailyTime, lang);
+  }
+}
+
 /**
  * Merge locked 8-item dynamic warm-up into AI chunk output and strictly validate
  * every session against domain rules, equipment/health eligibility, jump volume,
@@ -372,6 +753,7 @@ export function mergeAndValidateAIPeriodChunk(raw, {
   existingSessions = {},
   includeReport = false,
   lang = 'zh',
+  reconcile = false,
 } = {}) {
   if (!raw || typeof raw !== 'object' || !Array.isArray(raw.days)) {
     throw new Error('AI_INVALID_CHUNK_SHAPE');
@@ -383,6 +765,10 @@ export function mergeAndValidateAIPeriodChunk(raw, {
 
   for (const day of raw.days) {
     if (!day || !isCalendarDate(day.date) || rawByDate.has(day.date)) {
+      if (reconcile) {
+        if (day && isCalendarDate(day.date) && !rawByDate.has(day.date)) rawByDate.set(day.date, day);
+        continue;
+      }
       throw new Error('AI_INVALID_CHUNK_DATES');
     }
     rawByDate.set(day.date, day);
@@ -400,6 +786,17 @@ export function mergeAndValidateAIPeriodChunk(raw, {
     }
 
     const aiDay = rawByDate.get(date);
+    if (reconcile) {
+      sessions.push(reconcileAIPeriodDay(aiDay, {
+        date,
+        policy,
+        eligible,
+        dailyTime: Number(dailyTime),
+        lang,
+      }));
+      continue;
+    }
+
     if (!aiDay) throw new Error(`AI_MISSING_DATE:${date}`);
 
     if (!SESSION_TYPES.includes(aiDay.sessionType)) {
@@ -418,23 +815,28 @@ export function mergeAndValidateAIPeriodChunk(raw, {
       throw new Error(`AI_AEROBIC_WARMUP:${date}`);
     }
 
+    let sessionType = aiDay.sessionType;
     let routine = [...rawRoutine];
     let prescriptions = [...rawPrescriptions];
 
-    if (policy.warmupMode === 'daily_warmup' && aiDay.sessionType !== 'rest') {
-      const warmupPhase = aiDay.sessionType === 'recovery' ? 'recovery' : 'warmup';
+    if (policy.warmupMode === 'daily_warmup' && sessionType !== 'rest') {
+      const warmupPhase = sessionType === 'recovery' ? 'recovery' : 'warmup';
       const lockedDoses = dailyWarmupPrescriptions(warmupPhase);
       const nonWarmupRoutine = routine.filter(id => !lockedWarmupSet.has(id));
-      const nonWarmupPrescriptions = prescriptions.filter(dose => dose && !lockedWarmupSet.has(dose.id));
-      const mergedRoutine = [...DAILY_WARMUP_IDS, ...nonWarmupRoutine];
-      const mergedPrescriptions = [...lockedDoses, ...nonWarmupPrescriptions];
-      const ordered = normalizePhaseOrder(mergedRoutine, mergedPrescriptions);
-      routine = ordered.routine;
-      prescriptions = ordered.prescriptions;
-    } else if (aiDay.sessionType === 'rest') {
+      const nonWarmupPrescriptions = prescriptions
+        .filter(dose => dose && !lockedWarmupSet.has(dose.id))
+        .map(dose => (sessionType === 'recovery' && dose.phase === 'warmup' ? { ...dose, phase: 'recovery' } : dose));
+      const orderedExtras = normalizePhaseOrder(nonWarmupRoutine, nonWarmupPrescriptions);
+      routine = [...DAILY_WARMUP_IDS, ...orderedExtras.routine];
+      prescriptions = [...lockedDoses, ...orderedExtras.prescriptions];
+    } else if (sessionType === 'rest') {
       routine = [];
       prescriptions = [];
-    } else if (policy.warmupMode === 'custom') {
+    } else if (policy.warmupMode === 'rest_recommended' && sessionType === 'recovery' && routine.length === 0) {
+      sessionType = 'rest';
+      routine = [];
+      prescriptions = [];
+    } else {
       const ordered = normalizePhaseOrder(routine, prescriptions);
       routine = ordered.routine;
       prescriptions = ordered.prescriptions;
@@ -450,15 +852,15 @@ export function mergeAndValidateAIPeriodChunk(raw, {
       theme: typeof aiDay.theme === 'string' ? aiDay.theme.trim().slice(0, 200) : '',
       concept: typeof aiDay.concept === 'string' ? aiDay.concept.trim().slice(0, 1200) : '',
       coachAdvice: typeof aiDay.coachAdvice === 'string' ? aiDay.coachAdvice.trim().slice(0, 1200) : '',
-      sessionType: aiDay.sessionType,
+      sessionType,
       warmupNote: typeof aiDay.warmupNote === 'string' && aiDay.warmupNote.trim()
         ? aiDay.warmupNote.trim().slice(0, 1200)
-        : (aiDay.sessionType === 'rest'
+        : (sessionType === 'rest'
           ? (lang === 'en' ? 'Rest day — no warm-up needed.' : '今日為休息日，不需額外暖身。')
           : (lang === 'en' ? 'Begin with the 8-movement dynamic warm-up flow.' : '以標準八段動態暖身循序啟動關節與核心。')),
       cooldownNote: typeof aiDay.cooldownNote === 'string' && aiDay.cooldownNote.trim()
         ? aiDay.cooldownNote.trim().slice(0, 1200)
-        : (aiDay.sessionType === 'rest'
+        : (sessionType === 'rest'
           ? (lang === 'en' ? 'Rest day — focus on sleep and hydration.' : '今日為休息日，以睡眠與補水恢復為主。')
           : (lang === 'en' ? 'Finish with relaxed breathing and gentle mobility.' : '訓練後配合緩慢呼吸與放鬆收尾。')),
       routine,
@@ -658,7 +1060,9 @@ export async function generateAIPeriodPlan({
         report: null,
       };
     } else {
+      const TRANSIENT_OUTPUT_ERRORS = new Set(['AI_INVALID_JSON', 'AI_INCOMPLETE_RESULT', 'AI_EMPTY_RESPONSE']);
       let correctionHint = '';
+      let lastRaw = null;
       for (let attempt = 0; attempt < 2; attempt += 1) {
         const prompt = buildAIPeriodChunkPrompt({
           chunkDates: chunk.dates,
@@ -678,14 +1082,38 @@ export async function generateAIPeriodPlan({
           includeReport,
           correctionHint,
         });
-        const raw = await callChunk({
-          prompt,
-          includeReport,
-          chunkIndex: index,
-          totalChunks: chunks.length,
-          from: chunk.dates[0],
-          to: chunk.dates.at(-1),
-        });
+        let raw;
+        try {
+          raw = await callChunk({
+            prompt,
+            includeReport,
+            chunkIndex: index,
+            totalChunks: chunks.length,
+            from: chunk.dates[0],
+            to: chunk.dates.at(-1),
+          });
+        } catch (error) {
+          if (attempt === 0 && TRANSIENT_OUTPUT_ERRORS.has(error?.message)) {
+            correctionHint = 'Previous response was incomplete or invalid JSON. Keep concept/coachAdvice/report concise so the entire JSON object completes cleanly.';
+            continue;
+          }
+          if (attempt === 1 && lastRaw && TRANSIENT_OUTPUT_ERRORS.has(error?.message)) {
+            validated = mergeAndValidateAIPeriodChunk(lastRaw, {
+              chunkDates: chunk.dates,
+              policies,
+              exercises,
+              context,
+              dailyTime: time,
+              existingSessions: existing,
+              includeReport,
+              lang,
+              reconcile: true,
+            });
+            break;
+          }
+          throw error;
+        }
+        if (raw && typeof raw === 'object' && Array.isArray(raw.days)) lastRaw = raw;
         try {
           validated = mergeAndValidateAIPeriodChunk(raw, {
             chunkDates: chunk.dates,
@@ -696,11 +1124,28 @@ export async function generateAIPeriodPlan({
             existingSessions: existing,
             includeReport,
             lang,
+            reconcile: false,
           });
           break;
         } catch (error) {
-          if (attempt === 1) throw error;
-          correctionHint = `Validation failed with "${error.message}". Ensure every date matches editableDates, respect dailyTime=${time} minutes, include preparation on the first strength exercise, avoid repeating locked 8 warm-up IDs, and keep E-class jump contacts <= 24.`;
+          if (attempt === 1) {
+            if (raw && typeof raw === 'object' && Array.isArray(raw.days)) {
+              validated = mergeAndValidateAIPeriodChunk(raw, {
+                chunkDates: chunk.dates,
+                policies,
+                exercises,
+                context,
+                dailyTime: time,
+                existingSessions: existing,
+                includeReport,
+                lang,
+                reconcile: true,
+              });
+              break;
+            }
+            throw error;
+          }
+          correctionHint = `Validation failed with "${error.message}". Ensure every date matches editableDates, leave a 2–3 minute buffer under dailyTime=${time} minutes, include preparation on the first strength exercise, use only IDs from the candidate list, avoid repeating locked 8 warm-up IDs, and keep E-class jump contacts <= 24.`;
         }
       }
     }

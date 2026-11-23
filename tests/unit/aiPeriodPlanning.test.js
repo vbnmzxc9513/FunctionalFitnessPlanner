@@ -238,3 +238,134 @@ test('buildAIPeriodChunkPrompt enforces 56KB budget even with many custom exerci
   });
   assert.ok(Buffer.byteLength(prompt, 'utf8') <= 56000);
 });
+
+test('generateAIPeriodPlan reconciles persistent LLM slips (overshoot, missing prep, unit text, ineligible ID, wrong phase, jump volume) while keeping all safety invariants', async () => {
+  const { estimateSessionMinutes } = await import('../../src/domain/sessions.js');
+  const { planningExercises } = await import('../../src/domain/planning.js');
+  // Bodyweight-only context with tight 20-minute budget
+  const context = {
+    ...DEFAULT_PLANNING_CONTEXT,
+    trainingDays: [1],
+    badmintonDays: [],
+    equipment: [],
+  };
+  const eligible = planningExercises(exercises, context);
+  let attempts = 0;
+
+  // Simulate an LLM that keeps making realistic slips on BOTH attempts
+  const result = await generateAIPeriodPlan({
+    exercises,
+    profile: { context, focus: 'strength', time: '20' },
+    range: { from: '2026-11-23', to: '2026-11-23' },
+    today: '2026-11-23',
+    lang: 'zh',
+    callChunk: async ({ includeReport }) => {
+      attempts += 1;
+      return {
+        days: [{
+          date: '2026-11-23',
+          name: '下肢訓練',
+          theme: '煞車與爆發',
+          concept: '建立下肢穩定與彈性',
+          coachAdvice: '保留餘力，動作穩定優先。',
+          sessionType: 'training',
+          warmupNote: '先做八段動態暖身。',
+          cooldownNote: '緩和呼吸收尾。',
+          routine: [
+            'bf_B01',            // valid bodyweight lower
+            'nonexistent_id',    // hallucinated ID -> must be stripped
+            'bf_C04',            // requires dumbbell/equipment -> ineligible -> must be stripped
+            'bf_E01',            // jump exercise mislabeled as strength & > 24 contacts
+            'dead_bug',          // valid core
+            'plank',             // extra exercise causing overshoot on 20-min day
+          ],
+          prescriptions: [
+            // Missing preparation & unit text inside value + excessive sets/rest
+            { id: 'bf_B01', sets: 5, value: '10 次', unit: 'reps', restSeconds: 120, perSide: true, phase: 'strength' },
+            { id: 'nonexistent_id', sets: 3, value: '10', unit: 'reps', restSeconds: 60, perSide: false, phase: 'strength' },
+            { id: 'bf_C04', sets: 3, value: '10', unit: 'reps', restSeconds: 60, perSide: false, phase: 'strength' },
+            { id: 'bf_E01', sets: 4, value: '10', unit: 'reps', restSeconds: 90, perSide: false, phase: 'strength' },
+            { id: 'dead_bug', sets: 4, value: '12', unit: 'reps', restSeconds: 60, perSide: true, phase: 'accessory' },
+            { id: 'plank', sets: 4, value: '45', unit: 'seconds', restSeconds: 60, perSide: false, phase: 'accessory' },
+          ],
+        }],
+        ...(includeReport ? {
+          report: {
+            reviewAndPraise: '今天開始建立新的體能基準，一步一步累積最重要！',
+            reminders: ['控制每日 20 分鐘上限，品質勝過組數。'],
+            planOverview: '本週以穩定下肢煞車與核心控制為主軸。',
+            checkpoints: '觀察翌日腿部疲勞狀態作為下週參考。',
+          },
+        } : {}),
+      };
+    },
+  });
+
+  assert.equal(attempts, 2, 'Should attempt strict retry once before deterministic reconciliation');
+  assert.equal(result.sessions.length, 1);
+  const day = result.sessions[0];
+  assert.equal(isDailyWarmupComplete(day), true, 'Locked 8-item dynamic warm-up must remain intact');
+  assert.deepEqual(day.routine.slice(0, 8), [...DAILY_WARMUP_IDS]);
+  assert.ok(!day.routine.includes('nonexistent_id'), 'Unknown IDs must be stripped');
+  assert.ok(!day.routine.includes('bf_C04'), 'Ineligible equipment IDs must be stripped');
+  assert.ok(estimateSessionMinutes(day, eligible) <= 20, `Reconciled session must fit <= 20m (got ${estimateSessionMinutes(day, eligible)}m)`);
+  const firstStrength = day.prescriptions.find(d => d.phase === 'strength');
+  if (firstStrength) {
+    assert.ok(firstStrength.preparation, 'First strength move must have a valid preparation set');
+  }
+  const jumpDose = day.prescriptions.find(d => d.id === 'bf_E01');
+  if (jumpDose) {
+    assert.equal(jumpDose.phase, 'skill', 'Power/jump move must be normalized to skill phase');
+  }
+});
+
+test('generateAIPeriodPlan retries transient JSON truncation once and fails fast on auth/quota errors', async () => {
+  const context = { ...DEFAULT_PLANNING_CONTEXT, trainingDays: [1], badmintonDays: [] };
+  let calls = 0;
+  const recovered = await generateAIPeriodPlan({
+    exercises,
+    profile: { context, focus: 'balanced', time: '35' },
+    range: { from: '2026-11-23', to: '2026-11-23' },
+    today: '2026-11-23',
+    lang: 'zh',
+    callChunk: async ({ prompt, includeReport }) => {
+      calls += 1;
+      if (calls === 1) throw new Error('AI_INCOMPLETE_RESULT');
+      return mockChunkResponse(prompt, includeReport);
+    },
+  });
+  assert.equal(calls, 2);
+  assert.equal(recovered.sessions.length, 1);
+
+  let authCalls = 0;
+  await assert.rejects(
+    () => generateAIPeriodPlan({
+      exercises,
+      profile: { context, focus: 'balanced', time: '35' },
+      range: { from: '2026-11-23', to: '2026-11-23' },
+      today: '2026-11-23',
+      lang: 'zh',
+      callChunk: async () => {
+        authCalls += 1;
+        throw new Error('API_KEY_INVALID');
+      },
+    }),
+    { message: 'API_KEY_INVALID' },
+  );
+  assert.equal(authCalls, 1, 'Auth errors must fail immediately without retrying');
+});
+
+test('filterSupportedModels removes unstable/preview/non-text models and ranks gemini-2.5-flash first', async () => {
+  const { filterSupportedModels } = await import('../../src/services/gemini.js');
+  const options = filterSupportedModels([
+    { name: 'models/gemini-3.0-pro-preview', supportedGenerationMethods: ['generateContent'] },
+    { name: 'models/gemini-2.5-pro', supportedGenerationMethods: ['generateContent'] },
+    { name: 'models/gemini-2.5-flash-lite', supportedGenerationMethods: ['generateContent'] },
+    { name: 'models/gemini-2.0-flash-exp', supportedGenerationMethods: ['generateContent'] },
+    { name: 'models/gemini-2.5-flash-image', supportedGenerationMethods: ['generateContent'] },
+    { name: 'models/gemini-2.5-flash', supportedGenerationMethods: ['generateContent'] },
+    { name: 'models/gemini-1.5-pro', supportedGenerationMethods: ['generateContent'] },
+    { name: 'models/embedding-001', supportedGenerationMethods: ['embedContent'] },
+  ]);
+  assert.deepEqual(options.map(m => m.id), ['gemini-2.5-flash', 'gemini-2.5-pro']);
+});

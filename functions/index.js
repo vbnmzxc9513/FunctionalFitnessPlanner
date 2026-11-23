@@ -38,14 +38,14 @@ async function readBoundedResponseJson(response, maxBytes = 200000) {
 async function callGeminiBounded({ prompt, model, schema }) {
   const isFlash = String(model || '').includes('flash');
   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-    method: 'POST', signal: AbortSignal.timeout(45000),
+    method: 'POST', signal: AbortSignal.timeout(isFlash ? 45000 : 52000),
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': geminiKey.value() },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
         temperature: 0.3,
-        maxOutputTokens: 8192,
-        ...(isFlash ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
+        maxOutputTokens: isFlash ? 8192 : 16384,
+        thinkingConfig: { thinkingBudget: isFlash ? 0 : 1024 },
         responseMimeType: 'application/json',
         responseSchema: schema,
       },
@@ -105,21 +105,32 @@ const service = createTrialService({
 const memberService = createMemberPeriodService({
   getMember: getMemberDoc,
   consumeQuota: consumeMemberQuota,
-  generate: ({ prompt, model, includeReport }) => callGeminiBounded({
-    prompt,
-    model,
-    schema: periodChunkSchema(includeReport),
-  }),
+  generate: async ({ prompt, model, includeReport }) => {
+    const schema = periodChunkSchema(includeReport);
+    try {
+      return await callGeminiBounded({ prompt, model, schema });
+    } catch (error) {
+      if (model !== MODEL) {
+        return callGeminiBounded({ prompt, model: MODEL, schema });
+      }
+      throw error;
+    }
+  },
 });
 
 const memberCoachService = createMemberCoachService({
   getMember: getMemberDoc,
   consumeQuota: consumeMemberQuota,
-  generate: ({ systemContext, messages, model }) => callGeminiCoachBounded({
-    systemContext,
-    messages,
-    model,
-  }),
+  generate: async ({ systemContext, messages, model }) => {
+    try {
+      return await callGeminiCoachBounded({ systemContext, messages, model });
+    } catch (error) {
+      if (model !== MODEL) {
+        return callGeminiCoachBounded({ systemContext, messages, model: MODEL });
+      }
+      throw error;
+    }
+  },
 });
 
 export const requestAiTrialPlan = onCall({
@@ -142,7 +153,7 @@ export const requestAiTrialPlan = onCall({
 
 export const requestMemberAiPeriodChunk = onCall({
   region: 'asia-east1', enforceAppCheck: false, secrets: [geminiKey],
-  maxInstances: 4, concurrency: 2, timeoutSeconds: 60, memory: '256MiB',
+  maxInstances: 4, concurrency: 2, timeoutSeconds: 90, memory: '256MiB',
 }, async request => {
   try {
     return await memberService({

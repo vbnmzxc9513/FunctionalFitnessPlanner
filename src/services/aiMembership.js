@@ -75,7 +75,7 @@ async function getMemberFunctions() {
 async function getMemberCallable() {
   if (memberCallable) return memberCallable;
   const { functions, httpsCallable } = await getMemberFunctions();
-  memberCallable = httpsCallable(functions, 'requestMemberAiPeriodChunk', { timeout: 65000 });
+  memberCallable = httpsCallable(functions, 'requestMemberAiPeriodChunk', { timeout: 95000 });
   return memberCallable;
 }
 

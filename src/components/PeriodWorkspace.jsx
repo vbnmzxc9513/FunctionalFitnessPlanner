@@ -57,6 +57,26 @@ function aiErrorMessage(code, lang) {
       ? 'Member cloud AI service is not available right now. Use your own API key or the free planner.'
       : '會員雲端 AI 服務目前無法連線（請確認後端已部署），可改用個人 API Key 或免費規則排課。';
   }
+  if (code === 'AI_MEMBER_SIGN_IN_REQUIRED') {
+    return en
+      ? 'Please sign in with Google to use Member Cloud AI, or switch to your own API key / free planner.'
+      : '請先使用 Google 帳號登入以啟用會員雲端 AI，或改用個人 API Key／免費規則排課。';
+  }
+  if (code === 'AI_MEMBER_FAILED') {
+    return en
+      ? 'The cloud AI model did not complete this request (it may be temporarily busy). Please retry or switch to Gemini 2.5 Flash / the free planner.'
+      : '雲端 AI 模型暫時未能完成回覆（可能過載或逾時），請重試一次、切換至 Gemini 2.5 Flash，或改用免費規則排課。';
+  }
+  if (code === 'AI_MEMBER_INVALID_INPUT') {
+    return en
+      ? 'The request exceeded the cloud AI input limit. Try shortening your notes or planning fewer weeks at once.'
+      : '送出的條件內容超出雲端 AI 上限，請精簡補充說明或縮短單次規劃天數後再試。';
+  }
+  if (code === 'AI_INVALID_JSON' || code === 'AI_INCOMPLETE_RESULT' || code === 'AI_EMPTY_RESPONSE' || code === 'AI_REQUEST_FAILED') {
+    return en
+      ? 'The AI model returned an incomplete response. Please retry or switch to Gemini 2.5 Flash.'
+      : 'AI 模型這次未完整回覆，請重試一次，或改選 Gemini 2.5 Flash。';
+  }
   if (code === 'NETWORK_ERROR') {
     return en
       ? 'Network error while contacting Gemini. Check your connection and retry.'
@@ -177,8 +197,24 @@ export default function PeriodWorkspace({
   };
 
   const usingMemberProxy = Boolean(aiMember?.active && !preferOwnKey);
-  const availableModels = models?.length ? models : DEFAULT_AI_MODELS;
+  const availableModels = usingMemberProxy
+    ? DEFAULT_AI_MODELS
+    : (models?.length ? models : DEFAULT_AI_MODELS);
   const activeModel = availableModels.some(item => item.id === model) ? model : availableModels[0].id;
+
+  const invokeChunk = async ({ prompt, includeReport, signal }) => {
+    if (!usingMemberProxy) {
+      return generateAIPeriodChunk({ prompt, apiKey, model: activeModel, includeReport, signal });
+    }
+    try {
+      return await requestMemberAiPeriodChunk({ prompt, includeReport, model: activeModel, signal });
+    } catch (error) {
+      if (activeModel !== 'gemini-2.5-flash' && error?.message === 'AI_MEMBER_FAILED' && !signal?.aborted) {
+        return requestMemberAiPeriodChunk({ prompt, includeReport, model: 'gemini-2.5-flash', signal });
+      }
+      throw error;
+    }
+  };
 
   const loadState = selected => (
     uid
@@ -322,11 +358,7 @@ export default function PeriodWorkspace({
           onProgress: info => {
             if (id === request.current) setAiProgress(info);
           },
-          callChunk: ({ prompt, includeReport }) => (
-            usingMemberProxy
-              ? requestMemberAiPeriodChunk({ prompt, includeReport, model: activeModel, signal: controller.signal })
-              : generateAIPeriodChunk({ prompt, apiKey, model: activeModel, includeReport, signal: controller.signal })
-          ),
+          callChunk: ({ prompt, includeReport }) => invokeChunk({ prompt, includeReport, signal: controller.signal }),
         });
       } else {
         const templateResult = generatePeriodPlan(
@@ -371,6 +403,7 @@ export default function PeriodWorkspace({
       if (cause?.message === 'ABORTED' || controller.signal.aborted) return;
       if (id !== request.current) return;
       if (effectiveMode === 'ai') {
+        console.warn('[AI Period]', cause?.message || 'UNKNOWN');
         setError(aiErrorMessage(cause?.message, lang));
         setAiFailed(true);
       } else {
@@ -438,11 +471,7 @@ export default function PeriodWorkspace({
         onProgress: info => {
           if (id === request.current) setAiProgress(info);
         },
-        callChunk: ({ prompt, includeReport }) => (
-          usingMemberProxy
-            ? requestMemberAiPeriodChunk({ prompt, includeReport, model: activeModel, signal: controller.signal })
-            : generateAIPeriodChunk({ prompt, apiKey, model: activeModel, includeReport, signal: controller.signal })
-        ),
+        callChunk: ({ prompt, includeReport }) => invokeChunk({ prompt, includeReport, signal: controller.signal }),
       });
 
       if (id !== request.current || captured !== fingerprintRef.current) return false;
@@ -458,6 +487,7 @@ export default function PeriodWorkspace({
     } catch (cause) {
       if (cause?.message === 'ABORTED' || controller.signal.aborted) return false;
       if (id !== request.current) return false;
+      console.warn('[AI Period Refine]', cause?.message || 'UNKNOWN');
       setError(aiErrorMessage(cause?.message, lang));
       setAiFailed(true);
       return false;

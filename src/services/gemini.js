@@ -116,25 +116,32 @@ export function buildPeriodChunkSchema(includeReport = false) {
   return { type: 'OBJECT', properties, required };
 }
 
-export async function generateAIPeriodChunk({
-  prompt,
-  apiKey,
-  model = 'gemini-2.5-flash',
-  includeReport = false,
-  signal,
-} = {}) {
-  const key = String(apiKey || '').trim();
-  if (!key) throw new Error('API_KEY_MISSING');
-  if (signal?.aborted) throw new Error('ABORTED');
+const FALLBACK_PLANNING_MODEL = 'gemini-2.5-flash';
+const NON_FALLBACK_ERRORS = new Set(['API_KEY_MISSING', 'API_KEY_INVALID', 'RATE_LIMITED', 'ABORTED', 'NETWORK_ERROR']);
 
+function supportsThinkingConfig(model) {
+  return /^gemini-(2\.5|3)/.test(String(model || ''));
+}
+
+function buildPeriodGenerationConfig(model, includeReport) {
+  const isFlash = String(model || '').includes('flash');
+  const thinking = supportsThinkingConfig(model)
+    ? { thinkingConfig: { thinkingBudget: isFlash ? 0 : 1024 } }
+    : {};
+  return {
+    temperature: 0.35,
+    maxOutputTokens: isFlash ? 8192 : 16384,
+    ...thinking,
+    responseMimeType: 'application/json',
+    responseSchema: buildPeriodChunkSchema(includeReport),
+  };
+}
+
+async function requestPeriodChunkOnce({ prompt, key, model, includeReport, signal }) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`;
   const payload = {
     contents: [{ parts: [{ text: prompt }] }],
-    generationConfig: {
-      temperature: 0.35,
-      responseMimeType: 'application/json',
-      responseSchema: buildPeriodChunkSchema(includeReport),
-    },
+    generationConfig: buildPeriodGenerationConfig(model, includeReport),
   };
 
   let response;
@@ -167,38 +174,52 @@ export async function generateAIPeriodChunk({
     throw new Error(message || 'AI_REQUEST_FAILED');
   }
 
-  const parts = data?.candidates?.[0]?.content?.parts || [];
+  const candidate = data?.candidates?.[0];
+  const parts = candidate?.content?.parts || [];
   const text = parts.filter(part => !part.thought).map(part => part.text || '').join('').trim();
   if (!text) throw new Error('AI_EMPTY_RESPONSE');
   try {
     return JSON.parse(text);
   } catch {
+    if (candidate?.finishReason === 'MAX_TOKENS') throw new Error('AI_INCOMPLETE_RESULT');
     throw new Error('AI_INVALID_JSON');
   }
 }
 
-export async function generateCoachReply({
-  systemContext = '',
-  messages = [],
+export async function generateAIPeriodChunk({
+  prompt,
   apiKey,
-  model = 'gemini-2.5-flash',
+  model = FALLBACK_PLANNING_MODEL,
+  includeReport = false,
   signal,
 } = {}) {
   const key = String(apiKey || '').trim();
   if (!key) throw new Error('API_KEY_MISSING');
   if (signal?.aborted) throw new Error('ABORTED');
 
-  const normalized = normalizeCoachHistory(messages);
-  if (!normalized.length) throw new Error('AI_EMPTY_MESSAGE');
+  try {
+    return await requestPeriodChunkOnce({ prompt, key, model, includeReport, signal });
+  } catch (error) {
+    if (model !== FALLBACK_PLANNING_MODEL && !NON_FALLBACK_ERRORS.has(error?.message) && !signal?.aborted) {
+      return requestPeriodChunkOnce({ prompt, key, model: FALLBACK_PLANNING_MODEL, includeReport, signal });
+    }
+    throw error;
+  }
+}
 
+async function requestCoachReplyOnce({ systemText, normalized, key, model, signal }) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`;
-  const systemText = String(systemContext || '').trim();
+  const isFlash = String(model || '').includes('flash');
+  const thinking = supportsThinkingConfig(model)
+    ? { thinkingConfig: { thinkingBudget: isFlash ? 0 : 1024 } }
+    : {};
   const payload = {
     ...(systemText ? { systemInstruction: { parts: [{ text: systemText }] } } : {}),
     contents: normalized.map(m => ({ role: m.role, parts: [{ text: m.text }] })),
     generationConfig: {
       temperature: 0.6,
-      maxOutputTokens: 2048,
+      maxOutputTokens: isFlash ? 2048 : 4096,
+      ...thinking,
     },
   };
 
@@ -236,6 +257,31 @@ export async function generateCoachReply({
   const text = parts.filter(part => !part.thought).map(part => part.text || '').join('').trim();
   if (!text) throw new Error('AI_EMPTY_RESPONSE');
   return text;
+}
+
+export async function generateCoachReply({
+  systemContext = '',
+  messages = [],
+  apiKey,
+  model = FALLBACK_PLANNING_MODEL,
+  signal,
+} = {}) {
+  const key = String(apiKey || '').trim();
+  if (!key) throw new Error('API_KEY_MISSING');
+  if (signal?.aborted) throw new Error('ABORTED');
+
+  const normalized = normalizeCoachHistory(messages);
+  if (!normalized.length) throw new Error('AI_EMPTY_MESSAGE');
+
+  const systemText = String(systemContext || '').trim();
+  try {
+    return await requestCoachReplyOnce({ systemText, normalized, key, model, signal });
+  } catch (error) {
+    if (model !== FALLBACK_PLANNING_MODEL && !NON_FALLBACK_ERRORS.has(error?.message) && !signal?.aborted) {
+      return requestCoachReplyOnce({ systemText, normalized, key, model: FALLBACK_PLANNING_MODEL, signal });
+    }
+    throw error;
+  }
 }
 
 const VALID_EXERCISE_TYPES = ['mobility', 'lower', 'core', 'upper_pull', 'upper_push', 'full', 'power'];
@@ -301,37 +347,44 @@ export const generateExerciseDetails = async (exerciseName, userApiKey, selected
   }
 };
 
-export const checkAvailableModels = async (key) => {
-    const defaultModels = [{ id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' }];
-    try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
-      if (!response.ok) return defaultModels;
-      const data = await response.json();
-      const validModels = (data.models || [])
-        .filter(m => m.supportedGenerationMethods?.includes('generateContent') && m.name.startsWith('models/gemini-'))
-        .map(m => m.name.replace('models/', ''));
+const STABLE_PLANNING_MODEL_RE = /^gemini-(?:2\.(?:0|5)|[3-9]\.\d+)-(?:flash|pro)$/;
+const MODEL_PRIORITY = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash'];
 
-      // Remove duplicates and deprecated versions, and obscure preview/image models
-      const options = validModels
-        .filter(m =>
-          !m.includes('vision') &&
-          !m.includes('latest') &&
-          !m.includes('image') &&
-          !m.includes('tts') &&
-          (!m.includes('preview') || m.includes('3.0') || m.includes('3.1'))
-        )
-        .sort((a, b) => b.localeCompare(a)) // Put newer versions first
-        .map(m => {
-          let label = m.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
-          // Enhance label if it's an experimental or premium pro model
-          if (m.includes('exp') || (m.includes('pro') && !m.includes('test'))) {
-            label = label + ' 💎';
-          }
-          return { id: m, label: label };
-        });
+export function filterSupportedModels(rawModels = []) {
+  const defaultModels = [{ id: FALLBACK_PLANNING_MODEL, label: 'Gemini 2.5 Flash' }];
+  const validModels = [...new Set(
+    (Array.isArray(rawModels) ? rawModels : [])
+      .filter(m => m?.supportedGenerationMethods?.includes('generateContent') && typeof m?.name === 'string' && m.name.startsWith('models/gemini-'))
+      .map(m => m.name.replace('models/', ''))
+      .filter(id => STABLE_PLANNING_MODEL_RE.test(id)),
+  )];
 
-      return options.length > 0 ? options : defaultModels;
-    } catch {
-      return defaultModels;
+  if (!validModels.length) return defaultModels;
+
+  validModels.sort((a, b) => {
+    const rankA = MODEL_PRIORITY.indexOf(a);
+    const rankB = MODEL_PRIORITY.indexOf(b);
+    if (rankA !== -1 || rankB !== -1) {
+      return (rankA === -1 ? 999 : rankA) - (rankB === -1 ? 999 : rankB);
     }
-  };
+    return b.localeCompare(a);
+  });
+
+  return validModels.map(id => {
+    let label = id.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
+    if (id.includes('pro')) label = `${label} 💎`;
+    return { id, label };
+  });
+}
+
+export const checkAvailableModels = async (key) => {
+  const defaultModels = [{ id: FALLBACK_PLANNING_MODEL, label: 'Gemini 2.5 Flash' }];
+  try {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
+    if (!response.ok) return defaultModels;
+    const data = await response.json();
+    return filterSupportedModels(data.models);
+  } catch {
+    return defaultModels;
+  }
+};
