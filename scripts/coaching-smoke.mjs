@@ -124,13 +124,14 @@ try {
     };
     await page.evaluateOnNewDocument(fixture => { if (!sessionStorage.getItem('__legacySeeded')) { sessionStorage.setItem('fitness_public_preview_v1', JSON.stringify({ publicDraft: fixture })); sessionStorage.setItem('__legacySeeded', 'true'); } }, legacyFixture(new Date(timestamp), { focus: 'balanced' }));
     await page.goto(siteUrl, { waitUntil: 'networkidle2' });
-    assert.equal(await page.$$eval('nav button', buttons => buttons.length), 3);
+    assert.equal(await page.$$eval('nav button', buttons => buttons.length), 4);
     await click('今天'); await page.waitForSelector('[data-testid="session-start"]', { visible: true });
     await click('開始今天訓練'); await page.screenshot({ path: `/tmp/fitness-ux-${layout}-today.png`, fullPage: false }); await page.waitForSelector('[data-testid="current-exercise"]', { visible: true });
     const initialCompletion = (await draft()).completed;
     const flow = '[data-testid="current-exercise"] [data-testid="exercise-guide-bf_A13"]';
     await page.waitForSelector(flow, { visible: true });
     assert.equal(await page.$eval(flow, item => item.open), true, `${layout}: eight-part flow starts expanded`);
+    await page.waitForSelector(`${flow} li`, { visible: true });
     assert.equal(await page.$$eval(`${flow} li`, items => items.length), 8, `${layout}: every part is visible without another page`);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${layout}: flow does not overflow horizontally`);
     await page.screenshot({ path: `/tmp/fitness-ux-${layout}-daily-warmup.png`, fullPage: true });

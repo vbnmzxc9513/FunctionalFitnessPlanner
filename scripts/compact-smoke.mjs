@@ -58,6 +58,7 @@ try {
     await page.waitForSelector('dialog[open]', { visible: true });
     await click('dialog[open] [data-testid="exercise-guide-bf_A16"] > summary');
     assert.equal(await page.$eval('dialog[open] [data-testid="exercise-guide-bf_A16"]', item => item.open), true);
+    await page.waitForSelector('dialog[open] [data-testid="exercise-guide-bf_A16"] li', { visible: true });
     assert.equal(await page.$$eval('dialog[open] [data-testid="exercise-guide-bf_A16"] li', items => items.length), 2, `${layout}: held movement shows its own actionable steps`);
     assert.equal(await page.evaluate(() => localStorage.getItem('fitness_date_period_v1')), before, `${layout}: opening details creates no completion or log`);
     assert.equal(await page.evaluate(() => document.body.style.overflow), 'hidden');

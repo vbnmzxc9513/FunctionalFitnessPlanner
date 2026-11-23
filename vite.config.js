@@ -17,6 +17,20 @@ export default defineConfig(({ mode }) => {
         this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${siteUrl}</loc></url></urlset>\n` });
       },
     }],
+    optimizeDeps: {
+      include: [
+        'react',
+        'react-dom/client',
+        'lucide-react',
+        'firebase/app',
+        'firebase/app-check',
+        'firebase/auth',
+        'firebase/firestore',
+        'firebase/functions',
+        'react-markdown',
+        'recharts',
+      ],
+    },
     build: {
       rollupOptions: { output: { manualChunks(id) {
         if (id.includes('/node_modules/react/') || id.includes('/node_modules/react-dom/') || id.includes('/node_modules/scheduler/')) return 'react-vendor';
