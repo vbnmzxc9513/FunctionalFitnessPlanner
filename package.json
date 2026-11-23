@@ -12,6 +12,8 @@
     "deploy": "gh-pages -d dist",
     "test": "node --test tests/unit/*.test.js",
     "test:integration": "firebase emulators:exec --project demo-fitness-planner --only auth,firestore \"node scripts/integration.mjs\"",
+    "test:integration:data": "firebase emulators:exec --project demo-fitness-planner --only auth,firestore \"node scripts/integration.mjs --data-only\"",
+    "test:integration:core": "firebase emulators:exec --project demo-fitness-planner --only auth,firestore \"node scripts/integration.mjs --core-browser\"",
     "check": "npm run lint && npm test && npm run build"
   },
   "dependencies": {

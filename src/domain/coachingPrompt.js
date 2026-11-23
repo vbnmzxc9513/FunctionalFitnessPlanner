@@ -2,6 +2,7 @@ import { exerciseTrainingTargets } from './trainingTargets.js';
 import { competitionDaysAway, normalizePlanningContext } from './planning.js';
 import { createMobilityContext } from './mobility.js';
 import { dailyWarmupPrescriptions } from './quickWorkouts.js';
+import { DEFAULT_MAX_PROMPT_BYTES, selectPromptCandidates, utf8Bytes } from './promptCandidates.js';
 
 // Historical planning facts preserve identity and dose, without repeatedly
 // sending the old plan's long notes or copying unrecognized private fields.
@@ -32,16 +33,21 @@ export function buildPlanningPrompt({ lastWeekData, currentLevel, lastWeekFeedba
     .map(([week, record]) => ({ week, completed: Object.values(record.completed || {}).filter(Boolean).length,
       total: record.totalExercises ?? null, feedback: record.feedbackValue ?? null }));
   const specificTargets = (id, exercise) => exerciseTrainingTargets(id, exercise).filter(region => profile.targetRegions.includes(region) && !['legs', 'posterior', 'upper', 'core'].includes(region));
-  const exercises = Object.entries(availableExercises).filter(([, exercise]) => !exercise.legacySequence && exercise.active !== false && !exercise.deleted).map(([id, exercise]) => ({
-    id, name: exercise.name, type: exercise.type, category: exercise.category || 'custom',
-    equipmentOptions: exercise.equipmentOptions ?? '未分類；不得假設器材',
-    ...(exercise.advanced ? { advanced: true } : {}), ...(exercise.priority ? { priority: true } : {}),
-    ...(exercise.requiresPartner ? { requiresPartner: true } : {}), shoulderLoaded: exercise.shoulderLoaded ?? '未分類',
-    ...(exercise.restrictionTags?.length ? { restrictionTags: exercise.restrictionTags } : {}),
-    starterDose: exercise.prescription ? ['sets','value','unit','restSeconds','perSide'].map(key => exercise.prescription[key] ?? null) : null, cue: exercise.tip, ...(specificTargets(id, exercise).length ? { trainingTargets: specificTargets(id, exercise) } : {}),
-    regression: exercise.easier || null,
-  }));
-  return `你是一位羽球功能性體能教練，為使用者排出可恢復、可追蹤的本週午休／體能課。以到位、煞車、回位、協調和力量傳遞為目的，避免用汗量、痠痛或動作數量評價效果。
+  const candidateEntries = Object.entries(availableExercises).filter(([, exercise]) => !exercise.legacySequence && exercise.active !== false && !exercise.deleted).map(([id, exercise]) => [
+    id,
+    exercise,
+    {
+      id, name: exercise.name, type: exercise.type, category: exercise.category || 'custom',
+      equipmentOptions: exercise.equipmentOptions ?? '未分類；不得假設器材',
+      ...(exercise.advanced ? { advanced: true } : {}), ...(exercise.priority ? { priority: true } : {}),
+      ...(exercise.requiresPartner ? { requiresPartner: true } : {}), shoulderLoaded: exercise.shoulderLoaded ?? '未分類',
+      ...(exercise.restrictionTags?.length ? { restrictionTags: exercise.restrictionTags } : {}),
+      starterDose: exercise.prescription ? ['sets','value','unit','restSeconds','perSide'].map(key => exercise.prescription[key] ?? null) : null, cue: exercise.tip, ...(specificTargets(id, exercise).length ? { trainingTargets: specificTargets(id, exercise) } : {}),
+      regression: exercise.easier || null,
+    },
+  ]);
+
+  const assemblePrompt = (candidatesJson, candidateNotice = '') => `你是一位羽球功能性體能教練，為使用者排出可恢復、可追蹤的本週午休／體能課。以到位、煞車、回位、協調和力量傳遞為目的，避免用汗量、痠痛或動作數量評價效果。
 
 【時間與週期】
 今天：${currentDate || '日期未提供'}；課表週次：${currentWeek || '未提供'}。
@@ -111,7 +117,7 @@ mobilityHistory 只摘要已載入資訊；recorded_training 表示有實做／�
 
 【可用候選動作；ID 必須完全相同】
 starterDose 依序為 [sets,value,unit,restSeconds,perSide]，保持原處方數值。省略的 advanced／priority／requiresPartner 旗標為 false；器材或肩部資訊未知時仍明示未知，不推定可用。restrictionTags 表示需核對的姿勢或支撐限制，不是個人治療放行。
-${JSON.stringify(exercises)}
+${candidateNotice}${JSON.stringify(candidatesJson)}
 
 【輸出要求】
 只輸出符合 schema 的 JSON，不加程式碼圍欄。schedule 恰有五天、day 1–5 各一次。routine 是候選 ID 陣列，不使用名稱、未知 ID 或同日重複 ID。
@@ -120,4 +126,25 @@ ${JSON.stringify(exercises)}
 conclusion 用簡潔 Markdown，段落與標題留空行，說明本週重點、球日銜接、剩餘週期／賽前策略、恢復與加減量規則、未知資料及限制。語氣具體，不強迫誇獎、不做身體診斷或誇大證據。
 每日 theme 寫目的；concept 說羽球連結與動作原理；coachAdvice 說劑量／預估時間、當日恢復檢查、與前後球日銜接，對未觀察到的痠痛用條件句，不斷言學員今天必定痠痛。
 ${lang === 'en' ? 'Write all human-facing text in ENGLISH. Keep IDs and unit codes unchanged.' : '所有給使用者的文字使用繁體中文，ID 與 unit 代碼維持原值。'}`;
+
+  const noticeTemplate = (includedCount, totalEligible) => `已依每日暖身、本週手選、前期課表、目標部位與僵硬部位優先保留 ${includedCount}/${totalEligible} 項候選動作以符合提示上限；未列項目不可引用。\n`;
+  const baseBytesWithoutNotice = utf8Bytes(assemblePrompt([], '')) - 2; // exclude '[]' placeholder
+  const fullSelection = selectPromptCandidates(candidateEntries, {
+    profile,
+    previousPlan,
+    baseBytes: baseBytesWithoutNotice,
+    maxBytes: DEFAULT_MAX_PROMPT_BYTES,
+  });
+  if (!fullSelection.budgeted) {
+    return assemblePrompt(fullSelection.candidates, '');
+  }
+  const maxNoticeBytes = utf8Bytes(noticeTemplate(candidateEntries.length, candidateEntries.length));
+  const selection = selectPromptCandidates(candidateEntries, {
+    profile,
+    previousPlan,
+    baseBytes: baseBytesWithoutNotice + maxNoticeBytes,
+    maxBytes: DEFAULT_MAX_PROMPT_BYTES,
+  });
+  const notice = selection.budgeted ? noticeTemplate(selection.includedCount, selection.totalEligible) : '';
+  return assemblePrompt(selection.candidates, notice);
 }
