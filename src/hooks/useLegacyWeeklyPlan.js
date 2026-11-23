@@ -189,7 +189,7 @@ export function useLegacyWeeklyPlan({
         result = await requestTrialPlan({ context, dailyTime: time, lang, currentWeek, userGoal: aiGoal.slice(0, 300), userMessage: message });
       } else {
         const { generateAIPlan } = await import('../services/gemini.js');
-        result = await generateAIPlan(previous.completed || {}, difficultyLevel, previous.feedbackValue, apiKey, allProgress, data.metrics, aiGoal, time, message, available, lang, undefined,
+        result = await generateAIPlan(previous.completed || {}, difficultyLevel, previous.feedbackValue, apiKey, allProgress, data.metrics, aiGoal, time, message, available, lang, model,
           { context, currentDate: today, currentWeek, previousPlan: savedPlan || data.plans[lastWeek] || null, previousSessions: recentSessions, logs: exerciseLogs, progressByWeek: allProgress, readiness: readinessRecords });
       }
       if (request !== planRequest.current || (auth.currentUser?.uid || '') !== (user?.uid || '')) return;

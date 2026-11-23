@@ -1,5 +1,9 @@
 # Project continuity
 
+## Current AI period planner, AI coach & analytics work (2026-11-22)
+
+Read `docs/ai-period-planner-2026-11-22/DESIGN.md`, `STATE.md`, and `docs/ai-member-setup.md`. Auto-plan (`PeriodWorkspace`) and AI Coach (`AICoachDrawer`, plus in-preview conversational refinement `ai-refine-box`) support Free Rules (for auto-plan), BYOK AI (`gemini_byok_key`), and Member Cloud AI via Cloud Functions (`requestMemberAiPeriodChunk` + `requestMemberAiCoachReply` + Secret Manager + Firestore `aiMembers/{uid}` allowlist & shared `aiMemberQuota`; raw keys never stored in Firestore or sent to member browsers). Preserve locked 8-item dynamic warm-up, protected dates, blue tokens, 4 primary tabs (Today/Plan/Library/Records), lazy-loaded Recharts/Markdown chunks, and direct single-day editing.
+
 ## Current navigation work (2026-11-18)
 
 Read `docs/navigation-library-2026-11-18/DESIGN.md` and STATE for the latest navigation change. Library is a primary destination: Today / Plan / Library / Records. Preserve direct selected-day Add and immersive editor protections.

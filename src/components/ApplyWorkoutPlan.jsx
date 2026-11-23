@@ -2,8 +2,9 @@ import { useBackNavigation } from '../hooks/useBackNavigation.js';
 import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, Check, Loader2 } from 'lucide-react';
 import { assignmentConflicts, assignmentRange, assignmentSummary, materializeAssignments, planOffsets, shiftPlanDate, validateAssignmentConsent } from '../domain/planAssignments.js';
-import { applyLocalPeriod, localPeriodState, periodProfile, normalizePeriodDraft, writePeriodDraft } from '../domain/periodDraft.js';
-import { applyPeriodPlan, loadPeriodState } from '../services/periodRepository.js';
+import { applyLocalPeriod, localPeriodState, periodProfile, normalizePeriodDraft, writePeriodDraft, saveLocalSingleDaySession } from '../domain/periodDraft.js';
+import { applyPeriodPlan, loadPeriodState, saveSingleDaySession } from '../services/periodRepository.js';
+import { getRecordedExerciseIds, mergePreservingRecordedExercises } from '../domain/singleDayEdit.js';
 import { auth } from '../services/firebase.js';
 import { readPeriodDraft } from '../domain/periodDraft.js';
 import { estimateSessionMinutes } from '../domain/sessions.js';
@@ -71,9 +72,31 @@ export default function ApplyWorkoutPlan({ days, name, initialDates, uid, today,
       if (captured !== live.current) return;
       if (uid ? auth.currentUser?.uid !== uid : !!auth.currentUser) throw new Error('SESSION_CHANGED');
       setConflictState(state);
-      validateAssignmentConsent(state, dates, replacements);
-      setPreview({ range, dates: [...dates].sort(), selectedDates: [...dates], replaceDates: [...replacements], sessions, expectedState: state.expectedState,
-        weeklySummaries: assignmentSummary(sessions, exercises, profile.focus), profile: periodProfile(profile), conclusion: name, fingerprint: captured });
+      let finalSessions = sessions;
+      let preservedIds = [];
+      const singleProtected = singleDayEdit && dates.length === 1 && state.protectedDates.includes(dates[0]);
+      if (singleProtected) {
+        const targetDate = dates[0];
+        const recordedIds = getRecordedExerciseIds(targetDate, { progressByWeek: state.progressByWeek, logs: state.logs });
+        preservedIds = [...recordedIds];
+        finalSessions = [mergePreservingRecordedExercises(state.sessionsByDate[targetDate], sessions[0], recordedIds, { exercises, lang })];
+      } else {
+        validateAssignmentConsent(state, dates, replacements);
+      }
+      setPreview({
+        range,
+        dates: [...dates].sort(),
+        selectedDates: [...dates],
+        replaceDates: [...replacements],
+        sessions: finalSessions,
+        preservedIds,
+        singleProtected,
+        expectedState: state.expectedState,
+        weeklySummaries: assignmentSummary(finalSessions, exercises, profile.focus),
+        profile: periodProfile(profile),
+        conclusion: name,
+        fingerprint: captured,
+      });
       setStage('review'); window.scrollTo({ top: 0 });
     } catch (cause) {
       if (captured !== live.current) return;
@@ -95,23 +118,42 @@ export default function ApplyWorkoutPlan({ days, name, initialDates, uid, today,
     running.current = true; setBusy(true); setError('');
     try {
       let applied;
-      validateCurrentProfile(preview.sessions);
-      if (uid) {
-        if (auth.currentUser?.uid !== uid) throw new Error('SESSION_CHANGED');
-        const result = await applyPeriodPlan(uid, preview);
-        if (auth.currentUser?.uid !== uid) throw new Error('SESSION_CHANGED');
-        if (result.appliedDates.length !== dates.length) throw new Error('PERIOD_CHANGED');
-        applied = { ...preview, periodId: result.periodId };
+      if (singleDayEdit && dates.length === 1) {
+        const targetDate = dates[0];
+        const targetSession = preview.sessions[0];
+        if (uid) {
+          if (auth.currentUser?.uid !== uid) throw new Error('SESSION_CHANGED');
+          const saved = await saveSingleDaySession(uid, targetDate, targetSession, { exercises, profile, fallbackPlans, lang });
+          if (auth.currentUser?.uid !== uid) throw new Error('SESSION_CHANGED');
+          applied = { ...preview, sessions: [saved], periodId: saved.periodId };
+        } else {
+          const stored = readPeriodDraft();
+          if (auth.currentUser) throw new Error('SESSION_CHANGED');
+          if (localPeriod?.periodId === 'legacy_public' ? stored !== null : JSON.stringify(stored) !== JSON.stringify(normalizePeriodDraft(localPeriod))) throw new Error('PERIOD_CHANGED');
+          const next = saveLocalSingleDaySession(localPeriod, targetDate, targetSession, { today, exercises, profile, lang });
+          if (!writePeriodDraft(next)) throw new Error('LOCAL_STORAGE_FAILED');
+          onLocalPeriod(next);
+          applied = { ...preview, sessions: [next.sessionsByDate[targetDate]], periodId: next.periodId };
+        }
       } else {
-        // Recheck device state, including changes made in another browser tab.
-        const stored = readPeriodDraft();
-        if (auth.currentUser) throw new Error('SESSION_CHANGED');
-        if (localPeriod?.periodId === 'legacy_public' ? stored !== null : JSON.stringify(stored) !== JSON.stringify(normalizePeriodDraft(localPeriod))) throw new Error('PERIOD_CHANGED');
-        validateAssignmentConsent(localPeriodState(localPeriod, range, today), dates, replacements);
-        const next = applyLocalPeriod(localPeriod, preview, today);
-        if (preview.sessions.some(session => JSON.stringify(next.sessionsByDate[session.date]?.prescriptions) !== JSON.stringify(session.prescriptions) || JSON.stringify(next.sessionsByDate[session.date]?.routine) !== JSON.stringify(session.routine))) throw new Error('PERIOD_CHANGED');
-        if (!writePeriodDraft(next)) throw new Error('LOCAL_STORAGE_FAILED');
-        onLocalPeriod(next); applied = { ...preview, periodId: next.periodId };
+        validateCurrentProfile(preview.sessions);
+        if (uid) {
+          if (auth.currentUser?.uid !== uid) throw new Error('SESSION_CHANGED');
+          const result = await applyPeriodPlan(uid, preview);
+          if (auth.currentUser?.uid !== uid) throw new Error('SESSION_CHANGED');
+          if (result.appliedDates.length !== dates.length) throw new Error('PERIOD_CHANGED');
+          applied = { ...preview, periodId: result.periodId };
+        } else {
+          // Recheck device state, including changes made in another browser tab.
+          const stored = readPeriodDraft();
+          if (auth.currentUser) throw new Error('SESSION_CHANGED');
+          if (localPeriod?.periodId === 'legacy_public' ? stored !== null : JSON.stringify(stored) !== JSON.stringify(normalizePeriodDraft(localPeriod))) throw new Error('PERIOD_CHANGED');
+          validateAssignmentConsent(localPeriodState(localPeriod, range, today), dates, replacements);
+          const next = applyLocalPeriod(localPeriod, preview, today);
+          if (preview.sessions.some(session => JSON.stringify(next.sessionsByDate[session.date]?.prescriptions) !== JSON.stringify(session.prescriptions) || JSON.stringify(next.sessionsByDate[session.date]?.routine) !== JSON.stringify(session.routine))) throw new Error('PERIOD_CHANGED');
+          if (!writePeriodDraft(next)) throw new Error('LOCAL_STORAGE_FAILED');
+          onLocalPeriod(next); applied = { ...preview, periodId: next.periodId };
+        }
       }
       setStage('done'); onApplied?.(applied);
     } catch (cause) {
@@ -143,6 +185,7 @@ export default function ApplyWorkoutPlan({ days, name, initialDates, uid, today,
     </>}
     {stage === 'dates' && singleDayEdit && <div className="single-day-check"><p role="status">{busy ? en ? 'Checking this day…' : '正在檢查這天…' : en ? 'Changes have not been saved.' : '修改尚未儲存。'}</p>{!busy && <button type="button" className="button-secondary" onClick={inspect}>{en ? 'Retry check' : '重新檢查'}</button>}</div>}
     {stage === 'review' && preview && <>
+      {preview.singleProtected && <p role="status" className="rounded-xl bg-sky-50 border border-sky-200 px-4 py-3 text-sm text-sky-900 mb-3">{en ? 'Completed or logged exercises on this day are preserved automatically; your other edits will be saved.' : '這天已完成或有實做紀錄的動作會自動保留原處方；其餘新增或移除調整將直接儲存。'}</p>}
       <div className="assignment-review-list">{preview.sessions.map(day => <section key={day.date}><header><h3 className="assignment-source-label">{dateLabel(day.date)}</h3>{onEdit && <button type="button" disabled={busy} className="assignment-modify-day text-link" onClick={() => editCopy(day.date)}>{en ? 'Edit' : '修改'}</button>}</header>
         <div className="assignment-day-summary"><div><h4>{day.theme}</h4><p>{day.routine.length} {en ? 'exercises' : '個動作'} · {estimateSessionMinutes(day, exercises)} {en ? 'min' : '分鐘'}</p></div><span className={replacements.includes(day.date) && conflictState?.sessionsByDate[day.date] ? 'assignment-replace-tag' : 'assignment-new-tag'}>{replacements.includes(day.date) && conflictState?.sessionsByDate[day.date] ? en ? 'Replace' : '取代' : en ? 'Add' : '新增'}</span></div>
         {Number(profile.time) > 0 && estimateSessionMinutes(day, exercises) > Number(profile.time) && <p className="assignment-warning">{en ? `Exceeds your ${profile.time}-minute limit. Edit to adjust.` : `超出設定的 ${profile.time} 分鐘，可返回修改。`}</p>}

@@ -1,0 +1,8 @@
+# AI Period Planner (1–28 Days), Membership Proxy & Analytics — 2026-11-22
+
+## Goals & Acceptance Contract
+- **P1 (BYOK + Member Dual Auth)**: Auto-plan (`PeriodWorkspace`) supports Free Template (default), AI Coach via browser-local BYOK (`gemini_byok_key`), and AI Coach via Member Cloud Functions proxy (`aiMembers/{uid}` + Secret Manager, key never reaches the browser). Inline keyless setup inside the questionnaire when BYOK key is missing.
+- **P2 (1–28 Day Chunked AI + Locked 8-Item Warm-up)**: Split 1–28 day ranges into ≤7-day weekly chunks with rolling context. Eligible unprotected dates lock and inject the exact 8-item dynamic warm-up (`DAILY_WARMUP_IDS`) with time deducted before AI plans main training/coordination/accessory/cooldown. Protected dates and out-of-range plans are never overwritten. All sessions pass `sanitizePeriodSession` and jump/time/phase/eligibility guards.
+- **P3 (Warm Data-Grounded Coach Report)**: AI produces a 4-section report (recent review & encouragement based solely on real recorded metrics, reminders, period blueprint, checkpoints) encoded cleanly inside the existing 4,000-char `conclusion` limit without breaking existing Firestore period schemas.
+- **P4 (Visual Analytics on Free & AI Previews)**: Both Free Template and AI Coach previews (and saved period overviews) display lazy-loaded visual charts (daily minutes/rhythm with court badges, badminton strength/pattern distribution, 8-region mobility coverage, and recent 28-day factual KPIs) using blue brand tokens with zero horizontal overflow at 320 / 390 / 1440px.
+- **P5 (Zero Regression)**: Direct single-day Add/Edit, Today/Plan/Library/Records primary navigation, custom exercises, and account/device isolation remain intact.

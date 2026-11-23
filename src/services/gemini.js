@@ -1,6 +1,7 @@
 import { buildPlanningPrompt } from '../domain/coachingPrompt.js';
 import { validateNewAIPlan } from '../domain/newAIPlan.js';
 import { SESSION_PHASES, SESSION_TYPES } from '../domain/phases.js';
+import { normalizeCoachHistory } from '../domain/aiCoachChat.js';
 
 export const generateAIPlan = async (lastWeekData, currentLevel, lastWeekFeedback, userApiKey, allProgress, metricsHistory, userGoal, dailyTime, userMessage, availableExercises, lang = 'zh', selectedModel = 'gemini-2.5-flash', options = {}) => {
   if (!userApiKey) throw new Error('API_KEY_MISSING');
@@ -47,6 +48,195 @@ export const generateAIPlan = async (lastWeekData, currentLevel, lastWeekFeedbac
     }
   }
 };
+
+export function buildPeriodChunkSchema(includeReport = false) {
+  const doseSchema = {
+    type: 'OBJECT',
+    properties: {
+      id: { type: 'STRING' },
+      sets: { type: 'INTEGER' },
+      value: { type: 'STRING' },
+      unit: { type: 'STRING', enum: ['reps', 'seconds', 'minutes', 'breaths'] },
+      restSeconds: { type: 'INTEGER' },
+      perSide: { type: 'BOOLEAN' },
+      phase: { type: 'STRING', enum: SESSION_PHASES },
+      preparation: {
+        type: 'OBJECT',
+        properties: {
+          sets: { type: 'INTEGER' },
+          value: { type: 'STRING' },
+          unit: { type: 'STRING', enum: ['reps', 'seconds', 'breaths'] },
+          restSeconds: { type: 'INTEGER' },
+          perSide: { type: 'BOOLEAN' },
+          instruction: { type: 'STRING' },
+        },
+        required: ['sets', 'value', 'unit', 'restSeconds', 'perSide', 'instruction'],
+      },
+    },
+    required: ['id', 'sets', 'value', 'unit', 'restSeconds', 'perSide', 'phase'],
+  };
+
+  const properties = {
+    days: {
+      type: 'ARRAY',
+      items: {
+        type: 'OBJECT',
+        properties: {
+          date: { type: 'STRING' },
+          name: { type: 'STRING' },
+          theme: { type: 'STRING' },
+          concept: { type: 'STRING' },
+          coachAdvice: { type: 'STRING' },
+          sessionType: { type: 'STRING', enum: SESSION_TYPES },
+          warmupNote: { type: 'STRING' },
+          cooldownNote: { type: 'STRING' },
+          routine: { type: 'ARRAY', items: { type: 'STRING' } },
+          prescriptions: { type: 'ARRAY', items: doseSchema },
+        },
+        required: ['date', 'name', 'theme', 'concept', 'coachAdvice', 'sessionType', 'warmupNote', 'cooldownNote', 'routine', 'prescriptions'],
+      },
+    },
+  };
+  const required = ['days'];
+
+  if (includeReport) {
+    properties.report = {
+      type: 'OBJECT',
+      properties: {
+        reviewAndPraise: { type: 'STRING' },
+        reminders: { type: 'ARRAY', items: { type: 'STRING' } },
+        planOverview: { type: 'STRING' },
+        checkpoints: { type: 'STRING' },
+      },
+      required: ['reviewAndPraise', 'reminders', 'planOverview', 'checkpoints'],
+    };
+    required.push('report');
+  }
+
+  return { type: 'OBJECT', properties, required };
+}
+
+export async function generateAIPeriodChunk({
+  prompt,
+  apiKey,
+  model = 'gemini-2.5-flash',
+  includeReport = false,
+  signal,
+} = {}) {
+  const key = String(apiKey || '').trim();
+  if (!key) throw new Error('API_KEY_MISSING');
+  if (signal?.aborted) throw new Error('ABORTED');
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`;
+  const payload = {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: {
+      temperature: 0.35,
+      responseMimeType: 'application/json',
+      responseSchema: buildPeriodChunkSchema(includeReport),
+    },
+  };
+
+  let response;
+  try {
+    response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal,
+    });
+  } catch (error) {
+    if (error?.name === 'AbortError' || signal?.aborted) throw new Error('ABORTED');
+    throw new Error('NETWORK_ERROR');
+  }
+
+  let data = null;
+  try {
+    data = await response.json();
+  } catch {
+    if (response.status === 401 || response.status === 403) throw new Error('API_KEY_INVALID');
+    if (response.status === 429) throw new Error('RATE_LIMITED');
+    throw new Error('AI_INVALID_JSON');
+  }
+
+  if (!response.ok || data?.error) {
+    const status = response.status || data?.error?.code;
+    const message = String(data?.error?.message || '');
+    if (status === 401 || status === 403 || /api key/i.test(message)) throw new Error('API_KEY_INVALID');
+    if (status === 429 || /quota|rate/i.test(message)) throw new Error('RATE_LIMITED');
+    throw new Error(message || 'AI_REQUEST_FAILED');
+  }
+
+  const parts = data?.candidates?.[0]?.content?.parts || [];
+  const text = parts.filter(part => !part.thought).map(part => part.text || '').join('').trim();
+  if (!text) throw new Error('AI_EMPTY_RESPONSE');
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error('AI_INVALID_JSON');
+  }
+}
+
+export async function generateCoachReply({
+  systemContext = '',
+  messages = [],
+  apiKey,
+  model = 'gemini-2.5-flash',
+  signal,
+} = {}) {
+  const key = String(apiKey || '').trim();
+  if (!key) throw new Error('API_KEY_MISSING');
+  if (signal?.aborted) throw new Error('ABORTED');
+
+  const normalized = normalizeCoachHistory(messages);
+  if (!normalized.length) throw new Error('AI_EMPTY_MESSAGE');
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`;
+  const systemText = String(systemContext || '').trim();
+  const payload = {
+    ...(systemText ? { systemInstruction: { parts: [{ text: systemText }] } } : {}),
+    contents: normalized.map(m => ({ role: m.role, parts: [{ text: m.text }] })),
+    generationConfig: {
+      temperature: 0.6,
+      maxOutputTokens: 2048,
+    },
+  };
+
+  let response;
+  try {
+    response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal,
+    });
+  } catch (error) {
+    if (error?.name === 'AbortError' || signal?.aborted) throw new Error('ABORTED');
+    throw new Error('NETWORK_ERROR');
+  }
+
+  let data = null;
+  try {
+    data = await response.json();
+  } catch {
+    if (response.status === 401 || response.status === 403) throw new Error('API_KEY_INVALID');
+    if (response.status === 429) throw new Error('RATE_LIMITED');
+    throw new Error('AI_EMPTY_RESPONSE');
+  }
+
+  if (!response.ok || data?.error) {
+    const status = response.status || data?.error?.code;
+    const message = String(data?.error?.message || '');
+    if (status === 401 || status === 403 || /api key/i.test(message)) throw new Error('API_KEY_INVALID');
+    if (status === 429 || /quota|rate/i.test(message)) throw new Error('RATE_LIMITED');
+    throw new Error(message || 'AI_REQUEST_FAILED');
+  }
+
+  const parts = data?.candidates?.[0]?.content?.parts || [];
+  const text = parts.filter(part => !part.thought).map(part => part.text || '').join('').trim();
+  if (!text) throw new Error('AI_EMPTY_RESPONSE');
+  return text;
+}
 
 const VALID_EXERCISE_TYPES = ['mobility', 'lower', 'core', 'upper_pull', 'upper_push', 'full', 'power'];
 

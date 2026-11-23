@@ -1,5 +1,5 @@
 import { useId, useRef, useState } from 'react';
-import { ArrowDown, ArrowUp, ChevronRight, MoreHorizontal, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronRight, Lock, Minus, MoreHorizontal, Trash2 } from 'lucide-react';
 import { SESSION_PHASES } from '../domain/phases.js';
 import { estimateSessionMinutes } from '../domain/sessions.js';
 import { manualPlannerErrorMessage, removeManualExercise, reorderManualExercise, updateManualPrescription } from '../domain/manualPlanner.js';
@@ -16,9 +16,10 @@ const UNIT = { zh: { reps: '下', seconds: '秒', minutes: '分鐘', breaths: '�
 const control = 'min-h-11 rounded-xl border border-slate-300 bg-white px-3 py-2 text-base focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600';
 const action = 'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm text-sky-700 disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600';
 
-export default function SessionPlanEditor({ session, exercises = {}, eligibleExercises = {}, lang = 'zh', t, onChange, timeControls, moreControls, dailyTime = 240 }) {
+export default function SessionPlanEditor({ session, exercises = {}, eligibleExercises = {}, lang = 'zh', t, onChange, timeControls, moreControls, dailyTime = 240, recordedIds }) {
   const en = lang === 'en';
   const unit = UNIT[en ? 'en' : 'zh'];
+  const locked = recordedIds instanceof Set ? recordedIds : new Set(recordedIds || []);
   const phaseName = phase => t?.(`phase_${phase}`) || PHASES[en ? 'en' : 'zh'][phase];
   const [editId, setEditId] = useState(null);
   const [form, setForm] = useState(null);
@@ -42,6 +43,7 @@ export default function SessionPlanEditor({ session, exercises = {}, eligibleExe
     catch (problem) { setError(manualPlannerErrorMessage(problem, lang, exercises)); }
   };
   const remove = value => {
+    if (locked.has(value)) return;
     try {
       const next = removeManualExercise(session, value, { exercises, lang }); onChange(next, { session: next, undo: structuredClone(session), kind: 'remove' }); close(); setNotice('');
       requestAnimationFrame(() => heading.current?.focus());
@@ -72,11 +74,17 @@ export default function SessionPlanEditor({ session, exercises = {}, eligibleExe
       return <section key={group.phase} data-phase={group.phase} aria-labelledby={`${id}-${group.phase}`} className="manual-phase-card">
         <header><h3 id={`${id}-${group.phase}`} tabIndex={-1}>{group.label}<span className="manual-phase-count"> · {doses.length} {en ? 'exercises' : '個動作'} · {phaseMinutes} {en ? 'min' : '分'}</span></h3></header>
         <ol>{doses.map((dose, index) => {
-          const rowExercise = exercises[dose.id], rowName = rowExercise?.name || dose.id;
-          return <li key={dose.id} data-exercise-id={dose.id} className="manual-exercise-row"><button type="button" className="manual-exercise-open" aria-label={`${en ? 'Edit' : '編輯'} ${rowName}`} onClick={() => begin(dose)}>
-            <span className="manual-row-number">{String(index + 1).padStart(2, '0')}</span><span className="manual-exercise-info"><strong>{rowName}</strong><small>{dose.sets}{en ? ' sets' : '組'} × {dose.value} {unit[dose.unit] || dose.unit}{dose.perSide ? en ? ' / side' : '／側' : ''}</small><ExerciseTags id={dose.id} exercise={rowExercise} lang={lang} compact />{!eligibleExercises[dose.id] && <span className="text-sm text-red-700">{en ? 'Unavailable. Remove or replace before reviewing.' : '目前無法加入；請移除或更換。'}</span>}</span><ChevronRight size={15} aria-hidden="true" />
-          </button></li>;
-
+          const rowExercise = exercises[dose.id], rowName = rowExercise?.name || dose.id, isLocked = locked.has(dose.id);
+          return <li key={dose.id} data-exercise-id={dose.id} className="manual-exercise-row">
+            <button type="button" className="manual-exercise-open" aria-label={`${en ? 'Edit' : '編輯'} ${rowName}`} onClick={() => begin(dose)}>
+              <span className="manual-row-number">{String(index + 1).padStart(2, '0')}</span><span className="manual-exercise-info"><strong>{rowName}</strong><small>{dose.sets}{en ? ' sets' : '組'} × {dose.value} {unit[dose.unit] || dose.unit}{dose.perSide ? en ? ' / side' : '／側' : ''}</small><ExerciseTags id={dose.id} exercise={rowExercise} lang={lang} compact />{!eligibleExercises[dose.id] && <span className="text-sm text-red-700">{en ? 'Unavailable. Remove or replace before reviewing.' : '目前無法加入；請移除或更換。'}</span>}</span><ChevronRight size={15} aria-hidden="true" />
+            </button>
+            {isLocked ? (
+              <span className="exercise-row-locked" title={en ? 'Recorded — preserved' : '已有紀錄，自動保留'}><Lock size={14} aria-hidden="true" /></span>
+            ) : (
+              <button type="button" data-testid={`manual-quick-remove-${dose.id}`} className="manual-row-quick-remove" aria-label={`${en ? 'Remove' : '移除'} ${rowName}`} onClick={() => remove(dose.id)}><Minus size={17} aria-hidden="true" /></button>
+            )}
+          </li>;
         })}</ol>
       </section>;
     })}

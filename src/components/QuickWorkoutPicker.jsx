@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { ArrowLeft, Search, Pin, X, Sparkles, Dumbbell, Plus, Check, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Search, Pin, X, Sparkles, Dumbbell, Plus, Minus, Check, ChevronRight } from 'lucide-react';
 import { useBackNavigation } from '../hooks/useBackNavigation.js';
 import { getQuickWorkouts, expandLegacyWarmup } from '../domain/quickWorkouts.js';
 import { savedWorkoutDay } from '../domain/savedWorkouts.js';
@@ -18,7 +18,7 @@ import { matchesBodyPart, exerciseTags } from '../domain/exerciseTags.js';
 
 const phaseLabel = (phase, en) => ({ warmup: en ? 'Warm-up' : '暖身', skill: en ? 'Skill' : '技能', strength: en ? 'Training' : '訓練', accessory: en ? 'Accessory' : '輔助', recovery: en ? 'Recovery' : '恢復', cooldown: en ? 'Cooldown' : '收操' }[phase]);
 const doseText = (dose, en) => `${dose.sets} ${en ? 'sets' : '組'} × ${dose.value} ${{ reps: en ? 'reps' : '下', seconds: en ? 'sec' : '秒', minutes: en ? 'min' : '分鐘', breaths: en ? 'breaths' : '次呼吸' }[dose.unit]}${dose.perSide ? en ? ' / side' : '／側' : ''}`;
-export default function QuickWorkoutPicker({ session, exercises, eligibleExercises, store, lang = 'zh', dailyTime = 240, context = {}, phase, onApply, onCancel, compact = false, onOpen, initialSelected = null, onConfigure, onUndo, canUndo, initialTab = 'combos', onCreateExercise, createScope = 'device', t }) {
+export default function QuickWorkoutPicker({ session, exercises, eligibleExercises, store, lang = 'zh', dailyTime = 240, context = {}, phase, onApply, onRemoveSingle, recordedIds, busy = false, onCancel, compact = false, onOpen, initialSelected = null, onConfigure, onUndo, canUndo, initialTab = 'combos', onCreateExercise, createScope = 'device', t }) {
   const en = lang === 'en', id = useId(), heading = useRef(null), panel = useRef(null);
   const [tab, setTab] = useState(initialTab), [query, setQuery] = useState(''), [region, setRegion] = useState('all');
   const [creating, setCreating] = useState(false), [visibleCount, setVisibleCount] = useState(12);
@@ -57,21 +57,39 @@ export default function QuickWorkoutPicker({ session, exercises, eligibleExercis
       if (mounted.current) setStoreError(en ? 'Added to draft. Recent-use sync failed; your favorite is unchanged.' : '已加入草稿；最近使用紀錄同步失敗，收藏內容未變更。');
     });
   };
-  const commit = (result, workout) => {
-    onApply(result);
-    setFeedback(en ? `Added ${result.addedCount}${result.keptCount ? ` · ${result.keptCount} duplicates kept` : ''}` : `新增 ${result.addedCount}${result.keptCount ? `，${result.keptCount} 個重複保留原設定` : ''}`);
-    setSelected(null); setStoreError(''); recordUse(workout);
+  const commit = async (result, workout) => {
+    try {
+      await onApply(result);
+      if (!mounted.current) return;
+      setFeedback(en ? `Added ${result.addedCount}${result.keptCount ? ` · ${result.keptCount} duplicates kept` : ''}` : `新增 ${result.addedCount}${result.keptCount ? `，${result.keptCount} 個重複保留原設定` : ''}`);
+      setSelected(null); setStoreError(''); recordUse(workout);
+    } catch (problem) {
+      if (mounted.current) setStoreError(manualPlannerErrorMessage(problem, lang, exercises));
+    }
+  };
+  const removeSingle = async (value, exercise) => {
+    if (!onRemoveSingle || busy) return;
+    try {
+      await onRemoveSingle(value, exercise);
+      if (!mounted.current) return;
+      setStoreError('');
+      setFeedback(en ? `Removed ${exercise.name}` : `已移除「${exercise.name}」`);
+    } catch (problem) {
+      if (mounted.current) setStoreError(manualPlannerErrorMessage(problem, lang, exercises));
+    }
   };
   const directAdd = workout => {
+    if (busy) return;
     try {
       const next = previewQuickWorkout(session, workout, { exercises, eligibleExercises, dailyTime, context, lang });
       if (!next.canApply || workout.routine.some(value => ['bf_A12', 'bf_A13'].includes(value))) { if (compact) onOpen(workout); else select(workout); return; }
       if (!next.changedCount) { setFeedback(en ? 'Already in this draft; existing doses kept.' : '已在課表，保留原劑量。'); return; }
-      commit(applyQuickWorkout(next), workout);
+      void commit(applyQuickWorkout(next), workout);
     } catch (problem) { setStoreError(manualPlannerErrorMessage(problem, lang, exercises)); }
   };
-  const apply = () => { try { commit(applyQuickWorkout(preview, { confirmReplacement: confirmed, confirmPartial: partial }), selected); } catch (problem) { setStoreError(manualPlannerErrorMessage(problem, lang, exercises)); } };
+  const apply = () => { if (busy) return; try { void commit(applyQuickWorkout(preview, { confirmReplacement: confirmed, confirmPartial: partial }), selected); } catch (problem) { setStoreError(manualPlannerErrorMessage(problem, lang, exercises)); } };
   const addSingle = (value, exercise) => {
+    if (busy) return;
     try {
       const inferredPhase = exercisePhase({ sessionType: 'training' }, value, exercise);
       const workout = addManualExercises(createManualSession(session.date, lang), [value], { exercises, eligibleExercises, phase: inferredPhase, lang });
@@ -123,12 +141,17 @@ export default function QuickWorkoutPicker({ session, exercises, eligibleExercis
       </div>
       {store?.error && <p role="alert">{en ? 'Favorites unavailable.' : '無法讀取收藏。'}<button type="button" className="manual-text-action" onClick={store.reload}>{en ? 'Retry' : '重試'}</button></p>}
       {tab === 'combos' ? <div className="combo-first-cards">{rows}{!cards.length && emptyResults}</div> : <section className="exercise-browser-results"><div className="exercise-results-heading"><h3>{query ? en ? 'Search results' : '搜尋結果' : region === 'all' ? en ? 'Exercise library' : '動作清單' : en ? 'Matching exercises' : '符合部位的動作'}</h3><span>{singleCandidates.length} {en ? 'movements' : '個動作'}</span></div>{!singleCandidates.length && emptyResults}<div className="exercise-choice-list">{singleCandidates.slice(0,visibleCount).map(row => {
-        const {id:value,exercise,available} = row, added = session.routine.includes(value);
+        const {id:value,exercise,available} = row, added = session.routine.includes(value), isRecorded = recordedIds instanceof Set ? recordedIds.has(value) : Array.isArray(recordedIds) && recordedIds.includes(value);
+        const canRemove = added && !isRecorded && !!onRemoveSingle;
         const equipment = exercise.equipment || (exercise.equipmentOptions?.[0]?.length ? exercise.equipmentOptions[0].map(key => t?.(`equipment_${key}`) || key).join(' · ') : en ? 'Bodyweight' : '徒手');
         return <article key={value} className="exercise-choice-card" data-available={available} data-added={added}>
           <span className="exercise-choice-icon" aria-hidden="true"><Dumbbell size={23} strokeWidth={1.6} /></span>
           <div className="exercise-choice-content"><button type="button" className="exercise-choice-name" aria-haspopup="dialog" onClick={() => setDetail({id:value,...(exercise.prescription || {sets:1,value:'8',unit:'reps'})})}>{exercise.name}<ChevronRight size={13} /></button><p className="exercise-choice-equipment">{value.startsWith('custom_') && <span>{en ? 'Custom' : '自訂'} · </span>}{equipment}</p><ExerciseTags id={value} exercise={exercise} lang={lang} compact />{!available && <p className="exercise-choice-reason" data-testid={`exercise-unavailable-${value}`}>{selectionReason(row,lang)}</p>}</div>
-          <button type="button" className="exercise-choice-add" data-testid={`single-add-${value}`} disabled={added || !available} aria-label={`${added ? en ? 'Added' : '已加入' : en ? 'Add' : '加入'} ${exercise.name}`} onClick={() => addSingle(value,exercise)}>{added ? <Check size={21} /> : <Plus size={21} />}</button>
+          {canRemove ? (
+            <button type="button" className="exercise-choice-add exercise-choice-remove" data-testid={`single-remove-${value}`} disabled={busy} aria-label={`${en ? 'Remove' : '移除'} ${exercise.name}`} onClick={() => removeSingle(value, exercise)}><Minus size={21} /></button>
+          ) : (
+            <button type="button" className="exercise-choice-add" data-testid={`single-add-${value}`} disabled={busy || added || !available} aria-label={`${added ? en ? 'Added' : '已加入' : en ? 'Add' : '加入'} ${exercise.name}`} onClick={() => addSingle(value,exercise)}>{added ? <Check size={21} /> : <Plus size={21} />}</button>
+          )}
         </article>;
       })}</div>{singleCandidates.length > visibleCount && <button type="button" className="exercise-show-more" data-testid="picker-show-more" onClick={() => setVisibleCount(value => value+12)}>{en ? 'Show more exercises' : '顯示更多動作'}</button>}</section>}
 

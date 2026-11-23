@@ -8,6 +8,15 @@ service cloud.firestore {
     match /aiTrialConfig/{document=**} {
       allow read, write: if false;
     }
+    // Membership registry managed strictly via Firebase Console / Admin SDK.
+    // Signed-in users can check only their own membership status; raw API keys are never stored here.
+    match /aiMembers/{userId} {
+      allow get: if owner(userId);
+      allow list, write: if false;
+    }
+    match /aiMemberQuota/{document=**} {
+      allow read, write: if false;
+    }
     function owner(userId) { return request.auth != null && request.auth.uid == userId; }
     function weekId(id) { return id.matches('^[0-9]{4}-W(0[1-9]|[1-4][0-9]|5[0-3])$'); }
     function optionalNumber(data, field, min, max) {

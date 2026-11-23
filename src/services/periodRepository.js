@@ -8,6 +8,7 @@ import { dateForWeekDay, getWeekString, localDate } from '../domain/dates.js';
 import { enumeratePeriodDates, normalizePlanningRange, sanitizePeriodSession } from '../domain/periodPlanning.js';
 import { createWeeklyIntent } from '../domain/trainingPreferences.js';
 import { validateAssignmentConsent } from '../domain/planAssignments.js';
+import { getRecordedExerciseIds, mergePreservingRecordedExercises } from '../domain/singleDayEdit.js';
 import { exerciseKey, resolveExerciseId } from '../domain/training.js';
 
 const dayFields = ['day', 'name', 'theme', 'concept', 'coachAdvice', 'routine', 'sessionType', 'warmupNote', 'cooldownNote'];
@@ -252,5 +253,72 @@ export async function saveDateReadinessAdjustment(uid, date, session, { expected
     const metadata = writeSession(transaction, uid, next, current.revision + 1, current.periodId, current.weeklyIntent);
     transaction.set(progressRef, weeklySnapshot(week, documents, { [date]: { ...metadata, prescriptions } }), { merge: true });
     return { ...metadata, prescriptions };
+  });
+}
+
+/**
+ * Atomically save a direct single-day edit (quick +/- or single-day editor).
+ * Unlike bulk period overwrites, editing today mid-workout is allowed: any
+ * exercise already marked completed or logged on `date` keeps its exact
+ * original prescription, while unrecorded exercises can be added, edited, or removed.
+ */
+export async function saveSingleDaySession(uid, date, session, { exercises = {}, profile = {}, fallbackPlans = {}, lang = 'zh' } = {}) {
+  assertUser(uid);
+  const today = localDate();
+  if (!date || date < today) throw new Error('MANUAL_PAST_DATE');
+  const week = weekFor(date);
+  const day = new Date(`${date}T12:00:00Z`).getUTCDay() || 7;
+  const intent = createWeeklyIntent(profile.context || {}, profile.focus, profile.time || 30);
+
+  return runTransaction(db, async transaction => {
+    const sessionRef = userDoc(uid, 'dateSessions', date);
+    const progressRef = userDoc(uid, 'progress', week);
+    const current = raw(await transaction.get(sessionRef));
+    const progress = raw(await transaction.get(progressRef)) || {};
+    const plan = raw(await transaction.get(userDoc(uid, 'plans', week)));
+
+    const doses = {};
+    if (current) {
+      const doseIds = dateDoseKeys(date, current);
+      const doseSnaps = await Promise.all(doseIds.map(id => transaction.get(userDoc(uid, 'dateDoses', id))));
+      doseIds.forEach((id, index) => { doses[id] = raw(doseSnaps[index]); });
+    }
+
+    const legacyDay = plan?.schedule?.find(item => item.day === day)
+      || fallbackPlans?.[week]?.schedule?.find(item => item.day === day)
+      || null;
+    const existingSession = current
+      ? {
+        ...current,
+        prescriptions: current.routine
+          .map(id => dateDoseRecord(date, current, doses, id))
+          .filter(record => record?.revision === current.revision)
+          .map(record => record.dose),
+      }
+      : legacyDay
+        ? { ...legacyDay, date, week, day }
+        : null;
+
+    const candidateLogIds = new Set([
+      ...(existingSession?.routine || []),
+      ...(session?.routine || []),
+    ].filter(id => typeof id === 'string' && /^[A-Za-z0-9_-]{1,80}$/.test(id)));
+    const logIds = [...candidateLogIds];
+    const logSnaps = await Promise.all(logIds.map(id => transaction.get(userDoc(uid, 'trainingLogs', `${week}-D${day}-${id}`))));
+    const logs = logSnaps.map(snap => raw(snap)).filter(Boolean);
+
+    const documents = { [keyFor('plans', week)]: plan, [keyFor('progress', week)]: progress };
+    const siblingDates = Array.from({ length: 7 }, (_, i) => dateForWeekDay(week, i + 1)).filter(other => other !== date);
+    const siblingSnaps = await Promise.all(siblingDates.map(other => transaction.get(userDoc(uid, 'dateSessions', other))));
+    documents[keyFor('dateSessions', date)] = current;
+    siblingDates.forEach((other, index) => { documents[keyFor('dateSessions', other)] = raw(siblingSnaps[index]); });
+    assertUser(uid);
+
+    const recordedIds = getRecordedExerciseIds(date, { progressByWeek: { [week]: progress }, logs });
+    const merged = mergePreservingRecordedExercises(existingSession, { ...session, date }, recordedIds, { exercises, lang });
+    const periodId = current?.periodId || `day_${date}_${globalThis.crypto.randomUUID().slice(0, 8)}`;
+    const metadata = writeSession(transaction, uid, merged, (current?.revision || 0) + 1, periodId, current?.weeklyIntent || intent);
+    transaction.set(progressRef, weeklySnapshot(week, documents, { [date]: { ...metadata, prescriptions: merged.prescriptions } }, fallbackPlans), { merge: true });
+    return { ...metadata, prescriptions: merged.prescriptions, periodId, preservedIds: [...recordedIds] };
   });
 }

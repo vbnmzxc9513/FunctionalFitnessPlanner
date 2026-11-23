@@ -1,11 +1,12 @@
+import { lazy, Suspense, useRef, useState } from 'react';
 import CoachBrief from './CoachBrief.jsx';
+import PeriodCoachReport from './PeriodCoachReport.jsx';
 import { useBackNavigation } from '../hooks/useBackNavigation.js';
 import SessionTimeSummary from './SessionTimeSummary.jsx';
 import TrainingTargetOverview from './TrainingTargetOverview.jsx';
 import PlanningConditions from './PlanningConditions.jsx';
 import MobilityOverview from './MobilityOverview.jsx';
-import { useRef, useState } from 'react';
-import { ArrowLeft, BookOpen, Check, Loader2, Pencil, Share2 } from 'lucide-react';
+import { ArrowLeft, BookOpen, Check, Loader2, Pencil, Share2, Sparkles } from 'lucide-react';
 import { sessionSections, estimateSessionMinutes } from '../domain/sessions.js';
 import { enumeratePeriodDates } from '../domain/periodPlanning.js';
 import { competitionDaysAway } from '../domain/planning.js';
@@ -17,9 +18,12 @@ import ExerciseDetails from './ExerciseDetails.jsx';
 import { journeyText } from '../i18n/journey.js';
 import './PeriodPlanPreview.css';
 
-export default function PeriodPlanPreview({ preview, lang = 'zh', t = key => key, exercises = {}, today, onBack, onApply, busy = false, stale = false, onSaveWorkout, onShare, onEditWorkout, onPlanDate, choiceReport, choiceSummary, onAdjust, onAddToDay }) {
+const PeriodAnalyticsCharts = lazy(() => import('./PeriodAnalyticsCharts.jsx'));
+
+export default function PeriodPlanPreview({ preview, lang = 'zh', t = key => key, exercises = {}, today, onBack, onApply, onRefine, busy = false, stale = false, onSaveWorkout, onShare, onEditWorkout, onPlanDate, choiceReport, choiceSummary, onAdjust, onAddToDay }) {
   const [selected, setSelected] = useState(null);
   const [opened, setOpened] = useState(null);
+  const [refineText, setRefineText] = useState('');
   useBackNavigation(!!opened, () => setOpened(null), 100);
   useBackNavigation(!!selected, () => setSelected(null), 40);
   const heading = useRef(null);
@@ -105,8 +109,53 @@ export default function PeriodPlanPreview({ preview, lang = 'zh', t = key => key
         <details className="period-secondary"><summary>{en ? 'Time and planning notes' : '查看時間與安排說明'}</summary><div className="period-secondary-content"><SessionTimeSummary day={day} exercises={exercises} availableTime={preview.profile?.time} context={conditions} lang={lang} />{day.coachAdvice && <p data-testid="period-day-reason" className="text-sm text-slate-600">{day.coachAdvice.split(/(?<=[。.!])\s*/)[0]}</p>}<p className="text-xs text-slate-500">{p('readonly')}</p></div></details>
       </>}
     </section> : <>
-      {onApply && <header className="period-preview-heading"><h2>{en ? 'Review and apply' : '檢查並套用'}</h2><p>{shortDate(range.from)} — {shortDate(range.to)} · {dates.length} {p('days')}</p><div className="period-preview-meta"><span className="period-status period-status-draft">{en ? 'Draft preview' : '草稿預覽'}</span></div></header>}
+      {onApply && <header className="period-preview-heading"><h2>{en ? 'Review and apply' : '檢查並套用'}</h2><p>{shortDate(range.from)} — {shortDate(range.to)} · {dates.length} {p('days')}</p><div className="period-preview-meta"><span className="period-status period-status-draft">{preview.source === 'ai' ? (en ? 'AI Coach preview' : 'AI 教練草稿預覽') : (en ? 'Draft preview' : '草稿預覽')}</span></div></header>}
       {onApply && <CoachBrief {...{ preview, exercises, lang, t, onAdjust, busy }} />}
+      {onApply && <PeriodCoachReport report={preview.coachReport} conclusion={preview.conclusion} recentSummary={preview.recentSummary} lang={lang} />}
+      {onApply && onRefine && preview.source === 'ai' && (
+        <form
+          data-testid="ai-refine-box"
+          className="ai-refine-box"
+          onSubmit={async event => {
+            event.preventDefault();
+            const feedback = refineText.trim();
+            if (!feedback || busy) return;
+            const ok = await onRefine(feedback);
+            if (ok !== false) setRefineText('');
+          }}
+        >
+          <label htmlFor="ai-refine-input" className="ai-refine-label">
+            <Sparkles size={15} className="text-sky-700 shrink-0" aria-hidden="true" />
+            {en ? 'Refine this AI draft with a message' : '想微調這份 AI 草稿嗎？'}
+          </label>
+          <div className="ai-refine-row">
+            <input
+              id="ai-refine-input"
+              type="text"
+              data-testid="ai-refine-input"
+              value={refineText}
+              disabled={busy}
+              maxLength={400}
+              onChange={event => setRefineText(event.target.value)}
+              placeholder={en ? 'e.g. Make Wednesday legs lighter, add more scapular stability' : '想微調哪一天？例如：週三腿部改輕一點、多加肩胛穩定'}
+            />
+            <button
+              type="submit"
+              data-testid="ai-refine-submit"
+              className="button-primary"
+              disabled={busy || !refineText.trim()}
+            >
+              {busy ? <Loader2 size={15} className="animate-spin" aria-hidden="true" /> : <Sparkles size={15} aria-hidden="true" />}
+              {en ? 'Refine with AI' : '請 AI 微調課表'}
+            </button>
+          </div>
+        </form>
+      )}
+      {onApply && sessions.length > 0 && (
+        <Suspense fallback={<p role="status" className="text-sm text-slate-500 py-3">{en ? 'Loading statistics…' : '載入統計圖表中…'}</p>}>
+          <PeriodAnalyticsCharts sessions={sessions} exercises={exercises} context={conditions} range={range} protectedDates={protectedDates} recentSummary={preview.recentSummary} lang={lang} />
+        </Suspense>
+      )}
       {((onApply && (stale || incomplete || choiceSummary)) || noTraining) && <div className="period-preview-issues">
         {onApply && onEditWorkout && <button type="button" className="period-text-action" onClick={() => onEditWorkout(preview.sessions)}>{en ? 'Adjust this draft' : '調整這份草稿'}</button>}
         {onApply && stale && <p role="alert">{p('stale')}</p>}
@@ -126,7 +175,18 @@ export default function PeriodPlanPreview({ preview, lang = 'zh', t = key => key
         })}</div></section>;
       })}
       {!onApply && onShare && sessions.length > 0 && <button type="button" data-testid="share-week-plan" className="period-text-action period-share-plan" onClick={() => onShare(sessions)}><Share2 size={18} />{en ? 'Share selected days' : '選擇日期分享課表'}</button>}
+      {!onApply && <PeriodCoachReport report={preview.coachReport} conclusion={preview.conclusion} recentSummary={preview.recentSummary} lang={lang} />}
       <div className="period-plan-extras">
+        {!onApply && sessions.length > 0 && (
+          <details data-testid="overview-analytics-disclosure" className="period-secondary">
+            <summary>{en ? 'View statistics and coverage charts' : '查看本週統計數據與涵蓋圖表'}</summary>
+            <div className="period-secondary-content">
+              <Suspense fallback={<p role="status" className="text-sm text-slate-500">{en ? 'Loading statistics…' : '載入統計圖表中…'}</p>}>
+                <PeriodAnalyticsCharts sessions={sessions} exercises={exercises} context={conditions} range={range} protectedDates={protectedDates} recentSummary={preview.recentSummary} lang={lang} />
+              </Suspense>
+            </div>
+          </details>
+        )}
         <details data-testid="period-plan-conditions" className="period-secondary"><summary>{en ? 'Goals, conditions and weekly balance' : '查看規劃重點、條件與部位平衡'}</summary><div className="period-secondary-content">
           <p data-testid="period-equipment-summary" className="text-sm text-slate-600">{t('equipmentLabel')}：{equipmentKnown ? conditions.equipment.length ? conditions.equipment.map(item => t(`equipment_${item}`)).join('、') : t('equipment_bodyweight') : en ? 'Not preserved in this saved summary; check preferences before replanning.' : '這份儲存摘要未保留器材條件；重排前請確認問卷。'}</p>
           <PlanningConditions context={conditions} time={preview.profile?.time} {...{ lang, t }} equipment={false} />

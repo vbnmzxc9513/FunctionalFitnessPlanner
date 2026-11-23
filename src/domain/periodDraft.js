@@ -4,6 +4,7 @@ import { sanitizePeriodSession, preservePeriodSession, enumeratePeriodDates } fr
 import { validateReadiness, validateTrainingLog, trainingLogId } from './coaching.js';
 import { exerciseKey, resolveExerciseId } from './training.js';
 import { readStorage, writeStorage } from './storage.js';
+import { getRecordedExerciseIds, mergePreservingRecordedExercises } from './singleDayEdit.js';
 
 const KEY = 'fitness_date_period_v1';
 // Server timestamps may resolve after the local save. The matching local
@@ -73,6 +74,36 @@ export function applyLocalPeriod(draft, preview, today) {
   }
   return { version: 1, ...draft, range: preview.range, dates: preview.selectedDates || enumeratePeriodDates(preview.range), sessionsByDate, profile: preview.profile, conclusion: preview.conclusion, weeklySummaries: preview.weeklySummaries,
     periodId: `local_${Date.now()}`, progressByWeek: draft?.progressByWeek || {}, logs: draft?.logs || [], readiness: draft?.readiness || [] };
+}
+export function saveLocalSingleDaySession(draft, date, nextSession, { today = localDate(), exercises = {}, profile = {}, lang = 'zh' } = {}) {
+  if (!isCalendarDate(date) || date < today) throw new Error('MANUAL_PAST_DATE');
+  const existing = draft?.sessionsByDate?.[date] || null;
+  const recordedIds = getRecordedExerciseIds(date, { progressByWeek: draft?.progressByWeek || {}, logs: draft?.logs || [] });
+  const merged = mergePreservingRecordedExercises(existing, { ...nextSession, date }, recordedIds, { exercises, lang });
+  const sessionsByDate = { ...(draft?.sessionsByDate || {}), [date]: { ...merged, date, week: merged.week, revision: (existing?.revision || 0) + 1 } };
+  const range = draft?.range && date >= draft.range.from && date <= draft.range.to
+    ? draft.range
+    : { from: date, to: date };
+  const existingDates = Array.isArray(draft?.dates) && draft.dates.length ? draft.dates : enumeratePeriodDates(range);
+  const dates = existingDates.includes(date)
+    ? existingDates
+    : date >= range.from && date <= range.to
+      ? [...existingDates, date].sort()
+      : [date];
+  return {
+    version: 1,
+    ...(draft || {}),
+    range,
+    dates,
+    sessionsByDate,
+    profile: periodProfile(profile || draft?.profile || {}),
+    conclusion: draft?.conclusion || '',
+    weeklySummaries: draft?.weeklySummaries || [],
+    periodId: draft?.periodId || `local_${Date.now()}`,
+    progressByWeek: draft?.progressByWeek || {},
+    logs: draft?.logs || [],
+    readiness: draft?.readiness || [],
+  };
 }
 export function upsertLocalPeriodLog(draft, log, complete = false, today = localDate()) {
   const progressByWeek = { ...draft.progressByWeek };

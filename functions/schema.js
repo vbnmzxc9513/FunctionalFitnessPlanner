@@ -23,3 +23,42 @@ export const planSchema = {
     }, required: ['day', 'name', 'theme', 'concept', 'coachAdvice', 'sessionType', 'warmupNote', 'cooldownNote', 'routine', 'prescriptions'] } },
   }, required: ['conclusion', 'schedule'],
 };
+
+export function periodChunkSchema(includeReport = false) {
+  const properties = {
+    days: {
+      type: 'ARRAY',
+      items: {
+        type: 'OBJECT',
+        properties: {
+          date: string,
+          name: string,
+          theme: string,
+          concept: string,
+          coachAdvice: string,
+          sessionType: { type: 'STRING', enum: ['training', 'recovery', 'rest'] },
+          warmupNote: string,
+          cooldownNote: string,
+          routine: { type: 'ARRAY', items: string },
+          prescriptions: { type: 'ARRAY', items: dose },
+        },
+        required: ['date', 'name', 'theme', 'concept', 'coachAdvice', 'sessionType', 'warmupNote', 'cooldownNote', 'routine', 'prescriptions'],
+      },
+    },
+  };
+  const required = ['days'];
+  if (includeReport) {
+    properties.report = {
+      type: 'OBJECT',
+      properties: {
+        reviewAndPraise: string,
+        reminders: { type: 'ARRAY', items: string },
+        planOverview: string,
+        checkpoints: string,
+      },
+      required: ['reviewAndPraise', 'reminders', 'planOverview', 'checkpoints'],
+    };
+    required.push('report');
+  }
+  return { type: 'OBJECT', properties, required };
+}

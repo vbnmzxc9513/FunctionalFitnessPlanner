@@ -60,6 +60,15 @@ test('hosted trial controls and quota records are unavailable to clients', async
     await assertFails(getDoc(doc(environment.unauthenticatedContext().firestore(), path)));
   }
 });
+test('aiMembers allows only self-read (no client writes or stranger reads) and aiMemberQuota is server-only', async () => {
+  const ownerDb = userDoc(uid, 'profile', 'settings').firestore;
+  await assertSucceeds(getDoc(doc(ownerDb, 'aiMembers', uid)));
+  await assertFails(setDoc(doc(ownerDb, 'aiMembers', uid), { active: true }));
+  await assertFails(getDoc(doc(environment.authenticatedContext('stranger').firestore(), 'aiMembers', uid)));
+  await assertFails(getDoc(doc(environment.unauthenticatedContext().firestore(), 'aiMembers', uid)));
+  await assertFails(getDoc(doc(ownerDb, `aiMemberQuota/2026-11-22_${uid}`)));
+  await assertFails(setDoc(doc(ownerDb, `aiMemberQuota/2026-11-22_${uid}`), { count: 0 }));
+});
 test('concurrent completion writes retain both fields', async () => {
   await Promise.all([
     setCompletion(uid, week, 1, 'thoracic', true, EXERCISES_I18N.zh.thoracic, plan.schedule),

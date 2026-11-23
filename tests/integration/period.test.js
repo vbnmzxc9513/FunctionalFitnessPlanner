@@ -10,7 +10,7 @@ import { auth } from '../../src/services/firebase.js';
 import { userDoc, userCollection, savePlan, setCompletion, captureGuestData, importGuestData } from '../../src/services/repository.js';
 import { prepareWeeklyApplication, applyWeeklyApplication } from '../../src/services/weeklyApplication.js';
 import legacyPlans from '../fixtures/legacyWeeklyPlans.json' with { type: 'json' };
-import { applyPeriodPlan, assembleDateSessions, loadPeriodState, loadPeriodOverview, saveDateReadinessAdjustment } from '../../src/services/periodRepository.js';
+import { applyPeriodPlan, assembleDateSessions, loadPeriodState, loadPeriodOverview, saveDateReadinessAdjustment, saveSingleDaySession } from '../../src/services/periodRepository.js';
 import { saveTrainingLog, plannedSnapshot } from '../../src/services/trainingRepository.js';
 import { dateForWeekDay, getWeekString, localDate } from '../../src/domain/dates.js';
 import { enumeratePeriodDates } from '../../src/domain/periodPlanning.js';
@@ -327,4 +327,34 @@ test('weekly AI adapter previews the retained protected day and writes unprotect
   const state = await loadPeriodState(uid, application.range);
   assert.equal(state.sessionsByDate[dateForWeekDay(week, 2)].prescriptions.length, 24);
   assert.equal((await getDoc(userDoc(uid, 'progress', week))).data().completed[`day1_${completedId}`], true);
+});
+
+test('saveSingleDaySession edits unrecorded exercises on an in-progress day while preserving completed prescriptions', async () => {
+  const range = rangeFor(3);
+  const generated = sessionsFor(range);
+  await apply(range, generated);
+  const day0 = generated[0];
+  const recordedId = day0.routine[0];
+  await setCompletion(uid, day0.week, day0.day, recordedId, true, EXERCISES_I18N.zh[recordedId], []);
+
+  // Remove the last uncompleted exercise and add bf_B06 on the same day that already has a completion
+  const edited = {
+    ...day0,
+    routine: [...day0.routine.slice(0, -1), 'bf_B06'],
+    prescriptions: [
+      ...day0.prescriptions.slice(0, -1),
+      { id: 'bf_B06', sets: 2, value: '10', unit: 'reps', restSeconds: 60, perSide: false, phase: 'accessory' },
+    ],
+  };
+  const saved = await saveSingleDaySession(uid, day0.date, edited, { exercises: EXERCISES_I18N.zh, profile, lang: 'zh' });
+  assert.equal(saved.routine.includes(recordedId), true);
+  assert.equal(saved.routine.includes('bf_B06'), true);
+  assert.equal(saved.routine.includes(day0.routine.at(-1)), false);
+
+  const reloaded = await loadPeriodState(uid, range);
+  assert.equal(reloaded.sessionsByDate[day0.date].routine.includes('bf_B06'), true);
+  assert.equal(reloaded.sessionsByDate[day0.date].routine.includes(recordedId), true);
+  // Neighboring day and completion mark remain intact
+  assert.deepEqual(reloaded.sessionsByDate[generated[1].date].routine, generated[1].routine);
+  assert.equal((await getDoc(userDoc(uid, 'progress', day0.week))).data().completed[`day${day0.day}_${recordedId}`], true);
 });

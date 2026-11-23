@@ -35,3 +35,13 @@
   .session-body .session-hero .hero-metadata { white-space:nowrap; }
   .session-body .session-hero .button-primary { justify-self:start; margin-top:4px; }
 }
+
+.quick-edit-banner { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; margin:0 0 12px; padding:10px 14px; border-radius:12px; border:1px solid var(--brand-soft-border); background:var(--brand-tint); color:var(--ink-strong); font-size:13px; line-height:1.45; }
+.exercise-row-remove, .manual-row-quick-remove { display:inline-grid; place-items:center; flex:none; width:var(--touch-min); height:var(--touch-min); border-radius:12px; border:1px solid #fecdd3; background:var(--status-danger-bg); color:var(--status-danger); cursor:pointer; }
+.exercise-row-remove:hover:not(:disabled), .manual-row-quick-remove:hover:not(:disabled) { background:#ffe4e6; }
+.exercise-row-remove:disabled, .manual-row-quick-remove:disabled { opacity:0.45; cursor:default; }
+.exercise-row-locked { display:inline-flex; align-items:center; gap:4px; flex:none; padding:6px 10px; border-radius:999px; background:var(--surface-subtle); color:var(--ink-muted); font-size:12px; font-weight:600; white-space:nowrap; }
+.exercise-choice-card[data-added=true] .exercise-choice-add.exercise-choice-remove { background:var(--status-danger-bg); color:var(--status-danger); border-color:#fecdd3; }
+.exercise-choice-card[data-added=true] .exercise-choice-add.exercise-choice-remove:hover:not(:disabled) { background:#ffe4e6; }
+.manual-session .manual-exercise-row { display:flex; align-items:center; gap:6px; }
+.manual-session .manual-exercise-open { flex:1; min-width:0; }

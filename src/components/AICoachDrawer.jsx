@@ -1,0 +1,552 @@
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import { Crown, KeyRound, Loader2, Send, Sparkles, Square, Trash2, X } from 'lucide-react';
+import { useBackNavigation } from '../hooks/useBackNavigation.js';
+import {
+  MAX_USER_MESSAGE_CHARS,
+  buildCoachChatSystemContext,
+  buildCoachQuickPrompts,
+  normalizeCoachHistory,
+} from '../domain/aiCoachChat.js';
+import { generateCoachReply } from '../services/gemini.js';
+import { requestMemberAiCoachReply } from '../services/aiMembership.js';
+import { writeStorage } from '../domain/storage.js';
+import './ai-coach.css';
+
+const DEFAULT_AI_MODELS = [
+  { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+  { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
+];
+
+function coachErrorMessage(code, lang) {
+  const en = lang === 'en';
+  if (code === 'API_KEY_MISSING') {
+    return en
+      ? 'Paste your Google API Key above (or sign in with an active member account) to chat with the AI Coach.'
+      : '請先在上方貼上你的 Google API Key（或使用具會員權限的 Google 帳號登入），再開始與 AI 教練對話。';
+  }
+  if (code === 'API_KEY_INVALID') {
+    return en
+      ? 'Your Google API Key was rejected. Please check the key and try again.'
+      : 'Google API Key 驗證失敗，請確認金鑰是否正確後再試一次。';
+  }
+  if (code === 'RATE_LIMITED') {
+    return en
+      ? 'Google API rate limit reached (429). Please wait a moment and try again.'
+      : '已達 Google API 頻率上限（429），請稍候片刻再重試。';
+  }
+  if (code === 'AI_MEMBER_NOT_ACTIVE') {
+    return en
+      ? 'Cloud member AI is not active for this account. You can still paste your own Google API Key above.'
+      : '此帳號目前未開通會員雲端 AI 權限，你仍可在上方貼上自己的 Google API Key 使用。';
+  }
+  if (code === 'AI_MEMBER_DAILY_LIMIT') {
+    return en
+      ? 'Today’s member cloud AI quota is full. Try again tomorrow or switch to your own Google API Key.'
+      : '今日會員雲端 AI 額度已達上限，請明天再試或改用個人 Google API Key。';
+  }
+  if (code === 'AI_MEMBER_SIGN_IN_REQUIRED') {
+    return en
+      ? 'Please sign in with Google to use Member Cloud AI.'
+      : '請使用 Google 帳號登入以使用會員專屬雲端 AI。';
+  }
+  if (code === 'AI_MEMBER_UNAVAILABLE') {
+    return en
+      ? 'Member cloud AI service is temporarily unavailable. You can switch to your own API key.'
+      : '會員雲端 AI 服務目前無法連線，可先改用個人 Google API Key。';
+  }
+  if (code === 'NETWORK_ERROR') {
+    return en
+      ? 'Network error while reaching Gemini. Please check your connection and retry.'
+      : '連線至 Gemini 時發生網路錯誤，請檢查網路後重試。';
+  }
+  if (code === 'AI_EMPTY_RESPONSE') {
+    return en
+      ? 'The coach returned an empty reply. Please try asking again.'
+      : 'AI 教練這次沒有回傳內容，請再試一次。';
+  }
+  return en
+    ? 'Could not get a reply from the AI Coach. Please try again.'
+    : '目前無法取得 AI 教練回覆，請稍後再試。';
+}
+
+export default function AICoachDrawer({
+  open,
+  onClose,
+  today,
+  lang = 'zh',
+  activeSession = null,
+  schedule = [],
+  exercises = {},
+  profile = {},
+  recentSummary = null,
+  readiness = null,
+  metrics = [],
+  apiKey = '',
+  onSaveKey,
+  model = 'gemini-2.5-flash',
+  models = [],
+  onSelectModel,
+  aiMember = { active: false, loaded: true },
+  uid = null,
+  onSignIn,
+}) {
+  const en = lang === 'en';
+  const dialogRef = useRef(null);
+  const threadRef = useRef(null);
+  const inputRef = useRef(null);
+  const keyInputRef = useRef(null);
+  const abortRef = useRef(null);
+  const requestIdRef = useRef(0);
+  const closeRef = useRef(onClose);
+  const titleId = useId();
+
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [preferOwnKey, setPreferOwnKey] = useState(false);
+  const [inlineKey, setInlineKey] = useState('');
+  const [showKeyEditor, setShowKeyEditor] = useState(false);
+
+  useEffect(() => { closeRef.current = onClose; }, [onClose]);
+
+  useBackNavigation(open, onClose, 115);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const element = dialogRef.current;
+    const previousFocus = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    if (element && !element.open) element.showModal();
+    requestAnimationFrame(() => {
+      element?.querySelector('[data-coach-focus]')?.focus({ preventScroll: true });
+    });
+    return () => {
+      ++requestIdRef.current;
+      abortRef.current?.abort();
+      abortRef.current = null;
+      if (element?.open) element.close();
+      document.body.style.overflow = previousOverflow;
+      if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!threadRef.current) return;
+    threadRef.current.scrollTop = threadRef.current.scrollHeight;
+  }, [messages, busy]);
+
+  const usingMemberProxy = Boolean(aiMember?.active && !preferOwnKey);
+  const availableModels = usingMemberProxy
+    ? DEFAULT_AI_MODELS
+    : (models?.length ? models : DEFAULT_AI_MODELS);
+  const activeModel = availableModels.some(item => item.id === model) ? model : availableModels[0].id;
+  const hasAuthReady = usingMemberProxy || Boolean(String(apiKey || '').trim());
+
+  const systemContext = useMemo(
+    () => buildCoachChatSystemContext({
+      today,
+      lang,
+      activeSession,
+      schedule,
+      exercises,
+      profile,
+      recentSummary,
+      readiness,
+      metrics,
+    }),
+    [today, lang, activeSession, schedule, exercises, profile, recentSummary, readiness, metrics],
+  );
+
+  const quickPrompts = useMemo(
+    () => buildCoachQuickPrompts({ activeSession, recentSummary, readiness, lang }),
+    [activeSession, recentSummary, readiness, lang],
+  );
+
+  const handleSaveKey = () => {
+    const trimmed = inlineKey.trim();
+    if (!trimmed) return;
+    const saved = onSaveKey ? onSaveKey(trimmed) : writeStorage('gemini_byok_key', trimmed);
+    if (saved !== false) {
+      setInlineKey('');
+      setShowKeyEditor(false);
+      setError('');
+      requestAnimationFrame(() => inputRef.current?.focus({ preventScroll: true }));
+    }
+  };
+
+  const stopGeneration = () => {
+    ++requestIdRef.current;
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setBusy(false);
+  };
+
+  const clearChat = () => {
+    stopGeneration();
+    setMessages([]);
+    setError('');
+  };
+
+  const sendMessage = async rawText => {
+    const text = String(rawText ?? '').trim().slice(0, MAX_USER_MESSAGE_CHARS);
+    if (!text || busy) return;
+
+    if (!hasAuthReady) {
+      setError(coachErrorMessage('API_KEY_MISSING', lang));
+      keyInputRef.current?.focus({ preventScroll: true });
+      return;
+    }
+
+    const previousMessages = messages;
+    const nextHistory = normalizeCoachHistory([...previousMessages, { role: 'user', text }]);
+    const reqId = ++requestIdRef.current;
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    setMessages(nextHistory);
+    setInput('');
+    setError('');
+    setBusy(true);
+
+    try {
+      const reply = usingMemberProxy
+        ? await requestMemberAiCoachReply({
+          systemContext,
+          messages: nextHistory,
+          model: activeModel,
+          signal: controller.signal,
+        })
+        : await generateCoachReply({
+          systemContext,
+          messages: nextHistory,
+          apiKey,
+          model: activeModel,
+          signal: controller.signal,
+        });
+
+      if (reqId !== requestIdRef.current || controller.signal.aborted) return;
+      setMessages(previous => normalizeCoachHistory([...previous, { role: 'model', text: reply }]));
+    } catch (cause) {
+      if (cause?.message === 'ABORTED' || controller.signal.aborted) return;
+      if (reqId !== requestIdRef.current) return;
+      setMessages(previousMessages);
+      setInput(previous => previous || text);
+      setError(coachErrorMessage(cause?.message, lang));
+    } finally {
+      if (reqId === requestIdRef.current) setBusy(false);
+      if (abortRef.current === controller) abortRef.current = null;
+    }
+  };
+
+  const handleSubmit = event => {
+    event.preventDefault();
+    sendMessage(input);
+  };
+
+  const handleKeyDown = event => {
+    if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent?.isComposing) {
+      event.preventDefault();
+      sendMessage(input);
+    }
+  };
+
+  const handleBackdropClick = event => {
+    if (event.target === dialogRef.current) closeRef.current?.();
+  };
+
+  const sessionDate = activeSession?.date || today;
+  const subtitle = activeSession?.theme
+    ? `${sessionDate} · ${activeSession.theme}`
+    : today;
+
+  return (
+    <dialog
+      ref={dialogRef}
+      data-testid="ai-coach-drawer"
+      className="ai-coach-drawer"
+      aria-labelledby={titleId}
+      onClick={handleBackdropClick}
+      onCancel={event => {
+        event.preventDefault();
+        closeRef.current?.();
+      }}
+    >
+      <header className="ai-coach-header">
+        <div className="ai-coach-title-group">
+          <h3 id={titleId} className="ai-coach-title">
+            <Sparkles size={18} className="text-sky-700 shrink-0" aria-hidden="true" />
+            {en ? 'AI Badminton Coach' : 'AI 羽球體能教練'}
+          </h3>
+          <p className="ai-coach-subtitle">{subtitle}</p>
+        </div>
+        <div className="ai-coach-header-actions">
+          {messages.length > 0 && (
+            <button
+              type="button"
+              data-testid="coach-chat-clear"
+              className="ai-coach-icon-btn"
+              onClick={clearChat}
+              aria-label={en ? 'Clear conversation' : '清除對話'}
+            >
+              <Trash2 size={16} aria-hidden="true" />
+              <span>{en ? 'Clear' : '清除'}</span>
+            </button>
+          )}
+          <button
+            type="button"
+            data-coach-focus
+            data-testid="coach-drawer-close"
+            className="ai-coach-icon-btn"
+            onClick={onClose}
+            aria-label={en ? 'Close AI Coach' : '關閉 AI 教練'}
+          >
+            <X size={18} aria-hidden="true" />
+          </button>
+        </div>
+      </header>
+
+      <section className="ai-coach-auth" data-testid="coach-auth-status">
+        {aiMember?.active && (
+          <>
+            <span className="ai-coach-member-badge" data-testid="coach-member-badge">
+              <Crown size={14} aria-hidden="true" />
+              {en ? 'Member Cloud AI Active · No API Key Needed' : '會員專屬雲端 AI 已啟用 · 免填 API Key'}
+            </span>
+            <div className="ai-coach-auth-row">
+              <select
+                data-testid="coach-model-select"
+                aria-label={en ? 'AI model' : 'AI 模型'}
+                disabled={busy}
+                value={activeModel}
+                onChange={event => onSelectModel?.(event.target.value)}
+              >
+                {DEFAULT_AI_MODELS.map(item => (
+                  <option key={item.id} value={item.id}>{item.label}</option>
+                ))}
+              </select>
+              <label className="ai-coach-checkbox">
+                <input
+                  type="checkbox"
+                  checked={preferOwnKey}
+                  disabled={busy}
+                  onChange={event => setPreferOwnKey(event.target.checked)}
+                />
+                <span>{en ? 'Use my own API key' : '改用本機 API Key'}</span>
+              </label>
+            </div>
+          </>
+        )}
+
+        {(!aiMember?.active || preferOwnKey) && (
+          apiKey && !showKeyEditor ? (
+            <div className="ai-coach-auth-row" data-testid="coach-byok-ready">
+              <span className="ai-coach-byok-ready">
+                <KeyRound size={14} aria-hidden="true" />
+                {en ? 'Browser Google API Key ready' : '已連結本機 Google API Key'}
+              </span>
+              <select
+                data-testid="coach-model-select"
+                aria-label={en ? 'AI model' : 'AI 模型'}
+                disabled={busy}
+                value={activeModel}
+                onChange={event => onSelectModel?.(event.target.value)}
+              >
+                {availableModels.map(item => (
+                  <option key={item.id} value={item.id}>{item.label}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="text-link text-xs min-h-11"
+                disabled={busy}
+                onClick={() => setShowKeyEditor(true)}
+              >
+                {en ? 'Change key' : '更換金鑰'}
+              </button>
+            </div>
+          ) : (
+            <div className="ai-coach-key-form" data-testid="coach-inline-key-box">
+              <p className="ai-coach-key-hint">
+                {en
+                  ? 'Paste your Google AI Studio API Key (stored only in this browser, never sent to Firestore).'
+                  : '貼上你的 Google AI Studio API Key（僅存於此瀏覽器，不會上傳雲端資料庫）。'}
+                {!uid && onSignIn && (
+                  <>
+                    {' '}
+                    <button type="button" className="text-link text-xs" onClick={onSignIn}>
+                      {en ? 'Member? Sign in' : '已是會員？前往登入'}
+                    </button>
+                  </>
+                )}
+              </p>
+              <div className="ai-coach-key-row">
+                <input
+                  ref={keyInputRef}
+                  type="password"
+                  data-testid="coach-inline-key-input"
+                  value={inlineKey}
+                  onChange={event => setInlineKey(event.target.value)}
+                  onKeyDown={event => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      handleSaveKey();
+                    }
+                  }}
+                  placeholder={en ? 'AIza... Google API Key' : '貼上 AIza... Google API Key'}
+                  aria-label="Google API Key"
+                />
+                <button
+                  type="button"
+                  data-testid="coach-inline-key-save"
+                  className="button-primary"
+                  disabled={!inlineKey.trim()}
+                  onClick={handleSaveKey}
+                >
+                  {en ? 'Save key' : '儲存金鑰'}
+                </button>
+                {apiKey && (
+                  <button
+                    type="button"
+                    className="button-secondary"
+                    onClick={() => setShowKeyEditor(false)}
+                  >
+                    {en ? 'Cancel' : '取消'}
+                  </button>
+                )}
+              </div>
+            </div>
+          )
+        )}
+      </section>
+
+      <div ref={threadRef} className="ai-coach-thread">
+        {messages.length === 0 ? (
+          <>
+            <section className="ai-coach-welcome">
+              <h4>{en ? 'Hi! I’m your badminton S&C coach.' : '嗨！我是你的羽球功能性體能教練'}</h4>
+              <p>
+                {en
+                  ? 'I can see today’s workout, this week’s schedule, your recent readiness, and your 28-day recorded summary. Pick a quick question below or ask anything about form, recovery, or court-day pacing.'
+                  : '我已同步閱讀你今天的課表、本週安排、近期體感與近 28 天真實訓練摘要。直接點選下方常見問題，或輸入任何動作發力、恢復與球日搭配的疑問吧！'}
+              </p>
+            </section>
+            <div className="ai-coach-quick-grid" data-testid="coach-quick-prompts">
+              {quickPrompts.map(item => (
+                <button
+                  key={item.id}
+                  type="button"
+                  data-testid={`coach-quick-prompt-${item.id}`}
+                  className="ai-coach-quick-btn"
+                  disabled={busy}
+                  onClick={() => sendMessage(item.prompt)}
+                >
+                  <Sparkles size={14} className="text-sky-600 shrink-0" aria-hidden="true" />
+                  <span>{item.label}</span>
+                </button>
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            <details className="ai-coach-quick-collapsible">
+              <summary>{en ? 'Quick questions' : '快速提問建議'}</summary>
+              <div className="ai-coach-quick-grid">
+                {quickPrompts.map(item => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    data-testid={`coach-quick-prompt-${item.id}`}
+                    className="ai-coach-quick-btn"
+                    disabled={busy}
+                    onClick={() => sendMessage(item.prompt)}
+                  >
+                    <Sparkles size={14} className="text-sky-600 shrink-0" aria-hidden="true" />
+                    <span>{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            </details>
+            <div className="ai-coach-messages" role="log" aria-live="polite" data-testid="coach-messages">
+              {messages.map((msg, index) => (
+                <article
+                  key={`${msg.role}-${index}`}
+                  data-testid={msg.role === 'user' ? 'coach-msg-user' : 'coach-msg-model'}
+                  className={`ai-coach-msg ${msg.role === 'user' ? 'ai-coach-msg-user' : 'ai-coach-msg-model'}`}
+                >
+                  {msg.role === 'model' ? (
+                    <div className="ai-coach-markdown">
+                      <ReactMarkdown>{msg.text}</ReactMarkdown>
+                    </div>
+                  ) : (
+                    msg.text
+                  )}
+                </article>
+              ))}
+              {busy && (
+                <div className="ai-coach-thinking" role="status" data-testid="coach-thinking">
+                  <Loader2 size={16} className="animate-spin" aria-hidden="true" />
+                  <span>{en ? 'Coach is reviewing your data…' : 'AI 教練正在檢視你的紀錄並回覆…'}</span>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+
+      {error && (
+        <p role="alert" className="ai-coach-error" data-testid="coach-error">
+          {error}
+        </p>
+      )}
+
+      <form className="ai-coach-composer" onSubmit={handleSubmit}>
+        <div className="ai-coach-input-row">
+          <textarea
+            ref={inputRef}
+            rows={1}
+            data-testid="coach-chat-input"
+            className="ai-coach-input"
+            value={input}
+            maxLength={MAX_USER_MESSAGE_CHARS}
+            disabled={busy}
+            onChange={event => setInput(event.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={en ? 'Ask about today’s workout, form cues, or recovery…' : '輸入問題：今天動作怎麼發力、打球日怎麼調整…'}
+            aria-label={en ? 'Message AI Coach' : '傳送訊息給 AI 教練'}
+          />
+          {busy ? (
+            <button
+              type="button"
+              data-testid="coach-chat-stop"
+              className="ai-coach-stop-btn"
+              onClick={stopGeneration}
+              aria-label={en ? 'Stop reply' : '停止回覆'}
+            >
+              <Square size={15} aria-hidden="true" />
+              <span>{en ? 'Stop' : '停止'}</span>
+            </button>
+          ) : (
+            <button
+              type="submit"
+              data-testid="coach-chat-send"
+              className="ai-coach-send-btn"
+              disabled={!input.trim()}
+              aria-label={en ? 'Send message' : '送出問題'}
+            >
+              <Send size={15} aria-hidden="true" />
+              <span>{en ? 'Send' : '送出'}</span>
+            </button>
+          )}
+        </div>
+        <p className="ai-coach-disclaimer">
+          {en
+            ? 'Sends a de-identified workout summary to Gemini. Coaching advice does not replace medical evaluation.'
+            : '對話僅傳送去識別化訓練摘要至 Gemini；教練建議不取代醫師或物理治療師診斷。'}
+        </p>
+      </form>
+    </dialog>
+  );
+}
