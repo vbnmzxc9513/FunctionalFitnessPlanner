@@ -7,18 +7,28 @@ import { SESSION_PHASES, SESSION_TYPES } from './phases.js';
 import { isCalendarDate } from './dates.js';
 import { eligibleExercises, validSequenceDose } from './exerciseCatalog.js';
 
+export const MAX_DAILY_REQUIRED = 4;
+
 export const DEFAULT_PLANNING_CONTEXT = {
   trainingDays: [1, 2, 3, 4, 5], badmintonDays: [], badmintonMinutes: '', badmintonIntensity: 'unknown',
   equipment: [], partnerAvailable: false, experience: 'beginner',
-  targetRegions: [], stiffnessRegions: [], sorenessRegions: [], weeklyExerciseIds: [], warmupFamiliar: false, recoveryState: 'unknown', sorenessImpact: 'unknown', competitionDate: '', healthStatus: 'unrestricted', healthNotes: '', recoveryNotes: '',
+  targetRegions: [], stiffnessRegions: [], sorenessRegions: [], weeklyExerciseIds: [],
+  dailyRequiredWarmup: true, dailyRequiredExerciseIds: [],
+  warmupFamiliar: false, recoveryState: 'unknown', sorenessImpact: 'unknown', competitionDate: '', healthStatus: 'unrestricted', healthNotes: '', recoveryNotes: '',
 };
 
 export function normalizePlanningContext(value = {}) {
+  const dailyRequiredExerciseIds = [...new Set(
+    (Array.isArray(value.dailyRequiredExerciseIds) ? value.dailyRequiredExerciseIds : [])
+      .filter(id => typeof id === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(id) && !['bf_A12', 'bf_A13'].includes(id)),
+  )].slice(0, MAX_DAILY_REQUIRED);
   return {
     targetRegions: selectedRegions(value.targetRegions, TARGET_REGIONS),
     stiffnessRegions: selectedRegions(value.stiffnessRegions, STIFFNESS_REGIONS),
     sorenessRegions: selectedRegions(value.sorenessRegions, SORENESS_REGIONS),
     weeklyExerciseIds: weeklyChoiceIds(value.weeklyExerciseIds),
+    dailyRequiredWarmup: value.dailyRequiredWarmup !== false,
+    dailyRequiredExerciseIds,
     trainingDays: [...new Set((Array.isArray(value.trainingDays) ? value.trainingDays : [1, 2, 3, 4, 5]).filter(day => Number.isInteger(day) && day >= 1 && day <= 7))].sort(),
     badmintonDays: [...new Set((Array.isArray(value.badmintonDays) ? value.badmintonDays : []).filter(day => Number.isInteger(day) && day >= 1 && day <= 7))].sort(),
     badmintonMinutes: Number(value.badmintonMinutes) > 0 && Number(value.badmintonMinutes) <= 360 ? Number(value.badmintonMinutes) : '',

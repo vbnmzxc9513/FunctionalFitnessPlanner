@@ -1,11 +1,13 @@
 import { useBackNavigation } from '../hooks/useBackNavigation.js';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Crown, KeyRound, Sparkles, SlidersHorizontal, XCircle } from 'lucide-react';
+import { ArrowLeft, Crown, KeyRound, Pin, Plus, Sparkles, SlidersHorizontal, X, XCircle } from 'lucide-react';
 import PlanningRange from './PlanningRange.jsx';
 import PeriodPlanPreview from './PeriodPlanPreview.jsx';
 import Onboarding from './Onboarding.jsx';
 import { defaultPlanningRange, generatePeriodPlan, normalizePlanningRange } from '../domain/periodPlanning.js';
-import { generateAIPeriodPlan } from '../domain/aiPeriodPlanning.js';
+import { estimateDailyRequiredMinutes, generateAIPeriodPlan, lockedWarmupMinutes } from '../domain/aiPeriodPlanning.js';
+import { DAILY_WARMUP_IDS } from '../domain/quickWorkouts.js';
+import { MAX_DAILY_REQUIRED, planningExercises } from '../domain/planning.js';
 import { buildRefinementMessage } from '../domain/aiCoachChat.js';
 import { summarizeRecentPerformance } from '../domain/periodAnalytics.js';
 import { applyPeriodPlan, loadPeriodState, loadPeriodOverview } from '../services/periodRepository.js';
@@ -152,6 +154,7 @@ export default function PeriodWorkspace({
   const [error, setError] = useState('');
   const [aiFailed, setAiFailed] = useState(false);
   const [message, setMessage] = useState('');
+  const [requiredQuery, setRequiredQuery] = useState('');
   const [storageFailed, setStorageFailed] = useState(false);
 
   const request = useRef(0);
@@ -557,6 +560,46 @@ export default function PeriodWorkspace({
     )
     : [];
   const update = (key, value) => setProfile(previous => ({ ...previous, [key]: typeof value === 'function' ? value(previous[key]) : value }));
+
+  const dailyRequiredWarmup = profile.context?.dailyRequiredWarmup !== false;
+  const dailyRequiredIds = useMemo(
+    () => (Array.isArray(profile.context?.dailyRequiredExerciseIds) ? profile.context.dailyRequiredExerciseIds : []),
+    [profile.context?.dailyRequiredExerciseIds],
+  );
+  const aiEligible = useMemo(() => planningExercises(exercises, profile.context), [exercises, profile.context]);
+  const warmupCost = useMemo(() => lockedWarmupMinutes(exercises), [exercises]);
+  const requiredMinutes = useMemo(
+    () => estimateDailyRequiredMinutes(exercises, profile.context),
+    [exercises, profile.context],
+  );
+  const dailyRequiredOptions = useMemo(() => {
+    const lockedSet = new Set(DAILY_WARMUP_IDS);
+    const weeklySet = new Set(profile.context?.weeklyExerciseIds || []);
+    const q = requiredQuery.trim().toLowerCase();
+    const entries = Object.entries(aiEligible)
+      .filter(([id, ex]) => !ex.legacySequence && ex.active !== false && !ex.deleted && !(dailyRequiredWarmup && lockedSet.has(id)))
+      .filter(([id, ex]) => !q || [id, ex.name, ...(ex.aliases || []), ex.category || ''].join(' ').toLowerCase().includes(q));
+    entries.sort(([idA, exA], [idB, exB]) => {
+      const score = (id, ex) => (dailyRequiredIds.includes(id) ? 0 : weeklySet.has(id) ? 1 : ['warmup', 'recovery', 'core'].includes(ex.category) ? 2 : ex.priority ? 3 : 4);
+      return score(idA, exA) - score(idB, exB) || String(exA.name || idA).localeCompare(String(exB.name || idB));
+    });
+    return entries.slice(0, q ? 12 : 6);
+  }, [aiEligible, dailyRequiredIds, dailyRequiredWarmup, profile.context?.weeklyExerciseIds, requiredQuery]);
+
+  const toggleDailyRequiredWarmup = checked => update('context', previous => ({
+    ...previous,
+    dailyRequiredWarmup: checked,
+  }));
+  const toggleDailyRequiredExercise = id => update('context', previous => {
+    const list = Array.isArray(previous?.dailyRequiredExerciseIds) ? previous.dailyRequiredExerciseIds : [];
+    const next = list.includes(id)
+      ? list.filter(item => item !== id)
+      : list.length < MAX_DAILY_REQUIRED
+        ? [...list, id]
+        : list;
+    return { ...previous, dailyRequiredExerciseIds: next };
+  });
+
   const replan = () => {
     if (range.from < today) setRange(defaultPlanningRange(today));
     setPreview(null);
@@ -607,7 +650,9 @@ export default function PeriodWorkspace({
         <strong>{en ? 'Planning engine' : '選擇排課方式'}</strong>
         <span className="text-xs text-slate-500">
           {plannerMode === 'ai'
-            ? (en ? 'Personalized AI + 8-move warm-up lock + coach report' : 'AI 個人化編排＋鎖定八段暖身＋教練總結與圖表')
+            ? (dailyRequiredWarmup
+              ? (en ? 'Personalized AI + daily must-haves + coach report' : 'AI 個人化編排＋每日必須鎖定＋教練總結與圖表')
+              : (en ? 'Personalized AI + custom warm-up + coach report' : 'AI 個人化編排＋自訂暖身＋教練總結與圖表'))
             : (en ? 'Instant deterministic rules + visual charts' : '即時免費規則排課＋統計圖表')}
         </span>
       </div>
@@ -746,6 +791,123 @@ export default function PeriodWorkspace({
             </>
           )}
 
+          <div className="period-daily-required" data-testid="period-daily-required">
+            <div className="period-daily-required-head">
+              <span className="period-daily-required-title">
+                <Pin size={14} />
+                {en ? 'Daily must-haves' : '每日必須設定'}
+              </span>
+              <span
+                className={`period-daily-required-budget ${requiredMinutes > Number(profile.time || 30) ? 'is-over' : ''}`}
+                data-testid="daily-required-budget"
+              >
+                {en
+                  ? `~${requiredMinutes} / ${profile.time} min`
+                  : `約占 ${requiredMinutes} / ${profile.time} 分鐘`}
+              </span>
+            </div>
+
+            <label className="period-daily-warmup-toggle">
+              <input
+                type="checkbox"
+                data-testid="daily-required-warmup-toggle"
+                checked={dailyRequiredWarmup}
+                disabled={busy}
+                onChange={event => toggleDailyRequiredWarmup(event.target.checked)}
+              />
+              <span>
+                <strong>{en ? '8-movement dynamic stretch (required warm-up)' : '八段動態拉伸為每日暖身必須'}</strong>
+                <small>
+                  {en
+                    ? `Auto-locked at the start of every training & recovery day (8 tracked items, ~${warmupCost} min). Uncheck to let AI design custom warm-ups.`
+                    : `自動鎖定於每個訓練與恢復日開頭（8 項獨立紀錄，約 ${warmupCost} 分鐘）；取消勾選則由 AI 自由安排暖身。`}
+                </small>
+              </span>
+            </label>
+
+            {dailyRequiredWarmup && Number(profile.time || 30) <= warmupCost + 1 && (
+              <p className="period-daily-required-warn" role="status">
+                {en
+                  ? `Your daily limit (${profile.time} min) is tight for the ~${warmupCost}-min warm-up; short days will automatically switch to a lighter warm-up.`
+                  : `目前每日時間上限（${profile.time} 分鐘）偏短，不足容納約 ${warmupCost} 分鐘的八段拉伸時，系統會自動改為精簡暖身。`}
+              </p>
+            )}
+
+            {dailyRequiredIds.length > 0 && (
+              <div className="period-daily-required-chips" data-testid="daily-required-chips">
+                {dailyRequiredIds.map(id => {
+                  const unavailable = !Object.hasOwn(aiEligible, id);
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      disabled={busy}
+                      data-testid={`daily-required-chip-${id}`}
+                      className={`period-daily-chip ${unavailable ? 'is-muted' : ''}`}
+                      onClick={() => toggleDailyRequiredExercise(id)}
+                      aria-label={en ? `Remove ${exercises[id]?.name || id}` : `移除每日必須 ${exercises[id]?.name || id}`}
+                    >
+                      <span>{exercises[id]?.name || id}{unavailable ? (en ? ' (ineligible)' : '（目前條件不符）') : ''}</span>
+                      <X size={14} />
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            <details className="period-daily-required-picker" data-testid="daily-required-picker">
+              <summary>
+                <Plus size={14} />
+                {en
+                  ? `Pin extra daily must-have exercises (${dailyRequiredIds.length}/${MAX_DAILY_REQUIRED})`
+                  : `追加其他每日必須動作（選填，${dailyRequiredIds.length}/${MAX_DAILY_REQUIRED}）`}
+              </summary>
+              <div className="period-daily-picker-body">
+                <input
+                  type="search"
+                  data-testid="daily-required-search"
+                  value={requiredQuery}
+                  disabled={busy}
+                  onChange={event => setRequiredQuery(event.target.value)}
+                  placeholder={en ? 'Search eligible exercises (e.g. dead bug, plank, stretch)…' : '搜尋符合資格的動作（例如：死蟲、棒式、前鋸肌、伸展）…'}
+                  aria-label={en ? 'Search daily must-have exercises' : '搜尋每日必須動作'}
+                />
+                <div className="period-daily-option-grid">
+                  {dailyRequiredOptions.map(([id, ex]) => {
+                    const selected = dailyRequiredIds.includes(id);
+                    const limitReached = !selected && dailyRequiredIds.length >= MAX_DAILY_REQUIRED;
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        data-testid={`daily-required-option-${id}`}
+                        aria-pressed={selected}
+                        disabled={busy || limitReached}
+                        onClick={() => toggleDailyRequiredExercise(id)}
+                        className={`period-daily-option ${selected ? 'is-selected' : ''}`}
+                      >
+                        <span>{ex.name}</span>
+                        <span className="period-daily-option-badge">
+                          {selected ? (en ? 'Pinned' : '已鎖定') : (en ? 'Pin' : '設為必須')}
+                        </span>
+                      </button>
+                    );
+                  })}
+                  {dailyRequiredOptions.length === 0 && (
+                    <p className="text-xs text-slate-500 m-0">
+                      {en ? 'No matching eligible exercises found.' : '找不到符合目前器材與健康條件的動作。'}
+                    </p>
+                  )}
+                </div>
+                <p className="text-xs text-slate-500 m-0">
+                  {en
+                    ? 'Pinned exercises are included on every training day (mobility/stretches also carry over to recovery days) while still respecting your daily time limit and safety rules.'
+                    : '設為必須的動作會鎖定排入每個訓練日（安全活動度／伸展亦會配合恢復日），並仍嚴格遵守每日時間上限與安全規則。'}
+                </p>
+              </div>
+            </details>
+          </div>
+
           <p className="text-xs text-slate-500 m-0">
             {en
               ? 'AI planning sends your preferences, eligible exercise list and de-identified 28-day training summary to Google Gemini.'
@@ -813,9 +975,13 @@ export default function PeriodWorkspace({
             />
           </div>
           <p className="text-xs text-slate-500 m-0">
-            {en
-              ? 'Locking your 8-movement dynamic warm-up and balancing badminton strength & mobility…'
-              : '正在鎖定每日八段動態暖身、平衡羽球各部位肌力與活動度，並整理個人化總結報告…'}
+            {dailyRequiredWarmup
+              ? (en
+                ? 'Locking your daily must-haves (8-movement warm-up) and balancing badminton strength & mobility…'
+                : '正在鎖定每日必須項目（八段動態拉伸）並平衡羽球各部位肌力與活動度，整理個人化總結報告…')
+              : (en
+                ? 'Designing custom warm-ups, applying your daily must-haves, and balancing badminton strength & mobility…'
+                : '正在為每日設計專屬暖身、套用每日必須動作，並平衡羽球各部位肌力與活動度…')}
           </p>
         </div>
       )}

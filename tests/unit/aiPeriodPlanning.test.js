@@ -369,3 +369,80 @@ test('filterSupportedModels removes unstable/preview/non-text models and ranks g
   ]);
   assert.deepEqual(options.map(m => m.id), ['gemini-2.5-flash', 'gemini-2.5-pro']);
 });
+
+test('daily must-have rules: supports disabling 8-item warm-up lock and enforcing extra dailyRequiredExerciseIds', async () => {
+  const { estimateDailyRequiredMinutes } = await import('../../src/domain/aiPeriodPlanning.js');
+  const { estimateSessionMinutes } = await import('../../src/domain/sessions.js');
+  const { planningExercises } = await import('../../src/domain/planning.js');
+
+  const warmupOnlyMin = estimateDailyRequiredMinutes(exercises, { ...DEFAULT_PLANNING_CONTEXT, dailyRequiredWarmup: true, dailyRequiredExerciseIds: [] });
+  const warmupPlusMin = estimateDailyRequiredMinutes(exercises, { ...DEFAULT_PLANNING_CONTEXT, dailyRequiredWarmup: true, dailyRequiredExerciseIds: ['dead_bug'] });
+  const noneMin = estimateDailyRequiredMinutes(exercises, { ...DEFAULT_PLANNING_CONTEXT, dailyRequiredWarmup: false, dailyRequiredExerciseIds: [] });
+  assert.ok(warmupOnlyMin >= 5 && warmupOnlyMin <= 14, `Expected 8-item warm-up 5–14m, got ${warmupOnlyMin}`);
+  assert.ok(warmupPlusMin > warmupOnlyMin, 'Adding a pinned daily exercise increases required minutes');
+  assert.equal(noneMin, 0);
+
+  // 1) dailyRequiredWarmup: false lets AI use a custom warm-up without forcing all 8 locked items
+  const customWarmupContext = {
+    ...DEFAULT_PLANNING_CONTEXT,
+    trainingDays: [1],
+    badmintonDays: [],
+    dailyRequiredWarmup: false,
+    dailyRequiredExerciseIds: ['dead_bug'],
+  };
+  let seenPrompts = [];
+  const customResult = await generateAIPeriodPlan({
+    exercises,
+    profile: { context: customWarmupContext, focus: 'strength', time: '25' },
+    range: { from: '2026-11-23', to: '2026-11-23' },
+    today: '2026-11-23',
+    lang: 'zh',
+    callChunk: async ({ prompt, includeReport }) => {
+      seenPrompts.push(prompt);
+      // Intentionally omit 'dead_bug' on BOTH attempts to verify retry + deterministic injection
+      return {
+        days: [{
+          date: '2026-11-23',
+          name: '自訂暖身肌力日',
+          theme: '下肢控制',
+          concept: '快速暖身後進入下肢訓練',
+          coachAdvice: '穩定呼吸。',
+          sessionType: 'training',
+          warmupNote: '自訂單項暖身。',
+          cooldownNote: '緩和呼吸。',
+          routine: ['bf_A04', 'bf_B01'],
+          prescriptions: [
+            { id: 'bf_A04', sets: 1, value: '6', unit: 'reps', restSeconds: 0, perSide: true, phase: 'warmup' },
+            {
+              id: 'bf_B01',
+              sets: 2,
+              value: '8',
+              unit: 'reps',
+              restSeconds: 45,
+              perSide: true,
+              phase: 'strength',
+              preparation: { sets: 1, value: '5', unit: 'reps', restSeconds: 30, perSide: true, instruction: '輕量熱身組。' },
+            },
+          ],
+        }],
+        ...(includeReport ? {
+          report: {
+            reviewAndPraise: '持續累積就是進步的關鍵！',
+            reminders: ['已依設定改採自訂暖身並固定加入每日必須動作。'],
+            planOverview: '本日聚焦下肢控制與每日必須核心穩定。',
+            checkpoints: '觀察翌日核心與下肢疲勞感受。',
+          },
+        } : {}),
+      };
+    },
+  });
+
+  assert.equal(seenPrompts.length, 2, 'Omitting dailyRequiredExerciseIds must trigger retry');
+  assert.match(seenPrompts[0], /使用者設定的每日必須動作/);
+  assert.match(seenPrompts[1], /AI_DAILY_REQUIRED_MISSING/);
+  const day = customResult.sessions[0];
+  assert.equal(isDailyWarmupComplete(day), false, 'When dailyRequiredWarmup is false, 8-item warm-up is not forced');
+  assert.ok(day.routine.includes('dead_bug'), 'Reconciler must inject pinned dailyRequiredExerciseIds on training days');
+  const eligible = planningExercises(exercises, customWarmupContext);
+  assert.ok(estimateSessionMinutes(day, eligible) <= 25);
+});

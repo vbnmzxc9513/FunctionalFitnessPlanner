@@ -457,3 +457,197 @@
   font-size: 0.86rem;
   white-space: nowrap;
 }
+
+.period-daily-required {
+  border: 1px solid var(--brand-soft-border);
+  background: var(--surface-card);
+  border-radius: 0.85rem;
+  padding: 0.8rem 0.9rem;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.period-daily-required-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.period-daily-required-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--ink-strong);
+}
+
+.period-daily-required-budget {
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: var(--brand-soft);
+  color: var(--brand-primary);
+}
+
+.period-daily-required-budget.is-over {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.period-daily-warmup-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 0.7rem;
+  background: var(--brand-tint);
+  border: 1px solid var(--brand-soft-border);
+  cursor: pointer;
+  min-height: var(--touch-min);
+}
+
+.period-daily-warmup-toggle input[type="checkbox"] {
+  margin-top: 0.2rem;
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--brand-primary);
+  flex: none;
+}
+
+.period-daily-warmup-toggle span {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.period-daily-warmup-toggle strong {
+  font-size: 0.84rem;
+  color: var(--ink-strong);
+  line-height: 1.35;
+}
+
+.period-daily-warmup-toggle small {
+  font-size: 0.74rem;
+  color: var(--ink-secondary);
+  line-height: 1.45;
+}
+
+.period-daily-required-warn {
+  margin: 0;
+  font-size: 0.76rem;
+  color: #92400e;
+  background: #fffbeb;
+  border-radius: 0.55rem;
+  padding: 0.45rem 0.65rem;
+  line-height: 1.45;
+}
+
+.period-daily-required-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.period-daily-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: var(--touch-min);
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--brand-soft-border);
+  background: var(--brand-soft);
+  color: var(--brand-primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  max-width: 100%;
+  text-align: left;
+}
+
+.period-daily-chip.is-muted {
+  background: #fef3c7;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
+.period-daily-required-picker > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--brand-primary);
+  min-height: var(--touch-min);
+  list-style: none;
+}
+
+.period-daily-required-picker > summary::-webkit-details-marker {
+  display: none;
+}
+
+.period-daily-picker-body {
+  margin-top: 0.5rem;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.period-daily-picker-body input[type="search"] {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--touch-min);
+  border: 1px solid var(--border-input);
+  border-radius: 0.7rem;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.84rem;
+  background: var(--surface-card);
+  color: var(--ink-strong);
+}
+
+.period-daily-option-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+  gap: 0.45rem;
+}
+
+.period-daily-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  min-height: var(--touch-min);
+  padding: 0.45rem 0.7rem;
+  border-radius: 0.7rem;
+  border: 1px solid var(--border-input);
+  background: var(--surface-card);
+  color: var(--ink-strong);
+  font-size: 0.8rem;
+  text-align: left;
+  min-width: 0;
+}
+
+.period-daily-option > span:first-child {
+  overflow-wrap: anywhere;
+}
+
+.period-daily-option.is-selected {
+  border-color: var(--brand-primary);
+  background: var(--brand-soft);
+  color: var(--brand-primary);
+  font-weight: 600;
+}
+
+.period-daily-option:disabled {
+  opacity: 0.5;
+}
+
+.period-daily-option-badge {
+  font-size: 0.7rem;
+  color: var(--brand-primary);
+  white-space: nowrap;
+  flex: none;
+}

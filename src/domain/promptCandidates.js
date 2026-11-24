@@ -132,7 +132,11 @@ export function selectPromptCandidates(
 
   const warmupIds = dailyWarmupPrescriptions().map(dose => dose.id);
   const warmupRank = new Map(warmupIds.map((id, idx) => [id, idx]));
-  const weeklyIds = Array.isArray(profile?.weeklyExerciseIds) ? profile.weeklyExerciseIds : [];
+  const dailyRequiredIds = Array.isArray(profile?.dailyRequiredExerciseIds) ? profile.dailyRequiredExerciseIds : [];
+  const weeklyIds = [
+    ...dailyRequiredIds,
+    ...(Array.isArray(profile?.weeklyExerciseIds) ? profile.weeklyExerciseIds : []).filter(id => !dailyRequiredIds.includes(id)),
+  ];
   const weeklyRank = new Map(weeklyIds.map((id, idx) => [id, idx]));
   const previousIds = collectPreviousPlanIds(previousPlan);
   const targetRegions = Array.isArray(profile?.targetRegions) ? profile.targetRegions : [];

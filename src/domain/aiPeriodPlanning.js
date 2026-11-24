@@ -60,6 +60,36 @@ export function lockedWarmupMinutes(exercises, phase = 'warmup') {
   return section ? Math.ceil(section.seconds / 60) : 10;
 }
 
+/** Estimate total minutes occupied by user-pinned daily must-have warm-up & exercises. */
+export function estimateDailyRequiredMinutes(exercises = {}, context = {}) {
+  const normalized = normalizePlanningContext(context);
+  const eligible = planningExercises(exercises, normalized);
+  const lockedWarmupSet = new Set(DAILY_WARMUP_IDS);
+  const lockedDoses = normalized.dailyRequiredWarmup ? dailyWarmupPrescriptions('warmup') : [];
+  const extraDoses = normalized.dailyRequiredExerciseIds
+    .filter(id => Object.hasOwn(eligible, id) && !(normalized.dailyRequiredWarmup && lockedWarmupSet.has(id)))
+    .map(id => {
+      const ex = eligible[id];
+      const starter = ex.prescription || prescription(id, ex.type, 1, ex);
+      const phase = exercisePhase({ sessionType: 'training' }, id, ex);
+      return {
+        id,
+        sets: Math.max(1, Math.min(5, Math.round(Number(starter.sets) || 2))),
+        value: String(starter.value ?? '8'),
+        unit: ['reps', 'seconds', 'minutes', 'breaths'].includes(starter.unit) ? starter.unit : 'reps',
+        restSeconds: Math.max(0, Math.min(300, Math.round(Number(starter.restSeconds) || 30))),
+        perSide: !!starter.perSide,
+        phase,
+      };
+    });
+  const prescriptions = [...lockedDoses, ...extraDoses];
+  if (!prescriptions.length) return 0;
+  return estimateSessionMinutes(
+    { sessionType: 'training', routine: prescriptions.map(d => d.id), prescriptions },
+    eligible,
+  );
+}
+
 /**
  * Evaluate deterministic policy per date in a chunk using the template engine
  * strictly as a rule reference—never as fabricated completions.
@@ -141,7 +171,10 @@ export function resolveChunkDayPolicies(weekDates, {
       };
     }
 
-    const completeWarmupAllowed = !!expected && expected.sessionType !== 'rest' && isDailyWarmupComplete(expected);
+    const completeWarmupAllowed = context.dailyRequiredWarmup !== false
+      && !!expected
+      && expected.sessionType !== 'rest'
+      && isDailyWarmupComplete(expected);
     const warmupMode = expected?.sessionType === 'rest'
       ? 'rest_recommended'
       : completeWarmupAllowed
@@ -261,6 +294,15 @@ export function buildAIPeriodChunkPrompt({
       ? `\n【前次輸出修正要求（務必修正以下問題）】\n${correctionHint}\n`
       : '';
 
+    const eligibleRequired = context.dailyRequiredExerciseIds
+      .filter(id => Object.hasOwn(eligible, id) && !(context.dailyRequiredWarmup && lockedWarmupSet.has(id)));
+    const dailyRequiredBlock = eligibleRequired.length
+      ? `\n【使用者設定的每日必須動作（務必納入每個 training 訓練日）】\n以下動作由使用者鎖定為每日必須（ID 必須完全一致）：${JSON.stringify(eligibleRequired.map(id => ({ id, name: eligible[id].name, category: eligible[id].category || 'custom' })))}。\n- 每個 sessionType="training" 的日期都必須包含上述動作，並預留對應時間與劑量。\n- 若其中屬於安全活動度／伸展／呼吸（非肌力／跳躍／上下肢負重），也可在時間允許時納入 sessionType="recovery" 日。\n`
+      : '';
+    const warmupRuleIntro = context.dailyRequiredWarmup
+      ? `使用者已勾選「八段動態拉伸為每日暖身必須」。`
+      : `使用者本次未鎖定八段動態拉伸，請依各日訓練主題在每個 training 日自行安排合適的 warmup 動作。`;
+
     return `你是一位專業且溫暖的羽球功能性體能教練，正在為學員規劃日期原生課表（第 ${chunkIndex + 1} / ${totalChunks} 週，完整期間 ${range?.from || chunkDates[0]} 至 ${range?.to || chunkDates.at(-1)}）。
 你的目標是全面照顧羽球運動表現：下肢蹲／分腿煞車與蹬伸、髖鉸鏈（臀腿後）、上肢推與拉、肩胛／旋轉肌／前鋸肌穩定、核心抗旋轉、低量步法／爆發協調，以及八大關節活動度（胸椎、肩胸、髖前側、髖旋轉、內收肌、股四頭、腿後側、踝小腿）輪替。
 
@@ -269,15 +311,16 @@ export function buildAIPeriodChunkPrompt({
 僅為以下 editableDates 輸出 days 陣列（每天恰一筆，日期必須完全一致，不可包含受保護日期）：
 ${JSON.stringify(editableDates)}
 
-【八段動態暖身鎖定規則（非常重要）】
+【每日必須與暖身規則（非常重要）】
+${warmupRuleIntro}
 1. 凡是 warmupMode === "daily_warmup" 的日期：系統會自動在開頭加入標準八段動態暖身（動態嬰兒式後坐、偉大拉伸、貓牛式、徒手Y/T、前鋸肌牆推、胸椎開書、90/90髖轉換、下犬式交替踩跟，共 8 項獨立紀錄，已占用約 ${lockedWarmupMinutes(exercises)} 分鐘）。
    - 若你將該日排為 sessionType="training"：只需輸出主訓練與收操（phase 限用 skill / strength / accessory / cooldown），**切勿重複輸出這 8 個暖身 ID**，且剩餘動作總時間不可超過 remainingMinutes、數量不可超過 remainingSlots。
    - 若你將該日排為 sessionType="recovery"：系統自動以這 8 項動態拉伸作為主要恢復內容，你可將 routine/prescriptions 留空陣列，或再補 1–2 項安全 cooldown 拉伸（不可放肌力／跳躍／上肢負重）。
    - 若你將該日排為 sessionType="rest"：routine 與 prescriptions 必須皆為空陣列 []。
-2. 凡是 warmupMode === "custom" 的日期（短課／受限恢復／健康限制／未確認熟悉的賽前）：系統不鎖定八段暖身。若排 training 須自行包含至少 1 項安全 warmup 動作；若排 recovery 僅用 warmup/recovery/cooldown；若受限嚴重則排 rest。
+2. 凡是 warmupMode === "custom" 的日期（未鎖定八段暖身／短課／受限恢復／健康限制／未確認熟悉的賽前）：系統不鎖定八段暖身。若排 training 須自行包含至少 1 項安全 warmup 動作；若排 recovery 僅用 warmup/recovery/cooldown；若受限嚴重則排 rest。
 3. 凡是 warmupMode === "none"（非可訓練星期）：必須輸出 sessionType="rest"、routine=[]、prescriptions=[]。
 4. 若 warmupMode === "rest_recommended"：建議安排 sessionType="rest"（routine=[]）；若安排極輕 recovery，必須提供 1–2 項安全活動度／呼吸動作（不可留空陣列），並於 coachAdvice 說明原因。
-
+${dailyRequiredBlock}
 【學員資料、近 28 天真實紀錄與前期課表】
 ${JSON.stringify({
       goal: String(userGoal || '').slice(0, 600),
@@ -301,6 +344,8 @@ ${JSON.stringify({
         recoveryNotes: context.recoveryNotes.slice(0, 400),
         competitionDate: context.competitionDate,
         weeklyExerciseIds: context.weeklyExerciseIds,
+        dailyRequiredWarmup: context.dailyRequiredWarmup,
+        dailyRequiredExerciseIds: eligibleRequired,
       },
       recentSummary: summaryPayload,
       previousSessions: compactPreviousSessions(previousSessions),
@@ -477,7 +522,7 @@ function sanitizeReferenceFallback(date, policy, eligible, dailyTime, lang) {
  * phase mislabels, ineligible/duplicate IDs, jump volume > 24, or mild duration overshoot)
  * while strictly enforcing every domain safety invariant via sanitizePeriodSession.
  */
-function reconcileAIPeriodDay(aiDay, { date, policy, eligible, dailyTime, lang }) {
+function reconcileAIPeriodDay(aiDay, { date, policy, eligible, dailyTime, lang, dailyRequiredIds = [] }) {
   if (policy.warmupMode === 'none') {
     return sanitizePeriodSession(buildRestDay(date, policy, aiDay, lang), { exercises: eligible, dailyTime });
   }
@@ -494,6 +539,12 @@ function reconcileAIPeriodDay(aiDay, { date, policy, eligible, dailyTime, lang }
   }
 
   const lockedWarmupSet = new Set(DAILY_WARMUP_IDS);
+  const requiredSet = new Set(
+    dailyRequiredIds.filter(id => Object.hasOwn(eligible, id)
+      && !['bf_A12', 'bf_A13'].includes(id)
+      && !(policy.warmupMode === 'daily_warmup' && lockedWarmupSet.has(id))
+      && (sessionType !== 'recovery' || isRecoveryAllowedExercise(id, eligible[id]))),
+  );
   const rawRoutine = Array.isArray(aiDay.routine) ? aiDay.routine : [];
   const rawPrescriptions = Array.isArray(aiDay.prescriptions) ? aiDay.prescriptions : [];
   const rawDoseById = new Map();
@@ -505,7 +556,7 @@ function reconcileAIPeriodDay(aiDay, { date, policy, eligible, dailyTime, lang }
   const seen = new Set();
   const filteredIds = [];
   let hasSequence = false;
-  for (const id of rawRoutine) {
+  for (const id of [...rawRoutine, ...requiredSet]) {
     if (typeof id !== 'string' || seen.has(id) || !Object.hasOwn(eligible, id)) continue;
     if (['bf_A12', 'bf_A13'].includes(id)) continue;
     if (policy.warmupMode === 'daily_warmup' && lockedWarmupSet.has(id)) continue;
@@ -658,11 +709,14 @@ function reconcileAIPeriodDay(aiDay, { date, policy, eligible, dailyTime, lang }
   const maxExtras = isLockedWarmup ? MAX_DAY_EXERCISES - DAILY_WARMUP_IDS.length : MAX_DAY_EXERCISES;
   const trimPriority = ['cooldown', 'accessory', 'skill', 'recovery', 'strength', 'warmup'];
   const dropOneExtra = list => {
-    for (const phase of trimPriority) {
-      for (let i = list.length - 1; i >= 0; i -= 1) {
-        if (list[i].phase === phase) {
-          list.splice(i, 1);
-          return true;
+    // Always trim non-required exercises before ever touching user-pinned daily must-haves.
+    for (const protectRequired of [true, false]) {
+      for (const phase of trimPriority) {
+        for (let i = list.length - 1; i >= 0; i -= 1) {
+          if (list[i].phase === phase && (!protectRequired || !requiredSet.has(list[i].id))) {
+            list.splice(i, 1);
+            return true;
+          }
         }
       }
     }
@@ -684,8 +738,9 @@ function reconcileAIPeriodDay(aiDay, { date, policy, eligible, dailyTime, lang }
     fitGuard += 1;
     let adjusted = false;
 
-    // Step 1: reduce long rest intervals on non-locked exercises.
-    const restTarget = extraPrescriptions.find(dose => dose.restSeconds > 30);
+    // Step 1: reduce long rest intervals on non-locked exercises (non-required first).
+    const restTarget = extraPrescriptions.find(dose => !requiredSet.has(dose.id) && dose.restSeconds > 30)
+      || extraPrescriptions.find(dose => dose.restSeconds > 30);
     if (restTarget) {
       restTarget.restSeconds = restTarget.restSeconds > 60 ? 60 : restTarget.restSeconds > 45 ? 45 : 30;
       adjusted = true;
@@ -700,15 +755,20 @@ function reconcileAIPeriodDay(aiDay, { date, policy, eligible, dailyTime, lang }
       }
     }
 
-    // Step 3: reduce extra sets on lowest-priority phases first.
+    // Step 3: reduce extra sets on lowest-priority phases first (non-required first).
     if (!adjusted) {
-      for (const phase of trimPriority) {
-        const setTarget = [...extraPrescriptions].reverse().find(dose => dose.phase === phase && dose.sets > 1);
-        if (setTarget) {
-          setTarget.sets -= 1;
-          adjusted = true;
-          break;
+      for (const protectRequired of [true, false]) {
+        for (const phase of trimPriority) {
+          const setTarget = [...extraPrescriptions].reverse().find(
+            dose => dose.phase === phase && dose.sets > 1 && (!protectRequired || !requiredSet.has(dose.id)),
+          );
+          if (setTarget) {
+            setTarget.sets -= 1;
+            adjusted = true;
+            break;
+          }
         }
+        if (adjusted) break;
       }
     }
 
@@ -758,8 +818,10 @@ export function mergeAndValidateAIPeriodChunk(raw, {
   if (!raw || typeof raw !== 'object' || !Array.isArray(raw.days)) {
     throw new Error('AI_INVALID_CHUNK_SHAPE');
   }
-  const eligible = planningExercises(exercises, context);
+  const normalizedContext = normalizePlanningContext(context);
+  const eligible = planningExercises(exercises, normalizedContext);
   const lockedWarmupSet = new Set(DAILY_WARMUP_IDS);
+  const dailyRequiredIds = normalizedContext.dailyRequiredExerciseIds.filter(id => Object.hasOwn(eligible, id));
   const policyByDate = new Map(policies.map(item => [item.date, item]));
   const rawByDate = new Map();
 
@@ -793,6 +855,7 @@ export function mergeAndValidateAIPeriodChunk(raw, {
         eligible,
         dailyTime: Number(dailyTime),
         lang,
+        dailyRequiredIds,
       }));
       continue;
     }
@@ -857,7 +920,9 @@ export function mergeAndValidateAIPeriodChunk(raw, {
         ? aiDay.warmupNote.trim().slice(0, 1200)
         : (sessionType === 'rest'
           ? (lang === 'en' ? 'Rest day — no warm-up needed.' : '今日為休息日，不需額外暖身。')
-          : (lang === 'en' ? 'Begin with the 8-movement dynamic warm-up flow.' : '以標準八段動態暖身循序啟動關節與核心。')),
+          : (policy.warmupMode === 'daily_warmup'
+            ? (lang === 'en' ? 'Begin with the 8-movement dynamic warm-up flow.' : '以標準八段動態暖身循序啟動關節與核心。')
+            : (lang === 'en' ? 'Begin with a focused warm-up tailored to today’s movements.' : '先以符合今日主項的專屬暖身循序啟動關節與核心。'))),
       cooldownNote: typeof aiDay.cooldownNote === 'string' && aiDay.cooldownNote.trim()
         ? aiDay.cooldownNote.trim().slice(0, 1200)
         : (sessionType === 'rest'
@@ -870,6 +935,16 @@ export function mergeAndValidateAIPeriodChunk(raw, {
     // Enforce locked 8-item warm-up presence on daily_warmup active days
     if (policy.warmupMode === 'daily_warmup' && candidateSession.sessionType !== 'rest' && !isDailyWarmupComplete(candidateSession)) {
       throw new Error(`AI_DAILY_WARMUP_MISSING:${date}`);
+    }
+
+    // Enforce user-pinned daily must-have exercises on training days (strict attempt triggers targeted retry)
+    if (candidateSession.sessionType === 'training' && dailyRequiredIds.length) {
+      const missingRequired = dailyRequiredIds.filter(
+        id => !(policy.warmupMode === 'daily_warmup' && lockedWarmupSet.has(id)) && !candidateSession.routine.includes(id),
+      );
+      if (missingRequired.length) {
+        throw new Error(`AI_DAILY_REQUIRED_MISSING:${date}:${missingRequired.join(',')}`);
+      }
     }
 
     // Validate strictly against eligible exercises (equipment, experience, partner, health)
