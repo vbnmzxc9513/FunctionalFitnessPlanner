@@ -8,7 +8,8 @@
 }
 
 @layer base {
-  :root { font-synthesis: none; color: var(--color-slate-700); background: var(--color-slate-50); }
+  :root { font-synthesis: none; color: var(--color-slate-700); background: var(--color-slate-50); -webkit-text-size-adjust: 100%; }
+  html, body { overscroll-behavior-y: contain; }
   body { margin: 0; font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
   button, summary, select { -webkit-tap-highlight-color: transparent; }
   button, a, summary, input, select, textarea { outline-offset: 4px; }
@@ -25,17 +26,18 @@
 @layer components {
   .app-shell { min-height: 100dvh; padding-bottom: calc(90px + env(safe-area-inset-bottom)); }
   .app-sidebar { background: #fff; border-bottom: 1px solid var(--color-sky-100); }
-  .app-brand { padding: 14px 16px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 12px; }
+  .app-brand { padding: calc(14px + env(safe-area-inset-top)) 16px 14px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 12px; user-select: none; -webkit-touch-callout: none; }
   .brand-lockup { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 750; letter-spacing: -.3px; min-width: 0; }
   .brand-mark { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 12px; color: white; background: var(--color-sky-600); flex-shrink: 0; }
   .app-brand-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .coach-header-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 8px 13px; border: 1px solid var(--brand-soft-border); border-radius: 12px; background: var(--brand-soft); color: var(--brand-primary); font-size: 13px; font-weight: 700; white-space: nowrap; transition: background .15s, border-color .15s; }
+  .coach-header-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 8px 13px; border: 1px solid var(--brand-soft-border); border-radius: 12px; background: var(--brand-soft); color: var(--brand-primary); font-size: 13px; font-weight: 700; white-space: nowrap; transition: background .15s, border-color .15s; user-select: none; -webkit-touch-callout: none; }
   .coach-header-button:hover:not(:disabled) { background: var(--brand-tint); border-color: var(--brand-accent); }
-  .coach-inline-button { display: inline-flex; justify-content: center; align-items: center; gap: 7px; min-height: 44px; padding: 10px 16px; border: 1px solid var(--brand-soft-border); border-radius: 12px; background: var(--brand-tint); color: var(--brand-primary); font-size: 14px; font-weight: 650; transition: background .15s, border-color .15s; }
+  .coach-inline-button { display: inline-flex; justify-content: center; align-items: center; gap: 7px; min-height: 44px; padding: 10px 16px; border: 1px solid var(--brand-soft-border); border-radius: 12px; background: var(--brand-tint); color: var(--brand-primary); font-size: 14px; font-weight: 650; transition: background .15s, border-color .15s; user-select: none; -webkit-touch-callout: none; }
   .coach-inline-button:hover:not(:disabled) { background: var(--brand-soft); border-color: var(--brand-accent); }
-  .settings-button { display: flex; align-items: center; gap: 7px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--color-sky-100); border-radius: 12px; font-size: 13px; color: var(--color-slate-600); white-space: nowrap; }
-  .app-nav { position: fixed; z-index: 30; bottom: 0; left: 0; right: 0; display: flex; background: #fff; border-top: 1px solid var(--color-sky-100); padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); }
-  .app-nav button { display: flex; flex: 1; flex-direction: column; align-items: center; gap: 4px; padding: 8px; border-radius: 14px; color: var(--color-slate-500); font-size: 12px; min-height: 54px; }
+  .settings-button { display: flex; align-items: center; gap: 7px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--color-sky-100); border-radius: 12px; font-size: 13px; color: var(--color-slate-600); white-space: nowrap; user-select: none; -webkit-touch-callout: none; }
+  .app-nav { position: fixed; z-index: 30; bottom: 0; left: 0; right: 0; display: flex; background: rgba(255, 255, 255, 0.96); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-top: 1px solid var(--color-sky-100); box-shadow: 0 -2px 12px rgba(15, 23, 42, 0.05); padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); user-select: none; -webkit-touch-callout: none; }
+  .app-nav button { display: flex; flex: 1; flex-direction: column; align-items: center; gap: 4px; padding: 8px; border-radius: 14px; color: var(--color-slate-500); font-size: 12px; min-height: 54px; transition: transform .12s ease, color .15s ease, background .15s ease; }
+  .app-nav button:active { transform: scale(0.95); }
   .app-nav button[aria-current="page"] { background: var(--color-sky-50); color: var(--color-sky-700); font-weight: 750; }
   .app-main { padding: 24px 20px 32px; max-width: 1280px; margin: auto; }
   .screen-header { margin-bottom: 26px; }
@@ -145,7 +147,7 @@
   .app-brand-actions { flex-direction: column; align-items: stretch; width: 100%; }
   .coach-header-button, .settings-button { width: 100%; justify-content: flex-start; padding: 10px 14px; }
   .brand-lockup { font-size: 14px; }
-  .app-nav { position: static; padding: 8px 14px; flex-direction: column; border: 0; gap: 6px; }
+  .app-nav { position: static; padding: 8px 14px; flex-direction: column; border: 0; gap: 6px; background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: none; }
   .app-nav button { flex: none; flex-direction: row; justify-content: flex-start; gap: 13px; font-size: 14px; padding: 14px 18px; }
   .app-main { padding: 44px 40px; }
   .week-layout { grid-template-columns: minmax(0,1fr) 286px; align-items: start; gap: 26px; }
@@ -155,7 +157,12 @@
   .session-hero { padding: 32px; }
 }
 @media (max-width: 480px) {
-  .app-main { padding: 22px 16px; }
+  .app-brand { padding: calc(10px + env(safe-area-inset-top)) 12px 10px; gap: 8px; }
+  .brand-lockup { font-size: 14px; gap: 7px; }
+  .brand-mark { width: 32px; height: 32px; border-radius: 10px; }
+  .app-brand-actions { gap: 6px; }
+  .coach-header-button, .settings-button { padding: 6px 10px; font-size: 12.5px; gap: 5px; }
+  .app-main { padding: 20px 16px; }
   .setup-card { padding: 24px 20px; }
   .setup-heading h2 { font-size: 25px; }
   .week-hero .button-primary { width: 100%; }
