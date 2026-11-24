@@ -26,7 +26,8 @@ import { DEFAULT_PLANNING_CONTEXT, normalizePlanningContext } from './domain/pla
 import { enumeratePeriodDates } from './domain/periodPlanning.js';
 import { selectSavedPeriod, readPeriodDraft, writePeriodDraft, periodFromWeeklyDraft, localPeriodProgressView, saveLocalSingleDaySession } from './domain/periodDraft.js';
 import { saveSingleDaySession } from './services/periodRepository.js';
-import { getRecordedExerciseIds } from './domain/singleDayEdit.js';
+import { getRecordedExerciseIds, quickAddExerciseToDay, quickRemoveExerciseFromDay } from './domain/singleDayEdit.js';
+import { DAILY_WARMUP_IDS } from './domain/quickWorkouts.js';
 import { readShareFromLocation } from './domain/sharing.js';
 import { readSharedPlanLocation } from './domain/sharedPlans.js';
 import { savedWorkoutDay } from './domain/savedWorkouts.js';
@@ -436,7 +437,55 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
   const publicPeriodBase = useMemo(() => localPeriod || (!user ? periodFromWeeklyDraft(publicDraft) : null), [localPeriod, user, publicDraft]);
   const periodHistory = useMemo(() => ({ logs: exerciseLogs, progress: allProgress, readiness: readinessRecords }), [exerciseLogs, allProgress, readinessRecords]);
   const periodRefresh = useMemo(() => JSON.stringify({ progress: allProgress, logs: exerciseLogs, nativeSessions }), [allProgress, exerciseLogs, nativeSessions]);
-  const renderPeriodWorkspace = () => <PeriodWorkspace key={`${user?.uid || 'public'}:${periodCreating ? 'create' : activeTab === 'plan' && dateOverview ? `${displayWeek}_${selectedPeriod?.periodId || ''}` : 'first'}`} uid={user?.uid} today={today} lang={lang} t={t} exercises={exercises} profile={profile} setProfile={setProfile} available={weeklyAvailable} onToggleWeekly={toggleWeeklyChoice} preserveCurrentChoices={choicesChanged.current} history={periodHistory} metrics={data.metrics} apiKey={apiKey} onSaveKey={saveKey} model={model} models={models} onSelectModel={selectModel} aiMember={aiMember} onSignIn={() => navigate('settings')} localPeriod={publicPeriodBase} onLocalPeriod={onLocalPeriod} onApplied={periodApplied} fallbackPlans={data.plans} refreshToken={periodRefresh} overview={periodCreating ? null : activeTab === 'plan' && dateOverview ? calendarPeriod : selectedPeriod} onClose={periodCreating ? () => dispatchNav({ type: 'CLOSE_PERIOD_CREATING' }) : undefined} onToday={() => navigate('train')} onSaveWorkout={day => dispatchNav({ type: 'SET_SAVE_WORKOUT_DAY', day })} onShare={shareDays} onOverviewLoaded={sessions => setOverviewCounts(previous => previous[displayWeek] === sessions.length ? previous : { ...previous, [displayWeek]: sessions.length })} onPlanDate={date => openManual([createManualSession(date, lang)], null, date, { single: true, add: true })} onEditWorkout={day => openManual(Array.isArray(day) ? day : [day], null, null, { single: !Array.isArray(day) })} onAddToDay={day => openManual([day], null, null, { single: true, add: true })} />;
+  const [coachPlannerNote, setCoachPlannerNote] = useState('');
+  const consumeCoachPlannerNote = useCallback(() => setCoachPlannerNote(''), []);
+  const swapCoachExercise = async (oldId, newId) => {
+    if (!coachActiveSession || !oldId || !newId || oldId === newId) return false;
+    if (DAILY_WARMUP_IDS.includes(oldId)) {
+      showToast(lang === 'zh' ? '固定八段動態暖身不可替換。' : 'The 8-item dynamic warm-up cannot be swapped.');
+      return false;
+    }
+    const sessionDate = coachActiveSession.date || activeDate;
+    const routine = Array.isArray(coachActiveSession.routine) ? coachActiveSession.routine : [];
+    if (!routine.includes(oldId) || routine.includes(newId)) return false;
+    if (!weeklyAvailable[newId]) {
+      showToast(lang === 'zh' ? '目標替代動作不符合目前器材或安全條件。' : 'Suggested replacement does not match current equipment or safety settings.');
+      return false;
+    }
+    const recordedIds = getRecordedExerciseIds(sessionDate, { progressByWeek: allProgress, logs: exerciseLogs });
+    if (recordedIds.has(oldId)) {
+      showToast(lang === 'zh' ? '該動作今天已有完成紀錄，無法直接替換。' : 'This exercise already has a record today and cannot be swapped.');
+      return false;
+    }
+    try {
+      let swapped;
+      try {
+        const removed = quickRemoveExerciseFromDay(coachActiveSession, oldId, { recordedIds, exercises, lang });
+        swapped = quickAddExerciseToDay(removed, newId, { exercises, eligibleExercises: weeklyAvailable, lang });
+      } catch (inner) {
+        if (inner?.message !== 'AI_WARMUP_MISSING') throw inner;
+        const added = quickAddExerciseToDay(coachActiveSession, newId, { exercises, eligibleExercises: weeklyAvailable, lang });
+        swapped = quickRemoveExerciseFromDay(added, oldId, { recordedIds, exercises, lang });
+      }
+      const oldName = exercises[oldId]?.name || oldId;
+      const newName = exercises[newId]?.name || newId;
+      const msg = lang === 'zh' ? `已將「${oldName}」換成「${newName}」` : `Swapped "${oldName}" to "${newName}"`;
+      return await quickSaveDay(sessionDate, swapped, msg);
+    } catch (error) {
+      console.error('AI Coach swap failed', error);
+      showToast(t('toastSaveFail'));
+      return false;
+    }
+  };
+  const sendCoachToPlanner = note => {
+    const clean = String(note || '').trim();
+    if (!clean) return;
+    setCoachPlannerNote(clean);
+    setCoachOpen(false);
+    openWeeklySelection();
+  };
+
+  const renderPeriodWorkspace = () => <PeriodWorkspace key={`${user?.uid || 'public'}:${periodCreating ? 'create' : activeTab === 'plan' && dateOverview ? `${displayWeek}_${selectedPeriod?.periodId || ''}` : 'first'}`} uid={user?.uid} today={today} lang={lang} t={t} exercises={exercises} profile={profile} setProfile={setProfile} available={weeklyAvailable} onToggleWeekly={toggleWeeklyChoice} preserveCurrentChoices={choicesChanged.current} history={periodHistory} metrics={data.metrics} apiKey={apiKey} onSaveKey={saveKey} model={model} models={models} onSelectModel={selectModel} aiMember={aiMember} onSignIn={() => navigate('settings')} localPeriod={publicPeriodBase} onLocalPeriod={onLocalPeriod} onApplied={periodApplied} fallbackPlans={data.plans} refreshToken={periodRefresh} overview={periodCreating ? null : activeTab === 'plan' && dateOverview ? calendarPeriod : selectedPeriod} onClose={periodCreating ? () => dispatchNav({ type: 'CLOSE_PERIOD_CREATING' }) : undefined} onToday={() => navigate('train')} onSaveWorkout={day => dispatchNav({ type: 'SET_SAVE_WORKOUT_DAY', day })} onShare={shareDays} onOverviewLoaded={sessions => setOverviewCounts(previous => previous[displayWeek] === sessions.length ? previous : { ...previous, [displayWeek]: sessions.length })} onPlanDate={date => openManual([createManualSession(date, lang)], null, date, { single: true, add: true })} onEditWorkout={day => openManual(Array.isArray(day) ? day : [day], null, null, { single: !Array.isArray(day) })} onAddToDay={day => openManual([day], null, null, { single: true, add: true })} initialCoachNote={coachPlannerNote} onConsumeInitialCoachNote={consumeCoachPlannerNote} />;
   const openLegacyAI = () => { if (hasNativeWeek || editing || savingPlan || !user) return; dispatchNav({ type: 'OPEN_LEGACY_AI' }); setPlanningMode('byok'); setPlanningStep(0); setEditingAI(true); setLegacyPreview(null); };
   const firstPlan = <section data-testid="first-plan" className="panel"><h2 className="text-xl font-bold text-slate-800">{lang === 'zh' ? '今天尚未安排訓練' : 'No workout today'}</h2><div className="day-actions"><button type="button" data-testid="today-create-workout" className="button-primary" onClick={() => openManual([createManualSession(today, lang)], null, today, { single: true, add: true })}>{lang === 'zh' ? '＋ 新增今天的動作' : '+ Add today’s exercises'}</button><button type="button" className="button-secondary" onClick={() => navigate('plan')}>{lang === 'zh' ? '查看課表' : 'View plan'}</button><button type="button" data-testid="open-ai-coach" className="coach-inline-button" onClick={() => setCoachOpen(true)}><Sparkles size={16} aria-hidden="true" />{lang === 'zh' ? '問 AI 教練' : 'Ask AI Coach'}</button></div></section>;
 
@@ -544,6 +593,9 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
             recentSummary={coachRecentSummary}
             readiness={readiness}
             metrics={data.metrics}
+            exerciseLogs={exerciseLogs}
+            onSwapExercise={coachActiveSession ? swapCoachExercise : undefined}
+            onSendToPlanner={sendCoachToPlanner}
             apiKey={apiKey}
             onSaveKey={saveKey}
             onClearKey={clearKey}

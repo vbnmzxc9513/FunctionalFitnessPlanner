@@ -4139,5 +4139,686 @@
     "jumpContacts": 0,
     "betweenRepsSeconds": 0,
     "contentVersion": 1
+  },
+  {
+    "id": "bf_C22",
+    "catalogCode": "C22",
+    "name": "俯臥 YTWL 背部喚醒／徒手划船",
+    "nameEn": "Prone YTWL & floor pull",
+    "category": "upper",
+    "type": "upper_pull",
+    "equipmentOptions": [
+      []
+    ],
+    "equipment": "地墊",
+    "equipmentEn": "Exercise mat",
+    "aliases": [
+      "俯臥 YTWL",
+      "背部喚醒",
+      "徒手划船",
+      "俯臥划船",
+      "YTWL",
+      "prone YTWL",
+      "floor pull"
+    ],
+    "purpose": "徒手上背肌耐力與肩胛穩定喚醒",
+    "purposeEn": "Bodyweight upper-back endurance and scapular control",
+    "cue": "俯臥額頭輕靠軟墊，雙臂依序擺出 Y、T、W、L 並小幅抬離地面，以肩胛帶動而非聳肩或折腰。",
+    "cueEn": "Lie prone with forehead supported; smoothly move through Y, T, W and L shapes with small controlled lifts driven by the shoulder blades, without shrugging or arching the lower back.",
+    "easier": "縮小手臂抬高幅度，或改做單一 W 字徒手划船。",
+    "easierEn": "Use a smaller lift height or perform only the W-shape floor pull.",
+    "harder": "每個字母頂端停頓 2 秒，保持穩定呼吸。",
+    "harderEn": "Add a 2-second controlled pause at the top of each shape while breathing steadily.",
+    "dose": "2 組 × 8 次",
+    "doseEn": "2 sets × 8 reps",
+    "rest": "45–60 秒",
+    "restEn": "45–60 seconds",
+    "prescription": {
+      "sets": 2,
+      "value": "8",
+      "unit": "reps",
+      "restSeconds": 45,
+      "perSide": false
+    },
+    "active": true,
+    "advanced": false,
+    "shoulderLoaded": false,
+    "requiresPartner": false,
+    "priority": true,
+    "level": "基礎",
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0,
+    "contentVersion": 1
+  },
+  {
+    "id": "bf_C23",
+    "catalogCode": "C23",
+    "name": "毛巾／門框等長划船",
+    "nameEn": "Towel or doorframe isometric row",
+    "category": "upper",
+    "type": "upper_pull",
+    "equipmentOptions": [
+      []
+    ],
+    "equipment": "毛巾或穩固門框",
+    "equipmentEn": "Towel or sturdy doorframe",
+    "aliases": [
+      "毛巾划船",
+      "門框划船",
+      "等長划船",
+      "居家練背",
+      "towel row",
+      "doorframe row",
+      "isometric row"
+    ],
+    "purpose": "無器材居家背部拉動張力與肩胛後收",
+    "purposeEn": "No-equipment upper-back pulling tension and scapular retraction",
+    "cue": "站穩微屈膝，雙手握毛巾或扶穩門框，將手肘向身側後方穩定拉緊維持張力，胸口打開不聳肩。",
+    "cueEn": "Stand with soft knees, grip a towel or sturdy doorframe, and steadily pull the elbows back toward your sides to hold tension with an open chest and relaxed shoulders.",
+    "easier": "減少拉動出力至中等張力，或縮短單次維持秒數。",
+    "easierEn": "Pull at moderate tension or shorten the hold duration.",
+    "harder": "身體略微後傾並拉長穩定維持時間，全程維持順暢呼吸。",
+    "harderEn": "Lean back slightly more and extend the controlled hold while breathing normally.",
+    "dose": "2 組 × 20 秒",
+    "doseEn": "2 sets × 20 seconds",
+    "rest": "45–60 秒",
+    "restEn": "45–60 seconds",
+    "prescription": {
+      "sets": 2,
+      "value": "20",
+      "unit": "seconds",
+      "restSeconds": 45,
+      "perSide": false
+    },
+    "active": true,
+    "advanced": false,
+    "shoulderLoaded": false,
+    "requiresPartner": false,
+    "priority": false,
+    "level": "基礎",
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0,
+    "contentVersion": 1
+  },
+  {
+    "id": "bf_C24",
+    "catalogCode": "C24",
+    "name": "橫桿反向划船",
+    "nameEn": "Inverted bodyweight row",
+    "category": "upper",
+    "type": "upper_pull",
+    "equipmentOptions": [
+      [
+        "pullup_bar"
+      ],
+      [
+        "platform"
+      ]
+    ],
+    "equipment": "低單槓或穩固橫桿／桌緣",
+    "equipmentEn": "Low pull-up bar or sturdy horizontal bar/platform",
+    "aliases": [
+      "反向划船",
+      "澳式引體",
+      "水平拉",
+      "inverted row",
+      "bodyweight row",
+      "Australian pull-up"
+    ],
+    "purpose": "水平拉力肌力與軀幹核心一直線穩定",
+    "purposeEn": "Horizontal pulling strength and full-body trunk alignment",
+    "cue": "雙手比肩略寬握穩橫桿，身體成一直線；將胸口拉向橫桿，頂端稍停再控制下放，不塌腰或頂髖。",
+    "cueEn": "Grip a secure bar slightly wider than shoulders with the body in one straight line; pull your chest toward the bar, pause briefly, and lower under control without sagging or thrusting the hips.",
+    "easier": "屈膝踩實地面或提高橫桿高度，讓身體角度更直立。",
+    "easierEn": "Bend the knees with feet flat or raise the bar height for a more upright torso angle.",
+    "harder": "雙腿伸直並將雙腳放低，或下放時放慢至 3 秒離心控制。",
+    "harderEn": "Straighten the legs for a flatter body angle or use a slow 3-second lowering tempo.",
+    "dose": "2 組 × 8 次",
+    "doseEn": "2 sets × 8 reps",
+    "rest": "60–90 秒",
+    "restEn": "60–90 seconds",
+    "prescription": {
+      "sets": 2,
+      "value": "8",
+      "unit": "reps",
+      "restSeconds": 60,
+      "perSide": false
+    },
+    "active": true,
+    "advanced": false,
+    "shoulderLoaded": false,
+    "requiresPartner": false,
+    "priority": true,
+    "level": "基礎",
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0,
+    "contentVersion": 1
+  },
+  {
+    "id": "bf_C25",
+    "catalogCode": "C25",
+    "name": "引體向上／彈力帶輔助引體",
+    "nameEn": "Pull-up or band-assisted pull-up",
+    "category": "upper",
+    "type": "upper_pull",
+    "equipmentOptions": [
+      [
+        "pullup_bar"
+      ],
+      [
+        "pullup_bar",
+        "band"
+      ]
+    ],
+    "equipment": "單槓；可搭配輔助彈力帶",
+    "equipmentEn": "Pull-up bar; optional assistance band",
+    "aliases": [
+      "引體向上",
+      "拉單槓",
+      "彈力帶引體",
+      "垂直拉",
+      "pull-up",
+      "pull up",
+      "chin-up",
+      "assisted pull-up"
+    ],
+    "purpose": "垂直拉力、背闊肌與握力肌力",
+    "purposeEn": "Vertical pulling, latissimus and grip strength",
+    "cue": "穩握單槓並輕微啟動肩胛，將手肘向身側下方拉動讓胸口靠近橫桿；控制慢慢下放，不靠擺盪借力。",
+    "cueEn": "Grip the bar firmly, engage the shoulder blades gently, and drive the elbows down toward your sides to bring the chest toward the bar; lower slowly under control without kipping or swinging.",
+    "easier": "搭配較強阻力彈力帶輔助，或改做離心慢放與橫桿反向划船。",
+    "easierEn": "Use a thicker assistance band, slow eccentric lowers, or regress to inverted bodyweight rows.",
+    "harder": "移除彈力帶進行完整自重引體向上，並在頂端穩定停頓 1 秒。",
+    "harderEn": "Perform unassisted full-range pull-ups with a 1-second controlled pause at the top.",
+    "dose": "2 組 × 5 次",
+    "doseEn": "2 sets × 5 reps",
+    "rest": "90 秒",
+    "restEn": "90 seconds",
+    "prescription": {
+      "sets": 2,
+      "value": "5",
+      "unit": "reps",
+      "restSeconds": 90,
+      "perSide": false
+    },
+    "active": true,
+    "advanced": true,
+    "shoulderLoaded": true,
+    "requiresPartner": false,
+    "priority": false,
+    "level": "進階",
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0,
+    "contentVersion": 1
+  },
+  {
+    "id": "bf_C26",
+    "catalogCode": "C26",
+    "name": "上斜／下斜伏地挺身",
+    "nameEn": "Incline or decline push-up",
+    "category": "upper",
+    "type": "upper_push",
+    "equipmentOptions": [
+      [],
+      [
+        "platform"
+      ]
+    ],
+    "equipment": "穩固椅凳、台階或牆面",
+    "equipmentEn": "Sturdy bench, step or wall",
+    "aliases": [
+      "上斜伏地挺身",
+      "下斜伏地挺身",
+      "伏地挺身變化",
+      "incline push-up",
+      "decline push-up",
+      "elevated push-up"
+    ],
+    "purpose": "可調難度的胸部水平推舉與核心穩定",
+    "purposeEn": "Scalable chest pressing strength and core alignment",
+    "cue": "手撐穩固台階做上斜降難度，或腳墊低台做下斜增負荷；手肘自然向後約 45 度，軀幹維持一直線不塌腰。",
+    "cueEn": "Place hands on a stable elevation for an easier incline version or feet on a low step for a harder decline version; keep elbows angled about 45 degrees back and maintain a straight trunk without sagging.",
+    "easier": "提高手部支撐高度（如穩固桌面或牆面）。",
+    "easierEn": "Raise the hand support higher, such as a sturdy counter or wall.",
+    "harder": "逐步降低手部支撐，穩定後再以低台階進行下斜版本。",
+    "harderEn": "Gradually lower the hand elevation, then progress to a low-step decline push-up once fully controlled.",
+    "dose": "2 組 × 10 次",
+    "doseEn": "2 sets × 10 reps",
+    "rest": "60–90 秒",
+    "restEn": "60–90 seconds",
+    "prescription": {
+      "sets": 2,
+      "value": "10",
+      "unit": "reps",
+      "restSeconds": 60,
+      "perSide": false
+    },
+    "active": true,
+    "advanced": false,
+    "shoulderLoaded": true,
+    "requiresPartner": false,
+    "priority": false,
+    "level": "基礎",
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0,
+    "contentVersion": 1
+  },
+  {
+    "id": "bf_C27",
+    "catalogCode": "C27",
+    "name": "彈力帶／球拍手腕橈尺偏控制",
+    "nameEn": "Band or racket wrist radial-ulnar control",
+    "category": "upper",
+    "type": "upper_pull",
+    "equipmentOptions": [
+      [
+        "band"
+      ],
+      [
+        "racket"
+      ]
+    ],
+    "equipment": "輕彈力帶或羽球拍",
+    "equipmentEn": "Light resistance band or badminton racket",
+    "aliases": [
+      "手腕橈尺偏",
+      "球拍轉腕",
+      "手腕控制",
+      "前臂穩定",
+      "wrist radial deviation",
+      "ulnar deviation",
+      "racket wrist control"
+    ],
+    "purpose": "羽球揮拍所需的手腕橈尺偏控制與前臂耐受",
+    "purposeEn": "Badminton-specific wrist radial-ulnar control and forearm tolerance",
+    "cue": "手肘貼身彎曲約 90 度、前臂保持穩定，以手腕緩慢帶動球拍或輕彈力帶上下翹動（橈偏與尺偏），不用肩膀甩動。",
+    "cueEn": "Keep the elbow bent near 90 degrees at your side with a steady forearm; slowly tilt the wrist up and down (radial and ulnar deviation) using a racket or light band without swinging from the shoulder.",
+    "easier": "握靠近拍頭減短力臂，或改用更輕阻力的彈力帶縮小範圍。",
+    "easierEn": "Choke higher up the racket handle to shorten the lever, or use a lighter band and smaller range.",
+    "harder": "放慢離心控制速度，或改握拍柄末端增加力臂。",
+    "harderEn": "Slow down the lowering phase or grip closer to the end of the handle for a longer lever.",
+    "dose": "2 組 × 每側 10 次",
+    "doseEn": "2 sets × 10 reps per side",
+    "rest": "45 秒",
+    "restEn": "45 seconds",
+    "prescription": {
+      "sets": 2,
+      "value": "10",
+      "unit": "reps",
+      "restSeconds": 45,
+      "perSide": true
+    },
+    "active": true,
+    "advanced": false,
+    "shoulderLoaded": false,
+    "requiresPartner": false,
+    "priority": false,
+    "level": "基礎",
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0,
+    "contentVersion": 1
+  },
+  {
+    "id": "bf_B20",
+    "catalogCode": "B20",
+    "name": "哥本哈根內收肌橋式",
+    "nameEn": "Copenhagen adductor plank",
+    "category": "lower",
+    "type": "lower",
+    "equipmentOptions": [
+      [],
+      [
+        "platform"
+      ]
+    ],
+    "equipment": "地墊或穩固低凳",
+    "equipmentEn": "Exercise mat or stable low bench",
+    "aliases": [
+      "哥本哈根橋式",
+      "內收肌橋式",
+      "鼠蹊強化",
+      "Copenhagen plank",
+      "adductor plank",
+      "groin plank"
+    ],
+    "purpose": "大腿內側內收肌與骨盆側向穩定，支援羽球大跨步急停",
+    "purposeEn": "Adductor and lateral pelvic stability supporting badminton lunges and braking",
+    "cue": "側撐手肘在肩下，上側膝蓋或小腿靠在低凳或墊上（初階可採短力臂屈膝版），將骨盆抬起維持一直線，自然呼吸不塌髖。",
+    "cueEn": "Set up in a side elbow plank with the top knee or shin on a low bench or mat (bent-knee short lever first); lift the hips into straight alignment and breathe steadily without dropping the pelvis.",
+    "easier": "採短力臂屈膝版，或先讓下側腳輕點地面分擔重量。",
+    "easierEn": "Use the short-lever bent-knee setup or keep the bottom foot lightly resting on the floor for support.",
+    "harder": "改為直腿腳踝靠凳的長力臂版本，維持骨盆平穩。",
+    "harderEn": "Progress to a straight-leg ankle support once the short-lever hold is pain-free and steady.",
+    "dose": "2 組 × 每側 15 秒",
+    "doseEn": "2 sets × 15 seconds per side",
+    "rest": "45–60 秒",
+    "restEn": "45–60 seconds",
+    "prescription": {
+      "sets": 2,
+      "value": "15",
+      "unit": "seconds",
+      "restSeconds": 45,
+      "perSide": true
+    },
+    "active": true,
+    "advanced": false,
+    "shoulderLoaded": false,
+    "requiresPartner": false,
+    "priority": true,
+    "level": "基礎",
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0,
+    "contentVersion": 1
+  },
+  {
+    "id": "bf_B21",
+    "catalogCode": "B21",
+    "name": "單腳離心腿後側臀橋",
+    "nameEn": "Single-leg eccentric hamstring bridge",
+    "category": "lower",
+    "type": "lower",
+    "equipmentOptions": [
+      []
+    ],
+    "equipment": "地墊",
+    "equipmentEn": "Exercise mat",
+    "aliases": [
+      "單腳臀橋",
+      "離心腿後側",
+      "腿後肌離心",
+      "single-leg bridge",
+      "eccentric hamstring bridge",
+      "hamstring bridge"
+    ],
+    "purpose": "腿後側離心煞車耐受與單側髖伸穩定",
+    "purposeEn": "Eccentric hamstring braking tolerance and unilateral hip extension control",
+    "cue": "仰臥屈膝、雙腳略往前放，雙腳一起推起臀部後抬起一腳，以單腳腳跟穩穩撐地並花 3–4 秒緩慢控制下放骨盆。",
+    "cueEn": "Lie supine with feet placed slightly farther forward; bridge up with both legs, lift one foot, and lower the hips slowly over 3–4 seconds on the single planted heel.",
+    "easier": "雙腳拉近臀部減小腿後側力臂，或改做雙腳慢放臀橋。",
+    "easierEn": "Bring the feet closer to the hips to reduce lever length, or lower on both legs slowly.",
+    "harder": "直接單腳推起並單腳 4 秒慢放，保持骨盆左右齊平。",
+    "harderEn": "Press up and lower slowly for 4 seconds on the same single leg while keeping the pelvis level.",
+    "dose": "2 組 × 每側 6 次",
+    "doseEn": "2 sets × 6 reps per side",
+    "rest": "60 秒",
+    "restEn": "60 seconds",
+    "prescription": {
+      "sets": 2,
+      "value": "6",
+      "unit": "reps",
+      "restSeconds": 60,
+      "perSide": true
+    },
+    "active": true,
+    "advanced": false,
+    "shoulderLoaded": false,
+    "requiresPartner": false,
+    "priority": true,
+    "level": "基礎",
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0,
+    "contentVersion": 1
+  },
+  {
+    "id": "bf_B22",
+    "catalogCode": "B22",
+    "name": "仰臥滑行腿後側勾腿",
+    "nameEn": "Supine slider hamstring curl",
+    "category": "lower",
+    "type": "lower",
+    "equipmentOptions": [
+      []
+    ],
+    "equipment": "光滑地面與襪子／毛巾或滑行盤",
+    "equipmentEn": "Smooth floor with socks, towel or sliders",
+    "aliases": [
+      "滑行勾腿",
+      "腿後側勾腿",
+      "仰臥勾腿",
+      "slider hamstring curl",
+      "floor leg curl",
+      "hamstring curl"
+    ],
+    "purpose": "無器材腿後側離心與向心屈膝肌力",
+    "purposeEn": "No-equipment eccentric and concentric hamstring knee-flexion strength",
+    "cue": "仰臥將雙腳跟踩在毛巾或滑行盤上，先抬起臀部成橋式；慢慢將腳跟滑出伸長，再由腿後側發力拉回，不拱腰借力。",
+    "cueEn": "Lie supine with heels on a towel or sliders and lift into a bridge; slowly slide the heels out, then pull them back with the hamstrings without arching the lower back.",
+    "easier": "只做離心滑出，伸直後放下臀部再收回腳跟重來。",
+    "easierEn": "Perform eccentric slide-outs only: lower the hips once extended, pull feet back on the floor, and reset.",
+    "harder": "全程保持臀部離地平滑往復，或在滑出最遠端停留 1 秒。",
+    "harderEn": "Keep the hips lifted continuously throughout the set or add a 1-second pause at full extension.",
+    "dose": "2 組 × 8 次",
+    "doseEn": "2 sets × 8 reps",
+    "rest": "60 秒",
+    "restEn": "60 seconds",
+    "prescription": {
+      "sets": 2,
+      "value": "8",
+      "unit": "reps",
+      "restSeconds": 60,
+      "perSide": false
+    },
+    "active": true,
+    "advanced": false,
+    "shoulderLoaded": false,
+    "requiresPartner": false,
+    "priority": false,
+    "level": "基礎",
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0,
+    "contentVersion": 1
+  },
+  {
+    "id": "bf_B23",
+    "catalogCode": "B23",
+    "name": "單腳離心提踵（阿基里斯腱強化）",
+    "nameEn": "Single-leg eccentric calf raise",
+    "category": "lower",
+    "type": "lower",
+    "equipmentOptions": [
+      [],
+      [
+        "dumbbell"
+      ],
+      [
+        "platform"
+      ]
+    ],
+    "equipment": "牆面或穩固台階；啞鈴選配",
+    "equipmentEn": "Wall support or sturdy step; optional dumbbell",
+    "aliases": [
+      "單腳提踵",
+      "離心提踵",
+      "阿基里斯腱",
+      "跟腱強化",
+      "eccentric calf raise",
+      "single-leg calf raise",
+      "Achilles loading"
+    ],
+    "purpose": "小腿與阿基里斯腱離心耐受，支援羽球起跳與落地穩定",
+    "purposeEn": "Calf and Achilles tendon eccentric loading for badminton jumping and landing stability",
+    "cue": "輕扶牆面或欄杆，雙腳一起踮起腳跟後移重至單腳，花 3 秒平穩控制將腳跟慢慢放下，腳踝不外翻或反彈。",
+    "cueEn": "Hold a wall or rail lightly; rise up on both feet, shift weight onto one foot, and lower the heel slowly over 3 seconds without rolling the ankle outward or bouncing.",
+    "easier": "在平地進行（不站台階懸空），並用雙手輕扶穩定。",
+    "easierEn": "Perform on flat ground instead of a step edge and use light hand support.",
+    "harder": "前腳掌踩穩固低台階增加行程，或單手提輕啞鈴進行。",
+    "harderEn": "Stand with the forefoot on a sturdy low step for fuller range or hold a light dumbbell in one hand.",
+    "dose": "2 組 × 每側 8 次",
+    "doseEn": "2 sets × 8 reps per side",
+    "rest": "60 秒",
+    "restEn": "60 seconds",
+    "prescription": {
+      "sets": 2,
+      "value": "8",
+      "unit": "reps",
+      "restSeconds": 60,
+      "perSide": true
+    },
+    "active": true,
+    "advanced": false,
+    "shoulderLoaded": false,
+    "requiresPartner": false,
+    "priority": true,
+    "level": "基礎",
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0,
+    "contentVersion": 1
+  },
+  {
+    "id": "bf_D10",
+    "catalogCode": "D10",
+    "name": "彈力帶／啞鈴羽球轉體爆發拉",
+    "nameEn": "Band or dumbbell rotational chop drive",
+    "category": "core",
+    "type": "core",
+    "equipmentOptions": [
+      [
+        "band"
+      ],
+      [
+        "dumbbell"
+      ]
+    ],
+    "equipment": "中低阻力彈力帶或輕啞鈴",
+    "equipmentEn": "Light-to-moderate resistance band or light dumbbell",
+    "aliases": [
+      "轉體爆發拉",
+      "羽球轉體",
+      "對角旋轉拉",
+      "rotational chop",
+      "badminton rotation",
+      "chop drive"
+    ],
+    "purpose": "羽球殺球與揮拍的髖軀幹協調旋轉力量傳遞",
+    "purposeEn": "Hip-to-trunk rotational power transfer for badminton overhead strokes",
+    "cue": "採穩定分腿站姿，雙手握彈力帶或輕啞鈴從斜上方順著轉髖與胸椎斜向拉向對側髖部，加速拉動後控制回到起點，不靠扭腰硬甩。",
+    "cueEn": "Take a stable split stance holding a band or light dumbbell; drive diagonally from high to the opposite hip by turning hips and chest together, then return under control without twisting the lower back.",
+    "easier": "改用較輕阻力並放慢速度，專注腳、髖與胸口同步轉動。",
+    "easierEn": "Use lighter resistance and a slower tempo to focus on synchronized foot, hip and chest rotation.",
+    "harder": "在動作穩定前提下提高拉動段啟動速度，回程維持 2 秒控制。",
+    "harderEn": "Increase intent on the pulling drive while maintaining a controlled 2-second return.",
+    "dose": "2 組 × 每側 8 次",
+    "doseEn": "2 sets × 8 reps per side",
+    "rest": "60 秒",
+    "restEn": "60 seconds",
+    "prescription": {
+      "sets": 2,
+      "value": "8",
+      "unit": "reps",
+      "restSeconds": 60,
+      "perSide": true
+    },
+    "active": true,
+    "advanced": false,
+    "shoulderLoaded": false,
+    "requiresPartner": false,
+    "priority": true,
+    "level": "基礎",
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0,
+    "contentVersion": 1
+  },
+  {
+    "id": "bf_D11",
+    "catalogCode": "D11",
+    "name": "單腳站姿抗旋轉推舉",
+    "nameEn": "Single-leg Pallof press",
+    "category": "core",
+    "type": "core",
+    "equipmentOptions": [
+      [
+        "band"
+      ],
+      [
+        "cable"
+      ]
+    ],
+    "equipment": "彈力帶或胸高滑輪",
+    "equipmentEn": "Resistance band or chest-height pulley",
+    "aliases": [
+      "單腳抗旋轉",
+      "單腳 Pallof",
+      "單腳核心穩定",
+      "single-leg Pallof press",
+      "anti-rotation press"
+    ],
+    "purpose": "單腳支撐下的骨盆與軀幹抗旋轉穩定",
+    "purposeEn": "Pelvic and trunk anti-rotation stability on a single stance leg",
+    "cue": "側對固定點單腳微屈膝站穩，雙手握把手於胸前吐氣往前平推並停頓 2 秒；全程抵抗側拉扭轉，膝蓋對齊腳尖。",
+    "cueEn": "Stand sideways to the anchor on one softly bent leg; exhale to press the handle straight forward from the chest and hold 2 seconds while resisting rotation and keeping the knee aligned over the toes.",
+    "easier": "另一腳腳尖輕點地面做半單腳支撐，或減小阻力並縮短站距。",
+    "easierEn": "Lightly rest the opposite toes on the floor in a kickstand stance, or reduce resistance.",
+    "harder": "略微遠離固定點增加側向張力，每下伸直停頓 3 秒。",
+    "harderEn": "Step slightly farther from the anchor and extend the straight-arm pause to 3 seconds.",
+    "dose": "2 組 × 每側 6 次",
+    "doseEn": "2 sets × 6 reps per side",
+    "rest": "45–60 秒",
+    "restEn": "45–60 seconds",
+    "prescription": {
+      "sets": 2,
+      "value": "6",
+      "unit": "reps",
+      "restSeconds": 45,
+      "perSide": true
+    },
+    "active": true,
+    "advanced": false,
+    "shoulderLoaded": false,
+    "requiresPartner": false,
+    "priority": false,
+    "level": "基礎",
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0,
+    "contentVersion": 1
+  },
+  {
+    "id": "bf_H13",
+    "catalogCode": "H13",
+    "name": "頸部與上斜方肌溫和伸展",
+    "nameEn": "Gentle neck and upper trap stretch",
+    "category": "recovery",
+    "type": "mobility",
+    "equipmentOptions": [
+      []
+    ],
+    "equipment": "徒手（坐姿或站姿）",
+    "equipmentEn": "Bodyweight (seated or standing)",
+    "aliases": [
+      "頸部伸展",
+      "上斜方肌伸展",
+      "肩頸放鬆",
+      "neck stretch",
+      "upper trap stretch",
+      "upper trapezius stretch"
+    ],
+    "purpose": "釋放羽球仰頭擊球後的肩頸與上斜方肌緊繃",
+    "purposeEn": "Relieve neck and upper trapezius tightness after overhead badminton play",
+    "cue": "坐姿或站姿脊椎自然延伸，一側肩膀輕微下沉，頭部溫和向對側傾倒感受輕度伸展，自然呼吸不硬壓頭部。",
+    "cueEn": "Sit or stand tall, let one shoulder relax downward, and gently tilt your head toward the opposite side for a mild stretch while breathing calmly without pulling forcefully on the head.",
+    "easier": "不用手輔助，只靠頭部自然重量小幅側傾。",
+    "easierEn": "Keep both hands down and use only gentle head weight with a smaller tilt.",
+    "harder": "保持溫和舒適角度並配合深慢吐氣，不追求大幅拉扯。",
+    "harderEn": "Stay within a mild comfortable range paired with slow exhales rather than forcing more tilt.",
+    "dose": "2 組 × 每側 20 秒",
+    "doseEn": "2 sets × 20 seconds per side",
+    "rest": "15 秒",
+    "restEn": "15 seconds",
+    "prescription": {
+      "sets": 2,
+      "value": "20",
+      "unit": "seconds",
+      "restSeconds": 15,
+      "perSide": true
+    },
+    "active": true,
+    "advanced": false,
+    "shoulderLoaded": false,
+    "requiresPartner": false,
+    "priority": false,
+    "level": "基礎",
+    "jumpContacts": 0,
+    "betweenRepsSeconds": 0,
+    "contentVersion": 1
   }
 ]
+

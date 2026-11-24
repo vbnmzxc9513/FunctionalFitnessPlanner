@@ -5,13 +5,16 @@ import { generateTemplatePlan } from './templatePlanner.js';
 import { DAILY_WARMUP_IDS, dailyWarmupPrescriptions, isDailyWarmupComplete } from './quickWorkouts.js';
 import { DEFAULT_MAX_PROMPT_BYTES, selectPromptCandidates, utf8Bytes } from './promptCandidates.js';
 import { exerciseTrainingTargets } from './trainingTargets.js';
-import { estimateSessionMinutes, sessionSections } from './sessions.js';
+import { exerciseBodyParts } from './exerciseTags.js';
+import { doseSeconds, estimateSessionMinutes, sessionSections } from './sessions.js';
 import { MAX_DAY_EXERCISES } from './plannerLimits.js';
 import { exercisePhase, SESSION_PHASES, SESSION_TYPES } from './phases.js';
 import { validSequenceDose } from './exerciseCatalog.js';
 import { prescription } from './training.js';
 import { summarizeRecentPerformance } from './periodAnalytics.js';
 
+const LOCKED_WARMUP_SET = new Set(DAILY_WARMUP_IDS);
+const DAY_MS = 86400000;
 const isoDay = date => new Date(`${date}T12:00:00Z`).getUTCDay() || 7;
 const weekFor = date => getWeekString(new Date(`${date}T12:00:00`));
 
@@ -204,17 +207,49 @@ export function resolveChunkDayPolicies(weekDates, {
   });
 }
 
-function compactPreviousSessions(sessions = []) {
-  const doseFields = ['id', 'sets', 'value', 'unit', 'restSeconds', 'perSide', 'phase'];
-  return sessions.slice(-14).map(session => ({
-    date: session.date,
-    day: session.day,
-    sessionType: session.sessionType || (session.routine?.length ? 'training' : 'rest'),
-    theme: String(session.theme || '').slice(0, 60),
-    routine: Array.isArray(session.routine) ? session.routine : [],
-    prescriptions: (Array.isArray(session.prescriptions) ? session.prescriptions : [])
-      .map(dose => doseFields.map(field => dose[field] ?? null)),
-  }));
+function estimateCandidateMinutes(id, exercise) {
+  const starter = exercise?.prescription || prescription(id, exercise?.type, 1, exercise);
+  if (!starter || starter.sets == null || starter.value == null) return 1;
+  const seconds = doseSeconds(starter, exercise, false);
+  if (!Number.isFinite(seconds) || seconds <= 0) return 1;
+  return Math.round((seconds / 60) * 10) / 10;
+}
+
+function compactPreviousSessions(sessions = [], chunkDates = []) {
+  const byDate = new Map();
+  for (const session of sessions) {
+    if (session && isCalendarDate(session.date)) byDate.set(session.date, session);
+  }
+  const allSorted = [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
+  let selected = allSorted.slice(-21);
+  if (allSorted.length > 21 && Array.isArray(chunkDates) && chunkDates.length) {
+    const startMs = Date.parse(`${chunkDates[0]}T12:00:00Z`) - 14 * DAY_MS;
+    const endMs = Date.parse(`${chunkDates.at(-1)}T12:00:00Z`) + 7 * DAY_MS;
+    const near = allSorted.filter(session => {
+      const ms = Date.parse(`${session.date}T12:00:00Z`);
+      return ms >= startMs && ms <= endMs;
+    });
+    if (near.length) {
+      selected = near.slice(-21);
+    }
+  }
+  return selected.map(session => {
+    const routine = Array.isArray(session.routine) ? session.routine : [];
+    const sessionType = session.sessionType || (routine.length ? 'training' : 'rest');
+    const mainIds = routine.filter(id => !LOCKED_WARMUP_SET.has(id));
+    const mainDoses = (Array.isArray(session.prescriptions) ? session.prescriptions : [])
+      .filter(dose => dose && !LOCKED_WARMUP_SET.has(dose.id))
+      .map(dose => [dose.id, dose.sets ?? null, dose.value ?? null, dose.unit ?? null, dose.phase ?? null]);
+    return {
+      date: session.date,
+      day: session.day,
+      ...(session.week ? { week: session.week } : {}),
+      sessionType,
+      theme: String(session.theme || '').slice(0, 60),
+      mainIds,
+      ...(mainDoses.length ? { mainDoses } : {}),
+    };
+  });
 }
 
 /**
@@ -242,7 +277,6 @@ export function buildAIPeriodChunkPrompt({
   const focus = ['balanced', 'strength', 'stability', 'coordination'].includes(profile?.focus) ? profile.focus : 'balanced';
   const eligible = planningExercises(exercises, context);
   const dailyTime = Number(time);
-  const lockedWarmupSet = new Set(DAILY_WARMUP_IDS);
   const hasCustomWarmupDays = policies.some(item => item.warmupMode === 'custom');
 
   const specificTargets = (id, exercise) => exerciseTrainingTargets(id, exercise)
@@ -252,7 +286,7 @@ export function buildAIPeriodChunkPrompt({
     .filter(([, exercise]) => !exercise.legacySequence && exercise.active !== false && !exercise.deleted)
     // Always keep DAILY_WARMUP_IDS when any custom-warmup day exists; when all active days lock daily_warmup,
     // omitting the 8 locked IDs saves prompt bytes and prevents accidental duplication.
-    .filter(([id]) => hasCustomWarmupDays || !lockedWarmupSet.has(id))
+    .filter(([id]) => hasCustomWarmupDays || !LOCKED_WARMUP_SET.has(id))
     .map(([id, exercise]) => [
       id,
       exercise,
@@ -261,7 +295,9 @@ export function buildAIPeriodChunkPrompt({
         name: exercise.name,
         type: exercise.type,
         category: exercise.category || 'custom',
-        equipmentOptions: exercise.equipmentOptions ?? '未分類',
+        parts: exerciseBodyParts(id, exercise).slice(0, 3),
+        estMin: estimateCandidateMinutes(id, exercise),
+        ...(exercise.jumpContacts > 0 ? { jumpContacts: exercise.jumpContacts } : {}),
         ...(exercise.advanced ? { advanced: true } : {}),
         ...(exercise.priority ? { priority: true } : {}),
         ...(exercise.requiresPartner ? { requiresPartner: true } : {}),
@@ -271,7 +307,6 @@ export function buildAIPeriodChunkPrompt({
           ? ['sets', 'value', 'unit', 'restSeconds', 'perSide'].map(key => exercise.prescription[key] ?? null)
           : null,
         ...(specificTargets(id, exercise).length ? { trainingTargets: specificTargets(id, exercise) } : {}),
-        cue: String(exercise.tip || '').slice(0, 80),
       },
     ]);
 
@@ -295,7 +330,7 @@ export function buildAIPeriodChunkPrompt({
       : '';
 
     const eligibleRequired = context.dailyRequiredExerciseIds
-      .filter(id => Object.hasOwn(eligible, id) && !(context.dailyRequiredWarmup && lockedWarmupSet.has(id)));
+      .filter(id => Object.hasOwn(eligible, id) && !(context.dailyRequiredWarmup && LOCKED_WARMUP_SET.has(id)));
     const dailyRequiredBlock = eligibleRequired.length
       ? `\n【使用者設定的每日必須動作（務必納入每個 training 訓練日）】\n以下動作由使用者鎖定為每日必須（ID 必須完全一致）：${JSON.stringify(eligibleRequired.map(id => ({ id, name: eligible[id].name, category: eligible[id].category || 'custom' })))}。\n- 每個 sessionType="training" 的日期都必須包含上述動作，並預留對應時間與劑量。\n- 若其中屬於安全活動度／伸展／呼吸（非肌力／跳躍／上下肢負重），也可在時間允許時納入 sessionType="recovery" 日。\n`
       : '';
@@ -348,23 +383,24 @@ ${JSON.stringify({
         dailyRequiredExerciseIds: eligibleRequired,
       },
       recentSummary: summaryPayload,
-      previousSessions: compactPreviousSessions(previousSessions),
+      previousSessions: compactPreviousSessions(previousSessions, chunkDates),
     })}
 
 【專業排課約束】
 1. 球場負荷與體能合併考量：每週通常安排 1–2 次主要肌力＋短協調品質練習，其餘安排恢復或休息；避免連續兩天高強度肌力或緊鄰高強度球日重訓下肢。
-2. 全面照顧羽球動力鏈：在整段期間均衡涵蓋蹲／分腿、髖鉸鏈、上肢推與拉、核心抗旋、步法協調與八區活動度；跨週保留熟悉主項方便追蹤進步。優先納入合理的 weeklyExerciseIds 與 targetRegions（但不為硬塞而超時或違規）。
-3. 日內階段順序嚴格為：warmup → skill → strength → accessory → recovery → cooldown。
+2. 全面照顧羽球動力鏈與 A/B 日分流原則：在整段期間均衡涵蓋蹲／分腿、髖鉸鏈、上肢推與拉、核心抗旋、步法協調與八區活動度。當一週有 2 天以上訓練日時，刻意交替肌力重點（例如 Day A 下肢膝主導／分腿蹲＋上肢拉，Day B 下肢髖鉸鏈＋上肢推），參考各候選動作的 parts 避免相鄰訓練日重複相同主力動作，同日也不堆疊兩個同性質主項。優先納入合理的 weeklyExerciseIds 與 targetRegions（但不為硬塞而超時或違規）。
+3. 多週漸進節奏（Multi-week progression）：當總週數 > 1 或橫跨多週（目前第 ${chunkIndex + 1} / ${totalChunks} 週）時，跨週保留核心主項方便追蹤進步：第 1 週建立基礎動作模式與穩定劑量，第 2–3 週在安全時間上限內小幅進階組數、次數或動作變化；若有臨近比賽日（competitionDaysAway <= 7）則自然減量保鮮、降低下肢與跳躍疲勞。
+4. 日內階段順序嚴格為：warmup → skill → strength → accessory → recovery → cooldown。
    - power / footwork / reaction 類動作的 phase 必須是 "skill"。
    - 每個 training 日的第一個 strength 動作**必須提供 preparation 準備組**（sets 1–2、value "4–6" 或短秒數、restSeconds 0–120、具體輕量暖身指令 instruction）。
-   - 額外 E 類跳躍單日總落地（sets × 最大次數 × 雙側2）上限 24 次，且不與跳繩 I04 同日。
+   - 參考候選動作的 jumpContacts：額外 E 類跳躍單日總落地（jumpContacts × sets × 最大次數 × 雙側2）上限 24 次，且不與跳繩 I04 同日。
    - 禁止使用舊序列 bf_A12、bf_A13，且不可用 bf_A01 當暖身或恢復。
-4. 所有時間皆含雙側、組間休息、準備組與動作轉換，不可超過每日上限 ${dailyTime} 分鐘；估時會對每個階段無條件進位，請預留 2–3 分鐘安全緩衝，不足時減少組數或動作數，不硬塞。
-5. 劑量限制：sets 1–5 整數；value 為數字或範圍如 "8–10"（reps/seconds/breaths 上限 120，minutes 上限 ${dailyTime}）；restSeconds 0–300 整數；preparation 的 value reps/breaths 上限 8、seconds 上限 30。
-6. 每天提供非空 theme（當日重點）、concept（與羽球動作的動力鏈連結）、coachAdvice（與球日銜接與當日體感提醒）、warmupNote（說明暖身與主項銜接）、cooldownNote（說明收尾安排或省略原因）。
+5. 時間控管：請直接加總所選候選動作的 estMin（含雙側、組間休息與轉換；若增減組數或加上準備組請依比例估算），務必安全落在各日 remainingMinutes 內且總時間不超過每日上限 ${dailyTime} 分鐘；估時會對每個階段無條件進位，請預留 2–3 分鐘安全緩衝，不足時減少組數或動作數，不硬塞。
+6. 劑量限制：sets 1–5 整數；value 為數字或範圍如 "8–10"（reps/seconds/breaths 上限 120，minutes 上限 ${dailyTime}）；restSeconds 0–300 整數；preparation 的 value reps/breaths 上限 8、seconds 上限 30。
+7. 每天提供非空 theme（當日重點）、concept（與羽球動作的動力鏈連結）、coachAdvice（與球日銜接與當日體感提醒）、warmupNote（說明暖身與主項銜接）、cooldownNote（說明收尾安排或省略原因）。
 ${reportInstructions}${correctionBlock}
 【可用候選動作清單（ID 必須完全一致）】
-starterDose 格式為 [sets, value, unit, restSeconds, perSide]。
+starterDose 格式為 [sets, value, unit, restSeconds, perSide]；estMin 為該 starterDose 的單動作預估分鐘數；parts 為主要肌群／部位；jumpContacts 為單次動作落地次數（須計入單日上限 24 次）。
 ${candidateNotice}${JSON.stringify(candidatesJson)}
 
 【輸出格式】
@@ -811,6 +847,7 @@ export function mergeAndValidateAIPeriodChunk(raw, {
   context = {},
   dailyTime = 30,
   existingSessions = {},
+  lockedBaseByDate = null,
   includeReport = false,
   lang = 'zh',
   reconcile = false,
@@ -842,6 +879,10 @@ export function mergeAndValidateAIPeriodChunk(raw, {
     if (!policy) throw new Error('AI_INVALID_CHUNK_DATES');
 
     if (policy.protected) {
+      if (lockedBaseByDate?.has(date)) {
+        sessions.push(structuredClone(lockedBaseByDate.get(date)));
+        continue;
+      }
       if (!existingSessions[date]) throw new Error('PROTECTED_SESSION_MISSING');
       sessions.push(preservePeriodSession(existingSessions[date], { exercises }));
       continue;
@@ -1056,6 +1097,9 @@ export async function generateAIPeriodPlan({
   userGoal = '',
   userMessage = '',
   lang = 'zh',
+  refineDates = [],
+  baseSessions = [],
+  baseCoachReport = null,
   callChunk,
   onProgress,
 } = {}) {
@@ -1075,27 +1119,55 @@ export async function generateAIPeriodPlan({
     .filter(date => protectedSet.has(date) && existing[date])
     .map(date => preservePeriodSession(existing[date], { exercises }));
 
+  const selectiveActive = Array.isArray(refineDates) && refineDates.length > 0
+    && Array.isArray(baseSessions) && baseSessions.length > 0;
+  const refineSet = selectiveActive
+    ? new Set(refineDates.filter(date => isCalendarDate(date)))
+    : null;
+  const baseByDate = selectiveActive
+    ? new Map(baseSessions.filter(session => session && isCalendarDate(session.date)).map(session => [session.date, session]))
+    : new Map();
+
+  const effectiveProtectedSet = new Set(protectedSet);
+  const effectiveExisting = { ...existing };
+  const lockedBaseByDate = new Map();
+  if (selectiveActive) {
+    for (const date of dates) {
+      if (!(protectedSet.has(date) && existing[date]) && !refineSet.has(date) && baseByDate.has(date)) {
+        const baseSession = baseByDate.get(date);
+        effectiveProtectedSet.add(date);
+        effectiveExisting[date] = baseSession;
+        lockedBaseByDate.set(date, baseSession);
+      }
+    }
+  }
+  const effectiveProtectedDates = [...effectiveProtectedSet];
+
   const unchanged = Object.values(Object.fromEntries(
     [...previousSessions, ...Object.values(existing)]
       .filter(session => isCalendarDate(session?.date) && (session.date < cleanRange.from || session.date > cleanRange.to))
       .map(session => [session.date, session]),
   ));
 
-  const rollingHistory = [...unchanged, ...preserved];
+  const realHistory = [...unchanged, ...preserved];
   const recentSummary = summarizeRecentPerformance({
     today,
     logs,
     progressByWeek,
     readiness,
-    sessions: rollingHistory,
+    sessions: realHistory,
     metrics,
     exercises,
     context,
   });
 
+  // Pass locked untouched draft days into rollingHistory so Gemini maintains weekly balance around them,
+  // without counting draft previews as completed history in recentSummary.
+  const rollingHistory = [...realHistory, ...lockedBaseByDate.values()];
+
   const chunks = splitPeriodIntoChunks(dates);
   const lastEditableChunkIndex = chunks.reduce(
-    (last, chunk, index) => (chunk.dates.some(date => !(protectedSet.has(date) && existing[date])) ? index : last),
+    (last, chunk, index) => (chunk.dates.some(date => !(effectiveProtectedSet.has(date) && effectiveExisting[date])) ? index : last),
     -1,
   );
   const sessions = [];
@@ -1105,12 +1177,6 @@ export async function generateAIPeriodPlan({
   for (let index = 0; index < chunks.length; index += 1) {
     const chunk = chunks[index];
     const includeReport = index === lastEditableChunkIndex;
-    onProgress?.({
-      chunkIndex: index,
-      totalChunks: chunks.length,
-      from: chunk.dates[0],
-      to: chunk.dates.at(-1),
-    });
 
     const policies = resolveChunkDayPolicies(chunk.dates, {
       exercises,
@@ -1118,8 +1184,8 @@ export async function generateAIPeriodPlan({
       time,
       lang,
       today,
-      protectedDates,
-      existingSessions: existing,
+      protectedDates: effectiveProtectedDates,
+      existingSessions: effectiveExisting,
       historySessions: rollingHistory,
       logs,
       progressByWeek,
@@ -1131,10 +1197,20 @@ export async function generateAIPeriodPlan({
 
     if (editableCount === 0) {
       validated = {
-        sessions: chunk.dates.map(date => preservePeriodSession(existing[date], { exercises })),
+        sessions: chunk.dates.map(date => (
+          lockedBaseByDate.has(date)
+            ? structuredClone(lockedBaseByDate.get(date))
+            : preservePeriodSession(effectiveExisting[date], { exercises })
+        )),
         report: null,
       };
     } else {
+      onProgress?.({
+        chunkIndex: index,
+        totalChunks: chunks.length,
+        from: chunk.dates[0],
+        to: chunk.dates.at(-1),
+      });
       const TRANSIENT_OUTPUT_ERRORS = new Set(['AI_INVALID_JSON', 'AI_INCOMPLETE_RESULT', 'AI_EMPTY_RESPONSE']);
       let correctionHint = '';
       let lastRaw = null;
@@ -1179,7 +1255,8 @@ export async function generateAIPeriodPlan({
               exercises,
               context,
               dailyTime: time,
-              existingSessions: existing,
+              existingSessions: effectiveExisting,
+              lockedBaseByDate,
               includeReport,
               lang,
               reconcile: true,
@@ -1196,7 +1273,8 @@ export async function generateAIPeriodPlan({
             exercises,
             context,
             dailyTime: time,
-            existingSessions: existing,
+            existingSessions: effectiveExisting,
+            lockedBaseByDate,
             includeReport,
             lang,
             reconcile: false,
@@ -1211,7 +1289,8 @@ export async function generateAIPeriodPlan({
                 exercises,
                 context,
                 dailyTime: time,
-                existingSessions: existing,
+                existingSessions: effectiveExisting,
+                lockedBaseByDate,
                 includeReport,
                 lang,
                 reconcile: true,
@@ -1226,7 +1305,7 @@ export async function generateAIPeriodPlan({
     }
 
     sessions.push(...validated.sessions);
-    rollingHistory.push(...validated.sessions.filter(session => !protectedSet.has(session.date)));
+    rollingHistory.push(...validated.sessions.filter(session => !effectiveProtectedSet.has(session.date)));
     if (validated.report) coachReport = validated.report;
 
     const strengthSessions = validated.sessions.filter(
@@ -1243,6 +1322,10 @@ export async function generateAIPeriodPlan({
       restDays: validated.sessions.filter(day => day.sessionType === 'rest' || !day.routine?.length).length,
       minutes: validated.sessions.reduce((sum, day) => sum + estimateSessionMinutes(day, exercises), 0),
     });
+  }
+
+  if (!coachReport && baseCoachReport) {
+    coachReport = baseCoachReport;
   }
 
   const conclusion = coachReport

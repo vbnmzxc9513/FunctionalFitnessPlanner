@@ -1,5 +1,6 @@
 // Personal organization is independent of catalog eligibility and prescriptions.
 export const LIBRARY_PURPOSES = ['warmup', 'training', 'cooldown'];
+export const LIBRARY_EQUIPMENT_FILTERS = ['all', 'bodyweight', 'band', 'dumbbell', 'cable', 'pullup_bar'];
 
 export function libraryGroups(exercise = {}) {
   if (!Array.isArray(exercise?.libraryGroups)) return [];
@@ -11,11 +12,18 @@ export function suggestedUses(id, exercise = {}) {
   // These unloaded mobility drills also occupy the existing template's recovery slots.
   if (['D09', 'A02', 'A03', 'A04', 'A05', 'A06', 'A09', 'A10', 'A11', 'A12', 'A13', 'A14', 'A15', 'A16', 'A17', 'A19'].includes(code)) return ['warmup', 'cooldown'];
   // Scapular control and light shoulder rotation can be preparation or accessory work.
-  if (['A07', 'A08', 'A18', 'B13', 'B14', 'B15', 'B16', 'B17', 'C12', 'C13'].includes(code)) return ['warmup', 'training'];
+  if (['A07', 'A08', 'A18', 'B13', 'B14', 'B15', 'B16', 'B17', 'C12', 'C13', 'C22'].includes(code)) return ['warmup', 'training'];
   if (exercise.category === 'warmup') return ['warmup'];
   if (exercise.category === 'recovery') return ['cooldown'];
   if (exercise.type === 'mobility') return ['warmup', 'cooldown'];
   return ['training'];
+}
+
+export function matchesEquipmentFilter(exercise = {}, equipmentFilter = 'all') {
+  if (!equipmentFilter || equipmentFilter === 'all') return true;
+  const options = Array.isArray(exercise?.equipmentOptions) ? exercise.equipmentOptions : [[]];
+  if (equipmentFilter === 'bodyweight') return options.some(option => Array.isArray(option) && option.length === 0);
+  return options.some(option => Array.isArray(option) && option.includes(equipmentFilter));
 }
 
 // In all: inferred uses plus explicit personal uses. In mine: explicit uses only.

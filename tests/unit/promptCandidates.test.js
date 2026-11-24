@@ -72,7 +72,7 @@ function extractCandidateJson(prompt) {
   };
 }
 
-test('normal 92-exercise catalog keeps all eligible candidates unbudgeted under 60,000 UTF-8 bytes', () => {
+test('normal 105-exercise eligible catalog keeps all eligible candidates unbudgeted under 60,000 UTF-8 bytes', () => {
   for (const lang of ['zh', 'en']) {
     const catalog = catalogExercises(lang);
     const context = normalizePlanningContext({
@@ -83,7 +83,7 @@ test('normal 92-exercise catalog keeps all eligible candidates unbudgeted under 
     });
     const eligible = eligibleExercises(catalog, context);
     const expectedEntries = Object.entries(eligible).filter(([, exercise]) => !exercise.legacySequence && exercise.active !== false && !exercise.deleted);
-    assert.equal(expectedEntries.length, 90);
+    assert.equal(expectedEntries.length, 103);
 
     const prompt = buildPlanningPrompt({
       availableExercises: eligible,
@@ -157,7 +157,7 @@ test('selectPromptCandidates supports [id, exercise] tuple entries and serialize
   }
 });
 
-test('292-exercise worst-case stress test stays under 60KB, protects critical tiers, and is deterministic in zh and en', () => {
+test('305-exercise worst-case stress test stays under 60KB, protects critical tiers, and is deterministic in zh and en', () => {
   const synthetic = buildSyntheticCustomExercises(200);
 
   for (const lang of ['zh', 'en']) {
@@ -170,7 +170,7 @@ test('292-exercise worst-case stress test stays under 60KB, protects critical ti
     });
     const eligible = eligibleExercises(catalog, context);
     const combined = { ...eligible, ...synthetic };
-    assert.equal(Object.keys(combined).length, 292);
+    assert.equal(Object.keys(combined).length, 305);
 
     const previousPlan = generateTemplatePlan(catalog, context, 40, lang, {
       currentDate: '2026-10-19',
@@ -209,7 +209,7 @@ test('292-exercise worst-case stress test stays under 60KB, protects critical ti
     assert.ok(bytes <= DEFAULT_MAX_PROMPT_BYTES, `${lang} stress prompt exceeded ${DEFAULT_MAX_PROMPT_BYTES}: ${bytes}`);
 
     const { prefix, candidates } = extractCandidateJson(promptA);
-    assert.match(prefix, /已依每日暖身、本週手選、前期課表、目標部位與僵硬部位優先保留 \d+\/290 項候選動作以符合提示上限；未列項目不可引用。/);
+    assert.match(prefix, /已依每日暖身、本週手選、前期課表、目標部位與僵硬部位優先保留 \d+\/303 項候選動作以符合提示上限；未列項目不可引用。/);
 
     const selectedIds = new Set(candidates.map(item => item.id));
     for (const id of DAILY_WARMUP_IDS) {

@@ -207,13 +207,12 @@ export async function generateAIPeriodChunk({
   }
 }
 
-async function requestCoachReplyOnce({ systemText, normalized, key, model, signal }) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`;
+function buildCoachPayload(systemText, normalized, model) {
   const isFlash = String(model || '').includes('flash');
   const thinking = supportsThinkingConfig(model)
     ? { thinkingConfig: { thinkingBudget: isFlash ? 0 : 1024 } }
     : {};
-  const payload = {
+  return {
     ...(systemText ? { systemInstruction: { parts: [{ text: systemText }] } } : {}),
     contents: normalized.map(m => ({ role: m.role, parts: [{ text: m.text }] })),
     generationConfig: {
@@ -222,6 +221,18 @@ async function requestCoachReplyOnce({ systemText, normalized, key, model, signa
       ...thinking,
     },
   };
+}
+
+function mapGeminiHttpError(status, message) {
+  const cleanMessage = String(message || '');
+  if (status === 401 || status === 403 || /api key/i.test(cleanMessage)) return new Error('API_KEY_INVALID');
+  if (status === 429 || /quota|rate/i.test(cleanMessage)) return new Error('RATE_LIMITED');
+  return new Error(cleanMessage || 'AI_REQUEST_FAILED');
+}
+
+async function requestCoachReplyOnce({ systemText, normalized, key, model, signal }) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`;
+  const payload = buildCoachPayload(systemText, normalized, model);
 
   let response;
   try {
@@ -246,11 +257,7 @@ async function requestCoachReplyOnce({ systemText, normalized, key, model, signa
   }
 
   if (!response.ok || data?.error) {
-    const status = response.status || data?.error?.code;
-    const message = String(data?.error?.message || '');
-    if (status === 401 || status === 403 || /api key/i.test(message)) throw new Error('API_KEY_INVALID');
-    if (status === 429 || /quota|rate/i.test(message)) throw new Error('RATE_LIMITED');
-    throw new Error(message || 'AI_REQUEST_FAILED');
+    throw mapGeminiHttpError(response.status || data?.error?.code, data?.error?.message);
   }
 
   const parts = data?.candidates?.[0]?.content?.parts || [];
@@ -282,6 +289,171 @@ export async function generateCoachReply({
     }
     throw error;
   }
+}
+
+async function requestCoachStreamOnce({ systemText, normalized, key, model, signal, onChunk }) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse&key=${encodeURIComponent(key)}`;
+  const payload = buildCoachPayload(systemText, normalized, model);
+
+  let response;
+  try {
+    response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal,
+    });
+  } catch (error) {
+    if (error?.name === 'AbortError' || signal?.aborted) throw new Error('ABORTED');
+    throw new Error('NETWORK_ERROR');
+  }
+
+  if (!response.ok) {
+    let errorMessage = '';
+    let errorCode = response.status;
+    try {
+      const raw = await response.text();
+      const parsed = raw ? JSON.parse(raw) : null;
+      const errObj = Array.isArray(parsed) ? parsed[0]?.error : parsed?.error;
+      errorMessage = errObj?.message || '';
+      errorCode = response.status || errObj?.code;
+    } catch {
+      /* fall back to HTTP status mapping */
+    }
+    throw mapGeminiHttpError(errorCode, errorMessage);
+  }
+
+  if (!response.body || typeof response.body.getReader !== 'function') {
+    throw new Error('AI_STREAM_UNSUPPORTED');
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder('utf-8');
+  let buffer = '';
+  let accumulated = '';
+
+  const processLine = line => {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith(':') || !trimmed.startsWith('data:')) return;
+    const payloadStr = trimmed.slice(5).trim();
+    if (!payloadStr || payloadStr === '[DONE]') return;
+
+    let parsed;
+    try {
+      parsed = JSON.parse(payloadStr);
+    } catch {
+      return;
+    }
+
+    if (parsed?.error) {
+      throw mapGeminiHttpError(parsed.error.code, parsed.error.message);
+    }
+
+    const parts = parsed?.candidates?.[0]?.content?.parts || [];
+    const delta = parts
+      .filter(part => !part.thought && typeof part.text === 'string')
+      .map(part => part.text)
+      .join('');
+    if (delta) {
+      accumulated += delta;
+      onChunk?.(accumulated);
+    }
+  };
+
+  try {
+    while (true) {
+      if (signal?.aborted) throw new Error('ABORTED');
+      let chunk;
+      try {
+        chunk = await reader.read();
+      } catch (error) {
+        if (error?.name === 'AbortError' || signal?.aborted) throw new Error('ABORTED');
+        throw new Error('NETWORK_ERROR');
+      }
+
+      if (chunk.value) {
+        buffer += decoder.decode(chunk.value, { stream: !chunk.done });
+      } else if (chunk.done) {
+        buffer += decoder.decode();
+      }
+
+      const lines = buffer.split(/\r?\n/);
+      buffer = chunk.done ? '' : (lines.pop() ?? '');
+      for (const line of lines) {
+        processLine(line);
+      }
+
+      if (chunk.done) break;
+    }
+  } finally {
+    try {
+      reader.releaseLock();
+    } catch {
+      /* ignore release failures */
+    }
+  }
+
+  const finalText = accumulated.trim();
+  if (!finalText) throw new Error('AI_EMPTY_RESPONSE');
+  return finalText;
+}
+
+export async function streamCoachReply({
+  systemContext = '',
+  messages = [],
+  apiKey,
+  model = FALLBACK_PLANNING_MODEL,
+  signal,
+  onChunk,
+} = {}) {
+  const key = String(apiKey || '').trim();
+  if (!key) throw new Error('API_KEY_MISSING');
+  if (signal?.aborted) throw new Error('ABORTED');
+
+  const normalized = normalizeCoachHistory(messages);
+  if (!normalized.length) throw new Error('AI_EMPTY_MESSAGE');
+
+  const systemText = String(systemContext || '').trim();
+  let emittedChunk = false;
+  const emit = text => {
+    emittedChunk = true;
+    onChunk?.(text);
+  };
+
+  try {
+    return await requestCoachStreamOnce({ systemText, normalized, key, model, signal, onChunk: emit });
+  } catch (error) {
+    if (NON_FALLBACK_ERRORS.has(error?.message) || signal?.aborted || emittedChunk) {
+      throw error;
+    }
+  }
+
+  if (model !== FALLBACK_PLANNING_MODEL) {
+    try {
+      return await requestCoachStreamOnce({
+        systemText,
+        normalized,
+        key,
+        model: FALLBACK_PLANNING_MODEL,
+        signal,
+        onChunk: emit,
+      });
+    } catch (error) {
+      if (NON_FALLBACK_ERRORS.has(error?.message) || signal?.aborted || emittedChunk) {
+        throw error;
+      }
+    }
+  }
+
+  const fallbackText = await generateCoachReply({
+    systemContext: systemText,
+    messages: normalized,
+    apiKey: key,
+    model: FALLBACK_PLANNING_MODEL,
+    signal,
+  });
+  onChunk?.(fallbackText);
+  return fallbackText;
 }
 
 const VALID_EXERCISE_TYPES = ['mobility', 'lower', 'core', 'upper_pull', 'upper_push', 'full', 'power'];

@@ -427,7 +427,7 @@ service cloud.firestore {
     function publicCatalogId(id) {
       // One anchored match keeps repeated chunk checks inside the expression
       // budget while accepting exactly the real catalog identities.
-      return id is string && id.matches('^(bulgarian|dead_bug|shoulder_press|plank_row|weighted_lunge|bf_(A(0[1-9]|1[0-9])|B(0[1-9]|1[013-79])|C(0[1-9]|1[0-4]|1[7-9]|2[01])|D0[2-9]|E(0[1-9]|1[0-2])|F0[1-6]|G0[1-8]|H(0[1-9]|1[0-2])|I0[1-4]))$');
+      return id is string && id.matches('^(bulgarian|dead_bug|shoulder_press|plank_row|weighted_lunge|bf_(A(0[1-9]|1[0-9])|B(0[1-9]|1[013-79]|2[0-3])|C(0[1-9]|1[0-4]|1[7-9]|2[0-7])|D(0[2-9]|1[01])|E(0[1-9]|1[0-2])|F0[1-6]|G0[1-8]|H(0[1-9]|1[0-3])|I0[1-4]))$');
     }
     function publicRoutine(ids, maximum) {
       return ids is list && ids.size() <= maximum && ids.toSet().size() == ids.size()

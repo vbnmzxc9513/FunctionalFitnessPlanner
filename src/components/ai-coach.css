@@ -104,7 +104,9 @@
 .ai-coach-icon-btn:focus-visible,
 .ai-coach-quick-btn:focus-visible,
 .ai-coach-send-btn:focus-visible,
-.ai-coach-stop-btn:focus-visible {
+.ai-coach-stop-btn:focus-visible,
+.ai-coach-swap-btn:focus-visible,
+.ai-coach-handoff-btn:focus-visible {
   outline: var(--focus-ring);
   outline-offset: 2px;
 }
@@ -489,3 +491,149 @@
   color: var(--ink-muted);
   line-height: 1.4;
 }
+
+.ai-coach-msg-streaming {
+  border-color: var(--brand-accent);
+  background: var(--surface-card);
+}
+
+.ai-coach-cursor {
+  display: inline-block;
+  width: 0.45rem;
+  height: 1rem;
+  margin-top: 0.25rem;
+  border-radius: 2px;
+  background: var(--brand-accent);
+  vertical-align: middle;
+  animation: ai-coach-blink 1s steps(2, start) infinite;
+}
+
+@keyframes ai-coach-blink {
+  to {
+    opacity: 0.2;
+  }
+}
+
+.ai-coach-swap-list {
+  margin-top: 0.7rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--border-subtle);
+  display: grid;
+  gap: 0.5rem;
+}
+
+.ai-coach-swap-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.8rem;
+  border: 1px solid var(--brand-soft-border);
+  background: var(--brand-tint);
+}
+
+.ai-coach-swap-info {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.ai-coach-swap-title {
+  margin: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  font-size: 0.83rem;
+  font-weight: 700;
+  color: var(--ink-strong);
+  line-height: 1.4;
+}
+
+.ai-coach-swap-title svg {
+  margin-top: 0.15rem;
+}
+
+.ai-coach-swap-reason {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--ink-secondary);
+  line-height: 1.45;
+}
+
+.ai-coach-swap-error {
+  margin: 0.15rem 0 0;
+  font-size: 0.76rem;
+  color: var(--status-danger);
+  line-height: 1.4;
+}
+
+.ai-coach-swap-btn {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: var(--touch-min);
+  padding: 0.4rem 0.8rem;
+  border-radius: 0.7rem;
+  border: 1px solid var(--brand-primary);
+  background: var(--brand-primary);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ai-coach-swap-btn:hover:not(:disabled) {
+  background: var(--brand-accent);
+  border-color: var(--brand-accent);
+}
+
+.ai-coach-swap-btn:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
+.ai-coach-swap-btn-applied {
+  background: var(--brand-soft);
+  border-color: var(--brand-soft-border);
+  color: var(--brand-primary);
+  opacity: 1;
+}
+
+.ai-coach-swap-btn-applied:disabled {
+  opacity: 1;
+}
+
+.ai-coach-handoff-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.ai-coach-handoff-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: var(--touch-min);
+  padding: 0.45rem 0.8rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--brand-soft-border);
+  background: var(--brand-tint);
+  color: var(--brand-primary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ai-coach-handoff-btn:hover:not(:disabled) {
+  background: var(--brand-soft);
+  border-color: var(--brand-accent);
+}
+
+.ai-coach-handoff-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+

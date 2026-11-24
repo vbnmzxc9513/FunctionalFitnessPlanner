@@ -1,14 +1,30 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Crown, KeyRound, Loader2, Send, Sparkles, Square, Trash2, X } from 'lucide-react';
+import {
+  ArrowRightLeft,
+  CalendarPlus,
+  Check,
+  Crown,
+  KeyRound,
+  Loader2,
+  Send,
+  Sparkles,
+  Square,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { useBackNavigation } from '../hooks/useBackNavigation.js';
 import {
   MAX_USER_MESSAGE_CHARS,
   buildCoachChatSystemContext,
   buildCoachQuickPrompts,
+  buildCoachToPlannerNote,
   normalizeCoachHistory,
+  parseCoachActionSuggestions,
+  stripStreamingSwapTags,
 } from '../domain/aiCoachChat.js';
-import { generateCoachReply } from '../services/gemini.js';
+import { normalizePlanningContext, planningExercises } from '../domain/planning.js';
+import { streamCoachReply } from '../services/gemini.js';
 import { requestMemberAiCoachReply } from '../services/aiMembership.js';
 import { writeStorage } from '../domain/storage.js';
 import './ai-coach.css';
@@ -17,6 +33,44 @@ const DEFAULT_AI_MODELS = [
   { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
   { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
 ];
+
+const FALLBACK_COACH_MODEL = 'gemini-2.5-flash';
+const NON_FALLBACK_MEMBER_ERRORS = new Set([
+  'ABORTED',
+  'NETWORK_ERROR',
+  'AI_MEMBER_SIGN_IN_REQUIRED',
+  'AI_MEMBER_NOT_ACTIVE',
+  'AI_MEMBER_DAILY_LIMIT',
+  'AI_MEMBER_INVALID_INPUT',
+]);
+
+function coachChatStorageKey(uid) {
+  return `ai_coach_chat_${uid || 'public'}`;
+}
+
+function loadCoachHistory(storageKey) {
+  try {
+    const raw = sessionStorage.getItem(storageKey);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return normalizeCoachHistory(Array.isArray(parsed) ? parsed : []);
+  } catch {
+    return [];
+  }
+}
+
+function saveCoachHistory(storageKey, messages) {
+  try {
+    const normalized = normalizeCoachHistory(messages);
+    if (!normalized.length) {
+      sessionStorage.removeItem(storageKey);
+    } else {
+      sessionStorage.setItem(storageKey, JSON.stringify(normalized));
+    }
+  } catch {
+    /* ignore sessionStorage failures in private or restricted browsers */
+  }
+}
 
 function coachErrorMessage(code, lang) {
   const en = lang === 'en';
@@ -88,10 +142,13 @@ export default function AICoachDrawer({
   recentSummary = null,
   readiness = null,
   metrics = [],
+  exerciseLogs = [],
+  onSwapExercise,
+  onSendToPlanner,
   apiKey = '',
   onSaveKey,
   onClearKey,
-  model = 'gemini-2.5-flash',
+  model = FALLBACK_COACH_MODEL,
   models = [],
   onSelectModel,
   aiMember = { active: false, loaded: true },
@@ -107,22 +164,41 @@ export default function AICoachDrawer({
   const requestIdRef = useRef(0);
   const closeRef = useRef(onClose);
   const titleId = useId();
+  const storageKey = coachChatStorageKey(uid);
+  const prevStorageKeyRef = useRef(storageKey);
 
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState(() => loadCoachHistory(storageKey));
+  const [streamingText, setStreamingText] = useState('');
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [preferOwnKey, setPreferOwnKey] = useState(false);
   const [inlineKey, setInlineKey] = useState('');
   const [showKeyEditor, setShowKeyEditor] = useState(false);
+  const [appliedSwaps, setAppliedSwaps] = useState({});
+  const [applyingSwapKey, setApplyingSwapKey] = useState(null);
+  const [swapErrors, setSwapErrors] = useState({});
 
   useEffect(() => { closeRef.current = onClose; }, [onClose]);
 
   useBackNavigation(open, onClose, 115);
 
   useEffect(() => {
+    if (prevStorageKeyRef.current !== storageKey) {
+      prevStorageKeyRef.current = storageKey;
+      setMessages(loadCoachHistory(storageKey));
+      setAppliedSwaps({});
+      setApplyingSwapKey(null);
+      setSwapErrors({});
+      return;
+    }
+    saveCoachHistory(storageKey, messages);
+  }, [storageKey, messages]);
+
+  useEffect(() => {
     if (!open) return undefined;
     const element = dialogRef.current;
+    const reqIdRef = requestIdRef;
     const previousFocus = document.activeElement;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -131,7 +207,7 @@ export default function AICoachDrawer({
       element?.querySelector('[data-coach-focus]')?.focus({ preventScroll: true });
     });
     return () => {
-      ++requestIdRef.current;
+      reqIdRef.current += 1;
       abortRef.current?.abort();
       abortRef.current = null;
       if (element?.open) element.close();
@@ -143,7 +219,7 @@ export default function AICoachDrawer({
   useEffect(() => {
     if (!threadRef.current) return;
     threadRef.current.scrollTop = threadRef.current.scrollHeight;
-  }, [messages, busy]);
+  }, [messages, busy, streamingText]);
 
   const usingMemberProxy = Boolean(aiMember?.active && !preferOwnKey);
   const availableModels = usingMemberProxy
@@ -151,6 +227,11 @@ export default function AICoachDrawer({
     : (models?.length ? models : DEFAULT_AI_MODELS);
   const activeModel = availableModels.some(item => item.id === model) ? model : availableModels[0].id;
   const hasAuthReady = usingMemberProxy || Boolean(String(apiKey || '').trim());
+
+  const eligibleCatalog = useMemo(
+    () => planningExercises(exercises, normalizePlanningContext(profile?.context || profile)),
+    [exercises, profile],
+  );
 
   const systemContext = useMemo(
     () => buildCoachChatSystemContext({
@@ -163,8 +244,9 @@ export default function AICoachDrawer({
       recentSummary,
       readiness,
       metrics,
+      exerciseLogs,
     }),
-    [today, lang, activeSession, schedule, exercises, profile, recentSummary, readiness, metrics],
+    [today, lang, activeSession, schedule, exercises, profile, recentSummary, readiness, metrics, exerciseLogs],
   );
 
   const quickPrompts = useMemo(
@@ -185,16 +267,46 @@ export default function AICoachDrawer({
   };
 
   const stopGeneration = () => {
-    ++requestIdRef.current;
+    requestIdRef.current += 1;
     abortRef.current?.abort();
     abortRef.current = null;
     setBusy(false);
+    setStreamingText('');
   };
 
   const clearChat = () => {
     stopGeneration();
     setMessages([]);
+    setAppliedSwaps({});
+    setApplyingSwapKey(null);
+    setSwapErrors({});
     setError('');
+    saveCoachHistory(storageKey, []);
+  };
+
+  const requestMemberReplyWithFallback = async ({ nextHistory, signal }) => {
+    try {
+      return await requestMemberAiCoachReply({
+        systemContext,
+        messages: nextHistory,
+        model: activeModel,
+        signal,
+      });
+    } catch (cause) {
+      if (
+        activeModel !== FALLBACK_COACH_MODEL
+        && !NON_FALLBACK_MEMBER_ERRORS.has(cause?.message)
+        && !signal?.aborted
+      ) {
+        return requestMemberAiCoachReply({
+          systemContext,
+          messages: nextHistory,
+          model: FALLBACK_COACH_MODEL,
+          signal,
+        });
+      }
+      throw cause;
+    }
   };
 
   const sendMessage = async rawText => {
@@ -214,38 +326,79 @@ export default function AICoachDrawer({
     abortRef.current = controller;
 
     setMessages(nextHistory);
+    setStreamingText('');
     setInput('');
     setError('');
     setBusy(true);
 
     try {
       const reply = usingMemberProxy
-        ? await requestMemberAiCoachReply({
-          systemContext,
-          messages: nextHistory,
-          model: activeModel,
-          signal: controller.signal,
-        })
-        : await generateCoachReply({
+        ? await requestMemberReplyWithFallback({ nextHistory, signal: controller.signal })
+        : await streamCoachReply({
           systemContext,
           messages: nextHistory,
           apiKey,
           model: activeModel,
           signal: controller.signal,
+          onChunk: partial => {
+            if (reqId === requestIdRef.current && !controller.signal.aborted) {
+              setStreamingText(partial);
+            }
+          },
         });
 
       if (reqId !== requestIdRef.current || controller.signal.aborted) return;
+      setStreamingText('');
       setMessages(previous => normalizeCoachHistory([...previous, { role: 'model', text: reply }]));
     } catch (cause) {
       if (cause?.message === 'ABORTED' || controller.signal.aborted) return;
       if (reqId !== requestIdRef.current) return;
+      setStreamingText('');
       setMessages(previousMessages);
       setInput(previous => previous || text);
       setError(coachErrorMessage(cause?.message, lang));
     } finally {
-      if (reqId === requestIdRef.current) setBusy(false);
+      if (reqId === requestIdRef.current) {
+        setBusy(false);
+        setStreamingText('');
+      }
       if (abortRef.current === controller) abortRef.current = null;
     }
+  };
+
+  const handleApplySwap = async (swapKey, swap) => {
+    if (!onSwapExercise || applyingSwapKey || appliedSwaps[swapKey]) return;
+    setApplyingSwapKey(swapKey);
+    setSwapErrors(prev => {
+      if (!prev[swapKey]) return prev;
+      const next = { ...prev };
+      delete next[swapKey];
+      return next;
+    });
+    try {
+      const ok = await onSwapExercise(swap.oldId, swap.newId);
+      if (ok === false) {
+        setSwapErrors(prev => ({
+          ...prev,
+          [swapKey]: en ? 'Could not apply this swap to today’s workout.' : '無法套用此替換至今日課表，請稍後再試。',
+        }));
+      } else {
+        setAppliedSwaps(prev => ({ ...prev, [swapKey]: swap }));
+      }
+    } catch {
+      setSwapErrors(prev => ({
+        ...prev,
+        [swapKey]: en ? 'Could not apply this swap to today’s workout.' : '無法套用此替換至今日課表，請稍後再試。',
+      }));
+    } finally {
+      setApplyingSwapKey(current => (current === swapKey ? null : current));
+    }
+  };
+
+  const handleSendToPlanner = () => {
+    if (!onSendToPlanner || !messages.length || busy) return;
+    const note = buildCoachToPlannerNote(messages, lang);
+    if (note) onSendToPlanner(note);
   };
 
   const handleSubmit = event => {
@@ -268,6 +421,8 @@ export default function AICoachDrawer({
   const subtitle = activeSession?.theme
     ? `${sessionDate} · ${activeSession.theme}`
     : today;
+
+  const streamingDisplayText = streamingText ? stripStreamingSwapTags(streamingText) : '';
 
   return (
     <dialog
@@ -494,22 +649,107 @@ export default function AICoachDrawer({
               </div>
             </details>
             <div className="ai-coach-messages" role="log" aria-live="polite" data-testid="coach-messages">
-              {messages.map((msg, index) => (
-                <article
-                  key={`${msg.role}-${index}`}
-                  data-testid={msg.role === 'user' ? 'coach-msg-user' : 'coach-msg-model'}
-                  className={`ai-coach-msg ${msg.role === 'user' ? 'ai-coach-msg-user' : 'ai-coach-msg-model'}`}
-                >
-                  {msg.role === 'model' ? (
+              {messages.map((msg, index) => {
+                if (msg.role !== 'model') {
+                  return (
+                    <article
+                      key={`${msg.role}-${index}`}
+                      data-testid="coach-msg-user"
+                      className="ai-coach-msg ai-coach-msg-user"
+                    >
+                      {msg.text}
+                    </article>
+                  );
+                }
+
+                const parsed = parseCoachActionSuggestions(msg.text, {
+                  activeSession,
+                  eligibleExercises: eligibleCatalog,
+                  exercises,
+                });
+                const appliedPrefix = `${index}:`;
+                const appliedList = Object.entries(appliedSwaps)
+                  .filter(([key]) => key.startsWith(appliedPrefix))
+                  .map(([key, swap]) => ({ key, swap, applied: true }));
+                const appliedIds = new Set(appliedList.map(item => `${item.swap.oldId}->${item.swap.newId}`));
+                const pendingList = parsed.swaps
+                  .filter(swap => !appliedIds.has(`${swap.oldId}->${swap.newId}`))
+                  .map(swap => ({ key: `${index}:${swap.oldId}->${swap.newId}`, swap, applied: false }));
+                const displaySwaps = [...appliedList, ...pendingList];
+
+                return (
+                  <article
+                    key={`${msg.role}-${index}`}
+                    data-testid="coach-msg-model"
+                    className="ai-coach-msg ai-coach-msg-model"
+                  >
                     <div className="ai-coach-markdown">
-                      <ReactMarkdown>{msg.text}</ReactMarkdown>
+                      <ReactMarkdown>{parsed.cleanText}</ReactMarkdown>
                     </div>
-                  ) : (
-                    msg.text
-                  )}
+                    {displaySwaps.length > 0 && onSwapExercise && (
+                      <div className="ai-coach-swap-list" data-testid="coach-swap-list">
+                        {displaySwaps.map(({ key, swap, applied }) => {
+                          const isApplying = applyingSwapKey === key;
+                          const swapErr = swapErrors[key];
+                          return (
+                            <div key={key} className="ai-coach-swap-card" data-testid="coach-swap-card">
+                              <div className="ai-coach-swap-info">
+                                <p className="ai-coach-swap-title">
+                                  <ArrowRightLeft size={14} className="shrink-0 text-sky-700" aria-hidden="true" />
+                                  <span>
+                                    {en
+                                      ? `Suggested swap: "${swap.oldName}" → "${swap.newName}"`
+                                      : `建議替換：將「${swap.oldName}」換成「${swap.newName}」`}
+                                  </span>
+                                </p>
+                                {swap.reason && (
+                                  <p className="ai-coach-swap-reason">{swap.reason}</p>
+                                )}
+                                {swapErr && (
+                                  <p className="ai-coach-swap-error" role="alert">{swapErr}</p>
+                                )}
+                              </div>
+                              <button
+                                type="button"
+                                data-testid={`coach-swap-apply-${swap.oldId}-${swap.newId}`}
+                                className={`ai-coach-swap-btn ${applied ? 'ai-coach-swap-btn-applied' : ''}`}
+                                disabled={applied || isApplying || Boolean(applyingSwapKey)}
+                                onClick={() => handleApplySwap(key, swap)}
+                              >
+                                {applied ? (
+                                  <>
+                                    <Check size={14} aria-hidden="true" />
+                                    <span>{en ? 'Applied ✓' : '已套用 ✓'}</span>
+                                  </>
+                                ) : isApplying ? (
+                                  <>
+                                    <Loader2 size={14} className="animate-spin" aria-hidden="true" />
+                                    <span>{en ? 'Applying…' : '套用中…'}</span>
+                                  </>
+                                ) : (
+                                  <span>{en ? 'Apply to today’s workout' : '套用至今日課表'}</span>
+                                )}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
+              {busy && streamingDisplayText && (
+                <article
+                  data-testid="coach-msg-streaming"
+                  className="ai-coach-msg ai-coach-msg-model ai-coach-msg-streaming"
+                >
+                  <div className="ai-coach-markdown">
+                    <ReactMarkdown>{streamingDisplayText}</ReactMarkdown>
+                  </div>
+                  <span className="ai-coach-cursor" aria-hidden="true" />
                 </article>
-              ))}
-              {busy && (
+              )}
+              {busy && !streamingDisplayText && (
                 <div className="ai-coach-thinking" role="status" data-testid="coach-thinking">
                   <Loader2 size={16} className="animate-spin" aria-hidden="true" />
                   <span>{en ? 'Coach is reviewing your data…' : 'AI 教練正在檢視你的紀錄並回覆…'}</span>
@@ -527,6 +767,20 @@ export default function AICoachDrawer({
       )}
 
       <form className="ai-coach-composer" onSubmit={handleSubmit}>
+        {messages.length > 0 && onSendToPlanner && (
+          <div className="ai-coach-handoff-row">
+            <button
+              type="button"
+              data-testid="coach-send-to-planner"
+              className="ai-coach-handoff-btn"
+              disabled={busy}
+              onClick={handleSendToPlanner}
+            >
+              <CalendarPlus size={15} aria-hidden="true" />
+              <span>{en ? 'Send discussion to AI Planner' : '帶著討論去 AI 排課'}</span>
+            </button>
+          </div>
+        )}
         <div className="ai-coach-input-row">
           <textarea
             ref={inputRef}

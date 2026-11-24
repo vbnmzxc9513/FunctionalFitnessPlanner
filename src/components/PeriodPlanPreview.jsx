@@ -6,7 +6,7 @@ import SessionTimeSummary from './SessionTimeSummary.jsx';
 import TrainingTargetOverview from './TrainingTargetOverview.jsx';
 import PlanningConditions from './PlanningConditions.jsx';
 import MobilityOverview from './MobilityOverview.jsx';
-import { ArrowLeft, BookOpen, Check, Loader2, Pencil, Share2, Sparkles } from 'lucide-react';
+import { ArrowLeft, BookOpen, Check, Loader2, Lock, Pencil, Share2, Sparkles } from 'lucide-react';
 import { sessionSections, estimateSessionMinutes } from '../domain/sessions.js';
 import { enumeratePeriodDates } from '../domain/periodPlanning.js';
 import { competitionDaysAway } from '../domain/planning.js';
@@ -24,6 +24,7 @@ export default function PeriodPlanPreview({ preview, lang = 'zh', t = key => key
   const [selected, setSelected] = useState(null);
   const [opened, setOpened] = useState(null);
   const [refineText, setRefineText] = useState('');
+  const [selectedRefineDates, setSelectedRefineDates] = useState([]);
   useBackNavigation(!!opened, () => setOpened(null), 100);
   useBackNavigation(!!selected, () => setSelected(null), 40);
   const heading = useRef(null);
@@ -45,8 +46,21 @@ export default function PeriodPlanPreview({ preview, lang = 'zh', t = key => key
   const openedEntry = opened?.date === selectedDate ? entries.find(entry => entry.id === opened.id && entry.phase === opened.phase) : null;
   const groups = [...new Set(dates.map(date => getWeekString(new Date(`${date}T12:00:00`))))];
   const weekday = date => new Intl.DateTimeFormat(en ? 'en' : 'zh-TW', { weekday: en ? 'short' : 'long', timeZone: 'UTC' }).format(new Date(`${date}T12:00:00Z`));
+  const shortWeekday = date => new Intl.DateTimeFormat(en ? 'en' : 'zh-TW', { weekday: 'short', timeZone: 'UTC' }).format(new Date(`${date}T12:00:00Z`));
   const shortDate = date => `${Number(date.slice(5, 7))}/${Number(date.slice(8))}`;
   const dateLabel = date => `${shortDate(date)} ${weekday(date)}`;
+  const editableRefineDates = dates.filter(date => !protectedDates.includes(date));
+  const activeRefineDates = selectedRefineDates.filter(date => editableRefineDates.includes(date));
+  const toggleRefineDate = date => {
+    setSelectedRefineDates(previous => {
+      const valid = previous.filter(item => editableRefineDates.includes(item));
+      const next = valid.includes(date)
+        ? valid.filter(item => item !== date)
+        : [...valid, date];
+      if (next.length >= editableRefineDates.length) return [];
+      return editableRefineDates.filter(item => next.includes(item));
+    });
+  };
   const court = session => session?.badminton || session?.courtDay || preview.profile?.context?.badmintonDays?.includes(session?.day);
   const eventPhase = date => {
     const away = competitionDaysAway(preview.profile?.context?.competitionDate, date);
@@ -120,7 +134,7 @@ export default function PeriodPlanPreview({ preview, lang = 'zh', t = key => key
             event.preventDefault();
             const feedback = refineText.trim();
             if (!feedback || busy) return;
-            const ok = await onRefine(feedback);
+            const ok = await onRefine(feedback, activeRefineDates);
             if (ok !== false) setRefineText('');
           }}
         >
@@ -128,6 +142,44 @@ export default function PeriodPlanPreview({ preview, lang = 'zh', t = key => key
             <Sparkles size={15} className="text-sky-700 shrink-0" aria-hidden="true" />
             {en ? 'Refine this AI draft with a message' : '想微調這份 AI 草稿嗎？'}
           </label>
+          {editableRefineDates.length > 1 && (
+            <div className="ai-refine-dates" data-testid="ai-refine-dates" role="group" aria-label={en ? 'Choose dates to refine' : '選擇要微調的日期'}>
+              <button
+                type="button"
+                data-testid="ai-refine-date-all"
+                className={`ai-refine-chip ${activeRefineDates.length === 0 ? 'is-selected' : ''}`}
+                aria-pressed={activeRefineDates.length === 0}
+                disabled={busy}
+                onClick={() => setSelectedRefineDates([])}
+              >
+                {en ? 'All dates' : '全部日期'}
+              </button>
+              {editableRefineDates.map(date => {
+                const picked = activeRefineDates.includes(date);
+                return (
+                  <button
+                    key={date}
+                    type="button"
+                    data-testid={`ai-refine-date-${date}`}
+                    className={`ai-refine-chip ${picked ? 'is-selected' : ''}`}
+                    aria-pressed={picked}
+                    disabled={busy}
+                    onClick={() => toggleRefineDate(date)}
+                  >
+                    {`${shortDate(date)} ${shortWeekday(date)}`}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {activeRefineDates.length > 0 && (
+            <p className="ai-refine-lock-hint" data-testid="ai-refine-lock-hint" role="status">
+              <Lock size={13} aria-hidden="true" />
+              {en
+                ? `Refining only ${activeRefineDates.length} selected ${activeRefineDates.length === 1 ? 'day' : 'days'}; all other dates stay locked.`
+                : `僅微調選取的 ${activeRefineDates.length} 天，其餘日期完全鎖定不動`}
+            </p>
+          )}
           <div className="ai-refine-row">
             <input
               id="ai-refine-input"

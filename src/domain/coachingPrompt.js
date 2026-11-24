@@ -42,8 +42,8 @@ export function buildPlanningPrompt({ lastWeekData, currentLevel, lastWeekFeedba
       ...(exercise.advanced ? { advanced: true } : {}), ...(exercise.priority ? { priority: true } : {}),
       ...(exercise.requiresPartner ? { requiresPartner: true } : {}), shoulderLoaded: exercise.shoulderLoaded ?? '未分類',
       ...(exercise.restrictionTags?.length ? { restrictionTags: exercise.restrictionTags } : {}),
-      starterDose: exercise.prescription ? ['sets','value','unit','restSeconds','perSide'].map(key => exercise.prescription[key] ?? null) : null, cue: exercise.tip, ...(specificTargets(id, exercise).length ? { trainingTargets: specificTargets(id, exercise) } : {}),
-      regression: exercise.easier || null,
+      starterDose: exercise.prescription ? ['sets','value','unit','restSeconds','perSide'].map(key => exercise.prescription[key] ?? null) : null, cue: String(exercise.tip || '').slice(0, 56), ...(specificTargets(id, exercise).length ? { trainingTargets: specificTargets(id, exercise) } : {}),
+      ...(exercise.easier ? { regression: String(exercise.easier).slice(0, 36) } : {}),
     },
   ]);
 

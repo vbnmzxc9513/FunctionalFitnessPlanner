@@ -1,5 +1,5 @@
 import { isCalendarDate, localDate } from './dates.js';
-import { normalizePlanningContext } from './planning.js';
+import { normalizePlanningContext, planningExercises } from './planning.js';
 import { utf8Bytes } from './promptCandidates.js';
 import { estimateSessionMinutes, sessionSections } from './sessions.js';
 import { DAILY_WARMUP_IDS } from './quickWorkouts.js';
@@ -9,13 +9,30 @@ export const MAX_CHAT_TURNS = 10;
 export const MAX_USER_MESSAGE_CHARS = 1200;
 export const MAX_MODEL_MESSAGE_CHARS = 4000;
 export const MAX_REFINEMENT_MESSAGE_CHARS = 1800;
+export const MAX_PLANNER_HANDOFF_CHARS = 600;
+export const MAX_COACH_SWAPS = 2;
 
 const LOCKED_WARMUP_SET = new Set(DAILY_WARMUP_IDS);
+const DIGEST_GROUPS = ['lower', 'upper_push', 'upper_pull', 'core', 'power', 'full', 'mobility'];
+const SWAP_TAG_RE = /\[\[\s*SWAP\s*:\s*([^\s\->|\]]+)\s*->\s*([^\s|\]]+)(?:\s*\|\s*([^\]]*))?\s*\]\]/gi;
+const ANY_SWAP_TAG_RE = /\[\[\s*SWAP\s*:[^\]]*\]\]/gi;
 
 function clipText(value, maxChars) {
   const clean = String(value ?? '').replace(/\s+/g, ' ').trim();
   if (!clean || clean.length <= maxChars) return clean;
   return `${clean.slice(0, Math.max(0, maxChars - 1)).trimEnd()}…`;
+}
+
+function stripPii(value) {
+  return String(value ?? '')
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '')
+    .replace(/https?:\/\/\S+/gi, '')
+    .replace(/\+?\d[\d\s().-]{7,}\d/g, match => {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(match.trim())) return match;
+      return match.replace(/\D/g, '').length >= 8 ? '' : match;
+    })
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function trimToUtf8Bytes(text, maxBytes) {
@@ -40,6 +57,9 @@ function summarizeSessionExercises(session, exercises = {}, { compact = false } 
       if (compact) {
         return { id: entry.id, name, phase: section.phase };
       }
+      const cue = clipText(exercise?.tip || exercise?.cue || '', 70);
+      const easier = clipText(exercise?.easier || '', 50);
+      const harder = clipText(exercise?.harder || '', 50);
       return {
         id: entry.id,
         name,
@@ -49,6 +69,9 @@ function summarizeSessionExercises(session, exercises = {}, { compact = false } 
         unit: entry.dose.unit,
         perSide: Boolean(entry.dose.perSide),
         restSeconds: entry.dose.restSeconds ?? 0,
+        ...(cue ? { cue } : {}),
+        ...(easier ? { easier } : {}),
+        ...(harder ? { harder } : {}),
       };
     }),
   );
@@ -117,6 +140,94 @@ function sanitizeMetrics(metrics = [], limit = 3) {
     }));
 }
 
+/**
+ * Sanitize up to `limit` recent factual exercise logs (newest first),
+ * omitting empty/null fields, stripping PII, and never fabricating missing values.
+ */
+export function sanitizeRecentLogs(exerciseLogs = [], exercises = {}, limit = 12) {
+  if (!Array.isArray(exerciseLogs) || !exerciseLogs.length || !Number.isFinite(limit) || limit <= 0) return [];
+  return exerciseLogs
+    .filter(log => log && typeof log === 'object' && isCalendarDate(log.date) && typeof (log.exerciseId || log.id) === 'string' && String(log.exerciseId || log.id).trim())
+    .slice()
+    .sort((a, b) => b.date.localeCompare(a.date) || String(a.exerciseId || a.id).localeCompare(String(b.exerciseId || b.id)))
+    .slice(0, limit)
+    .map(log => {
+      const id = String(log.exerciseId || log.id).trim();
+      const name = clipText(stripPii(exercises?.[id]?.name || id), 36);
+      const entry = { date: log.date, id, name };
+
+      if (Array.isArray(log.sets) && log.sets.length > 0) {
+        entry.setsDone = log.sets.length;
+        const setParts = log.sets
+          .map(set => {
+            if (typeof set === 'number' && Number.isFinite(set)) return String(set);
+            if (!set || typeof set !== 'object' || typeof set.value !== 'number' || !Number.isFinite(set.value)) return '';
+            if (log.perSide && typeof set.otherSide === 'number' && Number.isFinite(set.otherSide)) {
+              return `${set.value}/${set.otherSide}`;
+            }
+            return String(set.value);
+          })
+          .filter(Boolean);
+        if (setParts.length) {
+          const unitSuffix = typeof log.unit === 'string' && log.unit && log.unit !== 'reps' ? ` ${log.unit}` : '';
+          entry.actualReps = clipText(`${setParts.join(',')}${unitSuffix}`, 40);
+        }
+      }
+
+      const cleanLabel = clipText(stripPii(log.resistanceLabel || ''), 28);
+      const variant = typeof log.variant === 'string' ? log.variant.trim() : '';
+      let resistance = '';
+      if (typeof log.loadKg === 'number' && Number.isFinite(log.loadKg) && log.loadKg > 0) {
+        const basisSuffix = log.loadBasis === 'per_dumbbell' ? '/hand' : log.loadBasis === 'stack' ? ' stack' : '';
+        const prefix = variant && variant !== 'other' ? `${variant} ` : '';
+        resistance = `${prefix}${log.loadKg}kg${basisSuffix}${cleanLabel ? ` (${cleanLabel})` : ''}`;
+      } else if (variant === 'bodyweight') {
+        resistance = cleanLabel ? `bodyweight (${cleanLabel})` : 'bodyweight';
+      } else if (cleanLabel) {
+        resistance = variant && variant !== 'other' ? `${variant}: ${cleanLabel}` : cleanLabel;
+      } else if (variant) {
+        resistance = variant;
+      }
+      resistance = clipText(resistance, 48);
+      if (resistance) entry.resistance = resistance;
+
+      if (typeof log.quality === 'string' && log.quality && log.quality !== 'unknown') {
+        entry.quality = log.quality;
+      }
+      if (typeof log.rir === 'number' && Number.isFinite(log.rir)) {
+        entry.reserve = `RIR ${log.rir}`;
+      }
+      if (typeof log.nextDay === 'string' && (log.nextDay === 'good' || log.nextDay === 'worse')) {
+        entry.nextDay = log.nextDay;
+      }
+
+      return entry;
+    });
+}
+
+/**
+ * Build a compact grouped digest of user-eligible built-in exercises so the
+ * coach can recommend valid swap IDs within the context byte budget.
+ */
+export function buildEligibleCatalogDigest(exercises = {}, profile = {}, { compact = false } = {}) {
+  if (!exercises || typeof exercises !== 'object') return {};
+  const eligible = planningExercises(exercises, normalizePlanningContext(profile?.context || profile));
+  const perGroup = compact ? 5 : 10;
+  const buckets = Object.fromEntries(DIGEST_GROUPS.map(group => [group, []]));
+
+  const entries = Object.entries(eligible)
+    .filter(([id, exercise]) => exercise && !exercise.custom && !id.startsWith('custom_') && !LOCKED_WARMUP_SET.has(id))
+    .sort(([idA, exA], [idB, exB]) => Number(Boolean(exB.priority)) - Number(Boolean(exA.priority)) || idA.localeCompare(idB));
+
+  for (const [id, exercise] of entries) {
+    const group = DIGEST_GROUPS.includes(exercise.type) ? exercise.type : 'full';
+    if (buckets[group].length >= perGroup) continue;
+    buckets[group].push(`${id}:${clipText(exercise.name || id, compact ? 16 : 22)}`);
+  }
+
+  return Object.fromEntries(Object.entries(buckets).filter(([, list]) => list.length > 0));
+}
+
 function sanitizeRecentSummary(recentSummary, { compact = false } = {}) {
   if (!recentSummary || typeof recentSummary !== 'object') return null;
   return {
@@ -148,7 +259,7 @@ function sanitizeProfile(profile = {}, { compact = false } = {}) {
   return {
     focus: ['balanced', 'strength', 'stability', 'coordination'].includes(profile?.focus) ? profile.focus : 'balanced',
     dailyTimeMinutes: Number(profile?.time) || 30,
-    goal: clipText(profile?.goal || '', compact ? 140 : 320),
+    goal: clipText(stripPii(profile?.goal || ''), compact ? 140 : 320),
     trainingDays: context.trainingDays,
     badmintonDays: context.badmintonDays,
     badmintonMinutes: context.badmintonMinutes,
@@ -161,8 +272,8 @@ function sanitizeProfile(profile = {}, { compact = false } = {}) {
     sorenessRegions: context.sorenessRegions,
     recoveryState: context.recoveryState,
     healthStatus: context.healthStatus,
-    healthNotes: clipText(context.healthNotes || '', compact ? 100 : 240),
-    recoveryNotes: clipText(context.recoveryNotes || '', compact ? 100 : 240),
+    healthNotes: clipText(stripPii(context.healthNotes || ''), compact ? 100 : 240),
+    recoveryNotes: clipText(stripPii(context.recoveryNotes || ''), compact ? 100 : 240),
   };
 }
 
@@ -172,9 +283,10 @@ function buildCoachPersona(lang, safeToday) {
       `You are a warm, encouraging, evidence-informed badminton functional strength & conditioning coach (today is ${safeToday}).`,
       'Coaching principles:',
       '1. Tone: Warm, practical, supportive, and specific to badminton movement mechanics (split-step, lunge braking, hip hinge drive, overhead rotational chain, scapular stability, core anti-rotation, and 8-region dynamic mobility).',
-      '2. Strict factual grounding: ONLY cite numbers, dates, exercises, and trends that explicitly appear in the de-identified JSON snapshot below. NEVER fabricate completed workouts, sets, streaks, or improvements when absent (if hasHistory is false or data is null, acknowledge it gently and focus on actionable guidance).',
+      '2. Strict factual grounding: ONLY cite numbers, dates, exercises, and trends that explicitly appear in the de-identified JSON snapshot below. NEVER fabricate completed workouts, sets, streaks, or improvements when absent (if hasHistory is false or data is null, acknowledge it gently and focus on actionable guidance). When referencing past weights, reps, or soreness, cite ONLY values present in recentLogs or recentSummary.',
       '3. Medical safety boundary: NEVER provide medical diagnoses, prescribe clinical rehabilitation, or give medical clearance. If the user reports acute/worsening pain, numbness, tingling, radiating pain, joint locking/instability, or muscle weakness, advise stopping the aggravating movement, conservative rest, and evaluation by a physician or physical therapist.',
-      '4. Format: Respond in clear English using concise Markdown (short headings or bullet points, scannable on mobile).',
+      '4. Actionable swaps: When recommending an exercise swap for today’s workout, pick ONLY from eligibleCatalog IDs (never invent IDs and never replace the 8 locked warm-up IDs). If suggesting a concrete 1-to-1 swap for a non-warmup exercise currently in activeSession, optionally append a tag on its own line at the end: [[SWAP:oldId->newId|short reason]] (max 2 swaps per reply) so the app can show a 1-click apply button.',
+      '5. Format: Respond in clear English using concise Markdown (short headings or bullet points, scannable on mobile).',
       '',
       'De-identified athlete context snapshot (JSON):',
     ].join('\n');
@@ -184,9 +296,10 @@ function buildCoachPersona(lang, safeToday) {
     `你是一位溫暖、有鼓勵性且具科學依據的羽球功能性體能教練（今天日期：${safeToday}）。`,
     '教練溝通守則：',
     '1. 語氣與專業：語氣溫暖、務實且能給學員信心，善於把訓練動作連結到羽球專項動力鏈（啟動步、弓步急停煞車、髖鉸鏈發力、過頭揮拍旋轉鏈、肩胛與旋轉肌穩定、核心抗旋轉與八大關節動態活動度）。',
-    '2. 嚴格事實根據：只能引用下方去識別化 JSON 快照中真實存在的日期、動作、組數與數據，絕對不可編造未紀錄的完成天數、次數或進步幅度；若 hasHistory 為 false 或資料為空，請溫和說明目前紀錄較少並直接給出實用建議。',
+    '2. 嚴格事實根據：只能引用下方去識別化 JSON 快照中真實存在的日期、動作、組數與數據，絕對不可編造未紀錄的完成天數、次數或進步幅度；若 hasHistory 為 false 或資料為空，請溫和說明目前紀錄較少並直接給出實用建議。提及過去重量、次數、保留次數或痠痛反應時，只能引用 recentLogs 或 recentSummary 中實際存在的數值。',
     '3. 醫療安全界線：絕不做醫療診斷、不開立臨床復健處方、不給予醫療復出許可。若學員提到急性或惡化疼痛、麻木、刺痛、放射痛、關節卡住不穩或明顯無力，請務必建議停止誘發動作、保守休息並儘速由醫師或物理治療師評估。',
-    '4. 回答格式：使用繁體中文與簡潔 Markdown（短標題與條列重點，方便手機閱讀）。',
+    '4. 可執行動作替換：若建議替換今日課表的動作，只能從 eligibleCatalog 裡挑選合適 ID（絕不自創 ID，且不可替換鎖定的 8 項動態暖身）。若對 activeSession 中非暖身動作提出具體一對一替換，可在回覆最後另起一行附上 [[SWAP:oldId->newId|簡短原因]]（每次回覆最多 2 個），讓系統顯示一鍵套用按鈕。',
+    '5. 回答格式：使用繁體中文與簡潔 Markdown（短標題與條列重點，方便手機閱讀）。',
     '',
     '學員去識別化訓練快照（JSON）：',
   ].join('\n');
@@ -206,6 +319,7 @@ export function buildCoachChatSystemContext({
   recentSummary = null,
   readiness = null,
   metrics = [],
+  exerciseLogs = [],
 } = {}) {
   const safeToday = isCalendarDate(today) ? today : localDate();
   const safeLang = lang === 'en' ? 'en' : 'zh';
@@ -219,8 +333,10 @@ export function buildCoachChatSystemContext({
     activeSession: buildActiveSessionSnapshot(activeSession, exercises, { compact: false }),
     weekSchedule: buildWeekScheduleSnapshot(schedule, exercises, { compact: false }),
     recentSummary: sanitizeRecentSummary(recentSummary, { compact: false }),
+    recentLogs: sanitizeRecentLogs(exerciseLogs, exercises, 12),
     todayReadiness: sanitizeReadiness(readiness),
     recentMetrics: sanitizeMetrics(metrics, 3),
+    eligibleCatalog: buildEligibleCatalogDigest(exercises, profile, { compact: false }),
   };
 
   let output = assemble(fullSnapshot);
@@ -232,8 +348,10 @@ export function buildCoachChatSystemContext({
     activeSession: buildActiveSessionSnapshot(activeSession, exercises, { compact: true }),
     weekSchedule: buildWeekScheduleSnapshot(schedule, exercises, { compact: true }),
     recentSummary: sanitizeRecentSummary(recentSummary, { compact: true }),
+    recentLogs: sanitizeRecentLogs(exerciseLogs, exercises, 5),
     todayReadiness: sanitizeReadiness(readiness),
     recentMetrics: sanitizeMetrics(metrics, 1),
+    eligibleCatalog: buildEligibleCatalogDigest(exercises, profile, { compact: true }),
   };
 
   output = assemble(compactSnapshot);
@@ -448,3 +566,137 @@ export function buildRefinementMessage(currentSessions = [], feedback = '', lang
   const result = lines.length ? `${header}\n${lines.join('\n')}` : header;
   return result.slice(0, MAX_REFINEMENT_MESSAGE_CHARS);
 }
+
+/**
+ * Strip complete or trailing partial `[[SWAP:...]]` markers from live streaming text
+ * so raw action tags never flash in the UI while tokens are arriving.
+ */
+export function stripStreamingSwapTags(text = '') {
+  const source = String(text ?? '');
+  if (!source) return '';
+  const withoutComplete = source
+    .split(/\r?\n/)
+    .reduce((acc, line) => {
+      const hadTag = /\[\[\s*SWAP\s*:/i.test(line);
+      if (!hadTag) {
+        acc.push(line);
+        return acc;
+      }
+      const cleaned = line
+        .replace(ANY_SWAP_TAG_RE, '')
+        .replace(/\[\[\s*SWAP\s*:[^\]]*$/i, '')
+        .trimEnd();
+      if (cleaned.trim()) acc.push(cleaned);
+      return acc;
+    }, [])
+    .join('\n');
+  return withoutComplete.trim();
+}
+
+/**
+ * Extract validated 1-to-1 exercise swap actions from an AI Coach reply
+ * and strip ALL `[[SWAP:...]]` markers cleanly from `cleanText`.
+ */
+export function parseCoachActionSuggestions(text = '', { activeSession = null, eligibleExercises = {}, exercises = null } = {}) {
+  const source = String(text ?? '');
+  if (!source) return { cleanText: '', swaps: [] };
+
+  const routine = Array.isArray(activeSession?.routine) ? activeSession.routine : [];
+  const routineSet = new Set(routine);
+  const eligible = eligibleExercises && typeof eligibleExercises === 'object' ? eligibleExercises : {};
+  const catalog = exercises && typeof exercises === 'object' ? exercises : eligible;
+
+  const swaps = [];
+  const usedOldIds = new Set();
+  const usedNewIds = new Set();
+
+  for (const match of source.matchAll(SWAP_TAG_RE)) {
+    if (swaps.length >= MAX_COACH_SWAPS) break;
+    const oldId = String(match[1] || '').trim();
+    const newId = String(match[2] || '').trim();
+    const reason = clipText(match[3] || '', 120);
+
+    if (!oldId || !newId || oldId === newId) continue;
+    if (!routineSet.has(oldId) || LOCKED_WARMUP_SET.has(oldId)) continue;
+    if (routineSet.has(newId)) continue;
+    if (!Object.hasOwn(eligible, newId)) continue;
+
+    const target = eligible[newId];
+    if (!target || typeof target !== 'object' || target.active === false || target.deleted) continue;
+    if (usedOldIds.has(oldId) || usedNewIds.has(newId)) continue;
+
+    usedOldIds.add(oldId);
+    usedNewIds.add(newId);
+    swaps.push({
+      oldId,
+      oldName: clipText(catalog[oldId]?.name || eligible[oldId]?.name || oldId, 48),
+      newId,
+      newName: clipText(target.name || catalog[newId]?.name || newId, 48),
+      reason,
+    });
+  }
+
+  const cleanLines = [];
+  for (const line of source.split(/\r?\n/)) {
+    const hasSwapTag = /\[\[\s*SWAP\s*:[^\]]*\]\]/i.test(line);
+    if (!hasSwapTag) {
+      cleanLines.push(line);
+      continue;
+    }
+    const stripped = line.replace(ANY_SWAP_TAG_RE, '').trimEnd();
+    if (stripped.trim()) cleanLines.push(stripped);
+  }
+
+  const cleanText = cleanLines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  return { cleanText, swaps };
+}
+
+function stripMarkdownForNote(text = '') {
+  return String(text ?? '')
+    .replace(ANY_SWAP_TAG_RE, '')
+    .replace(/^#{1,6}\s*/gm, '')
+    .replace(/^\s*[-*+]\s+/gm, '')
+    .replace(/^\s*\d+\.\s+/gm, '')
+    .replace(/[*_`~]/g, '')
+    .replace(/\r?\n+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Build a concise <= 600-char note from the latest 1–2 user questions
+ * and coach recommendations so the athlete can carry chat context into AI Period Planner.
+ */
+export function buildCoachToPlannerNote(messages = [], lang = 'zh') {
+  const normalized = normalizeCoachHistory(messages);
+  if (!normalized.length) return '';
+
+  const en = lang === 'en';
+  const userMsgs = normalized
+    .filter(item => item.role === 'user')
+    .slice(-2)
+    .map(item => clipText(stripPii(stripMarkdownForNote(item.text)), 110))
+    .filter(Boolean);
+  const modelMsgs = normalized
+    .filter(item => item.role === 'model')
+    .slice(-2)
+    .map(item => clipText(stripPii(stripMarkdownForNote(item.text)), 175))
+    .filter(Boolean);
+
+  if (!userMsgs.length && !modelMsgs.length) return '';
+
+  const parts = [en ? 'From AI Coach discussion:' : '延續 AI 教練討論：'];
+  if (userMsgs.length) {
+    const userSummary = clipText(userMsgs.join(en ? ' / ' : '；'), 200);
+    parts.push(en ? `Goals/Questions: ${userSummary}` : `需求與提問：${userSummary}`);
+  }
+  if (modelMsgs.length) {
+    const coachSummary = clipText(modelMsgs.join(en ? ' / ' : '；'), 340);
+    parts.push(en ? `Coach recommendations: ${coachSummary}` : `教練建議重點：${coachSummary}`);
+  }
+
+  const joined = parts.join('\n');
+  if (joined.length <= MAX_PLANNER_HANDOFF_CHARS) return joined;
+  return `${joined.slice(0, MAX_PLANNER_HANDOFF_CHARS - 1).trimEnd()}…`;
+}
+

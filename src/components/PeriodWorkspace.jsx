@@ -126,6 +126,8 @@ export default function PeriodWorkspace({
   onPlanDate,
   onOverviewLoaded,
   onAddToDay,
+  initialCoachNote = '',
+  onConsumeInitialCoachNote,
 }) {
   const en = lang === 'en';
   const scope = uid || 'signed-out';
@@ -136,15 +138,19 @@ export default function PeriodWorkspace({
   if (!restored.current) {
     try { restored.current = JSON.parse(readStorage(storageKey, '{}')); } catch { restored.current = {}; }
   }
+  const trimmedCoachNote = String(initialCoachNote || '').trim();
   let initialRange = overview?.range;
+  if (trimmedCoachNote && initialRange) {
+    try { initialRange = normalizePlanningRange(initialRange, today); } catch { initialRange = defaultPlanningRange(today); }
+  }
   if (!initialRange) {
     try { initialRange = normalizePlanningRange(restored.current.range, today); } catch { initialRange = defaultPlanningRange(today); }
   }
 
   const [range, setRange] = useState(initialRange);
-  const [stage, setStage] = useState(overview ? 'overview' : 'range');
-  const [step, setStep] = useState(0);
-  const [plannerMode, setPlannerMode] = useState(() => (readStorage(modeKey, 'template') === 'ai' ? 'ai' : 'template'));
+  const [stage, setStage] = useState(trimmedCoachNote ? 'questionnaire' : overview ? 'overview' : 'range');
+  const [step, setStep] = useState(trimmedCoachNote ? 2 : 0);
+  const [plannerMode, setPlannerMode] = useState(() => (trimmedCoachNote || readStorage(modeKey, 'template') === 'ai' ? 'ai' : 'template'));
   const [preferOwnKey, setPreferOwnKey] = useState(false);
   const [inlineKeyInput, setInlineKeyInput] = useState('');
   const [showKeyEditor, setShowKeyEditor] = useState(false);
@@ -153,9 +159,32 @@ export default function PeriodWorkspace({
   const [aiProgress, setAiProgress] = useState(null);
   const [error, setError] = useState('');
   const [aiFailed, setAiFailed] = useState(false);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState(trimmedCoachNote);
+  const [lastCoachNote, setLastCoachNote] = useState(trimmedCoachNote);
   const [requiredQuery, setRequiredQuery] = useState('');
   const [storageFailed, setStorageFailed] = useState(false);
+
+  if (trimmedCoachNote && trimmedCoachNote !== lastCoachNote) {
+    setLastCoachNote(trimmedCoachNote);
+    setMessage(trimmedCoachNote);
+    setPlannerMode('ai');
+    setRange(previous => {
+      try { return normalizePlanningRange(previous, today); } catch { return defaultPlanningRange(today); }
+    });
+    setPreview(null);
+    setStage('questionnaire');
+    setStep(2);
+    setError('');
+    setAiFailed(false);
+  } else if (!trimmedCoachNote && lastCoachNote) {
+    setLastCoachNote('');
+  }
+
+  useEffect(() => {
+    if (!trimmedCoachNote) return;
+    writeStorage(modeKey, 'ai');
+    onConsumeInitialCoachNote?.();
+  }, [trimmedCoachNote, modeKey, onConsumeInitialCoachNote]);
 
   const request = useRef(0);
   const abortRef = useRef(null);
@@ -425,7 +454,7 @@ export default function PeriodWorkspace({
     }
   };
 
-  const refinePreview = async feedback => {
+  const refinePreview = async (feedback, refineDates = []) => {
     if (busy || !preview || preview.source !== 'ai') return false;
     const refinement = buildRefinementMessage(preview.sessions, feedback, lang, message);
     if (!refinement) return false;
@@ -455,6 +484,7 @@ export default function PeriodWorkspace({
       ];
       const combinedProgress = { ...history.progress, ...state.progressByWeek };
       const normalizedProfile = periodProfile(preview.profile || profile);
+      const selectedRefineDates = Array.isArray(refineDates) ? refineDates.filter(Boolean) : [];
 
       const result = await generateAIPeriodPlan({
         exercises,
@@ -471,6 +501,9 @@ export default function PeriodWorkspace({
         userGoal: normalizedProfile.goal || '',
         userMessage: refinement,
         lang,
+        refineDates: selectedRefineDates,
+        baseSessions: preview.sessions,
+        baseCoachReport: preview.coachReport || null,
         onProgress: info => {
           if (id === request.current) setAiProgress(info);
         },

@@ -1,12 +1,12 @@
 import { Check, ChevronRight, Loader2, Plus, Search, Sparkles, Star, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { EXERCISE_CATEGORIES } from '../domain/exerciseCatalog.js';
-import { LIBRARY_PURPOSES, libraryGroups, matchesLibraryPurpose, suggestedUses } from '../domain/library.js';
+import { LIBRARY_EQUIPMENT_FILTERS, LIBRARY_PURPOSES, libraryGroups, matchesEquipmentFilter, matchesLibraryPurpose, suggestedUses } from '../domain/library.js';
 import { LIBRARY_TEXT } from '../i18n/library.js';
 import CreateExerciseDialog from './CreateExerciseDialog.jsx';
 import ExerciseGuide from './ExerciseGuide.jsx';
 import ExerciseTags, { BodyPartFilter } from './ExerciseTags.jsx';
-import { matchesBodyPart, matchesExerciseQuery } from '../domain/exerciseTags.js';
+import { exerciseBodyParts, matchesBodyPart, matchesExerciseQuery } from '../domain/exerciseTags.js';
 import { weeklyChoiceBlockReason } from '../domain/weeklyChoices.js';
 import { MAX_WEEKLY_CHOICES } from '../domain/trainingPreferences.js';
 import './exercise-library.css';
@@ -16,6 +16,8 @@ export default function ExerciseLibrary({ t, exercises, adding, onAdd, createSco
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('');
   const [bodyPart, setBodyPart] = useState('all');
+  const [equipmentFilter, setEquipmentFilter] = useState('all');
+  const [onlyEligible, setOnlyEligible] = useState(false);
   const [visibleCount, setVisibleCount] = useState(20);
   const [purpose, setPurpose] = useState('all');
   const [scope, setScope] = useState('all');
@@ -27,8 +29,15 @@ export default function ExerciseLibrary({ t, exercises, adding, onAdd, createSco
   const text = LIBRARY_TEXT[en ? 'en' : 'zh'];
   const showManagement = canManage && managing;
   const organizing = !!pendingId || busy;
+  const availableParts = new Set();
+  for (const [id, exercise] of Object.entries(exercises)) {
+    if (exercise?.deleted) continue;
+    for (const part of exerciseBodyParts(id, exercise)) availableParts.add(part);
+  }
   const entries = Object.entries(exercises).filter(([id, exercise]) => matchesLibraryPurpose(id, exercise, purpose, scope)
     && (!category || exercise.category === category) && matchesBodyPart(id, exercise, bodyPart)
+    && matchesEquipmentFilter(exercise, equipmentFilter)
+    && (!onlyEligible || !onToggleWeekly || id.startsWith('custom_') || !weeklyChoiceBlockReason(id, exercises, planningContext, weeklyAvailable))
     && matchesExerciseQuery(id, exercise, query, lang)).sort(([, left], [, right]) => Number(left.active === false) - Number(right.active === false));
 
   const toggleExpand = id => setExpandedIds(previous => ({ ...previous, [id]: !previous[id] }));
@@ -77,7 +86,26 @@ export default function ExerciseLibrary({ t, exercises, adding, onAdd, createSco
       </div>
 
       <div className="library-filter-row">
-        <BodyPartFilter value={bodyPart} onChange={value => { setBodyPart(value); setVisibleCount(20); }} lang={lang} testId="library-body-part" />
+        <BodyPartFilter value={bodyPart} onChange={value => { setBodyPart(value); setVisibleCount(20); }} lang={lang} testId="library-body-part" availableParts={availableParts} />
+        <label className="library-equipment-filter">
+          <span>{en ? 'Equipment' : '器材'}</span>
+          <select
+            aria-label={en ? 'Filter by equipment' : '依器材篩選'}
+            data-testid="library-equipment-filter"
+            value={equipmentFilter}
+            onChange={event => { setEquipmentFilter(event.target.value); setVisibleCount(20); }}
+          >
+            <option value="all">{en ? 'All equipment' : '全部器材'}</option>
+            {LIBRARY_EQUIPMENT_FILTERS.slice(1).map(key => <option key={key} value={key}>{t(`equipment_${key}`)}</option>)}
+          </select>
+        </label>
+        {onToggleWeekly && <button
+          type="button"
+          data-testid="library-only-eligible"
+          aria-pressed={onlyEligible}
+          onClick={() => { setOnlyEligible(value => !value); setVisibleCount(20); }}
+          className="library-eligible-toggle"
+        >{en ? 'Eligible only' : '只看目前可做'}</button>}
         <details className="library-more-filters">
           <summary>{text.moreFilters}{category && ` · ${t(`category_${category}`)}`}</summary>
           <select aria-label={t('filterCategory')} value={category} onChange={event => { setCategory(event.target.value); setVisibleCount(20); }} className="mt-2 max-w-full rounded-lg border border-sky-200 bg-white p-2 text-sm">
@@ -206,6 +234,6 @@ export default function ExerciseLibrary({ t, exercises, adding, onAdd, createSco
 
     {entries.length > visibleCount && <button type="button" data-testid="library-load-more" onClick={() => setVisibleCount(value => value + 20)} className="library-load-more">{en ? `Show more (${Math.min(visibleCount, entries.length)} / ${entries.length})` : `顯示更多（${Math.min(visibleCount, entries.length)} / ${entries.length}）`}</button>}
     {!entries.length && <p className="text-sm text-slate-500 text-center py-6">{scope === 'mine' ? text.emptyMine : t('noMatchingExercises')}</p>}
-    {creating && <CreateExerciseDialog lang={lang} t={t} scope={createScope} initialPart={bodyPart} onSave={async form => { const saved = await onAdd(form); setQuery(saved.exercise.name); setScope('all'); setPurpose('all'); setBodyPart('all'); }} onClose={() => setCreating(false)} />}
+    {creating && <CreateExerciseDialog lang={lang} t={t} scope={createScope} initialPart={bodyPart} onSave={async form => { const saved = await onAdd(form); setQuery(saved.exercise.name); setScope('all'); setPurpose('all'); setBodyPart('all'); setEquipmentFilter('all'); setOnlyEligible(false); }} onClose={() => setCreating(false)} />}
   </section>;
 }

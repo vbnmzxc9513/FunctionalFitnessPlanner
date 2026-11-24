@@ -446,3 +446,177 @@ test('daily must-have rules: supports disabling 8-item warm-up lock and enforcin
   const eligible = planningExercises(exercises, customWarmupContext);
   assert.ok(estimateSessionMinutes(day, eligible) <= 25);
 });
+
+test('buildAIPeriodChunkPrompt serializes estMin, parts, and jumpContacts (>0), omits cue & equipmentOptions, includes A/B split & multi-week progression rules, and stays <= 56KB', () => {
+  const fullContext = {
+    ...DEFAULT_PLANNING_CONTEXT,
+    trainingDays: [1, 2, 3, 4, 5],
+    badmintonDays: [2, 5],
+    equipment: ['dumbbell', 'band', 'kettlebell'],
+    experience: 'intermediate',
+  };
+  const prevWeekSession = {
+    date: '2026-11-16',
+    week: '2026-W47',
+    day: 1,
+    sessionType: 'training',
+    theme: 'Day A 分腿蹲與上肢拉',
+    routine: [...DAILY_WARMUP_IDS, 'bf_B01', 'dead_bug'],
+    prescriptions: [
+      ...DAILY_WARMUP_IDS.map(id => ({ id, sets: 1, value: '6', unit: 'reps', restSeconds: 0, perSide: false, phase: 'warmup' })),
+      { id: 'bf_B01', sets: 3, value: '8', unit: 'reps', restSeconds: 60, perSide: true, phase: 'strength' },
+      { id: 'dead_bug', sets: 2, value: '10', unit: 'reps', restSeconds: 30, perSide: true, phase: 'accessory' },
+    ],
+  };
+
+  const prompt = buildAIPeriodChunkPrompt({
+    chunkDates: ['2026-11-23', '2026-11-24', '2026-11-25'],
+    chunkIndex: 1,
+    totalChunks: 3,
+    policies: [
+      { date: '2026-11-23', day: 1, week: '2026-W48', protected: false, isTrainingDay: true, isCourtDay: false, warmupMode: 'daily_warmup', warmupMinutes: 10, remainingMinutes: 24, remainingSlots: 16 },
+      { date: '2026-11-24', day: 2, week: '2026-W48', protected: false, isTrainingDay: true, isCourtDay: true, warmupMode: 'daily_warmup', warmupMinutes: 10, remainingMinutes: 24, remainingSlots: 16 },
+      { date: '2026-11-25', day: 3, week: '2026-W48', protected: false, isTrainingDay: true, isCourtDay: false, warmupMode: 'daily_warmup', warmupMinutes: 10, remainingMinutes: 24, remainingSlots: 16 },
+    ],
+    exercises,
+    profile: { context: fullContext, focus: 'balanced', time: '35' },
+    time: 35,
+    previousSessions: [prevWeekSession],
+    includeReport: true,
+  });
+
+  assert.ok(Buffer.byteLength(prompt, 'utf8') <= 56000, 'Prompt must stay <= 56KB');
+  assert.match(prompt, /A\/B 日分流原則/);
+  assert.match(prompt, /多週漸進節奏/);
+  assert.match(prompt, /competitionDaysAway <= 7/);
+  assert.match(prompt, /estMin/);
+  assert.match(prompt, /jumpContacts/);
+
+  // Extract candidate JSON array from prompt
+  const candidateSection = prompt.split('【可用候選動作清單（ID 必須完全一致）】')[1].split('【輸出格式】')[0];
+  const jsonStart = candidateSection.indexOf('[{');
+  assert.ok(jsonStart >= 0, 'Candidate JSON array should be present');
+  const candidates = JSON.parse(candidateSection.slice(jsonStart).trim());
+  assert.ok(candidates.length > 20, 'Should serialize eligible candidates');
+
+  for (const candidate of candidates) {
+    assert.equal(typeof candidate.estMin, 'number', `${candidate.id} should include numeric estMin`);
+    assert.ok(candidate.estMin > 0, `${candidate.id} estMin should be > 0`);
+    assert.ok(Array.isArray(candidate.parts), `${candidate.id} should include parts array`);
+    assert.ok(candidate.parts.length <= 3, `${candidate.id} parts should be compact (<= 3)`);
+    assert.equal('cue' in candidate, false, `${candidate.id} must omit cue`);
+    assert.equal('equipmentOptions' in candidate, false, `${candidate.id} must omit equipmentOptions`);
+  }
+
+  const jumpCandidate = candidates.find(item => item.id === 'bf_E02');
+  assert.ok(jumpCandidate, 'Jump candidate bf_E02 should be present');
+  assert.ok(jumpCandidate.jumpContacts > 0, 'Jump candidate must expose jumpContacts > 0');
+
+  const nonJumpCandidate = candidates.find(item => item.id === 'bf_B01');
+  assert.ok(nonJumpCandidate, 'Strength candidate bf_B01 should be present');
+  assert.equal('jumpContacts' in nonJumpCandidate, false, 'Non-jump candidate must omit jumpContacts');
+  assert.ok(nonJumpCandidate.parts.length > 0, 'Strength candidate should include primary parts');
+
+  // Verify compactPreviousSessions keeps clean mainIds & themes without duplicating the 8 locked warm-up IDs
+  const profileSection = prompt.split('【學員資料、近 28 天真實紀錄與前期課表】\n')[1].split('\n\n【專業排課約束】')[0];
+  const profilePayload = JSON.parse(profileSection);
+  assert.equal(profilePayload.previousSessions.length, 1);
+  assert.equal(profilePayload.previousSessions[0].theme, 'Day A 分腿蹲與上肢拉');
+  assert.deepEqual(profilePayload.previousSessions[0].mainIds, ['bf_B01', 'dead_bug']);
+});
+
+test('generateAIPeriodPlan with refineDates and baseSessions only regenerates affected chunk and preserves untouched days byte-for-byte', async () => {
+  const context = {
+    ...DEFAULT_PLANNING_CONTEXT,
+    trainingDays: [1, 2, 3, 4, 5],
+    badmintonDays: [2, 5],
+    equipment: ['dumbbell', 'band'],
+  };
+
+  // Generate an initial 14-day (2-chunk) AI plan as baseSessions
+  const initial = await generateAIPeriodPlan({
+    exercises,
+    profile: { context, focus: 'balanced', time: '35' },
+    range: { from: '2026-11-23', to: '2026-12-06' },
+    today: '2026-11-23',
+    lang: 'zh',
+    callChunk: async ({ prompt, includeReport }) => mockChunkResponse(prompt, includeReport),
+  });
+  assert.equal(initial.sessions.length, 14);
+
+  // Now selectively refine ONLY 2026-11-26 (Thursday in Week 1 / Chunk 0).
+  // Week 2 (Chunk 1: 2026-11-30 .. 2026-12-06) has ZERO refineDates and MUST be skipped completely.
+  const targetDate = '2026-11-26';
+  const chunkCalls = [];
+  const refined = await generateAIPeriodPlan({
+    exercises,
+    profile: { context, focus: 'balanced', time: '35' },
+    range: { from: '2026-11-23', to: '2026-12-06' },
+    today: '2026-11-23',
+    lang: 'zh',
+    refineDates: [targetDate],
+    baseSessions: initial.sessions,
+    baseCoachReport: initial.coachReport,
+    userMessage: '11/26 改為輕量核心與肩胛穩定',
+    callChunk: async ({ prompt, includeReport, chunkIndex, from, to }) => {
+      chunkCalls.push({ chunkIndex, from, to, includeReport, prompt });
+      const match = prompt.match(/editableDates 輸出 days 陣列（每天恰一筆，日期必須完全一致，不可包含受保護日期）：\n(\[.*\])/);
+      assert.ok(match, 'Prompt should contain editableDates JSON');
+      const editableDates = JSON.parse(match[1]);
+      assert.deepEqual(editableDates.map(item => item.date), [targetDate], 'Only the selected refineDate should be sent as editable');
+
+      // Locked untouched sessions must appear in previousSessions so Gemini maintains weekly balance
+      const profileSection = prompt.split('【學員資料、近 28 天真實紀錄與前期課表】\n')[1].split('\n\n【專業排課約束】')[0];
+      const profilePayload = JSON.parse(profileSection);
+      const prevDates = new Set(profilePayload.previousSessions.map(item => item.date));
+      assert.equal(prevDates.has('2026-11-23'), true, 'Locked same-week sibling day should be in previousSessions');
+      assert.equal(prevDates.has('2026-11-30'), true, 'Locked week-2 day should be in previousSessions');
+
+      return {
+        days: [{
+          date: targetDate,
+          name: '微調後的核心與肩胛日',
+          theme: '核心抗旋與肩胛控制（微調版）',
+          concept: '減輕腿部負擔，專注軀幹穩定。',
+          coachAdvice: '動作放慢並配合穩定呼吸。',
+          sessionType: 'training',
+          warmupNote: '先完成八段動態暖身。',
+          cooldownNote: '緩慢伸展胸椎收尾。',
+          routine: ['dead_bug'],
+          prescriptions: [
+            { id: 'dead_bug', sets: 3, value: '10', unit: 'reps', restSeconds: 30, perSide: true, phase: 'accessory' },
+          ],
+        }],
+        ...(includeReport ? {
+          report: {
+            reviewAndPraise: '已依你的需求精準微調 11/26，同時完整保留其他日期的課表結構！',
+            reminders: ['11/26 已調整為核心與肩胛主軸，其餘日期維持原計畫。'],
+            planOverview: '兩週課表在鎖定其餘日期下完成單日微調。',
+            checkpoints: '觀察 11/26 調整後隔日週五球局的肩核心感受。',
+          },
+        } : {}),
+      };
+    },
+  });
+
+  // Only Chunk 0 should have been called, and it MUST request the updated coach report (final active chunk)
+  assert.equal(chunkCalls.length, 1, 'Should ONLY call Gemini for the chunk containing refineDates');
+  assert.equal(chunkCalls[0].chunkIndex, 0);
+  assert.equal(chunkCalls[0].includeReport, true, 'Final active chunk must regenerate coachReport');
+  assert.equal(refined.sessions.length, 14);
+  assert.match(refined.coachReport.reviewAndPraise, /11\/26/);
+
+  // Refined date should reflect the new plan (with locked 8-item warm-up intact)
+  const updatedDay = refined.sessions.find(day => day.date === targetDate);
+  assert.equal(updatedDay.theme, '核心抗旋與肩胛控制（微調版）');
+  assert.equal(isDailyWarmupComplete(updatedDay), true);
+  assert.ok(updatedDay.routine.includes('dead_bug'));
+
+  // Every other date across BOTH chunks must be preserved byte-for-byte!
+  for (const baseDay of initial.sessions) {
+    if (baseDay.date === targetDate) continue;
+    const actualDay = refined.sessions.find(day => day.date === baseDay.date);
+    assert.deepEqual(actualDay, baseDay, `Untouched date ${baseDay.date} must be preserved byte-for-byte`);
+  }
+});
+
