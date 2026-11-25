@@ -7,7 +7,7 @@ import { journeyText } from '../i18n/journey.js';
 import { dateForWeekDay, getDateForWeekDay, localDate } from '../domain/dates.js';
 import { exerciseKey } from '../domain/training.js';
 import { SESSION_PHASES } from '../domain/phases.js';
-import { doseSeconds, estimateSessionMinutes, sessionSections } from '../domain/sessions.js';
+import { estimateSessionMinutes, sessionSections } from '../domain/sessions.js';
 import { hydrateManualSession, manualPlannerErrorMessage } from '../domain/manualPlanner.js';
 import { isExerciseRecordedOnDay, quickRemoveExerciseFromDay } from '../domain/singleDayEdit.js';
 import ExerciseGuide from './ExerciseGuide.jsx';
@@ -218,12 +218,6 @@ export default function Training({ t, lang = 'zh', schedule, draft, activeDay, s
       const liveRemaining = Math.max(0, totalCount - liveDoneCount);
       const liveComplete = totalCount > 0 && liveDoneCount === totalCount;
       const completionPct = totalCount > 0 ? Math.round((liveDoneCount / totalCount) * 100) : 0;
-      const doneSecs = liveEntries.reduce((sum, item) => {
-        if (!item.done) return sum;
-        const ex = exercises[item.id];
-        return sum + doseSeconds(item.dose, ex) + (item.dose.preparation ? doseSeconds(item.dose.preparation, ex, true) : 0);
-      }, 0);
-      const doneMinutes = liveComplete ? minutes : liveDoneCount === 0 ? 0 : Math.min(minutes, Math.max(1, Math.ceil(doneSecs / 60)));
       const todayLogs = (Array.isArray(exerciseLogs) ? exerciseLogs : []).filter(log => log && log.week === currentWeek && log.day === active.day);
       const todayLoggedExercises = new Set(todayLogs.map(log => log.exerciseId)).size;
       const todayLoggedSets = todayLogs.reduce((sum, log) => sum + (Array.isArray(log.sets) ? log.sets.length : 0), 0);
@@ -269,12 +263,7 @@ export default function Training({ t, lang = 'zh', schedule, draft, activeDay, s
             <div className="session-summary-metric">
               <span className="session-summary-metric-label">{en ? 'Completed' : '完成動作'}</span>
               <strong>{liveDoneCount} / {totalCount}</strong>
-              <small>{completionPct}%</small>
-            </div>
-            <div className="session-summary-metric">
-              <span className="session-summary-metric-label">{en ? 'Est. time' : '完成時長'}</span>
-              <strong>{en ? `~${doneMinutes}m` : `約 ${doneMinutes} 分`}</strong>
-              <small>{en ? `of ${minutes} min` : `總預估 ${minutes} 分`}</small>
+              <small>{liveComplete ? (en ? 'All checked off' : '全數勾選完成') : liveDoneCount > 0 ? (en ? `${liveRemaining} remaining` : `尚餘 ${liveRemaining} 項`) : (en ? 'None checked yet' : '尚未勾選')}</small>
             </div>
             <div className="session-summary-metric">
               <span className="session-summary-metric-label">{en ? 'Logged sets' : '實做紀錄'}</span>
