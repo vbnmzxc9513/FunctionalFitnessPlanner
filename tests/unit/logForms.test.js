@@ -69,9 +69,9 @@ test('court question distinguishes unknown, explicit no session and an entered s
 
 test('readiness missing labels match decision inputs and do not ask RPE for no court', () => {
   const value = readinessInput({ ...readinessForm(null), yesterdayCourt: 'none' }, '2026-10-15');
-  assert.deepEqual(readinessMissing(value), ['sleepHours', 'fatigue', 'soreness', 'symptoms', 'todayCourtIntensity']);
-  assert.deepEqual(readinessMissing({ ...value, sleepHours: 7, fatigue: 0, soreness: 0, symptoms: 'none', todayCourtIntensity: 'none' }), []);
-  assert.deepEqual(readinessMissing({ ...value, sleepHours: 7, fatigue: 0, soreness: 0, symptoms: 'none', todayCourtIntensity: 'none', yesterdayCourtMinutes: 60 }), ['yesterdayCourtRpe']);
+  assert.deepEqual(readinessMissing(value), ['fatigue', 'soreness', 'symptoms', 'todayCourtIntensity']);
+  assert.deepEqual(readinessMissing({ ...value, fatigue: 0, soreness: 0, symptoms: 'none', todayCourtIntensity: 'none' }), []);
+  assert.deepEqual(readinessMissing({ ...value, fatigue: 0, soreness: 0, symptoms: 'none', todayCourtIntensity: 'none', yesterdayCourtMinutes: 60 }), ['yesterdayCourtRpe']);
 });
 
 test('adjustment preview lists only removed or changed exercises and preparation changes', () => {

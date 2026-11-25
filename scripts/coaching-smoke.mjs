@@ -202,10 +202,8 @@ try {
     await page.waitForFunction(id => JSON.parse(sessionStorage.getItem('fitness_public_preview_v1')).publicDraft.completed[`day3_${id}`] === true, {}, doneId);
     await closeExerciseDetails(page);
     await page.$eval('[data-testid="daily-readiness"] summary', item => item.click());
-    await page.evaluate(() => {
-      const select = [...document.querySelectorAll('[data-testid="daily-readiness"] label')].find(item => item.textContent.startsWith('今天的身體症狀')).querySelector('select');
-      select.value = 'worse'; select.dispatchEvent(new Event('change', { bubbles: true }));
-    });
+    await page.waitForSelector('[data-testid="readiness-symptom-worse"]', { visible: true });
+    await page.click('[data-testid="readiness-symptom-worse"]');
     await click('預覽今天調整'); await page.waitForSelector('[data-testid="readiness-preview"]');
     assert.deepEqual((await draft()).plan, before.plan, `${layout}: preview does not mutate the plan`);
     await click('套用到今天'); await waitText('已依今日狀態調整尚未完成的訓練。');

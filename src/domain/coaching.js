@@ -92,7 +92,7 @@ export function evaluateReadiness(record, { today = localDate(), healthStatus, h
   if (healthStatus === 'unknown') return { action: 'recover', reasonCodes: ['clinical_status_unknown'] };
   if (String(healthNotes || '').trim()) return { action: 'recover', reasonCodes: ['clinical_notes_review'] };
   const reasonCodes = [];
-  const incomplete = [ready.sleepHours, ready.fatigue, ready.soreness, ready.yesterdayCourtMinutes].some(value => value === null)
+  const incomplete = [ready.fatigue, ready.soreness].some(value => value === null)
     || (ready.yesterdayCourtMinutes > 0 && ready.yesterdayCourtRpe === null)
     || ready.symptoms === 'unknown' || ready.todayCourtIntensity === 'unknown';
   if (incomplete) reasonCodes.push('incomplete_readiness');

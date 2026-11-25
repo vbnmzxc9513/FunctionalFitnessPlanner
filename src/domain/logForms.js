@@ -31,9 +31,8 @@ export function trainingLogForm(saved, setCount) {
 }
 
 export function readinessMissing(input) {
-  const fields = ['sleepHours', 'fatigue', 'soreness'].filter(key => input[key] === null);
+  const fields = ['fatigue', 'soreness'].filter(key => input[key] === null);
   if (input.symptoms === 'unknown') fields.push('symptoms');
-  if (input.yesterdayCourtMinutes === null) fields.push('yesterdayCourt');
   if (input.yesterdayCourtMinutes > 0 && input.yesterdayCourtRpe === null) fields.push('yesterdayCourtRpe');
   if (input.todayCourtIntensity === 'unknown') fields.push('todayCourtIntensity');
   return fields;

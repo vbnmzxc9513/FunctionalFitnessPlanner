@@ -49,10 +49,11 @@ test('dates are real, future records excluded and tomorrow response cannot be re
   assert.deepEqual(fresh.evidenceDates, ['2026-10-06']);
 });
 
-test('readiness requires a current report with unknowns explicit; absence is never clearance', () => {
+test('readiness requires a current report with unknowns explicit; core 3 answers suffice while optional sleep/court stay null unless reported', () => {
   assert.equal(evaluateReadiness(ready(), { today }).action, 'normal');
+  assert.equal(evaluateReadiness(ready({ sleepHours: null, yesterdayCourtMinutes: null, yesterdayCourtRpe: null }), { today }).action, 'normal');
   assert.equal(evaluateReadiness(null, { today }).action, 'unknown');
-  for (const patch of [{ sleepHours: null }, { fatigue: null }, { soreness: null }, { symptoms: 'unknown' }, { yesterdayCourtMinutes: null }, { todayCourtIntensity: 'unknown' }, { yesterdayCourtMinutes: 60, yesterdayCourtRpe: null }]) {
+  for (const patch of [{ fatigue: null }, { soreness: null }, { symptoms: 'unknown' }, { todayCourtIntensity: 'unknown' }, { yesterdayCourtMinutes: 60, yesterdayCourtRpe: null }]) {
     assert.equal(evaluateReadiness(ready(patch), { today }).action, 'unknown');
   }
   assert.equal(evaluateReadiness(ready({ date: '2026-10-13', symptoms: 'none' }), { today }).action, 'unknown');
