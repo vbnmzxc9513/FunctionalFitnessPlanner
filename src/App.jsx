@@ -1,7 +1,7 @@
 import './usability.css';
 import './exercise-browser.css';
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react';
-import { ArrowLeft, BarChart3, CalendarDays, Feather, Info, Loader2, ChevronLeft, ChevronRight, Pencil, Sparkles, Bookmark, Library, LogOut, Settings as SettingsIcon } from 'lucide-react';
+import { ArrowLeft, BarChart3, CalendarDays, Feather, Info, Loader2, ChevronLeft, ChevronRight, Plus, Share2, Sparkles, Bookmark, Library, LogOut, Settings as SettingsIcon } from 'lucide-react';
 import { auth } from './services/firebase.js';
 import { saveFeedback, setCompletion } from './services/repository.js';
 import { replaceNavigationLocation, useBackNavigation } from './hooks/useBackNavigation.js';
@@ -124,7 +124,7 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
   useEffect(() => { dispatchNav({ type: 'SET_LOCAL_BROWSE_WEEK', week: currentWeek }); }, [currentWeek]);
 
   const workoutStore = useSavedWorkouts(user?.uid);
-  const [overviewCounts, setOverviewCounts] = useState({});
+  const [overviewSessions, setOverviewSessions] = useState({});
   const periodKey = `fitness_saved_period_${user?.uid || 'signed-out'}`;
   const [savedPeriod, setSavedPeriod] = useState(() => user ? readSavedPeriod(periodKey) : localPeriod);
   const [weekLimit, setWeekLimit] = useState(104);
@@ -427,12 +427,77 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
       : null
   ), [coachOpen, today, exerciseLogs, allProgress, readinessRecords, nativeSessions, data.metrics, exercises, planningContext]);
 
+  const displayWeekDates = calendarPeriod.dates;
+  const displayWeekSessions = overviewSessions[displayWeek]?.sessions
+    || (displayWeek === currentWeek && hasCurrentPlan
+      ? schedule.map((day, idx) => ({ ...day, date: day.date || dateForWeekDay(currentWeek, day.day || idx + 1) }))
+      : []);
+  const weekdayShortLabels = lang === 'en' ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] : ['一', '二', '三', '四', '五', '六', '日'];
+  const stripSessionKind = (session, dayNumber) => {
+    const isCourt = !!(session?.badminton || session?.courtDay || planningContext?.badmintonDays?.includes(dayNumber));
+    if (!session) return isCourt ? 'court' : 'empty';
+    const type = session.sessionType || (session.routine?.length ? 'training' : 'rest');
+    if (type === 'training') return 'strength';
+    if (type === 'recovery') return isCourt ? 'court' : 'recovery';
+    return isCourt ? 'court' : 'rest';
+  };
+  const handleStripSelectDate = (date, index) => {
+    const row = document.querySelector(`[data-testid="period-day-${date}"]`);
+    if (row) {
+      row.click();
+      return;
+    }
+    if (!dateOverview && displayWeek === currentWeek && hasCurrentPlan) {
+      selectPlanDay(index + 1);
+    }
+  };
+  const savedCount = workoutStore.items?.length || 0;
   const plannerActions = <header className="planner-home-heading" data-testid="planner-actions">
-    <h2>{lang === 'zh' ? '本週安排' : 'This week’s plan'}</h2>
-    <div className="planner-week-nav"><button type="button" aria-label={lang === 'zh' ? '查看前一週' : 'Previous week'} onClick={() => shiftOverviewWeek(-1)}><ChevronLeft size={21} /></button><strong>{dateForWeekDay(displayWeek, 1)?.slice(5).replace('-', '/')} — {dateForWeekDay(displayWeek, 7)?.slice(5).replace('-', '/')} · {lang === 'zh' ? `已安排 ${overviewCounts[displayWeek] ?? (displayWeek === currentWeek && weeklyPlan ? weeklyPlan.schedule.length : 0)} 天` : `${overviewCounts[displayWeek] ?? (displayWeek === currentWeek && weeklyPlan ? weeklyPlan.schedule.length : 0)} days planned`}</strong><button type="button" aria-label={lang === 'zh' ? '查看下一週' : 'Next week'} onClick={() => shiftOverviewWeek(1)}><ChevronRight size={21} /></button></div>
-    <div className="planner-create-actions"><button type="button" data-testid="open-manual-planner" onClick={() => openManual()} className="button-secondary"><Pencil size={18} />{lang === 'zh' ? '手動新增' : 'Create workout'}</button><button type="button" data-testid="open-auto-planner" onClick={openWeeklySelection} className="button-primary"><Sparkles size={18} />{lang === 'zh' ? '自動排課' : 'Auto plan'}</button><button type="button" data-testid="plan-open-ai-coach" onClick={() => setCoachOpen(true)} className="coach-inline-button"><Sparkles size={18} aria-hidden="true" />{lang === 'zh' ? 'AI 教練' : 'AI Coach'}</button></div>
+    <div className="planner-week-bar">
+      <div className="planner-week-nav">
+        <button type="button" aria-label={lang === 'zh' ? '查看前一週' : 'Previous week'} onClick={() => shiftOverviewWeek(-1)}><ChevronLeft size={19} /></button>
+        <strong>{dateForWeekDay(displayWeek, 1)?.slice(5).replace('-', '/')} — {dateForWeekDay(displayWeek, 7)?.slice(5).replace('-', '/')}</strong>
+        <button type="button" aria-label={lang === 'zh' ? '查看下一週' : 'Next week'} onClick={() => shiftOverviewWeek(1)}><ChevronRight size={19} /></button>
+      </div>
+      <div className="planner-week-bar-tools">
+        <button type="button" data-testid="planner-top-saved" aria-label={lang === 'zh' ? '我的收藏' : 'My favorites'} title={lang === 'zh' ? '我的收藏' : 'My favorites'} onClick={() => dispatchNav({ type: 'SET_PLAN_SCREEN', screen: 'saved' })} className="session-hero-icon-btn"><Bookmark size={17} aria-hidden="true" /></button>
+        {displayWeekSessions.length > 0 && <button type="button" data-testid="share-week-plan" aria-label={lang === 'zh' ? '選擇日期分享課表' : 'Share selected days'} title={lang === 'zh' ? '選擇日期分享課表' : 'Share selected days'} onClick={() => shareDays(displayWeekSessions)} className="session-hero-icon-btn"><Share2 size={17} aria-hidden="true" /></button>}
+      </div>
+    </div>
+    <div className="planner-day-strip" data-testid="planner-day-strip" role="group" aria-label={lang === 'zh' ? '本週日期總覽' : 'This week calendar strip'}>
+      {displayWeekDates.map((date, index) => {
+        const session = displayWeekSessions.find(item => item.date === date);
+        const kind = stripSessionKind(session, index + 1);
+        const isCurrent = date === today;
+        return (
+          <button
+            key={date}
+            type="button"
+            data-testid={`planner-strip-${date}`}
+            data-today={isCurrent || undefined}
+            data-kind={kind}
+            onClick={() => handleStripSelectDate(date, index)}
+            className={`planner-strip-day ${isCurrent ? 'is-today' : ''}`}
+            aria-label={`${date} ${weekdayShortLabels[index]}`}
+          >
+            <span className="planner-strip-weekday">{weekdayShortLabels[index]}</span>
+            <strong className="planner-strip-num">{Number(date.slice(8))}</strong>
+            <span className={`planner-strip-dot is-${kind}`} aria-hidden="true" />
+          </button>
+        );
+      })}
+    </div>
+    <div className="planner-create-actions">
+      <button type="button" data-testid="open-auto-planner" onClick={openWeeklySelection} className="button-primary"><Sparkles size={17} aria-hidden="true" />{lang === 'zh' ? '自動排課' : 'Auto plan'}</button>
+      <button type="button" data-testid="open-manual-planner" onClick={() => openManual()} className="button-secondary"><Plus size={17} aria-hidden="true" />{lang === 'zh' ? '手動排課' : 'Create workout'}</button>
+    </div>
   </header>;
-  const plannerTools = <div className="planner-home-tools"><button type="button" data-testid="open-saved-workouts" onClick={() => dispatchNav({ type: 'SET_PLAN_SCREEN', screen: 'saved' })}><Bookmark size={18} />{lang === 'zh' ? '我的收藏' : 'My favorites'}</button></div>;
+  const plannerTools = <div className="planner-home-tools">
+    <button type="button" data-testid="open-saved-workouts" onClick={() => dispatchNav({ type: 'SET_PLAN_SCREEN', screen: 'saved' })} className="planner-tool-card">
+      <span className="planner-tool-card-left"><Bookmark size={17} aria-hidden="true" /><span>{lang === 'zh' ? (savedCount > 0 ? `我的收藏（${savedCount}）` : '我的收藏課表') : (savedCount > 0 ? `My favorites (${savedCount})` : 'My saved workouts')}</span></span>
+      <ChevronRight size={16} aria-hidden="true" />
+    </button>
+  </div>;
   // A stable conversion prevents overview load -> parent update -> reload loops.
   const publicPeriodBase = useMemo(() => localPeriod || (!user ? periodFromWeeklyDraft(publicDraft) : null), [localPeriod, user, publicDraft]);
   const periodHistory = useMemo(() => ({ logs: exerciseLogs, progress: allProgress, readiness: readinessRecords }), [exerciseLogs, allProgress, readinessRecords]);
@@ -485,7 +550,7 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
     openWeeklySelection();
   };
 
-  const renderPeriodWorkspace = () => <PeriodWorkspace key={`${user?.uid || 'public'}:${periodCreating ? 'create' : activeTab === 'plan' && dateOverview ? `${displayWeek}_${selectedPeriod?.periodId || ''}` : 'first'}`} uid={user?.uid} today={today} lang={lang} t={t} exercises={exercises} profile={profile} setProfile={setProfile} available={weeklyAvailable} onToggleWeekly={toggleWeeklyChoice} preserveCurrentChoices={choicesChanged.current} history={periodHistory} metrics={data.metrics} apiKey={apiKey} onSaveKey={saveKey} model={model} models={models} onSelectModel={selectModel} aiMember={aiMember} onSignIn={() => navigate('settings')} localPeriod={publicPeriodBase} onLocalPeriod={onLocalPeriod} onApplied={periodApplied} fallbackPlans={data.plans} refreshToken={periodRefresh} overview={periodCreating ? null : activeTab === 'plan' && dateOverview ? calendarPeriod : selectedPeriod} onClose={periodCreating ? () => dispatchNav({ type: 'CLOSE_PERIOD_CREATING' }) : undefined} onToday={() => navigate('train')} onSaveWorkout={day => dispatchNav({ type: 'SET_SAVE_WORKOUT_DAY', day })} onShare={shareDays} onOverviewLoaded={sessions => setOverviewCounts(previous => previous[displayWeek] === sessions.length ? previous : { ...previous, [displayWeek]: sessions.length })} onPlanDate={date => openManual([createManualSession(date, lang)], null, date, { single: true, add: true })} onEditWorkout={day => openManual(Array.isArray(day) ? day : [day], null, null, { single: !Array.isArray(day) })} onAddToDay={day => openManual([day], null, null, { single: true, add: true })} initialCoachNote={coachPlannerNote} onConsumeInitialCoachNote={consumeCoachPlannerNote} />;
+  const renderPeriodWorkspace = () => <PeriodWorkspace key={`${user?.uid || 'public'}:${periodCreating ? 'create' : activeTab === 'plan' && dateOverview ? `${displayWeek}_${selectedPeriod?.periodId || ''}` : 'first'}`} uid={user?.uid} today={today} lang={lang} t={t} exercises={exercises} profile={profile} setProfile={setProfile} available={weeklyAvailable} onToggleWeekly={toggleWeeklyChoice} preserveCurrentChoices={choicesChanged.current} history={periodHistory} metrics={data.metrics} apiKey={apiKey} onSaveKey={saveKey} model={model} models={models} onSelectModel={selectModel} aiMember={aiMember} onSignIn={() => navigate('settings')} localPeriod={publicPeriodBase} onLocalPeriod={onLocalPeriod} onApplied={periodApplied} fallbackPlans={data.plans} refreshToken={periodRefresh} overview={periodCreating ? null : activeTab === 'plan' && dateOverview ? calendarPeriod : selectedPeriod} onClose={periodCreating ? () => dispatchNav({ type: 'CLOSE_PERIOD_CREATING' }) : undefined} onToday={() => navigate('train')} onSaveWorkout={day => dispatchNav({ type: 'SET_SAVE_WORKOUT_DAY', day })} onShare={shareDays} onOverviewLoaded={sessions => { const sig = JSON.stringify(sessions.map(s => [s.date, s.sessionType, s.theme, s.routine?.length, s.badminton, s.courtDay])); setOverviewSessions(previous => previous[displayWeek]?.sig === sig ? previous : { ...previous, [displayWeek]: { sig, sessions } }); }} onPlanDate={date => openManual([createManualSession(date, lang)], null, date, { single: true, add: true })} onEditWorkout={day => openManual(Array.isArray(day) ? day : [day], null, null, { single: !Array.isArray(day) })} onAddToDay={day => openManual([day], null, null, { single: true, add: true })} initialCoachNote={coachPlannerNote} onConsumeInitialCoachNote={consumeCoachPlannerNote} />;
   const openLegacyAI = () => { if (hasNativeWeek || editing || savingPlan || !user) return; dispatchNav({ type: 'OPEN_LEGACY_AI' }); setPlanningMode('byok'); setPlanningStep(0); setEditingAI(true); setLegacyPreview(null); };
   const firstPlan = <section data-testid="first-plan" className="panel"><h2 className="text-xl font-bold text-slate-800">{lang === 'zh' ? '今天尚未安排訓練' : 'No workout today'}</h2><div className="day-actions"><button type="button" data-testid="today-create-workout" className="button-primary" onClick={() => openManual([createManualSession(today, lang)], null, today, { single: true, add: true })}>{lang === 'zh' ? '＋ 新增今天的動作' : '+ Add today’s exercises'}</button><button type="button" className="button-secondary" onClick={() => navigate('plan')}>{lang === 'zh' ? '查看課表' : 'View plan'}</button><button type="button" data-testid="open-ai-coach" className="coach-inline-button" onClick={() => setCoachOpen(true)}><Sparkles size={16} aria-hidden="true" />{lang === 'zh' ? '問 AI 教練' : 'Ask AI Coach'}</button></div></section>;
 

@@ -1090,12 +1090,12 @@ export default function PeriodWorkspace({
       )}
 
       {stage === 'overview' && (
-        <div className="flex gap-3 mt-5">
-          <button className="button-primary" onClick={replan}>
+        <div className="period-overview-actions">
+          <button type="button" className="button-primary" onClick={replan}>
             {en ? 'Plan another date range' : '規劃另一段日期'}
           </button>
           {onToday && (
-            <button className="button-secondary" onClick={onToday}>
+            <button type="button" className="button-secondary" onClick={onToday}>
               {en ? 'Go to Today' : '回到今日訓練'}
             </button>
           )}

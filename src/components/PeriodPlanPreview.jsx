@@ -6,7 +6,7 @@ import SessionTimeSummary from './SessionTimeSummary.jsx';
 import TrainingTargetOverview from './TrainingTargetOverview.jsx';
 import PlanningConditions from './PlanningConditions.jsx';
 import MobilityOverview from './MobilityOverview.jsx';
-import { ArrowLeft, BookOpen, Check, Loader2, Lock, Pencil, Share2, Sparkles } from 'lucide-react';
+import { ArrowLeft, BookOpen, Check, ChevronRight, Loader2, Lock, Pencil, Plus, Share2, Sparkles } from 'lucide-react';
 import { sessionSections, estimateSessionMinutes } from '../domain/sessions.js';
 import { enumeratePeriodDates } from '../domain/periodPlanning.js';
 import { competitionDaysAway } from '../domain/planning.js';
@@ -217,16 +217,91 @@ export default function PeriodPlanPreview({ preview, lang = 'zh', t = key => key
       </div>}
       {groups.map(week => {
         const weekDates = dates.filter(date => getWeekString(new Date(`${date}T12:00:00`)) === week);
-        return <section className="period-agenda-week" key={week} data-week={week}><div className="period-agenda-heading"><h3>{groups.length > 1 ? `${shortDate(weekDates[0])} — ${shortDate(weekDates.at(-1))}` : en ? 'This week’s plan' : '這週的安排'}</h3>{groups.length === 1 && <span>{en ? `${trainingCount} training · ${recoveryCount} recovery` : `${sessions.length} 天已安排 · ${trainingCount} 訓練 · ${recoveryCount} 恢復`}</span>}</div><div className="period-agenda-card">{weekDates.map(date => {
-          const session = sessions.find(item => item.date === date);
-          return <button type="button" key={date} data-testid={`period-day-${date}`} onClick={() => !session && onPlanDate ? onPlanDate(date) : openDay(date)} className="period-agenda-row" aria-label={`${dateLabel(date)} · ${session?.theme || label(session)} · ${session ? statusLabel(date) : label(session)}`}>
-            <span className="period-agenda-date"><strong>{shortDate(date)}</strong><span>{weekday(date)}</span></span>
-            <span className="period-agenda-content"><strong>{session?.theme || label(session)}</strong><span>{session ? `${label(session)} · ${statusLabel(date)}` : en ? 'Choose manual or automatic planning' : '可手動或自動排課'}{today === date ? ` · ${en ? 'Today' : '今天'}` : ''}</span>{onApply && session && <span className="period-agenda-counts">{en ? 'Warm-up' : '暖身'} {(session.prescriptions || []).filter(dose => dose.phase === 'warmup').length} · {en ? 'Training' : '訓練'} {(session.prescriptions || []).filter(dose => ['skill', 'strength', 'accessory'].includes(dose.phase)).length} · {en ? 'Cooldown' : '收操'} {(session.prescriptions || []).filter(dose => ['recovery', 'cooldown'].includes(dose.phase)).length}</span>}{eventPhase(date) && <span data-testid={`period-event-${date}`} className="period-agenda-event">{p(eventPhase(date))}</span>}</span>
-            <span className="period-agenda-minutes">{session && `${estimateSessionMinutes(session, exercises)} ${en ? 'min' : '分'}`}</span><span className="period-agenda-action">{session ? en ? 'View' : '查看' : en ? 'Plan' : '安排'}</span>
-          </button>;
-        })}</div></section>;
+        return <section className="period-agenda-week" key={week} data-week={week}>
+          <div className="period-agenda-card">
+            <div className="period-agenda-card-head">
+              <h3>{groups.length > 1 ? `${shortDate(weekDates[0])} — ${shortDate(weekDates.at(-1))}` : en ? 'Weekly schedule' : '一週日程'}</h3>
+              {groups.length === 1 && (
+                <span className="period-agenda-summary">
+                  {en
+                    ? `${trainingCount} train · ${recoveryCount} rec`
+                    : `${trainingCount} 訓練 · ${recoveryCount} 恢復`}
+                </span>
+              )}
+            </div>
+            <div className="period-agenda-rows">
+              {weekDates.map(date => {
+                const session = sessions.find(item => item.date === date);
+                const isTodayRow = today === date;
+                const isProtected = protectedDates.includes(date);
+                const isUnplanned = !session;
+                const mins = session ? estimateSessionMinutes(session, exercises) : 0;
+                const shortType = label(session);
+                const eventTag = eventPhase(date);
+                return (
+                  <button
+                    type="button"
+                    key={date}
+                    data-testid={`period-day-${date}`}
+                    data-today={isTodayRow || undefined}
+                    data-empty={isUnplanned || undefined}
+                    onClick={() => isUnplanned && onPlanDate ? onPlanDate(date) : openDay(date)}
+                    className={`period-agenda-row ${isTodayRow ? 'is-today' : ''} ${isUnplanned ? 'is-empty' : ''}`}
+                    aria-label={`${dateLabel(date)} · ${session?.theme || shortType} · ${session ? statusLabel(date) : shortType}`}
+                  >
+                    <span className={`period-agenda-date-badge ${isTodayRow ? 'is-today' : ''} ${isUnplanned ? 'is-empty' : ''}`}>
+                      <strong>{Number(date.slice(8))}</strong>
+                      <span>{shortWeekday(date)}</span>
+                    </span>
+                    <span className="period-agenda-content">
+                      <strong>{session?.theme || (en ? 'Unscheduled' : '尚未安排')}</strong>
+                      <span className="period-agenda-pills">
+                        {isProtected && (
+                          <span className="period-agenda-pill is-done">
+                            <Check size={11} aria-hidden="true" />
+                            {en ? 'Logged' : '已有紀錄'}
+                          </span>
+                        )}
+                        {session && (
+                          <span className={`period-agenda-pill ${isTodayRow ? 'is-today' : ''}`}>
+                            {isTodayRow ? `${en ? 'Today' : '今天'} · ${shortType}` : shortType}
+                          </span>
+                        )}
+                        {isUnplanned && isTodayRow && (
+                          <span className="period-agenda-pill is-today">{en ? 'Today' : '今天'}</span>
+                        )}
+                        {eventTag && (
+                          <span data-testid={`period-event-${date}`} className="period-agenda-pill is-event">
+                            {p(eventTag)}
+                          </span>
+                        )}
+                      </span>
+                      {onApply && session && (
+                        <span className="period-agenda-counts">
+                          {en ? 'Warm-up' : '暖身'} {(session.prescriptions || []).filter(dose => dose.phase === 'warmup').length} · {en ? 'Training' : '訓練'} {(session.prescriptions || []).filter(dose => ['skill', 'strength', 'accessory'].includes(dose.phase)).length} · {en ? 'Cooldown' : '收操'} {(session.prescriptions || []).filter(dose => ['recovery', 'cooldown'].includes(dose.phase)).length}
+                        </span>
+                      )}
+                    </span>
+                    <span className="period-agenda-trailing">
+                      {session ? (
+                        <>
+                          {mins > 0 && <span className="period-agenda-minutes">{mins}{en ? 'm' : '分'}</span>}
+                          <ChevronRight size={16} className="period-agenda-chevron" aria-hidden="true" />
+                        </>
+                      ) : (
+                        <span className="period-agenda-plan-pill">
+                          <Plus size={12} aria-hidden="true" />
+                          {en ? 'Plan' : '安排'}
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </section>;
       })}
-      {!onApply && onShare && sessions.length > 0 && <button type="button" data-testid="share-week-plan" className="period-text-action period-share-plan" onClick={() => onShare(sessions)}><Share2 size={18} />{en ? 'Share selected days' : '選擇日期分享課表'}</button>}
       {!onApply && <PeriodCoachReport report={preview.coachReport} conclusion={preview.conclusion} recentSummary={preview.recentSummary} lang={lang} />}
       <div className="period-plan-extras">
         {!onApply && sessions.length > 0 && (

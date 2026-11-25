@@ -259,7 +259,7 @@ try {
       const planBtn = buttons.find(btn => /課表|Plan/.test(btn.textContent));
       if (planBtn) planBtn.click();
     });
-    await page.waitForSelector('[data-testid="plan-open-ai-coach"]', { visible: true });
+    await page.waitForSelector('[data-testid="global-ai-coach"]', { visible: true });
     await page.waitForSelector('[data-testid="open-auto-planner"]', { visible: true });
     await page.click('[data-testid="open-auto-planner"]');
     await page.waitForSelector('[data-testid="period-workspace"]');
