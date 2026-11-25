@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { ArrowLeft, Search, Pin, X, Sparkles, Dumbbell, Plus, Minus, Check, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Search, Pin, X, Sparkles, Dumbbell, Plus, Minus, Check, ChevronRight, ListChecks, Lock } from 'lucide-react';
 import { useBackNavigation } from '../hooks/useBackNavigation.js';
 import { getQuickWorkouts, expandLegacyWarmup } from '../domain/quickWorkouts.js';
 import { savedWorkoutDay } from '../domain/savedWorkouts.js';
@@ -14,7 +14,7 @@ import ExerciseDetails from './ExerciseDetails.jsx';
 import ExerciseGuide from './ExerciseGuide.jsx';
 import './manual-planner.css';
 import ExerciseTags, { BodyPartFilter } from './ExerciseTags.jsx';
-import { matchesBodyPart, exerciseTags } from '../domain/exerciseTags.js';
+import { exerciseBodyParts, matchesBodyPart, exerciseTags } from '../domain/exerciseTags.js';
 
 const phaseLabel = (phase, en) => ({ warmup: en ? 'Warm-up' : '暖身', skill: en ? 'Skill' : '技能', strength: en ? 'Training' : '訓練', accessory: en ? 'Accessory' : '輔助', recovery: en ? 'Recovery' : '恢復', cooldown: en ? 'Cooldown' : '收操' }[phase]);
 const doseText = (dose, en) => `${dose.sets} ${en ? 'sets' : '組'} × ${dose.value} ${{ reps: en ? 'reps' : '下', seconds: en ? 'sec' : '秒', minutes: en ? 'min' : '分鐘', breaths: en ? 'breaths' : '次呼吸' }[dose.unit]}${dose.perSide ? en ? ' / side' : '／側' : ''}`;
@@ -45,6 +45,11 @@ export default function QuickWorkoutPicker({ session, exercises, eligibleExercis
   const orderedMine = compact ? mine : [...mine].sort((a, b) => { const rank = item => initialOrder.includes(item.id) ? initialOrder.indexOf(item.id) : initialOrder.length; return rank(a) - rank(b); });
   const cards = [...orderedMine, ...builtins].filter(matches);
   const singleCandidates = exerciseSelection(exercises, eligibleExercises, { query, region, context, lang });
+  const availableParts = new Set();
+  for (const [exId, ex] of Object.entries(exercises)) {
+    if (ex?.deleted) continue;
+    for (const part of exerciseBodyParts(exId, ex)) availableParts.add(part);
+  }
   const changeRegion = value => { setRegion(value); setVisibleCount(12); };
   const emptyResults = <div className="combo-first-no-results" role="status"><p>{en ? 'No matching items' : '沒有符合項目'}</p><button type="button" className="manual-text-action" data-testid="combo-clear-filters" onClick={() => { setQuery(''); changeRegion('all'); }}>{en ? 'Clear filters' : '清除篩選'}</button></div>;
   const preview = selected ? previewQuickWorkout(session, selected, { exercises, eligibleExercises, duplicateChoices: duplicates, mode, replaceScope, excludedIds: excluded, dailyTime, context, lang }) : null;
@@ -73,9 +78,14 @@ export default function QuickWorkoutPicker({ session, exercises, eligibleExercis
       await onRemoveSingle(value, exercise);
       if (!mounted.current) return;
       setStoreError('');
-      setFeedback(en ? `Removed ${exercise.name}` : `已移除「${exercise.name}」`);
+      setFeedback(en ? `Removed ${exercise?.name || value}` : `已移除「${exercise?.name || value}」`);
     } catch (problem) {
-      if (mounted.current) setStoreError(manualPlannerErrorMessage(problem, lang, exercises));
+      if (mounted.current) {
+        const msg = problem?.message === 'AI_WARMUP_MISSING'
+          ? (en ? 'A training day needs at least 1 warm-up movement. Remove strength moves first to clear the day.' : '訓練日至少需保留 1 個暖身動作；若要清空，請先移除主訓練動作。')
+          : manualPlannerErrorMessage(problem, lang, exercises);
+        setStoreError(msg);
+      }
     }
   };
   const directAdd = workout => {
@@ -127,20 +137,69 @@ export default function QuickWorkoutPicker({ session, exercises, eligibleExercis
       {!!blocked.length && <p className="combo-first-warning">{blocked.map(value => exercises[value]?.name || value).join('、')} · {en ? 'Check restrictions before adding' : '需檢查器材／可用條件'}</p>}
     </article>;
   });
+  const hasRemoveMode = !!onRemoveSingle;
+  const pickerTitle = hasRemoveMode ? (en ? 'Add / remove exercises' : '增減動作') : (en ? 'Choose exercises' : '選擇動作');
+  const tabOptions = [
+    ['exercises', en ? 'Single exercises' : '單一動作', Dumbbell],
+    ['combos', en ? 'Combos' : '組合', Sparkles],
+    ...(hasRemoveMode ? [['current', en ? `Scheduled (${session.routine.length})` : `已排 (${session.routine.length})`, ListChecks]] : []),
+  ];
+  const currentEntries = (session.routine || []).map(value => {
+    const exercise = exercises[value] || { id: value, name: value };
+    const dose = session.prescriptions?.find(item => item.id === value) || exercise.prescription || { sets: 1, value: '8', unit: 'reps', phase: exercisePhase({ sessionType: 'training' }, value, exercise) };
+    const isRecorded = recordedIds instanceof Set ? recordedIds.has(value) : Array.isArray(recordedIds) && recordedIds.includes(value);
+    return { value, exercise, dose, isRecorded };
+  });
   if (compact) return <section className={`combo-first-common ${session.routine.length ? 'combo-first-common-filled' : ''}`} aria-label={en ? 'Frequent combos' : '常用組合'}><header><h2>{en ? 'Frequent combos' : '常用組合'}</h2><button type="button" className="manual-text-action" onClick={() => onOpen(null)}>{en ? 'All' : '全部'} ›</button></header>{rows}{storeError && <p role="status">{storeError}</p>}</section>;
-  return <dialog ref={panel} onCancel={event => { event.preventDefault(); back(); }} className="quick-workout-picker combo-first-picker" data-testid="quick-workout-picker" aria-label={en ? 'Choose exercises' : '選擇動作'}>
-    <header className="combo-first-panel-heading"><div><h2 tabIndex={-1} ref={heading}>{en ? 'Choose exercises' : '選擇動作'}</h2><p>{destinationLabel}</p></div><button type="button" className="manual-text-action" onClick={back} aria-label={en ? 'Close add panel' : '關閉加入面板'}>{selected ? <ArrowLeft size={20} /> : <X size={20} />}<span className="sr-only">{selected ? en ? 'Combos' : '組合' : en ? 'Close' : '關閉'}</span></button></header>
+  return <dialog ref={panel} onCancel={event => { event.preventDefault(); back(); }} className="quick-workout-picker combo-first-picker" data-testid="quick-workout-picker" aria-label={pickerTitle}>
+    <header className="combo-first-panel-heading"><div><h2 tabIndex={-1} ref={heading}>{pickerTitle}</h2><p>{destinationLabel}</p></div><button type="button" className="manual-text-action" onClick={back} aria-label={en ? 'Close add panel' : '關閉加入面板'}>{selected ? <ArrowLeft size={20} /> : <X size={20} />}<span className="sr-only">{selected ? en ? 'Combos' : '組合' : en ? 'Close' : '關閉'}</span></button></header>
     {storeError && <p role="alert" className="quick-conflict">{storeError}</p>}
     <div className="combo-first-panel-body exercise-browser-body">
     {!selected ? <>
       <div className="exercise-browser-tools">
-      <div className="quick-tabs" role="group" aria-label={en ? 'Content type' : '內容種類'}>{[['exercises', en ? 'Single exercises' : '單一動作'], ['combos', en ? 'Combos' : '組合']].map(([value,label]) => <button type="button" key={value} aria-pressed={tab === value} onClick={() => setTab(value)}>{value === 'exercises' ? <Dumbbell size={16} /> : <Sparkles size={16} />}{label}</button>)}</div>
-      <label className="manual-search"><Search size={20} /><span className="sr-only">{en ? 'Search names or regions' : '搜尋名稱或部位'}</span><input data-testid="combo-search" type="search" value={query} onChange={event => { setQuery(event.target.value); setVisibleCount(12); }} placeholder={en ? 'Search chest press, shoulder press…' : '搜尋胸推、肩推、動作名稱…'} /></label>
-      <div className="exercise-part-shortcuts" role="group" aria-label={en ? 'Quick body parts' : '常用部位'}>{[['all',en?'All':'全部'],['chest',en?'Chest':'胸'],['back',en?'Back':'背'],['shoulder',en?'Shoulders':'肩'],['legs',en?'Legs':'腿'],['core',en?'Core':'核心']].map(([value,label]) => <button type="button" key={value} aria-pressed={region === value} onClick={() => changeRegion(value)}>{label}</button>)}</div>
-      <div className="exercise-browser-filter-row"><BodyPartFilter lang={lang} value={region} onChange={changeRegion} testId="combo-body-part" />{onCreateExercise && <button type="button" className="exercise-create-entry" data-testid="picker-create-exercise" onClick={() => setCreating(true)}><Plus size={16} />{en ? 'Create exercise' : '自訂動作'}</button>}</div>
+      <div className="quick-tabs" role="group" aria-label={en ? 'Content type' : '內容種類'}>{tabOptions.map(([value, label, Icon]) => <button type="button" key={value} data-testid={`quick-tab-${value}`} aria-pressed={tab === value} onClick={() => setTab(value)}><Icon size={15} />{label}</button>)}</div>
+      {tab !== 'current' && <>
+        <label className="manual-search"><Search size={20} /><span className="sr-only">{en ? 'Search names or regions' : '搜尋名稱或部位'}</span><input data-testid="combo-search" type="search" value={query} onChange={event => { setQuery(event.target.value); setVisibleCount(12); }} placeholder={en ? 'Search chest press, shoulder press…' : '搜尋胸推、肩推、動作名稱…'} /></label>
+        <div className="exercise-part-shortcuts" role="group" aria-label={en ? 'Quick body parts' : '常用部位'}>{[['all',en?'All':'全部'],['chest',en?'Chest':'胸'],['back',en?'Back':'背'],['shoulder',en?'Shoulders':'肩'],['legs',en?'Legs':'腿'],['core',en?'Core':'核心']].map(([value,label]) => <button type="button" key={value} aria-pressed={region === value} onClick={() => changeRegion(value)}>{label}</button>)}</div>
+        <div className="exercise-browser-filter-row"><BodyPartFilter lang={lang} value={region} onChange={changeRegion} testId="combo-body-part" availableParts={availableParts} />{onCreateExercise && <button type="button" className="exercise-create-entry" data-testid="picker-create-exercise" onClick={() => setCreating(true)}><Plus size={16} />{en ? 'Create exercise' : '自訂動作'}</button>}</div>
+      </>}
       </div>
       {store?.error && <p role="alert">{en ? 'Favorites unavailable.' : '無法讀取收藏。'}<button type="button" className="manual-text-action" onClick={store.reload}>{en ? 'Retry' : '重試'}</button></p>}
-      {tab === 'combos' ? <div className="combo-first-cards">{rows}{!cards.length && emptyResults}</div> : <section className="exercise-browser-results"><div className="exercise-results-heading"><h3>{query ? en ? 'Search results' : '搜尋結果' : region === 'all' ? en ? 'Exercise library' : '動作清單' : en ? 'Matching exercises' : '符合部位的動作'}</h3><span>{singleCandidates.length} {en ? 'movements' : '個動作'}</span></div>{!singleCandidates.length && emptyResults}<div className="exercise-choice-list">{singleCandidates.slice(0,visibleCount).map(row => {
+      {tab === 'current' ? (
+        <section className="exercise-browser-results" data-testid="quick-current-list">
+          <div className="exercise-results-heading">
+            <h3>{en ? 'Scheduled for this day' : '當天已排動作'}</h3>
+            <span>{currentEntries.length} {en ? 'movements' : '個動作'}</span>
+          </div>
+          {!currentEntries.length ? (
+            <div className="combo-first-no-results" role="status">
+              <p>{en ? 'No exercises scheduled for this day yet.' : '這天尚未安排動作。'}</p>
+              <button type="button" className="manual-text-action" onClick={() => setTab('exercises')}>{en ? 'Browse exercises to add' : '前往新增動作'}</button>
+            </div>
+          ) : (
+            <div className="exercise-choice-list">
+              {currentEntries.map(({ value, exercise, dose, isRecorded }) => (
+                <article key={value} className="exercise-choice-card" data-available="true" data-added="true">
+                  <span className="exercise-choice-icon" aria-hidden="true"><Dumbbell size={23} strokeWidth={1.6} /></span>
+                  <div className="exercise-choice-content">
+                    <button type="button" className="exercise-choice-name" aria-haspopup="dialog" onClick={() => setDetail({ id: value, ...dose })}>{exercise.name}<ChevronRight size={13} /></button>
+                    <p className="exercise-choice-equipment">{phaseLabel(dose.phase || exercisePhase({ sessionType: 'training' }, value, exercise), en)} · {doseText(dose, en)}</p>
+                    <ExerciseTags id={value} exercise={exercise} lang={lang} compact />
+                  </div>
+                  {isRecorded ? (
+                    <span className="exercise-row-locked" data-testid={`quick-locked-${value}`} title={en ? 'Recorded — preserved' : '已有紀錄，自動保留'}>
+                      <Lock size={14} aria-hidden="true" />
+                      <span>{en ? 'Logged' : '已紀錄'}</span>
+                    </span>
+                  ) : (
+                    <button type="button" className="exercise-choice-add exercise-choice-remove" data-testid={`quick-remove-${value}`} disabled={busy} aria-label={`${en ? 'Remove' : '移除'} ${exercise.name}`} onClick={() => removeSingle(value, exercise)}><Minus size={21} /></button>
+                  )}
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      ) : tab === 'combos' ? <div className="combo-first-cards">{rows}{!cards.length && emptyResults}</div> : <section className="exercise-browser-results"><div className="exercise-results-heading"><h3>{query ? en ? 'Search results' : '搜尋結果' : region === 'all' ? en ? 'Exercise library' : '動作清單' : en ? 'Matching exercises' : '符合部位的動作'}</h3><span>{singleCandidates.length} {en ? 'movements' : '個動作'}</span></div>{!singleCandidates.length && emptyResults}<div className="exercise-choice-list">{singleCandidates.slice(0,visibleCount).map(row => {
         const {id:value,exercise,available} = row, added = session.routine.includes(value), isRecorded = recordedIds instanceof Set ? recordedIds.has(value) : Array.isArray(recordedIds) && recordedIds.includes(value);
         const canRemove = added && !isRecorded && !!onRemoveSingle;
         const equipment = exercise.equipment || (exercise.equipmentOptions?.[0]?.length ? exercise.equipmentOptions[0].map(key => t?.(`equipment_${key}`) || key).join(' · ') : en ? 'Bodyweight' : '徒手');
@@ -166,7 +225,7 @@ export default function QuickWorkoutPicker({ session, exercises, eligibleExercis
       <p className="manual-secondary-copy">{en ? `After adding: ${preview.next.routine.length} exercises · ${preview.minutes} min. ${preview.keptCount} existing doses kept.` : `加入後：${preview.next.routine.length} 個動作 · ${preview.minutes} 分鐘。保留 ${preview.keptCount} 項原本內容，不重複加入。`}</p>
       <footer className="combo-first-exception-actions"><div className="manual-fixed-inner"><div><strong>{en ? 'Draft · not applied to dates' : '草稿 · 尚未套用到日期'}</strong></div><button type="button" data-testid="quick-workout-add" className="manual-primary" disabled={!!selected.legacyOriginal && !legacyConfirmed || !preview.canApply || !count && !preview.removed.length || mode === 'replace' && !confirmed || excluded.length > 0 && !partial} onClick={apply}>{mode === 'replace' ? en ? 'Confirm replacement' : '確認取代草稿內容' : en ? `Add ${preview.addedIds.length} exercises to ${shortDate} draft${preview.replacedIds.length ? ` and update ${preview.replacedIds.length} doses` : ''}` : `加入 ${preview.addedIds.length} 個動作到 ${shortDate} 草稿${preview.replacedIds.length ? `，更新 ${preview.replacedIds.length} 項劑量` : ''}`}</button></div></footer>
     </>}
-    </div><footer className="combo-first-panel-footer"><div role="status">{feedback}{canUndo && <button type="button" className="manual-text-action" onClick={() => { onUndo(); setFeedback(en ? 'Last draft change undone.' : '已撤銷最近一次草稿變更。'); }}>{en ? 'Undo' : '撤銷'}</button>}</div><div className="flex gap-2">{onConfigure && <button type="button" className="manual-text-action" onClick={onConfigure}>{en ? 'Time / equipment' : '時間／器材'}</button>}<button type="button" className="manual-primary" data-testid="combo-panel-done" onClick={onCancel}>{en ? 'Done' : '完成'} · {session.routine.length}</button></div></footer>
+    </div><footer className="combo-first-panel-footer"><div role="status">{feedback}{canUndo && <button type="button" data-testid="quick-edit-undo" className="manual-text-action" onClick={() => { onUndo(); setFeedback(en ? 'Last change undone.' : '已復原最近一次變更。'); }}>{en ? 'Undo' : '復原'}</button>}</div><div className="flex gap-2">{onConfigure && <button type="button" className="manual-text-action" onClick={onConfigure}>{en ? 'Time / equipment' : '時間／器材'}</button>}<button type="button" className="manual-primary" data-testid="combo-panel-done" onClick={onCancel}>{en ? 'Done' : '完成'} · {session.routine.length}</button></div></footer>
     {creating && <CreateExerciseDialog lang={lang} t={t} scope={createScope} initialPart={region} addToDay onSave={createAndAdd} onClose={() => setCreating(false)} />}
     <ExerciseDetails open={!!detail} title={exercises[detail?.id]?.name || ''} subtitle={detail ? doseText(detail, en) : ''} closeLabel={en ? 'Close' : '關閉'} onClose={() => setDetail(null)}>{detail && <ExerciseGuide id={detail.id} exercise={exercises[detail.id]} lang={lang} expanded />}</ExerciseDetails>
   </dialog>;

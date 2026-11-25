@@ -145,8 +145,8 @@
 .manual-phase-card { border-top:0; margin-top:2px; }
 .manual-phase-card > header { border-bottom:1px solid var(--border-input); padding-bottom:8px; }
 .manual-phase-count { font-size:14px; font-weight:600; }
-.quick-tabs { display:grid; grid-template-columns:1fr 1fr; gap:0; border:0; border-radius:11px; padding:4px; background:var(--border-subtle); }
-.quick-tabs button { border:0; border-radius:8px; min-height:var(--touch-min); color:var(--ink-secondary); font-weight:600; }
+.quick-tabs { display:grid; grid-auto-flow:column; grid-auto-columns:minmax(0,1fr); gap:0; border:0; border-radius:11px; padding:4px; background:var(--border-subtle); }
+.quick-tabs button { border:0; border-radius:8px; min-height:var(--touch-min); color:var(--ink-secondary); font-weight:600; font-size:13px; padding:6px 4px; white-space:nowrap; }
 .quick-tabs button[aria-pressed=true] { background:var(--surface-card); box-shadow:0 1px 3px #0001; color:var(--brand-primary); }
 .save-workout-ui .workout-ui-form .save-workout-scopes label,.save-workout-ui .workout-ui-form .save-workout-tags label { display:inline-flex; flex-direction:row; align-items:center; gap:8px; min-height:var(--touch-min); padding:9px 12px; border:1px solid var(--border-input); border-radius:9px; background:var(--surface-card); margin:0; }
 .save-workout-ui .workout-ui-form input[type=radio],.save-workout-ui .workout-ui-form input[type=checkbox] { width:20px; height:20px; min-height:20px; flex:0 0 20px; padding:0; margin:0; border-radius:50%; }

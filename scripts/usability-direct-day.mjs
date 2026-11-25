@@ -58,8 +58,8 @@ try{
  assert.equal(protectedAfter.sessionsByDate['2026-11-16'].routine.length,10,'Single-day add succeeds on an in-progress day');
  assert.ok(protectedAfter.sessionsByDate['2026-11-16'].routine.includes('bf_A10'),'Recorded exercise remains in the day');
  assert.deepEqual(protectedAfter.progressByWeek[targetWeek],protectedBefore.progressByWeek[targetWeek],'Existing completion records are never overwritten');
- await click('[data-testid="day-quick-edit"]');await page.waitForSelector('[data-testid="quick-locked-bf_A10"]',{visible:true});
- assert.equal(await page.$('[data-testid="quick-remove-bf_A10"]'),null,'Recorded exercise cannot be quick-removed');
+ await click('[data-testid="day-add-exercise"]');await click('[data-testid="quick-tab-current"]');await page.waitForSelector('[data-testid="quick-locked-bf_A10"]',{visible:true});
+ assert.equal(await page.$('[data-testid="quick-remove-bf_A10"]'),null,'Recorded exercise cannot be quick-removed');await click('[data-testid="combo-panel-done"]');
  assert.deepEqual(errors,[]);results.push({width,oneClickAdd:true,chestFilter:true,tagged:true,sameDateSaved:true,emptyDateDirect:true,otherDatePreserved:true,protectedPreserved:true,pageErrors:errors});await ctx.close();
  }
  await writeFile(`${out}/results.json`,JSON.stringify(results,null,2));console.log(JSON.stringify(results));
