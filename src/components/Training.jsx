@@ -7,7 +7,7 @@ import { journeyText } from '../i18n/journey.js';
 import { dateForWeekDay, getDateForWeekDay, localDate } from '../domain/dates.js';
 import { exerciseKey } from '../domain/training.js';
 import { SESSION_PHASES } from '../domain/phases.js';
-import { estimateSessionMinutes, sessionSections } from '../domain/sessions.js';
+import { doseSeconds, estimateSessionMinutes, sessionSections } from '../domain/sessions.js';
 import { hydrateManualSession, manualPlannerErrorMessage } from '../domain/manualPlanner.js';
 import { isExerciseRecordedOnDay, quickRemoveExerciseFromDay } from '../domain/singleDayEdit.js';
 import ExerciseGuide from './ExerciseGuide.jsx';
@@ -211,7 +211,109 @@ export default function Training({ t, lang = 'zh', schedule, draft, activeDay, s
         </section>;
       })}
     </ExerciseDetails>
-    {isToday && (complete || rest) && <section data-testid="session-summary" className="panel mt-5 space-y-3"><h3 className="text-xl font-bold text-slate-800">{j('summary')}</h3><p className="text-sm text-slate-600">{rest ? j('rest') : j('finished')}</p>{!rest && <p className="text-sm text-slate-500">{j('summaryHint')}</p>}{onViewRecords && <button type="button" onClick={onViewRecords} className="button-primary">{j('records')}<ArrowRight size={16} /></button>}</section>}
+    {isToday && !rest && (() => {
+      const liveEntries = entries.map(entry => ({ ...entry, done: completionView(active.day, entry.id).done }));
+      const totalCount = liveEntries.length;
+      const liveDoneCount = liveEntries.filter(item => item.done).length;
+      const liveRemaining = Math.max(0, totalCount - liveDoneCount);
+      const liveComplete = totalCount > 0 && liveDoneCount === totalCount;
+      const completionPct = totalCount > 0 ? Math.round((liveDoneCount / totalCount) * 100) : 0;
+      const doneSecs = liveEntries.reduce((sum, item) => {
+        if (!item.done) return sum;
+        const ex = exercises[item.id];
+        return sum + doseSeconds(item.dose, ex) + (item.dose.preparation ? doseSeconds(item.dose.preparation, ex, true) : 0);
+      }, 0);
+      const doneMinutes = liveComplete ? minutes : liveDoneCount === 0 ? 0 : Math.min(minutes, Math.max(1, Math.ceil(doneSecs / 60)));
+      const todayLogs = (Array.isArray(exerciseLogs) ? exerciseLogs : []).filter(log => log && log.week === currentWeek && log.day === active.day);
+      const todayLoggedExercises = new Set(todayLogs.map(log => log.exerciseId)).size;
+      const todayLoggedSets = todayLogs.reduce((sum, log) => sum + (Array.isArray(log.sets) ? log.sets.length : 0), 0);
+      const phaseProgress = sections
+        .filter(section => section.items.length > 0)
+        .map(section => ({
+          phase: section.phase,
+          label: j(`short_${section.phase}`),
+          done: section.items.filter(item => completionView(active.day, item.id).done).length,
+          total: section.items.length,
+        }));
+      const statusLabel = liveComplete
+        ? (en ? 'Completed' : '全部完成')
+        : liveDoneCount > 0
+          ? (en ? `In progress · ${completionPct}%` : `進行中 · ${completionPct}%`)
+          : (en ? 'Not started' : '尚未開始');
+      const hintText = liveDoneCount === 0
+        ? (en ? 'Tap the circle to mark exercises done, or open an exercise to log sets and weights.' : '點動作左側圓圈標記完成，點右側箭頭可查看說明並紀錄實做組數。')
+        : !liveComplete
+          ? (en ? `${liveDoneCount} done, ${liveRemaining} remaining. Resume anytime or wrap up based on today’s readiness.` : `已完成 ${liveDoneCount} 項，尚餘 ${liveRemaining} 項未勾選；可隨時接續完成，或依今日體感彈性收尾。`)
+          : todayLoggedExercises > 0
+            ? (en ? `All exercises and ${todayLoggedExercises} actual logs saved! Report next-day recovery in Records tomorrow.` : `全部動作與 ${todayLoggedExercises} 項實做紀錄都已保存！明天記得在紀錄頁回報恢復情況。`)
+            : (en ? 'All planned exercises done! Open main lifts to log actual weights if you want progression tracking, and report recovery tomorrow.' : '今天安排的動作已全部完成！若需追蹤負重進步，可點主訓練動作補記重量，明天可在紀錄頁回報恢復。');
+
+      return (
+        <section data-testid="session-summary" data-complete={liveComplete} className="panel mt-5 session-summary-card">
+          <div className="session-summary-head">
+            <div>
+              <h3 className="session-summary-title">{en ? 'Today’s training summary' : '今日訓練完成摘要'}</h3>
+              <p className="session-summary-sub">{date}{active.theme ? ` · ${active.theme}` : ''}</p>
+            </div>
+            <span className={`session-summary-badge ${liveComplete ? 'is-complete' : liveDoneCount > 0 ? 'is-progress' : ''}`}>
+              {liveComplete && <Check size={13} aria-hidden="true" />}
+              {statusLabel}
+            </span>
+          </div>
+
+          <div className="session-summary-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={completionPct} aria-label={en ? 'Today completion progress' : '今日完成進度'}>
+            <span style={{ width: `${completionPct}%` }} />
+          </div>
+
+          <div className="session-summary-metrics">
+            <div className="session-summary-metric">
+              <span className="session-summary-metric-label">{en ? 'Completed' : '完成動作'}</span>
+              <strong>{liveDoneCount} / {totalCount}</strong>
+              <small>{completionPct}%</small>
+            </div>
+            <div className="session-summary-metric">
+              <span className="session-summary-metric-label">{en ? 'Est. time' : '完成時長'}</span>
+              <strong>{en ? `~${doneMinutes}m` : `約 ${doneMinutes} 分`}</strong>
+              <small>{en ? `of ${minutes} min` : `總預估 ${minutes} 分`}</small>
+            </div>
+            <div className="session-summary-metric">
+              <span className="session-summary-metric-label">{en ? 'Logged sets' : '實做紀錄'}</span>
+              <strong>{todayLoggedSets} {en ? 'sets' : '組'}</strong>
+              <small>{todayLoggedExercises > 0 ? (en ? `${todayLoggedExercises} exercises` : `${todayLoggedExercises} 項動作`) : (en ? 'No weight logs' : '未填寫負重')}</small>
+            </div>
+          </div>
+
+          {phaseProgress.length > 0 && (
+            <div className="session-summary-phases">
+              {phaseProgress.map(item => (
+                <span key={item.phase} className={`session-summary-phase ${item.done === item.total ? 'is-done' : ''}`}>
+                  {item.label} {item.done}/{item.total}
+                </span>
+              ))}
+            </div>
+          )}
+
+          <p className="session-summary-hint">{hintText}</p>
+
+          {(onOpenCoach || onViewRecords) && (
+            <div className="session-summary-actions">
+              {onOpenCoach && (
+                <button type="button" onClick={onOpenCoach} className={liveDoneCount > 0 ? 'session-summary-primary' : 'coach-inline-button'}>
+                  <Sparkles size={15} aria-hidden="true" />
+                  {en ? 'Review today with AI Coach' : '請 AI 教練點評今天'}
+                </button>
+              )}
+              {onViewRecords && (
+                <button type="button" onClick={onViewRecords} className="button-secondary">
+                  {j('records')}
+                  <ArrowRight size={15} aria-hidden="true" />
+                </button>
+              )}
+            </div>
+          )}
+        </section>
+      );
+    })()}
     {editing && <ExercisePicker key={`${currentWeek}-${active.day}`} t={t} lang={lang} exercises={eligibleExercises} excludedIds={active.routine} selected={selected} setSelected={setSelected} onAdd={phase => onAdd(active.day, phase)} busy={saving} />}
     <div className="session-notes">
       {!editing && <details className="panel"><summary className="font-medium text-sm">{j('more')}</summary><div className="mt-4 mb-5"><WorkoutShare day={active} exercises={exercises} level={level} lang={lang} week={currentWeek} /></div><h3 className="font-semibold mb-2">{t('feedbackTitle')}</h3><p className="text-sm text-slate-500 mb-4">{t('feedbackSubtitle')}</p><div className="grid grid-cols-3 gap-2">{[[-1, 'feedbackHard'], [0, 'feedbackOk'], [1, 'feedbackEasy']].map(([value, label]) => <button key={value} disabled={busy} onClick={() => onFeedback(value)} aria-pressed={feedback === value} className={`rounded-xl p-3 text-sm border disabled:opacity-50 ${feedback === value ? 'bg-sky-50 border-sky-300 text-sky-700 font-semibold' : 'border-slate-200'}`}>{t(label)}<span className="block text-xs mt-1 text-slate-500">{t(`${label}Sub`)}</span></button>)}</div></details>}
