@@ -14,7 +14,6 @@ import ExerciseGuide from './ExerciseGuide.jsx';
 import ExercisePicker from './ExercisePicker.jsx';
 import ExerciseRow from './ExerciseRow.jsx';
 import ExerciseDetails from './ExerciseDetails.jsx';
-import WorkoutShare from './WorkoutShare.jsx';
 import ExerciseLog from './ExerciseLog.jsx';
 import DailyReadiness from './DailyReadiness.jsx';
 
@@ -409,7 +408,7 @@ export default function Training({ t, lang = 'zh', schedule, draft, activeDay, s
     })()}
     {editing && <ExercisePicker key={`${currentWeek}-${active.day}`} t={t} lang={lang} exercises={eligibleExercises} excludedIds={active.routine} selected={selected} setSelected={setSelected} onAdd={phase => onAdd(active.day, phase)} busy={saving} />}
     <div className="session-notes">
-      {!editing && <details className="panel"><summary className="font-medium text-sm">{j('more')}</summary><div className="mt-4 mb-5"><WorkoutShare day={active} exercises={exercises} level={level} lang={lang} week={currentWeek} /></div><h3 className="font-semibold mb-2">{t('feedbackTitle')}</h3><p className="text-sm text-slate-500 mb-4">{t('feedbackSubtitle')}</p><div className="grid grid-cols-3 gap-2">{[[-1, 'feedbackHard'], [0, 'feedbackOk'], [1, 'feedbackEasy']].map(([value, label]) => <button key={value} disabled={busy} onClick={() => onFeedback(value)} aria-pressed={feedback === value} className={`rounded-xl p-3 text-sm border disabled:opacity-50 ${feedback === value ? 'bg-sky-50 border-sky-300 text-sky-700 font-semibold' : 'border-slate-200'}`}>{t(label)}<span className="block text-xs mt-1 text-slate-500">{t(`${label}Sub`)}</span></button>)}</div></details>}
+      {!editing && <details className="panel"><summary className="font-medium text-sm">{j('more')}</summary><h3 className="font-semibold mt-4 mb-2">{t('feedbackTitle')}</h3><p className="text-sm text-slate-500 mb-4">{t('feedbackSubtitle')}</p><div className="grid grid-cols-3 gap-2">{[[-1, 'feedbackHard'], [0, 'feedbackOk'], [1, 'feedbackEasy']].map(([value, label]) => <button key={value} disabled={busy} onClick={() => onFeedback(value)} aria-pressed={feedback === value} className={`rounded-xl p-3 text-sm border disabled:opacity-50 ${feedback === value ? 'bg-sky-50 border-sky-300 text-sky-700 font-semibold' : 'border-slate-200'}`}>{t(label)}<span className="block text-xs mt-1 text-slate-500">{t(`${label}Sub`)}</span></button>)}</div></details>}
       <details className="panel"><summary className="font-medium text-sm">{j('concept')}</summary><h3 className="font-semibold mt-4 mb-3 flex gap-2"><Feather size={17} />{active.theme}</h3><p className="text-sm text-slate-600 whitespace-pre-wrap leading-relaxed">{active.concept}</p>{active.coachAdvice && <><h3 className="font-semibold mt-5 mb-2 flex items-center gap-2"><Brain size={17} />{j('advice')}</h3><p className="text-sm text-slate-600 whitespace-pre-wrap leading-relaxed">{active.coachAdvice}</p></>}</details>
     </div>
   </div>;

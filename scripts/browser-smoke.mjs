@@ -162,8 +162,11 @@ try {
       window.__workoutLink = null;
       Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async text => { window.__workoutLink = text; } } });
     });
-    await openDetails('分享與本週回饋'); await click('複製連結'); await waitText('課表連結已複製。');
-    const publicLink = await page.evaluate(() => window.__workoutLink); assert.ok(publicLink.includes('#workout='));
+    await page.click('[data-testid="share-day-workout"]');
+    await page.waitForSelector('[data-testid="plan-share-create"]', { visible: true });
+    await page.click('[data-testid="plan-share-create"]');
+    await click('複製連結'); await waitText('連結已複製。');
+    const publicLink = await page.evaluate(() => window.__workoutLink); assert.ok(publicLink.includes('#plan='));
     assert.equal(new URL(publicLink).origin, 'https://badminton-functional-fitness-planner.pages.dev');
     await page.goto(`${siteUrl}${new URL(publicLink).hash}`, { waitUntil: 'networkidle2' }); await waitText('分享的羽球體能課表'); await clickSelector('[data-testid="shared-plan-day-toggle"]');
     assert.equal(await visibleCount('button[aria-pressed]'), 0, `${layout} share is read-only`); await waitText('準備組');
@@ -204,7 +207,7 @@ try {
     await page.reload({ waitUntil: 'networkidle2' }); await monday(); await visibleElement('section[data-phase="cooldown"]');
     assert.ok(await read('section[data-phase="cooldown"]', (section, label) => section.innerText.includes(label), changedPhaseName), `${layout} preserves a manually chosen phase`);
     await click('↩ 復原上一次的課表'); await waitCompletion(name, true);
-    await openDetails('分享與本週回饋'); await click('太簡單\n需增量');
+    await openDetails('本週訓練回饋'); await click('太簡單\n需增量');
     const feedbackSelected = label => page.waitForFunction(text => [...document.querySelectorAll('button')].some(element => window.__smokeVisible(element) && element.innerText.trim().replace(/\s+/g, ' ') === text && element.getAttribute('aria-pressed') === 'true'), {}, label);
     await feedbackSelected('太簡單 需增量'); await click('太簡單\n需增量'); await feedbackSelected('太簡單 需增量');
     await click('剛好\n維持架構'); await feedbackSelected('剛好 維持架構');

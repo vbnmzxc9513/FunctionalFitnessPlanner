@@ -189,9 +189,13 @@ try {
     assert.equal((await draft()).logs.length, 1, `${layout}: navigation preserves private logs`);
     await click('課表'); await selectDay('週一');
     await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async text => { window.__link = text; } } }));
-    await openSummary('分享與本週回饋'); await click('複製連結'); await waitText('課表連結已複製。');
-    const shared = await page.evaluate(() => new TextDecoder().decode(Uint8Array.from(atob(window.__link.split('#workout=')[1].replace(/-/g, '+').replace(/_/g, '/')), character => character.charCodeAt(0))));
+    await page.click('[data-testid="share-day-workout"]');
+    await page.waitForSelector('[data-testid="plan-share-create"]', { visible: true });
+    await page.click('[data-testid="plan-share-create"]');
+    await click('複製連結'); await waitText('連結已複製。');
+    const shared = await page.evaluate(() => new TextDecoder().decode(Uint8Array.from(atob(window.__link.split('#plan=')[1].replace(/-/g, '+').replace(/_/g, '/')), character => character.charCodeAt(0))));
     for (const privateField of ['PRIVATE_VARIANT_TEST', 'loadKg', 'rir', 'symptoms', 'logs', 'readiness']) assert.ok(!shared.includes(privateField), `${layout}: share excludes ${privateField}`);
+    await click('返回課表');
     await page.reload({ waitUntil: 'networkidle2' }); await waitText('本分頁暫存'); await click('課表'); await selectDay('週三');
     const before = await draft(); const day = before.plan.schedule.find(item => item.day === 3);
     const doneId = day.prescriptions.find(item => item.phase === 'strength').id;
