@@ -88,8 +88,8 @@ try {
     assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('fitness_date_period_v1')).profile.context.weeklyExerciseIds), ids);
     const today = await page.evaluateHandle(lang => [...document.querySelectorAll('button')].find(item => item.innerText.trim() === (lang === 'en' ? 'Today' : '今天') && item.getClientRects().length), lang);
     await today.click(); await today.dispose(); await page.waitForSelector('[data-testid="session-hero"]');
-    await click('.day-more > summary'); await click('.day-time-details > summary');
-    assert.ok(await page.$eval('.day-more [data-testid="session-time-summary"]', item => item.innerText.includes('40')));
+    await click('[data-testid="session-time-details"] > summary');
+    assert.ok(await page.$eval('[data-testid="session-hero"] [data-testid="session-time-summary"]', item => item.innerText.includes('40')));
     if (layout === 'mobile') { await page.setViewport({ width: 320, height: 844, isMobile: true, hasTouch: true }); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false); }
     assert.deepEqual(errors, []);
     console.log(`${layout}: 40-minute dose, honest short-court recovery, no running recommendation, seven actual choices, eight regions, saved plan and daily time passed`);

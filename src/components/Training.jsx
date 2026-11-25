@@ -2,7 +2,7 @@ import { completionKey } from '../domain/completionQueue.js';
 import { useBackNavigation } from '../hooks/useBackNavigation.js';
 import SessionTimeSummary from './SessionTimeSummary.jsx';
 import { lazy, Suspense, useState } from 'react';
-import { ArrowDown, ArrowRight, ArrowUp, Brain, Check, CheckCircle2, Circle, Edit2, Feather, Loader2, Plus, RotateCcw, Save, SlidersHorizontal, Sparkles, Trash2, X } from 'lucide-react';
+import { ArrowDown, ArrowRight, ArrowUp, Bookmark, Brain, Check, CheckCircle2, ChevronDown, Circle, Edit2, Feather, Loader2, Pencil, Plus, RotateCcw, Save, Share2, SlidersHorizontal, Sparkles, Trash2, X } from 'lucide-react';
 import { journeyText } from '../i18n/journey.js';
 import { dateForWeekDay, getDateForWeekDay, localDate } from '../domain/dates.js';
 import { exerciseKey } from '../domain/training.js';
@@ -37,6 +37,8 @@ export default function Training({ t, lang = 'zh', schedule, draft, activeDay, s
   const [quickPickerOpen, setQuickPickerOpen] = useState(false);
   const [quickUndo, setQuickUndo] = useState(null);
   const [quickError, setQuickError] = useState('');
+  const [renamingScope, setRenamingScope] = useState('');
+  const [titleDraft, setTitleDraft] = useState('');
   const display = editing ? draft : schedule;
   const active = display.find(day => day.day === activeDay) || display[0];
   const sections = sessionSections(active, exercises, level);
@@ -46,11 +48,11 @@ export default function Training({ t, lang = 'zh', schedule, draft, activeDay, s
   const minutes = estimateSessionMinutes(active, exercises, level);
   const scope = `${currentWeek}-${active.day}-${today}`;
   const quickEdit = !editing && !!onQuickSaveDay && date >= today && quickEditScope === scope;
+  const renamingTitle = !editing && !!onQuickSaveDay && date >= today && renamingScope === scope;
+  const canRenameTitle = !editing && !!onQuickSaveDay && date >= today && !busy && !saving && !quickSaving;
   const currentDetails = details.scope === scope ? details : { id: null, visited: [] };
   const entries = sections.flatMap(section => section.items.map(entry => ({ ...entry, phase: section.phase })));
   const doneCount = active.routine.filter(id => progress[exerciseKey(active.day, id)]).length;
-  const complete = !rest && doneCount === active.routine.length;
-  const firstPending = entries.find(entry => !progress[exerciseKey(active.day, entry.id)]);
   const selectedEntry = entries.find(entry => entry.id === currentDetails.id);
   const currentIndex = entries.findIndex(entry => entry.id === selectedEntry?.id);
   const recordedIds = new Set(active.routine.filter(id => isExerciseRecordedOnDay(active.day, id, { progress, logs: exerciseLogs, week: currentWeek })));
@@ -59,11 +61,31 @@ export default function Training({ t, lang = 'zh', schedule, draft, activeDay, s
     setDetails(previous => ({ scope, id, visited: [...new Set([...(previous.scope === scope ? previous.visited : []), id])] }));
   };
   const closeDetails = () => setDetails(previous => ({ ...previous, id: null }));
+  const cancelRenameTitle = () => setRenamingScope('');
+  const startRenameTitle = () => {
+    if (!canRenameTitle) return;
+    setQuickError('');
+    setTitleDraft(active.theme || active.name || '');
+    setRenamingScope(scope);
+  };
   useBackNavigation(!!currentDetails.id, closeDetails, 100);
   useBackNavigation(quickPickerOpen, () => setQuickPickerOpen(false), 65);
+  useBackNavigation(renamingTitle, cancelRenameTitle, 60);
   useBackNavigation(quickEdit && !quickPickerOpen, () => setQuickEditScope(''), 55);
 
   const hydratedActive = () => hydrateManualSession({ ...active, date }, exercises, lang);
+  const saveRenameTitle = async () => {
+    if (!onQuickSaveDay || quickSaving || busy) return;
+    const trimmed = titleDraft.trim();
+    if (!trimmed || trimmed === (active.theme || active.name || '').trim()) {
+      cancelRenameTitle();
+      return;
+    }
+    setQuickError('');
+    const next = { ...hydratedActive(), theme: trimmed, name: trimmed };
+    const ok = await onQuickSaveDay(date, next, en ? 'Updated workout title.' : '已更新今日菜單名稱。');
+    if (ok) cancelRenameTitle();
+  };
   const handleQuickRemove = async id => {
     if (!onQuickSaveDay || quickSaving || busy) return;
     setQuickError('');
@@ -121,17 +143,98 @@ export default function Training({ t, lang = 'zh', schedule, draft, activeDay, s
   const preparation = (id, dose) => dose && <div data-preparation-for={id} className="rounded-2xl bg-amber-50 border border-amber-100 p-4 text-sm"><p className="font-semibold text-amber-800">{t('preparationSetsLabel')} · {exercises[id].name}</p><p className="text-sm text-slate-600 mt-2">{description(dose)}{dose.restSeconds > 0 && ` · ${t('restLabel')} ${dose.restSeconds} ${t('seconds')}`}</p><p className="text-sm text-slate-600 mt-2">{dose.instruction}</p><p className="text-xs text-amber-700 mt-2">{t('preparationTrackingHint')}</p></div>;
   let sequence = 0;
   return <div className="session-body">
-    {!isToday && <div className="flex bg-white rounded-2xl p-2 mb-6 gap-1 border border-slate-200 overflow-x-auto">{display.map(day => <button key={day.day} onClick={() => { closeDetails(); setQuickEditScope(''); setActiveDay(day.day); }} className={`flex-1 min-w-12 rounded-xl p-3 text-sm ${active.day === day.day ? 'bg-sky-700 text-white' : 'text-slate-500'}`}><span className="block font-semibold">{t('dayShort')[day.day - 1]}</span><span className="block mt-1 text-xs">{getDateForWeekDay(currentWeek, day.day)}</span></button>)}</div>}
-    {isToday ? <section className="session-hero" data-running={doneCount > 0} data-testid="session-hero"><p className="eyebrow">{date} · {rest ? t('restSessionTitle') : j('progress', { done: doneCount, total: active.routine.length })}</p><h2>{active.theme || j('today')}</h2><div className="hero-metadata"><span><strong>{minutes}</strong>{t('minutes')}</span><span><strong>{active.routine.length}</strong>{j('movementCount')}</span></div>
+    {!isToday && <div className="flex bg-white rounded-2xl p-2 mb-6 gap-1 border border-slate-200 overflow-x-auto">{display.map(day => <button key={day.day} onClick={() => { closeDetails(); setQuickEditScope(''); cancelRenameTitle(); setActiveDay(day.day); }} className={`flex-1 min-w-12 rounded-xl p-3 text-sm ${active.day === day.day ? 'bg-sky-700 text-white' : 'text-slate-500'}`}><span className="block font-semibold">{t('dayShort')[day.day - 1]}</span><span className="block mt-1 text-xs">{getDateForWeekDay(currentWeek, day.day)}</span></button>)}</div>}
+    {isToday ? <section className="session-hero" data-running={doneCount > 0} data-testid="session-hero">
+      <div className="session-hero-top">
+        <p className="eyebrow">{date} · {rest ? t('restSessionTitle') : j('progress', { done: doneCount, total: active.routine.length })}</p>
+        {(onSaveWorkout || onShare) && (
+          <div className="session-hero-tools">
+            {onSaveWorkout && <button type="button" data-testid="save-day-workout" aria-label={en ? 'Save workout' : '收藏這天'} title={en ? 'Save workout' : '收藏這天'} disabled={busy || saving} onClick={() => onSaveWorkout(active)} className="session-hero-icon-btn"><Bookmark size={16} aria-hidden="true" /></button>}
+            {onShare && <button type="button" data-testid="share-day-workout" aria-label={en ? 'Share workout' : '分享這天'} title={en ? 'Share workout' : '分享這天'} disabled={busy || saving} onClick={() => onShare(active)} className="session-hero-icon-btn"><Share2 size={16} aria-hidden="true" /></button>}
+          </div>
+        )}
+      </div>
 
-      {!rest && !complete && <button type="button" data-testid="session-start" disabled={busy || !firstPending} onClick={event => openDetails(firstPending.id, event.currentTarget)} className="button-primary">{j(doneCount ? 'resume' : 'start')}<ArrowRight size={18} /></button>}
-      {rest && <p className="text-sm text-sky-700">{j('rest')}</p>}
-    </section> : <div className="flex flex-wrap items-start justify-between gap-4 mb-5"><div><p className="eyebrow">{date} · {minutes} {t('minutes')}</p><h2 className="text-2xl font-bold text-slate-800">{active.theme || j('week')}</h2></div><div className="flex gap-2 text-sm">{!editing ? (canEdit || !onManualEdit) && <button disabled={!canEdit || saving || busy} onClick={onEdit} className="button-secondary disabled:opacity-50"><Edit2 size={15} />{t('editSchedule')}</button> : <><button disabled={saving} onClick={onCancel} className="button-secondary"><X size={15} />{t('cancelEdits')}</button><button disabled={saving || !canEdit} onClick={onSave} className="button-primary">{saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}{t('saveEdits')}</button></>}{canRestore && !editing && <button disabled={saving} onClick={onRestore} className="text-link">{t('aiRestoreBtn')}</button>}</div></div>}
-    {!editing && <div className="day-actions">
+      {renamingTitle ? (
+        <form className="session-title-form" onSubmit={event => { event.preventDefault(); saveRenameTitle(); }}>
+          <input
+            type="text"
+            data-testid="session-title-input"
+            autoFocus
+            maxLength={60}
+            value={titleDraft}
+            onChange={event => setTitleDraft(event.target.value)}
+            onKeyDown={event => { if (event.key === 'Escape') cancelRenameTitle(); }}
+            placeholder={en ? 'Workout title' : '輸入今日菜單名稱'}
+            aria-label={en ? 'Workout title' : '菜單名稱'}
+            className="session-title-input"
+          />
+          <button type="submit" data-testid="session-title-save" disabled={quickSaving || !titleDraft.trim()} aria-label={en ? 'Save title' : '儲存名稱'} className="session-title-save"><Check size={16} aria-hidden="true" /></button>
+          <button type="button" data-testid="session-title-cancel" disabled={quickSaving} onClick={cancelRenameTitle} aria-label={en ? 'Cancel' : '取消'} className="session-title-cancel"><X size={16} aria-hidden="true" /></button>
+        </form>
+      ) : (
+        <div className="session-hero-title-row">
+          <h2 data-testid="session-hero-title">{active.theme || j('today')}</h2>
+          {onQuickSaveDay && date >= today && (
+            <button
+              type="button"
+              data-testid="rename-day-title"
+              aria-label={en ? 'Rename workout' : '修改菜單名稱'}
+              title={en ? 'Rename workout' : '修改菜單名稱'}
+              disabled={!canRenameTitle}
+              onClick={startRenameTitle}
+              className="session-hero-edit-btn"
+            >
+              <Pencil size={15} aria-hidden="true" />
+            </button>
+          )}
+        </div>
+      )}
+
+      <details className="session-time-details" data-testid="session-time-details">
+        <summary className="session-time-summary-row">
+          <div className="hero-metadata">
+            <span><strong>{minutes}</strong>{t('minutes')}</span>
+            <span><strong>{active.routine.length}</strong>{j('movementCount')}</span>
+          </div>
+          <span className="session-time-toggle">
+            {en ? 'Timing' : '時間說明'}
+            <ChevronDown size={14} aria-hidden="true" />
+          </span>
+        </summary>
+        <div className="session-time-details-body">
+          <SessionTimeSummary day={active} exercises={exercises} availableTime={plannedTime} context={coachingContext} lang={lang} />
+        </div>
+      </details>
+
+      {rest && <p className="text-sm text-sky-700 mt-1">{j('rest')}</p>}
+    </section> : <div className="session-plan-head mb-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="eyebrow">{date} · {minutes} {t('minutes')}</p>
+          <h2 className="text-2xl font-bold text-slate-800">{active.theme || j('week')}</h2>
+        </div>
+        <div className="flex items-center gap-2 text-sm">
+          {!editing && onSaveWorkout && <button type="button" data-testid="save-day-workout" aria-label={en ? 'Save workout' : '收藏這天'} title={en ? 'Save workout' : '收藏這天'} disabled={busy || saving} onClick={() => onSaveWorkout(active)} className="session-hero-icon-btn"><Bookmark size={16} aria-hidden="true" /></button>}
+          {!editing && onShare && <button type="button" data-testid="share-day-workout" aria-label={en ? 'Share workout' : '分享這天'} title={en ? 'Share workout' : '分享這天'} disabled={busy || saving} onClick={() => onShare(active)} className="session-hero-icon-btn"><Share2 size={16} aria-hidden="true" /></button>}
+          {!editing ? (canEdit || !onManualEdit) && <button disabled={!canEdit || saving || busy} onClick={onEdit} className="button-secondary disabled:opacity-50"><Edit2 size={15} />{t('editSchedule')}</button> : <><button disabled={saving} onClick={onCancel} className="button-secondary"><X size={15} />{t('cancelEdits')}</button><button disabled={saving || !canEdit} onClick={onSave} className="button-primary">{saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}{t('saveEdits')}</button></>}
+          {canRestore && !editing && <button disabled={saving} onClick={onRestore} className="text-link">{t('aiRestoreBtn')}</button>}
+        </div>
+      </div>
+      {!editing && (
+        <details className="session-time-details mt-2" data-testid="session-time-details">
+          <summary className="session-time-summary-row">
+            <span className="session-time-toggle">{en ? 'Timing details' : '時間與安排說明'}<ChevronDown size={14} aria-hidden="true" /></span>
+          </summary>
+          <div className="session-time-details-body">
+            <SessionTimeSummary day={active} exercises={exercises} availableTime={plannedTime} context={coachingContext} lang={lang} />
+          </div>
+        </details>
+      )}
+    </div>}
+    {!editing && (onQuickSaveDay || onAddToDay || onOpenCoach) && <div className="day-actions">
       {(onQuickSaveDay || onAddToDay) && <button type="button" data-testid="day-add-exercise" aria-pressed={onQuickSaveDay ? quickEdit : undefined} disabled={busy || saving || quickSaving || date < today} onClick={toggleQuickEdit} className={quickEdit ? 'button-primary' : 'button-secondary'}>{quickEdit ? <><Check size={16} aria-hidden="true" />{en ? 'Done' : '完成編輯'}</> : onQuickSaveDay && !rest ? <><SlidersHorizontal size={15} aria-hidden="true" />{en ? '+/- Exercises' : '± 增減動作'}</> : <><Plus size={16} aria-hidden="true" />{en ? 'Add exercise' : '新增動作'}</>}</button>}
-      {onManualEdit && <button type="button" data-testid="day-edit" disabled={busy || saving || quickSaving || date < today} onClick={() => onManualEdit(active)} className="button-secondary">{en ? 'Edit doses' : '調整組次'}</button>}
       {onOpenCoach && <button type="button" data-testid="open-ai-coach" disabled={busy || saving} onClick={onOpenCoach} className="coach-inline-button"><Sparkles size={16} aria-hidden="true" />{en ? 'Ask AI Coach' : '問 AI 教練'}</button>}
-      <details className="day-more"><summary>{en ? 'More' : '更多'}</summary><div><details className="day-time-details"><summary>{en ? 'Timing details' : '時間與安排說明'}</summary><SessionTimeSummary day={active} exercises={exercises} availableTime={plannedTime} context={coachingContext} lang={lang} /></details>{onSaveWorkout && <button type="button" data-testid="save-day-workout" disabled={busy || saving} onClick={() => onSaveWorkout(active)} className="text-link">{en ? 'Save workout' : '收藏這天'}</button>}{onShare && <button type="button" disabled={busy || saving} onClick={() => onShare(active)} className="text-link">{en ? 'Share workout' : '分享這天'}</button>}</div></details>
     </div>}
     {quickEdit && <div className="quick-edit-banner" role="status" data-testid="quick-edit-banner">
       <div className="quick-edit-banner-copy">
@@ -140,6 +243,7 @@ export default function Training({ t, lang = 'zh', schedule, draft, activeDay, s
       </div>
       <div className="quick-edit-banner-actions">
         <button type="button" data-testid="quick-edit-add" disabled={quickSaving || busy} onClick={openQuickPicker} className="quick-edit-add-btn"><Plus size={15} aria-hidden="true" />{en ? 'Add' : '新增動作'}</button>
+        {onManualEdit && <button type="button" data-testid="day-edit" disabled={quickSaving || busy || date < today} onClick={() => { setQuickEditScope(''); onManualEdit(active); }} className="text-link inline-flex items-center gap-1">{en ? 'Edit sets & reps' : '進階調整組次'}</button>}
         {!quickPickerOpen && quickUndo?.scope === scope && <button type="button" data-testid="quick-edit-undo" disabled={quickSaving} onClick={handleQuickUndo} className="text-link inline-flex items-center gap-1"><RotateCcw size={14} />{en ? 'Undo' : '復原'}</button>}
       </div>
     </div>}

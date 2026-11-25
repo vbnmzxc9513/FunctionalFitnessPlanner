@@ -89,7 +89,7 @@ try {
     assert.equal(external, 0, `${layout}: free planning never calls external AI`);
     await page.reload({ waitUntil: 'networkidle2' }); await click('課表'); await visible('[data-testid="period-plan-preview"]');
     assert.deepEqual((await draft()).sessionsByDate, applied.sessionsByDate, `${layout}: exact dates survive reload`);
-    await click('今天'); await visible('[data-testid="session-start"]'); await click('開始今天訓練'); await visible('[data-testid="current-exercise"]');
+    await click('今天'); await visible('[data-testid="daily-exercise-list"] [data-testid^="exercise-open-"]'); await clickSelector('[data-testid="daily-exercise-list"] [data-testid^="exercise-open-"]'); await visible('[data-testid="current-exercise"]');
     const completion = await page.waitForSelector('[data-testid="current-exercise"] button[aria-label][aria-pressed]', { visible: true }); const name = await completion.evaluate(item => item.getAttribute('aria-label')); await completion.evaluate(item => item.scrollIntoView({ block: 'center', behavior: 'instant' })); await completion.asLocator().click(); await completion.dispose();
     await page.waitForFunction(() => Object.values(JSON.parse(localStorage.getItem('fitness_date_period_v1')).progressByWeek).some(progress => Object.values(progress.completed).includes(true)));
     for (let index = 0; index < applied.sessionsByDate[today].routine.length && !await page.$eval('[data-testid="current-exercise"]', item => !!item.querySelector('[data-testid^="exercise-log-"]')).catch(() => false); index++) await click('查看下一個動作');

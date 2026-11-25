@@ -136,8 +136,28 @@ try {
     // Exit Edit Mode via "✓ 完成編輯"
     await page.click('[data-testid="day-add-exercise"]');
     await page.waitForFunction(() => !document.querySelector('[data-testid="quick-edit-banner"]'));
+    // Outside Edit Mode, top bar has no redundant "調整組次", no "更多", no "開始今天訓練"
+    assert.equal(await page.$('[data-testid="day-edit"]'), null, 'day-edit should be inside Edit Mode only');
+    assert.equal(await page.$('[data-testid="session-start"]'), null, 'session-start should be removed');
+    assert.equal(await page.$('.day-more'), null, 'day-more menu should be removed');
+    assert.ok(await page.$('[data-testid="save-day-workout"]'), 'Bookmark icon should exist in hero');
+    assert.ok(await page.$('[data-testid="share-day-workout"]'), 'Share icon should exist in hero');
 
-    // 4. Also verify full single-day editor ("調整組次") + Review + Save succeeds without DATE_PROTECTED error!
+    // 3b. Inline title rename via pencil button right next to title
+    await page.click('[data-testid="rename-day-title"]');
+    await page.waitForSelector('[data-testid="session-title-input"]', { visible: true });
+    await page.$eval('[data-testid="session-title-input"]', el => { el.select(); });
+    await page.type('[data-testid="session-title-input"]', '週三羽球核心');
+    await page.click('[data-testid="session-title-save"]');
+    await page.waitForFunction(() => document.querySelector('[data-testid="session-hero-title"]')?.textContent === '週三羽球核心');
+
+    // 3c. Timing details live directly inside the hero card
+    await page.click('[data-testid="session-time-details"] > summary');
+    await page.waitForSelector('[data-testid="session-hero"] [data-testid="session-time-summary"]', { visible: true });
+
+    // 4. Plan A: Re-enter Edit Mode -> open advanced "進階調整組次" link -> Review + Save succeeds without DATE_PROTECTED error!
+    await page.click('[data-testid="day-add-exercise"]');
+    await page.waitForSelector('[data-testid="day-edit"]', { visible: true });
     await page.click('[data-testid="day-edit"]');
     await page.waitForSelector('[data-testid="manual-quick-remove-bf_B06"]', { visible: true });
     await page.click('[data-testid="manual-quick-remove-bf_B06"]');
