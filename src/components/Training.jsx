@@ -2,7 +2,7 @@ import { completionKey } from '../domain/completionQueue.js';
 import { useBackNavigation } from '../hooks/useBackNavigation.js';
 import SessionTimeSummary from './SessionTimeSummary.jsx';
 import { lazy, Suspense, useState } from 'react';
-import { ArrowDown, ArrowRight, ArrowUp, Brain, CheckCircle2, Circle, Edit2, Feather, Loader2, Plus, RotateCcw, Save, SlidersHorizontal, Sparkles, Trash2, X } from 'lucide-react';
+import { ArrowDown, ArrowRight, ArrowUp, Brain, Check, CheckCircle2, Circle, Edit2, Feather, Loader2, Plus, RotateCcw, Save, SlidersHorizontal, Sparkles, Trash2, X } from 'lucide-react';
 import { journeyText } from '../i18n/journey.js';
 import { dateForWeekDay, getDateForWeekDay, localDate } from '../domain/dates.js';
 import { exerciseKey } from '../domain/training.js';
@@ -33,6 +33,7 @@ export default function Training({ t, lang = 'zh', schedule, draft, activeDay, s
   };
   const isToday = mode === 'today' && !editing;
   const [details, setDetails] = useState({ scope: '', id: null, visited: [] });
+  const [quickEditScope, setQuickEditScope] = useState('');
   const [quickPickerOpen, setQuickPickerOpen] = useState(false);
   const [quickUndo, setQuickUndo] = useState(null);
   const [quickError, setQuickError] = useState('');
@@ -44,6 +45,7 @@ export default function Training({ t, lang = 'zh', schedule, draft, activeDay, s
   const today = coachingContext.today || localDate();
   const minutes = estimateSessionMinutes(active, exercises, level);
   const scope = `${currentWeek}-${active.day}-${today}`;
+  const quickEdit = !editing && !!onQuickSaveDay && date >= today && quickEditScope === scope;
   const currentDetails = details.scope === scope ? details : { id: null, visited: [] };
   const entries = sections.flatMap(section => section.items.map(entry => ({ ...entry, phase: section.phase })));
   const doneCount = active.routine.filter(id => progress[exerciseKey(active.day, id)]).length;
@@ -59,6 +61,7 @@ export default function Training({ t, lang = 'zh', schedule, draft, activeDay, s
   const closeDetails = () => setDetails(previous => ({ ...previous, id: null }));
   useBackNavigation(!!currentDetails.id, closeDetails, 100);
   useBackNavigation(quickPickerOpen, () => setQuickPickerOpen(false), 65);
+  useBackNavigation(quickEdit && !quickPickerOpen, () => setQuickEditScope(''), 55);
 
   const hydratedActive = () => hydrateManualSession({ ...active, date }, exercises, lang);
   const handleQuickRemove = async id => {
@@ -95,44 +98,78 @@ export default function Training({ t, lang = 'zh', schedule, draft, activeDay, s
     const ok = await onQuickSaveDay(target.date, target.session, en ? 'Undid last change.' : '已復原剛剛的動作調整。');
     if (ok) setQuickUndo(null);
   };
+  const openQuickPicker = () => {
+    setQuickError('');
+    setQuickPickerOpen(true);
+  };
+  const toggleQuickEdit = () => {
+    setQuickError('');
+    if (!onQuickSaveDay) {
+      onAddToDay?.(active);
+      return;
+    }
+    if (rest && !quickEdit) {
+      setQuickEditScope(scope);
+      setQuickPickerOpen(true);
+      return;
+    }
+    setQuickEditScope(quickEdit ? '' : scope);
+  };
 
   const description = params => `${params.sets} ${t('setsUnit')} × ${params.value} ${t(params.unit)}${params.perSide ? ` · ${t('eachSide')}` : ''}`;
   const doseGrid = (params, phase = params.phase) => <div className="dose-grid" role="group" aria-label={`${description(params)}${params.restSeconds > 0 ? ` · ${t('restLabel')} ${params.restSeconds} ${t('seconds')}` : ''}`}><div><strong>{params.sets}</strong>{t(['strength', 'accessory'].includes(phase) ? 'workingSetsLabel' : 'setsUnit')}</div><div><strong>{params.value}</strong>{t(params.unit)}{params.perSide && ` · ${t('eachSide')}`}</div><div><strong>{params.restSeconds || '—'}</strong>{t('restLabel')}{params.restSeconds > 0 && ` · ${t('seconds')}`}</div></div>;
   const preparation = (id, dose) => dose && <div data-preparation-for={id} className="rounded-2xl bg-amber-50 border border-amber-100 p-4 text-sm"><p className="font-semibold text-amber-800">{t('preparationSetsLabel')} · {exercises[id].name}</p><p className="text-sm text-slate-600 mt-2">{description(dose)}{dose.restSeconds > 0 && ` · ${t('restLabel')} ${dose.restSeconds} ${t('seconds')}`}</p><p className="text-sm text-slate-600 mt-2">{dose.instruction}</p><p className="text-xs text-amber-700 mt-2">{t('preparationTrackingHint')}</p></div>;
   let sequence = 0;
   return <div className="session-body">
-    {!isToday && <div className="flex bg-white rounded-2xl p-2 mb-6 gap-1 border border-slate-200 overflow-x-auto">{display.map(day => <button key={day.day} onClick={() => { closeDetails(); setActiveDay(day.day); }} className={`flex-1 min-w-12 rounded-xl p-3 text-sm ${active.day === day.day ? 'bg-sky-700 text-white' : 'text-slate-500'}`}><span className="block font-semibold">{t('dayShort')[day.day - 1]}</span><span className="block mt-1 text-xs">{getDateForWeekDay(currentWeek, day.day)}</span></button>)}</div>}
+    {!isToday && <div className="flex bg-white rounded-2xl p-2 mb-6 gap-1 border border-slate-200 overflow-x-auto">{display.map(day => <button key={day.day} onClick={() => { closeDetails(); setQuickEditScope(''); setActiveDay(day.day); }} className={`flex-1 min-w-12 rounded-xl p-3 text-sm ${active.day === day.day ? 'bg-sky-700 text-white' : 'text-slate-500'}`}><span className="block font-semibold">{t('dayShort')[day.day - 1]}</span><span className="block mt-1 text-xs">{getDateForWeekDay(currentWeek, day.day)}</span></button>)}</div>}
     {isToday ? <section className="session-hero" data-running={doneCount > 0} data-testid="session-hero"><p className="eyebrow">{date} · {rest ? t('restSessionTitle') : j('progress', { done: doneCount, total: active.routine.length })}</p><h2>{active.theme || j('today')}</h2><div className="hero-metadata"><span><strong>{minutes}</strong>{t('minutes')}</span><span><strong>{active.routine.length}</strong>{j('movementCount')}</span></div>
 
       {!rest && !complete && <button type="button" data-testid="session-start" disabled={busy || !firstPending} onClick={event => openDetails(firstPending.id, event.currentTarget)} className="button-primary">{j(doneCount ? 'resume' : 'start')}<ArrowRight size={18} /></button>}
       {rest && <p className="text-sm text-sky-700">{j('rest')}</p>}
     </section> : <div className="flex flex-wrap items-start justify-between gap-4 mb-5"><div><p className="eyebrow">{date} · {minutes} {t('minutes')}</p><h2 className="text-2xl font-bold text-slate-800">{active.theme || j('week')}</h2></div><div className="flex gap-2 text-sm">{!editing ? (canEdit || !onManualEdit) && <button disabled={!canEdit || saving || busy} onClick={onEdit} className="button-secondary disabled:opacity-50"><Edit2 size={15} />{t('editSchedule')}</button> : <><button disabled={saving} onClick={onCancel} className="button-secondary"><X size={15} />{t('cancelEdits')}</button><button disabled={saving || !canEdit} onClick={onSave} className="button-primary">{saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}{t('saveEdits')}</button></>}{canRestore && !editing && <button disabled={saving} onClick={onRestore} className="text-link">{t('aiRestoreBtn')}</button>}</div></div>}
     {!editing && <div className="day-actions">
-      {(onQuickSaveDay || onAddToDay) && <button type="button" data-testid="day-add-exercise" disabled={busy || saving || quickSaving || date < today} onClick={() => { if (onQuickSaveDay) { setQuickError(''); setQuickPickerOpen(true); } else { onAddToDay(active); } }} className="button-secondary">{onQuickSaveDay && !rest ? <><SlidersHorizontal size={15} aria-hidden="true" />{en ? '+/- Exercises' : '± 增減動作'}</> : <><Plus size={16} aria-hidden="true" />{en ? 'Add exercise' : '新增動作'}</>}</button>}
+      {(onQuickSaveDay || onAddToDay) && <button type="button" data-testid="day-add-exercise" aria-pressed={onQuickSaveDay ? quickEdit : undefined} disabled={busy || saving || quickSaving || date < today} onClick={toggleQuickEdit} className={quickEdit ? 'button-primary' : 'button-secondary'}>{quickEdit ? <><Check size={16} aria-hidden="true" />{en ? 'Done' : '完成編輯'}</> : onQuickSaveDay && !rest ? <><SlidersHorizontal size={15} aria-hidden="true" />{en ? '+/- Exercises' : '± 增減動作'}</> : <><Plus size={16} aria-hidden="true" />{en ? 'Add exercise' : '新增動作'}</>}</button>}
       {onManualEdit && <button type="button" data-testid="day-edit" disabled={busy || saving || quickSaving || date < today} onClick={() => onManualEdit(active)} className="button-secondary">{en ? 'Edit doses' : '調整組次'}</button>}
       {onOpenCoach && <button type="button" data-testid="open-ai-coach" disabled={busy || saving} onClick={onOpenCoach} className="coach-inline-button"><Sparkles size={16} aria-hidden="true" />{en ? 'Ask AI Coach' : '問 AI 教練'}</button>}
       <details className="day-more"><summary>{en ? 'More' : '更多'}</summary><div><details className="day-time-details"><summary>{en ? 'Timing details' : '時間與安排說明'}</summary><SessionTimeSummary day={active} exercises={exercises} availableTime={plannedTime} context={coachingContext} lang={lang} /></details>{onSaveWorkout && <button type="button" data-testid="save-day-workout" disabled={busy || saving} onClick={() => onSaveWorkout(active)} className="text-link">{en ? 'Save workout' : '收藏這天'}</button>}{onShare && <button type="button" disabled={busy || saving} onClick={() => onShare(active)} className="text-link">{en ? 'Share workout' : '分享這天'}</button>}</div></details>
     </div>}
-    {!quickPickerOpen && quickUndo?.scope === scope && <div className="quick-edit-banner" role="status" data-testid="quick-edit-undo-bar">
+    {quickEdit && <div className="quick-edit-banner" role="status" data-testid="quick-edit-banner">
+      <div className="quick-edit-banner-copy">
+        <strong>{en ? 'Edit mode' : '增減模式'}</strong>
+        <span>{en ? 'Tap − to remove, or add exercises below.' : '點右側「−」直接移除（已紀錄動作自動鎖定），或點右側按鈕加入新動作。'}</span>
+      </div>
+      <div className="quick-edit-banner-actions">
+        <button type="button" data-testid="quick-edit-add" disabled={quickSaving || busy} onClick={openQuickPicker} className="quick-edit-add-btn"><Plus size={15} aria-hidden="true" />{en ? 'Add' : '新增動作'}</button>
+        {!quickPickerOpen && quickUndo?.scope === scope && <button type="button" data-testid="quick-edit-undo" disabled={quickSaving} onClick={handleQuickUndo} className="text-link inline-flex items-center gap-1"><RotateCcw size={14} />{en ? 'Undo' : '復原'}</button>}
+      </div>
+    </div>}
+    {!quickEdit && !quickPickerOpen && quickUndo?.scope === scope && <div className="quick-edit-banner" role="status" data-testid="quick-edit-undo-bar">
       <span>{quickUndo.label}</span>
       <button type="button" data-testid="quick-edit-undo" disabled={quickSaving} onClick={handleQuickUndo} className="text-link inline-flex items-center gap-1"><RotateCcw size={14} />{en ? 'Undo' : '復原'}</button>
     </div>}
     {quickError && <p role="alert" data-testid="quick-edit-error" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 mb-3">{quickError}</p>}
     {!rest && !active.routine.every(id => active.prescriptions?.some(dose => dose.id === id && dose.phase)) && <p className="text-sm text-amber-700 mb-4">{t('legacyPhaseNotice')}</p>}
-    {!editing && onSaveReadiness && (isToday || date === today || readiness) && <DailyReadiness key={date} compact lang={lang} value={readiness} date={date} onSave={onSaveReadiness} preview={readinessPreview} onPreview={onPreviewReadiness} onApply={onApplyReadiness} busy={readinessBusy} disabled={readinessDisabled} today={today} exercises={exercises} context={coachingContext} />}
+    {!editing && !quickEdit && onSaveReadiness && (isToday || date === today || readiness) && <DailyReadiness key={date} compact lang={lang} value={readiness} date={date} onSave={onSaveReadiness} preview={readinessPreview} onPreview={onPreviewReadiness} onApply={onApplyReadiness} busy={readinessBusy} disabled={readinessDisabled} today={today} exercises={exercises} context={coachingContext} />}
 
     {entries.length < active.routine.length && <p role="status" className="text-sm text-amber-700">{j('unknown')}</p>}
-    <div className="space-y-5" data-testid="daily-exercise-list">{!rest && sections.filter(section => section.items.length).map(section => <section key={section.phase} aria-label={t(`phase_${section.phase}`)} data-phase={section.phase} className="space-y-2">
+    <div className={`space-y-5 ${quickEdit ? 'quick-edit-list' : ''}`} data-testid="daily-exercise-list">{!rest && sections.filter(section => section.items.length).map(section => <section key={section.phase} aria-label={t(`phase_${section.phase}`)} data-phase={section.phase} className="space-y-2">
       <div className="flex items-center justify-between gap-3 pt-2"><h3 className="font-semibold text-slate-700">{t(`phase_${section.phase}`)}</h3>{section.seconds > 0 && <span className="text-xs text-slate-500">{t('aboutTime')} {Math.ceil(section.seconds / 60)} {t('minutes')}</span>}</div>
       {section.items.map((entry, position) => {
         const { id, index, dose } = entry; const exercise = exercises[id]; sequence++;
         if (!editing) {
           const completion = completionView(active.day, id);
-          return <ExerciseRow key={id} id={id} name={exercise.name} exercise={exercise} lang={lang} number={sequence} summary={description(dose)} preparation={dose.preparation ? j('hasPreparation') : null} actionLabel={j('detailsLog')} done={completion.done} status={completion.status} failed={completion.failed} disabled={completionDisabled || completion.pending || date > today} onToggle={() => onToggle(active.day, id)} onOpen={opener => openDetails(id, opener)} />;
+          return <ExerciseRow key={id} id={id} name={exercise.name} exercise={exercise} lang={lang} number={sequence} summary={description(dose)} preparation={dose.preparation ? j('hasPreparation') : null} actionLabel={j('detailsLog')} done={completion.done} status={completion.status} failed={completion.failed} disabled={completionDisabled || completion.pending || date > today} onToggle={() => onToggle(active.day, id)} onOpen={opener => openDetails(id, opener)} quickEdit={quickEdit} recorded={recordedIds.has(id)} removing={quickSaving} onQuickRemove={handleQuickRemove} />;
         }
         return <div key={id} className="exercise-card"><div className="flex items-center gap-3"><button aria-label={`${t('removeExercise')} ${exercise.name}`} disabled={saving} onClick={() => onRemove(active.day, index)} className="p-2 text-red-500 disabled:opacity-30"><Trash2 size={20} /></button><span className="exercise-title flex-1">{sequence}. {exercise.name}</span></div><div className="flex flex-wrap items-center gap-2 mt-3"><select aria-label={`${t('exercisePhaseLabel')} ${exercise.name}`} disabled={saving} value={section.phase} onChange={event => onPhase(active.day, id, event.target.value)} className="rounded-xl border border-slate-200 p-2 text-sm">{SESSION_PHASES.map(value => <option key={value} value={value}>{t(`phase_${value}`)}</option>)}</select><button type="button" aria-label={`${t('moveUp')} ${exercise.name}`} disabled={saving || position === 0} onClick={() => onMove(active.day, id, -1)} className="p-3 rounded-lg bg-slate-50 disabled:opacity-30"><ArrowUp size={16} /></button><button type="button" aria-label={`${t('moveDown')} ${exercise.name}`} disabled={saving || position === section.items.length - 1} onClick={() => onMove(active.day, id, 1)} className="p-3 rounded-lg bg-slate-50 disabled:opacity-30"><ArrowDown size={16} /></button></div>{doseGrid(dose, section.phase)}<p className="text-sm text-slate-600 leading-relaxed">{exercise.tip}</p></div>;
       })}
-    </section>)}</div>
+    </section>)}
+    {quickEdit && (
+      <button type="button" data-testid="quick-edit-add-bottom" disabled={quickSaving || busy} onClick={openQuickPicker} className="quick-edit-add-bottom">
+        <Plus size={18} aria-hidden="true" />
+        <span>{en ? 'Add exercises or combos' : '新增動作或組合'}</span>
+      </button>
+    )}
+    </div>
     {quickPickerOpen && onQuickSaveDay && (
       <Suspense fallback={null}>
         <QuickWorkoutPicker

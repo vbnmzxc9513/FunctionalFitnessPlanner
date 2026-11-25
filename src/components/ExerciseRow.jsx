@@ -1,14 +1,14 @@
 import ExerciseTags from './ExerciseTags.jsx';
 import { useEffect, useRef, useState } from 'react';
-import { CheckCircle2, Circle, ChevronRight } from 'lucide-react';
+import { CheckCircle2, Circle, ChevronRight, Lock, Minus } from 'lucide-react';
 
-export default function ExerciseRow({ id, name, number, summary, preparation, actionLabel, done = false, disabled = false, status, failed = false, onToggle, onOpen, exercise, lang = 'zh' }) {
+export default function ExerciseRow({ id, name, number, summary, preparation, actionLabel, done = false, disabled = false, status, failed = false, onToggle, onOpen, exercise, lang = 'zh', quickEdit = false, recorded = false, onQuickRemove, removing = false }) {
   const press = useRef(null);
   const [pressing, setPressing] = useState(false);
   const cancel = () => { clearTimeout(press.current?.timer); press.current = null; setPressing(false); };
   useEffect(() => () => clearTimeout(press.current?.timer), []);
   const begin = event => {
-    if (!event.isPrimary || event.button !== 0) { cancel(); return; }
+    if (!event.isPrimary || event.button !== 0 || quickEdit) { cancel(); return; }
     cancel();
     const target = event.currentTarget;
     const { clientX: x, clientY: y, pointerId } = event;
@@ -16,12 +16,33 @@ export default function ExerciseRow({ id, name, number, summary, preparation, ac
     const timer = setTimeout(() => { press.current = null; setPressing(false); onOpen(target); }, 500);
     press.current = { x, y, pointerId, timer };
   };
-  return <div data-testid={`exercise-row-${id}`} data-pressing={pressing} tabIndex={-1} className="exercise-row"
+  return <div data-testid={`exercise-row-${id}`} data-pressing={pressing} data-quick-edit={quickEdit || undefined} tabIndex={-1} className="exercise-row"
     onPointerDown={begin} onPointerUp={cancel} onPointerCancel={cancel} onPointerLeave={cancel}
     onPointerMove={event => { const value = press.current; if (value && (event.pointerId !== value.pointerId || Math.hypot(event.clientX - value.x, event.clientY - value.y) > 10)) cancel(); }}
     onContextMenu={event => { if (event.nativeEvent.pointerType === 'touch') event.preventDefault(); }}>
-    {onToggle ? <button type="button" aria-label={name} aria-pressed={done} disabled={disabled} onPointerDown={event => event.stopPropagation()} onClick={onToggle} className="exercise-row-check disabled:opacity-40">{done ? <CheckCircle2 size={23} /> : <Circle size={23} />}</button> : <span className="exercise-row-number" aria-hidden="true">{number}</span>}
+    {onToggle ? <button type="button" aria-label={name} aria-pressed={done} disabled={disabled || quickEdit} onPointerDown={event => event.stopPropagation()} onClick={onToggle} className="exercise-row-check disabled:opacity-40">{done ? <CheckCircle2 size={23} /> : <Circle size={23} />}</button> : <span className="exercise-row-number" aria-hidden="true">{number}</span>}
     <div className="min-w-0 flex-1"><h4 className={`exercise-row-title ${done ? 'text-slate-500' : ''}`}>{onToggle && `${number}. `}{name}</h4><p className="exercise-row-dose">{summary}</p>{exercise && <ExerciseTags id={id} exercise={exercise} lang={lang} compact />}{preparation && <span className="exercise-row-preparation">{preparation}</span>}{status && <p data-testid={`completion-status-${id}`} role={failed ? 'alert' : 'status'} className={`text-xs mt-1 ${failed ? 'text-red-700' : 'text-sky-700'}`}>{status}</p>}</div>
-    <button type="button" data-testid={`exercise-open-${id}`} aria-label={`${actionLabel} ${name}`} aria-haspopup="dialog" onPointerDown={event => event.stopPropagation()} onClick={event => onOpen(event.currentTarget)} className="exercise-row-open"><span className="sr-only">{actionLabel}</span><ChevronRight size={16} aria-hidden="true" /></button>
+    {quickEdit ? (
+      recorded ? (
+        <span className="exercise-row-locked" data-testid={`quick-locked-${id}`} title={lang === 'en' ? 'Recorded — preserved' : '已有紀錄，自動保留'}>
+          <Lock size={14} aria-hidden="true" />
+          <span>{lang === 'en' ? 'Logged' : '已紀錄'}</span>
+        </span>
+      ) : (
+        <button
+          type="button"
+          data-testid={`quick-remove-${id}`}
+          aria-label={`${lang === 'en' ? 'Remove' : '移除'} ${name}`}
+          disabled={removing}
+          onPointerDown={event => event.stopPropagation()}
+          onClick={() => onQuickRemove?.(id)}
+          className="exercise-row-remove"
+        >
+          <Minus size={18} aria-hidden="true" />
+        </button>
+      )
+    ) : (
+      <button type="button" data-testid={`exercise-open-${id}`} aria-label={`${actionLabel} ${name}`} aria-haspopup="dialog" onPointerDown={event => event.stopPropagation()} onClick={event => onOpen(event.currentTarget)} className="exercise-row-open"><span className="sr-only">{actionLabel}</span><ChevronRight size={16} aria-hidden="true" /></button>
+    )}
   </div>;
 }

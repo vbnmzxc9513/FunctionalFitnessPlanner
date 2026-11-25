@@ -34,12 +34,12 @@ try{
  const originalMultiDraft=await page.evaluate(key=>localStorage.getItem(key),manualDraftStorageKey());
  step='today';await page.waitForSelector('[data-testid="day-add-exercise"]',{visible:true});await capture('today');
  assert.ok(await page.$('[data-testid="exercise-tags-bf_A10"]'));
- step='one-click add';await click('[data-testid="day-add-exercise"]');await page.waitForSelector('[data-testid="combo-body-part"]',{visible:true});
+ step='one-click add';await click('[data-testid="day-add-exercise"]');await click('[data-testid="quick-edit-add"]');await page.waitForSelector('[data-testid="combo-body-part"]',{visible:true});
  assert.equal(await page.$$eval('[data-testid^="manual-date-"]',e=>e.length),0,'No date wizard');
  assert.equal(await page.$eval('[data-testid="combo-search"]',e=>e.value),'');
  await page.select('[data-testid="combo-body-part"]','chest');await page.waitForSelector('[data-testid="single-add-bf_C11"]');
  assert.ok(await page.$('[data-testid="exercise-tags-bf_C11"]'));await capture('chest-picker');
- await click('[data-testid="single-add-bf_C11"]');await click('[data-testid="combo-panel-done"]');
+ await click('[data-testid="single-add-bf_C11"]');await click('[data-testid="combo-panel-done"]');await click('[data-testid="day-add-exercise"]');
  await page.waitForSelector('[data-testid="exercise-row-bf_C11"]',{visible:true});
  assert.equal(await page.$$eval('.manual-date-tab',e=>e.length),0,'Single-day edit never asks for a date');
  await capture('edit-day');
@@ -53,13 +53,13 @@ try{
  await textClick('動作庫');await page.waitForSelector('[data-testid="library-body-part"]');await page.select('[data-testid="library-body-part"]','chest');assert.ok(await page.$('[data-testid="library-exercise-bf_C11"]'));await capture('library-chest');
  await textClick('紀錄');await page.waitForSelector('[data-testid="training-history"]',{visible:true});await capture('records');
  step='protected day';await page.evaluate(saved=>{const session=saved.sessionsByDate['2026-11-16'];saved.progressByWeek[session.week]={completed:{day1_bf_A10:true}};localStorage.setItem('fitness_date_period_v1',JSON.stringify(saved));},saved);await page.reload({waitUntil:'networkidle2'});
- const protectedBefore=await snap();await click('[data-testid="day-add-exercise"]');await page.waitForSelector('[data-testid="combo-body-part"]',{visible:true});await page.select('[data-testid="combo-body-part"]','chest');await click('[data-testid="single-add-bf_C03"]');await click('[data-testid="combo-panel-done"]');await page.waitForSelector('[data-testid="exercise-row-bf_C03"]',{visible:true});
+ const protectedBefore=await snap();await click('[data-testid="day-add-exercise"]');await page.waitForSelector('[data-testid="quick-locked-bf_A10"]',{visible:true});
+ assert.equal(await page.$('[data-testid="quick-remove-bf_A10"]'),null,'Recorded exercise cannot be quick-removed');
+ await click('[data-testid="quick-edit-add"]');await page.waitForSelector('[data-testid="combo-body-part"]',{visible:true});await page.select('[data-testid="combo-body-part"]','chest');await click('[data-testid="single-add-bf_C03"]');await click('[data-testid="combo-panel-done"]');await click('[data-testid="day-add-exercise"]');await page.waitForSelector('[data-testid="exercise-row-bf_C03"]',{visible:true});
  const protectedAfter=await snap();const targetWeek=protectedBefore.sessionsByDate['2026-11-16'].week;
  assert.equal(protectedAfter.sessionsByDate['2026-11-16'].routine.length,10,'Single-day add succeeds on an in-progress day');
  assert.ok(protectedAfter.sessionsByDate['2026-11-16'].routine.includes('bf_A10'),'Recorded exercise remains in the day');
  assert.deepEqual(protectedAfter.progressByWeek[targetWeek],protectedBefore.progressByWeek[targetWeek],'Existing completion records are never overwritten');
- await click('[data-testid="day-add-exercise"]');await click('[data-testid="quick-tab-current"]');await page.waitForSelector('[data-testid="quick-locked-bf_A10"]',{visible:true});
- assert.equal(await page.$('[data-testid="quick-remove-bf_A10"]'),null,'Recorded exercise cannot be quick-removed');await click('[data-testid="combo-panel-done"]');
  assert.deepEqual(errors,[]);results.push({width,oneClickAdd:true,chestFilter:true,tagged:true,sameDateSaved:true,emptyDateDirect:true,otherDatePreserved:true,protectedPreserved:true,pageErrors:errors});await ctx.close();
  }
  await writeFile(`${out}/results.json`,JSON.stringify(results,null,2));console.log(JSON.stringify(results));

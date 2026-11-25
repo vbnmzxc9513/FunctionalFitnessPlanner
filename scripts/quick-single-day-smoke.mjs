@@ -102,26 +102,26 @@ try {
     assert.equal(await page.$('[data-testid="day-quick-edit"]'), null, 'Duplicate day-quick-edit button must not exist');
     await page.waitForSelector('[data-testid="exercise-row-dead_bug"]', { visible: true });
 
-    // 2. Click unified "± 增減動作" -> opens instant-save picker right over Today
+    // 2. Click unified "± 增減動作" -> enters inline Edit Mode right on Today!
     await page.click('[data-testid="day-add-exercise"]');
-    await page.waitForSelector('[data-testid="quick-workout-picker"]', { visible: true });
-
-    // Switch to "已排 (N)" tab: recorded warmup is locked, unrecorded dead_bug has 1-click remove!
-    await page.click('[data-testid="quick-tab-current"]');
+    await page.waitForSelector('[data-testid="quick-edit-banner"]', { visible: true });
+    await page.waitForSelector('[data-testid="quick-edit-add"]', { visible: true });
+    await page.waitForSelector('[data-testid="quick-edit-add-bottom"]', { visible: true });
     await page.waitForSelector(`[data-testid="quick-locked-${warmups[0].id}"]`, { visible: true });
     await page.waitForSelector('[data-testid="quick-remove-dead_bug"]', { visible: true });
 
-    // 1-click minus immediately removes dead_bug even though today already has a completed record!
+    // 1-click minus right on Today immediately removes dead_bug even though today already has a completed record!
     await page.click('[data-testid="quick-remove-dead_bug"]');
-    await page.waitForFunction(() => !document.querySelector('[data-testid="quick-remove-dead_bug"]'));
+    await page.waitForFunction(() => !document.querySelector('[data-testid="exercise-row-dead_bug"]'));
     await page.waitForSelector('[data-testid="quick-edit-undo"]', { visible: true });
 
-    // 1-click undo inside picker brings dead_bug right back
+    // 1-click undo right in edit-mode banner brings dead_bug right back
     await page.click('[data-testid="quick-edit-undo"]');
-    await page.waitForSelector('[data-testid="quick-remove-dead_bug"]', { visible: true });
+    await page.waitForSelector('[data-testid="exercise-row-dead_bug"]', { visible: true });
 
-    // 3. Switch to "單一動作" tab -> search for glute bridge (bf_B06, bodyweight) and tap + (saves immediately in 1 click!)
-    await page.click('[data-testid="quick-tab-exercises"]');
+    // 3. Inside Edit Mode, click "+ 新增動作" -> opens instant-save picker right over Today!
+    await page.click('[data-testid="quick-edit-add"]');
+    await page.waitForSelector('[data-testid="quick-workout-picker"]', { visible: true });
     await page.waitForSelector('[data-testid="combo-search"]', { visible: true });
     await page.type('[data-testid="combo-search"]', '臀橋');
     await page.waitForSelector('[data-testid="single-add-bf_B06"]', { visible: true });
@@ -129,9 +129,13 @@ try {
     // After 1 click, it turns into a 1-click minus button inside the picker!
     await page.waitForSelector('[data-testid="single-remove-bf_B06"]', { visible: true });
 
-    // Close picker -> bf_B06 is already on Today without any extra confirmation screen!
+    // Close picker -> back in Edit Mode with bf_B06 already on Today!
     await page.click('[data-testid="combo-panel-done"]');
     await page.waitForSelector('[data-testid="exercise-row-bf_B06"]', { visible: true });
+
+    // Exit Edit Mode via "✓ 完成編輯"
+    await page.click('[data-testid="day-add-exercise"]');
+    await page.waitForFunction(() => !document.querySelector('[data-testid="quick-edit-banner"]'));
 
     // 4. Also verify full single-day editor ("調整組次") + Review + Save succeeds without DATE_PROTECTED error!
     await page.click('[data-testid="day-edit"]');
