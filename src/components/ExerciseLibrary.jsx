@@ -10,7 +10,7 @@ import { exerciseBodyParts, matchesBodyPart, matchesExerciseQuery } from '../dom
 import { weeklyChoiceBlockReason } from '../domain/weeklyChoices.js';
 import './exercise-library.css';
 
-export default function ExerciseLibrary({ t, exercises, adding, onAdd, createScope = 'device', onToggle, onDelete, busy, canManage = true, lang = 'zh', onOrganize, onSignIn, todayExerciseIds = [], todayRecordedIds, onToggleTodayExercise, quickSaving = false, weeklyAvailable = {}, planningContext = {}, onUpdateContext }) {
+export default function ExerciseLibrary({ t, exercises, adding, onAdd, createScope = 'device', onToggle, onDelete, busy, canManage = true, lang = 'zh', onOrganize, onSignIn, todayExerciseIds = [], todayRecordedIds, onToggleTodayExercise, quickSaving = false, weeklyAvailable = {}, planningContext = {}, onUpdateContext, aiConfig }) {
   const [creating, setCreating] = useState(false);
   const [conditionsOpen, setConditionsOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -386,6 +386,6 @@ export default function ExerciseLibrary({ t, exercises, adding, onAdd, createSco
 
     {entries.length > visibleCount && <button type="button" data-testid="library-load-more" onClick={() => setVisibleCount(value => value + 20)} className="library-load-more">{en ? `Show more (${Math.min(visibleCount, entries.length)} / ${entries.length})` : `顯示更多（${Math.min(visibleCount, entries.length)} / ${entries.length}）`}</button>}
     {!entries.length && <p className="text-sm text-slate-500 text-center py-6">{scope === 'mine' ? text.emptyMine : t('noMatchingExercises')}</p>}
-    {creating && <CreateExerciseDialog lang={lang} t={t} scope={createScope} initialPart={bodyPart} onSave={async form => { const saved = await onAdd(form); setQuery(saved.exercise.name); setScope('all'); setPurpose('all'); setBodyPart('all'); setEquipmentFilter('all'); setOnlyEligible(false); }} onClose={() => setCreating(false)} />}
+    {creating && <CreateExerciseDialog lang={lang} t={t} scope={createScope} initialPart={bodyPart} aiConfig={aiConfig} onSave={async form => { const saved = await onAdd(form); setQuery(saved.exercise.name); setScope('all'); setPurpose('all'); setBodyPart('all'); setEquipmentFilter('all'); setOnlyEligible(false); }} onClose={() => setCreating(false)} />}
   </section>;
 }

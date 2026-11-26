@@ -20,7 +20,7 @@ import DailyReadiness from './DailyReadiness.jsx';
 const QuickWorkoutPicker = lazy(() => import('./QuickWorkoutPicker.jsx'));
 
 export default function Training({ t, lang = 'zh', schedule, draft, activeDay, setActiveDay, currentWeek, exercises, progress, level,
-  editing, selected, setSelected, onEdit, onCancel, onSave, onAdd, onRemove, onMove, onPhase, onToggle, onFeedback, feedback, busy, completionState = { pending: {}, errors: {} }, completionDisabled = busy, saving, canEdit, canRestore, onRestore, exerciseLogs = [], readiness = null, readinessPreview = null, onSaveExerciseLog, onUpdateNextDay: _onUpdateNextDay, onSaveReadiness, onPreviewReadiness, onApplyReadiness, loggingBusy = false, readinessBusy = false, coachingContext = {}, readinessDisabled = false, loggingDisabled = false, mode = 'plan', onViewRecords, eligibleExercises = exercises, plannedTime, onSaveWorkout, onShare, onManualEdit, onAddToDay, onQuickSaveDay, quickSaving = false, workoutStore, onCreateExercise, createScope = 'device', onOpenCoach }) {
+  editing, selected, setSelected, onEdit, onCancel, onSave, onAdd, onRemove, onMove, onPhase, onToggle, onFeedback, feedback, busy, completionState = { pending: {}, errors: {} }, completionDisabled = busy, saving, canEdit, canRestore, onRestore, exerciseLogs = [], readiness = null, readinessPreview = null, onSaveExerciseLog, onUpdateNextDay: _onUpdateNextDay, onSaveReadiness, onPreviewReadiness, onApplyReadiness, loggingBusy = false, readinessBusy = false, coachingContext = {}, readinessDisabled = false, loggingDisabled = false, mode = 'plan', onViewRecords, eligibleExercises = exercises, plannedTime, onSaveWorkout, onShare, onManualEdit, onAddToDay, onQuickSaveDay, quickSaving = false, workoutStore, onCreateExercise, createScope = 'device', aiConfig, onOpenCoach }) {
   const en = lang === 'en';
   const j = (key, values) => journeyText(lang, key, values);
   const completionView = (day, id) => {
@@ -290,6 +290,7 @@ export default function Training({ t, lang = 'zh', schedule, draft, activeDay, s
           busy={quickSaving}
           onCreateExercise={onCreateExercise}
           createScope={createScope}
+          aiConfig={aiConfig}
           onApply={handleQuickApply}
           onRemoveSingle={handleQuickRemove}
           onUndo={quickUndo?.scope === scope ? handleQuickUndo : undefined}

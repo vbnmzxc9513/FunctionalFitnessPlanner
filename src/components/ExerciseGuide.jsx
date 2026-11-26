@@ -54,7 +54,7 @@ export default function ExerciseGuide({ id, exercise = {}, lang = 'zh', expanded
           <div><p className="font-semibold text-slate-800">{resolved.text.steps}</p><ol className="list-decimal pl-5 space-y-1">{resolved.guide.steps.map(step => <li key={step}>{step}</li>)}</ol></div>
           <p><strong className="text-slate-800">{resolved.text.mistake}：</strong>{resolved.guide.mistake}</p>
           <p><strong className="text-slate-800">{resolved.text.easier}：</strong>{resolved.guide.easier}</p>
-        </> : <><p>{resolved.text.fallback}</p><p>{resolved.tip}</p></>}
+        </> : exercise.manuallyCreated && exercise.tip ? <p className="whitespace-pre-line text-slate-700">{exercise.tip}</p> : <><p>{resolved.text.fallback}</p><p className="whitespace-pre-line">{resolved.tip}</p></>}
         <p className="text-xs text-slate-500">{resolved.text.safety}</p>
         {source && <div className="border-t border-slate-100 pt-2 text-xs text-slate-500">
           <div className="flex flex-wrap gap-3">

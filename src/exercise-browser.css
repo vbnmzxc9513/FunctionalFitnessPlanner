@@ -55,6 +55,16 @@
 .create-exercise-submit { display:flex; align-items:center; justify-content:center; gap:7px; min-height:var(--touch-primary); border-radius:12px; background:var(--brand-primary); color:var(--surface-card); font-size:14px; font-weight:650; cursor:pointer; }
 .create-exercise-submit:disabled { opacity:.45; }
 .create-exercise-error { background:var(--status-danger-bg); padding:12px; border-radius:10px; color:var(--status-danger); font-size:13px; }
+.create-exercise-name-block { display:grid; gap:10px; }
+.create-exercise-ai-btn { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:var(--touch-min); padding:9px 14px; border-radius:11px; border:1px solid var(--brand-soft-border); background:var(--brand-tint); color:var(--brand-primary); font-size:13px; font-weight:600; cursor:pointer; transition:background-color .14s ease, border-color .14s ease; }
+.create-exercise-ai-btn:hover:not(:disabled) { background:var(--brand-soft); border-color:var(--brand-primary); }
+.create-exercise-ai-btn:disabled { opacity:.45; cursor:not-allowed; }
+.create-exercise-ai-pill { font-style:normal; font-size:11px; font-weight:600; padding:1px 7px; border-radius:999px; background:var(--surface-card); color:var(--brand-primary); border:1px solid var(--brand-soft-border); }
+.create-exercise-ai-status { display:flex; align-items:flex-start; gap:8px; padding:11px 12px; border-radius:11px; background:var(--brand-tint); border:1px solid var(--brand-soft-border); color:var(--brand-primary); font-size:13px; line-height:1.5; margin:0; }
+.create-exercise-ai-status svg { flex-shrink:0; margin-top:2px; }
+.create-exercise-part-block { display:grid; gap:8px; }
+.create-exercise-extra-parts { display:flex; flex-wrap:wrap; align-items:center; gap:6px; font-size:12px; color:var(--ink-muted); }
+.create-exercise-part-chip { display:inline-flex; align-items:center; gap:4px; padding:4px 9px; border-radius:999px; background:var(--brand-tint); border:1px solid var(--brand-soft-border); color:var(--brand-primary); font-size:12px; font-weight:500; cursor:pointer; }
 .library-custom-delete { min-height:var(--touch-min); color:#b45353; font-size:12px; }
 @media(min-width:760px) {
   .quick-workout-picker.combo-first-picker { inset:0; margin:auto; width:min(800px,calc(100% - 64px)); height:min(88dvh,900px); max-height:88dvh; border-radius:24px; box-shadow:0 24px 80px #0f213244; }

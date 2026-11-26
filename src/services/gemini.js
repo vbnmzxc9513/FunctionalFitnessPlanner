@@ -2,6 +2,10 @@ import { buildPlanningPrompt } from '../domain/coachingPrompt.js';
 import { validateNewAIPlan } from '../domain/newAIPlan.js';
 import { SESSION_PHASES, SESSION_TYPES } from '../domain/phases.js';
 import { normalizeCoachHistory } from '../domain/aiCoachChat.js';
+import { buildCustomExercisePrompt, parseAiCustomExerciseDraft } from '../domain/aiCustomExercise.js';
+import { EQUIPMENT } from '../domain/exerciseCatalog.js';
+import { BODY_PARTS } from '../domain/exerciseTags.js';
+import { requestMemberAiCoachReply } from './aiMembership.js';
 
 export const generateAIPlan = async (lastWeekData, currentLevel, lastWeekFeedback, userApiKey, allProgress, metricsHistory, userGoal, dailyTime, userMessage, availableExercises, lang = 'zh', selectedModel = 'gemini-2.5-flash', options = {}) => {
   if (!userApiKey) throw new Error('API_KEY_MISSING');
@@ -560,3 +564,124 @@ export const checkAvailableModels = async (key) => {
     return defaultModels;
   }
 };
+
+function buildCustomExerciseSchema() {
+  return {
+    type: 'OBJECT',
+    properties: {
+      name: { type: 'STRING' },
+      purpose: { type: 'STRING', enum: ['warmup', 'training', 'cooldown'] },
+      bodyParts: { type: 'ARRAY', items: { type: 'STRING', enum: BODY_PARTS.map(([key]) => key) } },
+      equipment: { type: 'ARRAY', items: { type: 'STRING', enum: EQUIPMENT } },
+      description: { type: 'STRING' },
+      prescription: {
+        type: 'OBJECT',
+        properties: {
+          sets: { type: 'INTEGER' },
+          value: { type: 'STRING' },
+          unit: { type: 'STRING', enum: ['reps', 'seconds', 'minutes', 'breaths'] },
+          restSeconds: { type: 'INTEGER' },
+          perSide: { type: 'BOOLEAN' },
+        },
+        required: ['sets', 'value', 'unit', 'restSeconds', 'perSide'],
+      },
+    },
+    required: ['name', 'purpose', 'bodyParts', 'equipment', 'description', 'prescription'],
+  };
+}
+
+/**
+ * Generate a structured custom exercise draft (purpose, bodyParts, equipment,
+ * starting dose, and movement instructions) from an exercise name.
+ * Supports both Member Cloud AI (via deployed Cloud Function) and BYOK Gemini.
+ */
+export async function generateCustomExerciseWithAI({
+  name,
+  apiKey = '',
+  model = FALLBACK_PLANNING_MODEL,
+  lang = 'zh',
+  aiMemberActive = false,
+  signal,
+} = {}) {
+  const cleanName = String(name || '').trim();
+  if (!cleanName) throw new Error('CUSTOM_NAME');
+  if (signal?.aborted) throw new Error('ABORTED');
+
+  const { systemContext, userMessage } = buildCustomExercisePrompt({ name: cleanName, lang });
+  const chosenModel = model || FALLBACK_PLANNING_MODEL;
+  const trimmedKey = String(apiKey || '').trim();
+
+  if (aiMemberActive) {
+    try {
+      const reply = await requestMemberAiCoachReply({
+        systemContext,
+        messages: [{ role: 'user', text: userMessage }],
+        model: chosenModel,
+        signal,
+      });
+      return parseAiCustomExerciseDraft(reply, cleanName);
+    } catch (error) {
+      if (signal?.aborted || error?.message === 'ABORTED') throw new Error('ABORTED');
+      if (chosenModel !== FALLBACK_PLANNING_MODEL && error?.message === 'AI_MEMBER_FAILED') {
+        const reply = await requestMemberAiCoachReply({
+          systemContext,
+          messages: [{ role: 'user', text: userMessage }],
+          model: FALLBACK_PLANNING_MODEL,
+          signal,
+        });
+        return parseAiCustomExerciseDraft(reply, cleanName);
+      }
+      if (!trimmedKey) throw error;
+    }
+  }
+
+  if (!trimmedKey) throw new Error('AI_NOT_CONFIGURED');
+
+  const callDirect = async targetModel => {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(targetModel)}:generateContent?key=${encodeURIComponent(trimmedKey)}`;
+    const thinking = supportsThinkingConfig(targetModel) ? { thinkingConfig: { thinkingBudget: 0 } } : {};
+    const payload = {
+      systemInstruction: { parts: [{ text: systemContext }] },
+      contents: [{ role: 'user', parts: [{ text: userMessage }] }],
+      generationConfig: {
+        temperature: 0.3,
+        maxOutputTokens: 1024,
+        ...thinking,
+        responseMimeType: 'application/json',
+        responseSchema: buildCustomExerciseSchema(),
+      },
+    };
+    let response;
+    try {
+      response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal,
+      });
+    } catch (error) {
+      if (error?.name === 'AbortError' || signal?.aborted) throw new Error('ABORTED');
+      throw new Error('NETWORK_ERROR');
+    }
+    let data = null;
+    try { data = await response.json(); } catch { data = null; }
+    if (!response.ok || data?.error) {
+      const status = response.status;
+      const msg = String(data?.error?.message || '');
+      if (status === 401 || status === 403 || /API[_ ]?KEY/i.test(msg)) throw new Error('API_KEY_INVALID');
+      if (status === 429) throw new Error('RATE_LIMITED');
+      throw new Error('AI_EXERCISE_FAILED');
+    }
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    return parseAiCustomExerciseDraft(text, cleanName);
+  };
+
+  try {
+    return await callDirect(chosenModel);
+  } catch (error) {
+    if (chosenModel !== FALLBACK_PLANNING_MODEL && !NON_FALLBACK_ERRORS.has(error?.message)) {
+      return callDirect(FALLBACK_PLANNING_MODEL);
+    }
+    throw error;
+  }
+}
