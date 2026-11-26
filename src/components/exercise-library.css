@@ -29,25 +29,6 @@
   gap: 8px;
 }
 
-.library-auto-plan-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: var(--touch-min);
-  padding: 8px 12px;
-  border-radius: 11px;
-  border: 1px solid var(--brand-soft-border);
-  background: var(--brand-tint);
-  color: var(--brand-primary);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.library-auto-plan-btn:hover {
-  background: var(--brand-soft);
-}
-
 .library-manage-btn {
   display: inline-flex;
   align-items: center;

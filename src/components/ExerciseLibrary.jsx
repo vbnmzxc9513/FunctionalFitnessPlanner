@@ -1,4 +1,4 @@
-import { Check, ChevronRight, Loader2, Plus, Search, Sparkles, Star, Trash2 } from 'lucide-react';
+import { Check, ChevronRight, Loader2, Plus, Search, Star, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { EXERCISE_CATEGORIES } from '../domain/exerciseCatalog.js';
 import { LIBRARY_EQUIPMENT_FILTERS, LIBRARY_PURPOSES, libraryGroups, matchesEquipmentFilter, matchesLibraryPurpose, suggestedUses } from '../domain/library.js';
@@ -11,7 +11,7 @@ import { weeklyChoiceBlockReason } from '../domain/weeklyChoices.js';
 import { MAX_WEEKLY_CHOICES } from '../domain/trainingPreferences.js';
 import './exercise-library.css';
 
-export default function ExerciseLibrary({ t, exercises, adding, onAdd, createScope = 'device', onToggle, onDelete, busy, canManage = true, lang = 'zh', onOrganize, onSignIn, weeklyExerciseIds = [], weeklyAvailable = {}, planningContext = {}, onToggleWeekly, onOpenWeeklySelection }) {
+export default function ExerciseLibrary({ t, exercises, adding, onAdd, createScope = 'device', onToggle, onDelete, busy, canManage = true, lang = 'zh', onOrganize, onSignIn, weeklyExerciseIds = [], weeklyAvailable = {}, planningContext = {}, onToggleWeekly }) {
   const [creating, setCreating] = useState(false);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('');
@@ -61,7 +61,6 @@ export default function ExerciseLibrary({ t, exercises, adding, onAdd, createSco
       <div className="library-top-actions">
         <div className="library-top-left">
           {onAdd && <button type="button" data-testid="library-create-exercise" className="exercise-create-entry" disabled={adding} onClick={() => setCreating(true)}><Plus size={16} />{en ? 'Create exercise' : '新增自己的動作'}</button>}
-          {onOpenWeeklySelection && <button type="button" data-testid="library-auto-plan" onClick={onOpenWeeklySelection} className="library-auto-plan-btn"><Sparkles size={15} />{en ? 'Plan with selected' : '用選取動作自動排課'} · {weeklyExerciseIds.length}</button>}
         </div>
         {canManage && <button type="button" aria-expanded={showManagement} aria-controls="exercise-management" onClick={() => setManaging(value => !value)} className="library-manage-btn">{showManagement ? text.done : text.manage}</button>}
       </div>
