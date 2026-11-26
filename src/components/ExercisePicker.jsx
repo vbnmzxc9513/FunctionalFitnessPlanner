@@ -13,7 +13,7 @@ const messages = {
     emptyMine: '這個階段還沒有可加入的常用動作。可先到動作庫整理，或切換全部動作。',
     switchAll: '查看全部動作', recommended: '建議階段', choose: '選擇', selected: '已選擇',
     add: phase => `加入到「${phase}」`, more: '載入更多動作',
-    hint: '常用分類供你快速尋找；可加入項目依目前器材、搭檔、經驗、身體限制與啟用設定篩選。已在今天課表的動作不會重複顯示。',
+    hint: '常用分類供你快速尋找；可加入項目依目前器材、搭檔、身體限制與啟用設定篩選。已在今天課表的動作不會重複顯示。',
     phaseHint: phase => `爆發、反應與步法動作請選「${phase}」階段。`,
   },
   en: {
@@ -23,7 +23,7 @@ const messages = {
     emptyMine: 'No available favorites for this phase. Organize them in the library, or browse all exercises.',
     switchAll: 'View all exercises', recommended: 'Suggested phase', choose: 'Choose', selected: 'Selected',
     add: phase => `Add to ${phase}`, more: 'Load more exercises',
-    hint: 'Favorites help you find exercises. Available additions follow your current equipment, partner, experience, health restrictions and enabled settings. Exercises already in this session are excluded.',
+    hint: 'Favorites help you find exercises. Available additions follow your current equipment, partner, health restrictions and enabled settings. Exercises already in this session are excluded.',
     phaseHint: phase => `For power, reaction and footwork exercises, choose “${phase}”.`,
   },
 };

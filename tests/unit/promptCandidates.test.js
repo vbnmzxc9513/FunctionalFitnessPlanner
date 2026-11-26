@@ -72,9 +72,30 @@ function extractCandidateJson(prompt) {
   };
 }
 
-test('normal 105-exercise eligible catalog keeps all eligible candidates unbudgeted under 60,000 UTF-8 bytes', () => {
+test('typical eligible catalog stays unbudgeted and full 121-exercise catalog stays bounded under 60,000 UTF-8 bytes', () => {
   for (const lang of ['zh', 'en']) {
     const catalog = catalogExercises(lang);
+    const gymContext = normalizePlanningContext({
+      healthStatus: 'unrestricted',
+      equipment: ['dumbbell', 'band', 'foam_roller'],
+      partnerAvailable: false,
+      experience: 'advanced',
+    });
+    const gymEligible = eligibleExercises(catalog, gymContext);
+    const gymEntries = Object.entries(gymEligible).filter(([, exercise]) => !exercise.legacySequence && exercise.active !== false && !exercise.deleted);
+    const gymPrompt = buildPlanningPrompt({
+      availableExercises: gymEligible,
+      context: gymContext,
+      dailyTime: 40,
+      lang,
+      currentDate: '2026-10-19',
+      currentWeek: '2026-W43',
+    });
+    assert.ok(Buffer.byteLength(gymPrompt, 'utf8') < 60000);
+    const gymParsed = extractCandidateJson(gymPrompt);
+    assert.equal(gymParsed.prefix, '');
+    assert.equal(gymParsed.candidates.length, gymEntries.length);
+
     const context = normalizePlanningContext({
       healthStatus: 'unrestricted',
       equipment: EQUIPMENT,
@@ -83,7 +104,7 @@ test('normal 105-exercise eligible catalog keeps all eligible candidates unbudge
     });
     const eligible = eligibleExercises(catalog, context);
     const expectedEntries = Object.entries(eligible).filter(([, exercise]) => !exercise.legacySequence && exercise.active !== false && !exercise.deleted);
-    assert.equal(expectedEntries.length, 103);
+    assert.equal(expectedEntries.length, 121);
 
     const prompt = buildPlanningPrompt({
       availableExercises: eligible,
@@ -95,13 +116,13 @@ test('normal 105-exercise eligible catalog keeps all eligible candidates unbudge
     });
 
     const bytes = Buffer.byteLength(prompt, 'utf8');
-    assert.ok(bytes < 60000, `${lang} normal prompt exceeded 60KB: ${bytes}`);
+    assert.ok(bytes < 60000, `${lang} full-catalog prompt exceeded 60KB: ${bytes}`);
+    assert.ok(bytes <= DEFAULT_MAX_PROMPT_BYTES, `${lang} full-catalog prompt exceeded ${DEFAULT_MAX_PROMPT_BYTES}: ${bytes}`);
     assert.equal(bytes, utf8Bytes(prompt));
 
-    const { prefix, candidates } = extractCandidateJson(prompt);
-    assert.equal(prefix, '');
-    assert.equal(candidates.length, expectedEntries.length);
-    assert.deepEqual(candidates.map(item => item.id), expectedEntries.map(([id]) => id));
+    const { candidates } = extractCandidateJson(prompt);
+    const candidateIds = new Set(candidates.map(item => item.id));
+    for (const id of DAILY_WARMUP_IDS) assert.equal(candidateIds.has(id), true);
   }
 });
 
@@ -157,7 +178,7 @@ test('selectPromptCandidates supports [id, exercise] tuple entries and serialize
   }
 });
 
-test('305-exercise worst-case stress test stays under 60KB, protects critical tiers, and is deterministic in zh and en', () => {
+test('323-exercise worst-case stress test stays under 60KB, protects critical tiers, and is deterministic in zh and en', () => {
   const synthetic = buildSyntheticCustomExercises(200);
 
   for (const lang of ['zh', 'en']) {
@@ -170,7 +191,7 @@ test('305-exercise worst-case stress test stays under 60KB, protects critical ti
     });
     const eligible = eligibleExercises(catalog, context);
     const combined = { ...eligible, ...synthetic };
-    assert.equal(Object.keys(combined).length, 305);
+    assert.equal(Object.keys(combined).length, 323);
 
     const previousPlan = generateTemplatePlan(catalog, context, 40, lang, {
       currentDate: '2026-10-19',
@@ -209,7 +230,7 @@ test('305-exercise worst-case stress test stays under 60KB, protects critical ti
     assert.ok(bytes <= DEFAULT_MAX_PROMPT_BYTES, `${lang} stress prompt exceeded ${DEFAULT_MAX_PROMPT_BYTES}: ${bytes}`);
 
     const { prefix, candidates } = extractCandidateJson(promptA);
-    assert.match(prefix, /已依每日暖身、本週手選、前期課表、目標部位與僵硬部位優先保留 \d+\/303 項候選動作以符合提示上限；未列項目不可引用。/);
+    assert.match(prefix, /已依每日暖身、本週手選、前期課表、目標部位與僵硬部位優先保留 \d+\/321 項候選動作以符合提示上限；未列項目不可引用。/);
 
     const selectedIds = new Set(candidates.map(item => item.id));
     for (const id of DAILY_WARMUP_IDS) {

@@ -24,11 +24,11 @@ test('requested dumbbell power movements are searchable, tagged and guided in bo
   }
 });
 
-test('equipment, shoulder treatment and jump experience restrictions remain enforced', () => {
+test('equipment and shoulder treatment restrictions remain enforced without beginner gating', () => {
   const exercises = catalogExercises();
   const available = manualPlanningExercises(exercises,context);
   assert.ok(ids.every(id=>available[id]));
-  assert.equal(manualPlanningExercises(exercises,{...context,experience:'beginner'}).bf_E12,undefined);
+  assert.ok(manualPlanningExercises(exercises,{...context,experience:'beginner'}).bf_E12);
   assert.ok(manualPlanningExercises(exercises,{...context,experience:'beginner'}).bf_E11);
   for (const change of [{equipment:[]},{healthStatus:'restricted'}]) for (const id of ids) assert.equal(manualPlanningExercises(exercises,{...context,...change})[id],undefined);
   assert.equal(exercises.bf_E11.jumpContacts,0);

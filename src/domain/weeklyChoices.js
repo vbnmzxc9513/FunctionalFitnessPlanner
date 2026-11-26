@@ -32,7 +32,6 @@ export function weeklyChoiceBlockReason(id, exercises, context, available) {
   if (!exercise || exercise.deleted || exercise.active === false) return 'unavailable';
   if (['A01', 'A12', 'A13', 'I01'].includes(exercise.catalogCode)) return 'stretch_opening';
   if (!weeklyChoicePhase(id, exercise)) return 'metadata';
-  if (exercise.advanced && profile.experience === 'beginner') return 'experience';
   if (exercise.requiresPartner && !profile.partnerAvailable) return 'partner';
   if (!equipmentChoices(exercise, profile.equipment).length) return 'equipment';
   if (!Object.hasOwn(available, id)) return 'health';

@@ -126,7 +126,6 @@ export function exerciseEligibilityIssues(exercise, context = {}) {
   const issues = [];
   if (exercise.deleted) issues.push({ code: 'deleted' });
   if (exercise.active === false) issues.push({ code: 'disabled' });
-  if (exercise.advanced && context.experience === 'beginner') issues.push({ code: 'advanced' });
   if (exercise.requiresPartner && !context.partnerAvailable) issues.push({ code: 'partner' });
   const restricted = context.healthStatus !== 'unrestricted';
   if (restricted && exercise.shoulderLoaded) issues.push({ code: 'health' });

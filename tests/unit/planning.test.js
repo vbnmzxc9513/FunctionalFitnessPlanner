@@ -25,19 +25,19 @@ test('curated catalog has 123 bilingual entries, nine categories and controlled 
   assert.deepEqual([...new Set(Object.values(catalog).map(item => item.category))].sort(), [...EXERCISE_CATEGORIES].sort());
   assert.deepEqual(Object.keys(catalog), Object.keys(catalogExercises('en')));
   assert.ok(Object.values(catalogExercises('en')).every(item => item.name && item.tip && !/[\u4e00-\u9fff]/.test(item.name + item.tip)));
-  for (const item of Object.values(catalog).filter(item => item.advanced && !['bf_E12', 'bf_C25'].includes(item.id))) assert.equal(item.active, false);
+  assert.ok(Object.values(catalog).every(item => item.active === true));
   assert.equal(catalog.bulgarian.catalogCode, 'B12');
   assert.equal(catalog.dead_bug.catalogCode, 'D01');
   assert.ok(Object.values(catalog).every(item => !item.equipmentOptions.flat().includes('medicine_ball')));
 });
-test('planning excludes unavailable equipment, partners, disabled moves and beginner advanced hops', () => {
+test('planning excludes unavailable equipment, partners and disabled moves without beginner experience gating', () => {
   const available = planningExercises(catalog, { ...context, equipment: [] });
   assert.ok(available.bf_B01);
+  assert.ok(available.bf_E03);
   assert.equal(available.bf_B11, undefined);
   assert.equal(available.bf_G02, undefined);
-  assert.equal(available.bf_E03, undefined);
-  const advanced = planningExercises({ ...catalog, bf_E03: { ...catalog.bf_E03, active: true } }, { ...context, experience: 'advanced' });
-  assert.ok(advanced.bf_E03);
+  assert.equal(planningExercises({ ...catalog, bf_E03: { ...catalog.bf_E03, active: false } }, context).bf_E03, undefined);
+  assert.ok(planningExercises(catalog, { ...context, experience: 'beginner' }).bulgarian);
 });
 test('shockwave notes conservatively restrict shoulder loading without turning lack of pain into clearance', () => {
   const profile = normalizePlanningContext({ ...context, healthNotes: '肩部剛做震波，目前感覺鬆' });

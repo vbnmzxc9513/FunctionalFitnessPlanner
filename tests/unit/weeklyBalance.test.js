@@ -102,9 +102,10 @@ test('template rotates existing eligible upper slots between push/pull without i
   assert.deepEqual([...new Set(upper.map(dose => dose.id))].sort(), ['bf_C10', 'bf_C11']);
   assert.ok(upper.every(dose => dose.sets === 1 && dose.value === '6'));
   const noSupport = generateTemplatePlan(catalog, { ...profile, equipment: ['dumbbell'] }, 35, 'zh', options);
-  assert.equal(byKey(analysis(noSupport.schedule, { ...profile, equipment: ['dumbbell'] }), 'patterns', 'pull').status, 'unavailable');
+  assert.equal(byKey(analysis(noSupport.schedule, { ...profile, equipment: ['dumbbell'] }), 'patterns', 'pull').status, 'not_scheduled');
   const bodyweight = generateTemplatePlan(catalog, { ...profile, equipment: [] }, 35, 'zh', options);
   assert.equal(byKey(analysis(bodyweight.schedule, { ...profile, equipment: [] }), 'patterns', 'pull').count, 0);
+  assert.equal(byKey(analysis(bodyweight.schedule, { ...profile, equipment: [] }), 'patterns', 'pull').status, 'unavailable');
 });
 
 test('restricted, unknown, fatigue and taper templates preserve their clinical/recovery priority instead of filling coverage', () => {

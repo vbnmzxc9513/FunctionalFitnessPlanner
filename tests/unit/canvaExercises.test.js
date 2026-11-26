@@ -32,9 +32,9 @@ test('gym additions keep historical identities, classify correctly and remain di
     [['shoulder_press', '8', false], ['plank_row', '8', true], ['weighted_lunge', '6', true]]);
 });
 
-test('gym additions respect equipment, treatment, beginner and explicit disabled settings', () => {
-  assert.equal(catalog.plank_row.active, false);
-  assert.ok(!eligibleExercises(enabled, { ...context, experience: 'beginner' }).plank_row);
+test('gym additions respect equipment, treatment and explicit disabled settings without beginner gating', () => {
+  assert.equal(catalog.plank_row.active, true);
+  assert.ok(eligibleExercises(enabled, { ...context, experience: 'beginner' }).plank_row);
   for (const id of ids) {
     assert.ok(!eligibleExercises(enabled, { ...context, equipment: [] })[id]);
     assert.ok(!eligibleExercises(enabled, { ...context, healthStatus: 'restricted' })[id]);

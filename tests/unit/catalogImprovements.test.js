@@ -137,8 +137,10 @@ test('eligibility and weekly block reasons properly distinguish home bodyweight 
     assert.equal(weeklyChoiceBlockReason(id, catalogZh, homeBeginner, homeAvailable), null, `${id} should not be blocked`);
   }
 
-  // Pull-up is blocked for beginners (experience) and without pullup_bar (equipment)
-  assert.equal(weeklyChoiceBlockReason('bf_C25', catalogZh, homeBeginner, homeAvailable), 'experience');
+  // Pull-up is gated by pullup_bar equipment (not beginner experience)
+  assert.equal(weeklyChoiceBlockReason('bf_C25', catalogZh, homeBeginner, homeAvailable), 'equipment');
+  const withBarBeginner = { healthStatus: 'unrestricted', experience: 'beginner', equipment: ['pullup_bar'], badmintonDays: [] };
+  assert.equal(weeklyChoiceBlockReason('bf_C25', catalogZh, withBarBeginner, eligibleExercises(catalogZh, withBarBeginner)), null);
   const noBarInter = { healthStatus: 'unrestricted', experience: 'intermediate', equipment: ['band'], badmintonDays: [] };
   assert.equal(weeklyChoiceBlockReason('bf_C25', catalogZh, noBarInter, eligibleExercises(catalogZh, noBarInter)), 'equipment');
 
