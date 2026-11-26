@@ -315,10 +315,14 @@ export default function PeriodWorkspace({
       setRange(clean);
       const previous = restored.current.drafts?.[`${clean.from}_${clean.to}`];
       if (previous) {
+        const restoredProfile = periodProfile(previous);
         setProfile({
-          ...periodProfile(previous),
+          ...restoredProfile,
           context: {
-            ...periodProfile(previous).context,
+            ...restoredProfile.context,
+            equipment: profile.context.equipment,
+            partnerAvailable: profile.context.partnerAvailable,
+            healthStatus: profile.context.healthStatus,
             weeklyExerciseIds: preserveCurrentChoices ? profile.context.weeklyExerciseIds : previous.context?.weeklyExerciseIds || [],
           },
         });

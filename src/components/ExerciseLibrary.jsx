@@ -1,6 +1,6 @@
-import { Check, ChevronRight, Loader2, Plus, Search, Star, Trash2 } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, Loader2, Plus, Search, SlidersHorizontal, Star, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { EXERCISE_CATEGORIES } from '../domain/exerciseCatalog.js';
+import { EQUIPMENT, EXERCISE_CATEGORIES } from '../domain/exerciseCatalog.js';
 import { LIBRARY_EQUIPMENT_FILTERS, LIBRARY_PURPOSES, libraryGroups, matchesEquipmentFilter, matchesLibraryPurpose, suggestedUses } from '../domain/library.js';
 import { LIBRARY_TEXT } from '../i18n/library.js';
 import CreateExerciseDialog from './CreateExerciseDialog.jsx';
@@ -11,8 +11,9 @@ import { weeklyChoiceBlockReason } from '../domain/weeklyChoices.js';
 import { MAX_WEEKLY_CHOICES } from '../domain/trainingPreferences.js';
 import './exercise-library.css';
 
-export default function ExerciseLibrary({ t, exercises, adding, onAdd, createScope = 'device', onToggle, onDelete, busy, canManage = true, lang = 'zh', onOrganize, onSignIn, weeklyExerciseIds = [], weeklyAvailable = {}, planningContext = {}, onToggleWeekly }) {
+export default function ExerciseLibrary({ t, exercises, adding, onAdd, createScope = 'device', onToggle, onDelete, busy, canManage = true, lang = 'zh', onOrganize, onSignIn, weeklyExerciseIds = [], weeklyAvailable = {}, planningContext = {}, onUpdateContext, onToggleWeekly }) {
   const [creating, setCreating] = useState(false);
+  const [conditionsOpen, setConditionsOpen] = useState(true);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('');
   const [bodyPart, setBodyPart] = useState('all');
@@ -29,6 +30,15 @@ export default function ExerciseLibrary({ t, exercises, adding, onAdd, createSco
   const text = LIBRARY_TEXT[en ? 'en' : 'zh'];
   const showManagement = canManage && managing;
   const organizing = !!pendingId || busy;
+  const selectedEquipment = Array.isArray(planningContext.equipment) ? planningContext.equipment : [];
+  const healthStatus = planningContext.healthStatus || 'unrestricted';
+  const toggleEquipment = item => onUpdateContext?.(previous => {
+    const current = Array.isArray(previous.equipment) ? previous.equipment : [];
+    const next = current.includes(item) ? current.filter(value => value !== item) : [...current, item];
+    return { ...previous, equipment: next };
+  });
+  const togglePartner = () => onUpdateContext?.(previous => ({ ...previous, partnerAvailable: !previous.partnerAvailable }));
+  const setHealthStatus = status => onUpdateContext?.(previous => ({ ...previous, healthStatus: status }));
   const availableParts = new Set();
   for (const [id, exercise] of Object.entries(exercises)) {
     if (exercise?.deleted) continue;
@@ -56,7 +66,123 @@ export default function ExerciseLibrary({ t, exercises, adding, onAdd, createSco
     finally { setPendingId(null); }
   }
 
+  const conditionSummary = [
+    selectedEquipment.length
+      ? (en ? `${selectedEquipment.length} equipment` : `已選 ${selectedEquipment.length} 項器材`)
+      : (en ? 'Bodyweight only' : '僅徒手'),
+    planningContext.partnerAvailable ? (en ? 'Partner' : '有搭檔') : null,
+    healthStatus === 'restricted'
+      ? (en ? 'Restricted' : '有疼痛／治療受限')
+      : healthStatus === 'unknown'
+        ? (en ? 'Health unconfirmed' : '身體狀態未確認')
+        : null,
+  ].filter(Boolean).join(' · ');
+
   return <section className="exercise-library" aria-label={t('exercisesTitle')}>
+    {onUpdateContext && (
+      <section className="library-conditions-card" data-testid="library-conditions-panel" aria-label={en ? 'My equipment and planning conditions' : '我的器材與排課條件'}>
+        <div className="library-conditions-head">
+          <div className="library-conditions-title-wrap">
+            <span className="library-conditions-title">
+              <SlidersHorizontal size={15} aria-hidden="true" />
+              {en ? 'My equipment & conditions' : '我的器材與排課條件'}
+            </span>
+            <span className="library-conditions-summary">{conditionSummary}</span>
+          </div>
+          <button
+            type="button"
+            data-testid="library-conditions-toggle"
+            aria-expanded={conditionsOpen}
+            onClick={() => setConditionsOpen(value => !value)}
+            className="library-conditions-toggle"
+          >
+            {conditionsOpen ? (en ? 'Hide' : '收合') : (en ? 'Edit' : '展開設定')}
+            <ChevronDown size={15} className={conditionsOpen ? 'is-open' : ''} aria-hidden="true" />
+          </button>
+        </div>
+
+        {conditionsOpen && (
+          <div className="library-conditions-body">
+            <div className="library-conditions-group">
+              <div className="library-conditions-label-row">
+                <span className="library-conditions-label">{en ? 'Available equipment (bodyweight always included)' : '可用器材（徒手動作預設可用，可複選）'}</span>
+                {selectedEquipment.length > 0 && (
+                  <button
+                    type="button"
+                    data-testid="library-equip-clear"
+                    className="library-conditions-clear"
+                    onClick={() => onUpdateContext(previous => ({ ...previous, equipment: [] }))}
+                  >
+                    {en ? 'Bodyweight only' : '改為僅徒手'}
+                  </button>
+                )}
+              </div>
+              <div className="library-condition-chips" role="group" aria-label={t('equipmentLabel')} data-testid="library-conditions-equipment">
+                {EQUIPMENT.map(item => {
+                  const active = selectedEquipment.includes(item);
+                  return (
+                    <button
+                      key={item}
+                      type="button"
+                      data-testid={`library-equip-${item}`}
+                      aria-pressed={active}
+                      onClick={() => toggleEquipment(item)}
+                      className={`library-condition-chip ${active ? 'is-active' : ''}`}
+                    >
+                      {active && <Check size={13} aria-hidden="true" />}
+                      {t(`equipment_${item}`)}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="library-conditions-group">
+              <span className="library-conditions-label">{en ? 'Partner & body restrictions' : '搭檔與身體限制'}</span>
+              <div className="library-condition-chips" data-testid="library-conditions-extra">
+                <button
+                  type="button"
+                  data-testid="library-partner-toggle"
+                  aria-pressed={!!planningContext.partnerAvailable}
+                  onClick={togglePartner}
+                  className={`library-condition-chip ${planningContext.partnerAvailable ? 'is-active' : ''}`}
+                >
+                  {planningContext.partnerAvailable && <Check size={13} aria-hidden="true" />}
+                  {en ? 'Partner available' : '有搭檔一起練'}
+                </button>
+                <button
+                  type="button"
+                  data-testid="library-health-unrestricted"
+                  aria-pressed={healthStatus === 'unrestricted'}
+                  onClick={() => setHealthStatus('unrestricted')}
+                  className={`library-condition-chip ${healthStatus === 'unrestricted' ? 'is-active' : ''}`}
+                >
+                  {healthStatus === 'unrestricted' && <Check size={13} aria-hidden="true" />}
+                  {en ? 'No movement limits' : '身體無動作限制'}
+                </button>
+                <button
+                  type="button"
+                  data-testid="library-health-restricted"
+                  aria-pressed={healthStatus === 'restricted'}
+                  onClick={() => setHealthStatus('restricted')}
+                  className={`library-condition-chip is-caution ${healthStatus === 'restricted' ? 'is-active' : ''}`}
+                >
+                  {healthStatus === 'restricted' && <Check size={13} aria-hidden="true" />}
+                  {en ? 'Pain / treatment limit' : '有疼痛／治療受限'}
+                </button>
+              </div>
+            </div>
+
+            <p className="library-conditions-hint">
+              {en
+                ? 'Checked items update availability below immediately and apply automatically when creating future plans.'
+                : '勾選後會即時更新下方可用動作，後續自動排課與手動排課都會直接依這裡的條件安排。'}
+            </p>
+          </div>
+        )}
+      </section>
+    )}
+
     <div className="library-toolbar">
       <div className="library-top-actions">
         <div className="library-top-left">
