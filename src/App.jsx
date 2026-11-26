@@ -32,6 +32,7 @@ import { readShareFromLocation } from './domain/sharing.js';
 import { readSharedPlanLocation } from './domain/sharedPlans.js';
 import { savedWorkoutDay } from './domain/savedWorkouts.js';
 import { clearManualDraft, createManualSession } from './domain/manualPlanner.js';
+import { dailyWarmupPrescriptions } from './domain/quickWorkouts.js';
 import { manualPlanningExercises } from './domain/templatePlanner.js';
 import { MAX_WEEKLY_CHOICES } from './domain/trainingPreferences.js';
 import { buildWeeklyChoiceReport, weeklyChoiceBlockReason } from './domain/weeklyChoices.js';
@@ -145,10 +146,15 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
   const readiness = readinessRecords.find(record => record.date === activeDate) || null;
   const defaultSchedule = DEFAULT_SCHEDULE_I18N[lang];
 
-  const [toast, setToast] = useState('');
+  const [toast, setToast] = useState(null);
   const toastTimer = useRef();
+  const toastSeq = useRef(0);
   useEffect(() => () => clearTimeout(toastTimer.current), []);
-  const showToast = useCallback(text => { clearTimeout(toastTimer.current); setToast(text); toastTimer.current = setTimeout(() => setToast(''), 3500); }, []);
+  const showToast = useCallback(text => {
+    clearTimeout(toastTimer.current);
+    setToast({ id: ++toastSeq.current, text });
+    toastTimer.current = setTimeout(() => setToast(null), 2600);
+  }, []);
 
   const completions = useCompletionQueue({
     confirmedProgress: data.progress,
@@ -391,6 +397,86 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
       setQuickSaving(false);
     }
   };
+  const todayDayNumber = new Date(`${today}T12:00:00`).getDay() || 7;
+  const todaySession = useMemo(() => {
+    if (nativeSessions[today]) return { ...nativeSessions[today], date: today };
+    if (hasCurrentPlan) {
+      const fromSchedule = schedule.find(day => day.date === today || day.day === todayDayNumber);
+      if (fromSchedule?.routine?.length) return { ...fromSchedule, date: today };
+    }
+    return createManualSession(today, lang);
+  }, [nativeSessions, hasCurrentPlan, schedule, today, todayDayNumber, lang]);
+  const todayRoutineIds = todaySession?.routine || EMPTY_ITEMS;
+  const todayRecordedIds = useMemo(
+    () => getRecordedExerciseIds(today, { progressByWeek: allProgress, logs: exerciseLogs }),
+    [today, allProgress, exerciseLogs],
+  );
+  const toggleTodayExerciseFromLibrary = async id => {
+    const exercise = exercises[id];
+    const name = exercise?.name || id;
+    if (!exercise || exercise.deleted || exercise.active === false) {
+      showToast(lang === 'zh' ? `「${name}」目前已停用，無法加入今日課表` : `"${name}" is disabled.`);
+      return false;
+    }
+    const inToday = todayRoutineIds.includes(id);
+    if (inToday) {
+      if (todayRecordedIds.has(id)) {
+        showToast(lang === 'zh' ? `「${name}」今天已有完成紀錄，無法直接移除` : `"${name}" already has a record today and cannot be removed.`);
+        return false;
+      }
+      try {
+        const next = quickRemoveExerciseFromDay(todaySession, id, { recordedIds: todayRecordedIds, exercises, lang });
+        return await quickSaveDay(today, next, lang === 'zh' ? `已從今日課表移除「${name}」` : `Removed "${name}" from today’s workout`);
+      } catch (error) {
+        const text = error?.message === 'AI_WARMUP_MISSING'
+          ? (lang === 'zh' ? '訓練日至少需保留 1 個暖身動作；建議先移除主訓練動作。' : 'A training day needs at least 1 warm-up movement.')
+          : t('toastSaveFail');
+        showToast(text);
+        return false;
+      }
+    }
+    if (!weeklyAvailable[id]) {
+      showToast(lang === 'zh' ? `目前器材或條件暫不允許加入「${name}」` : `"${name}" is not available under current conditions.`);
+      return false;
+    }
+    try {
+      let next;
+      let addedWarmup = false;
+      try {
+        next = quickAddExerciseToDay(todaySession, id, { exercises, eligibleExercises: weeklyAvailable, lang });
+      } catch (inner) {
+        if (inner?.message !== 'AI_WARMUP_MISSING') throw inner;
+        const warmupDoses = dailyWarmupPrescriptions('warmup').filter(dose => weeklyAvailable[dose.id]);
+        const fallbackWarmup = !warmupDoses.length
+          ? Object.entries(weeklyAvailable).find(([, ex]) => ex.category === 'warmup' && !ex.legacySequence)
+          : null;
+        const seedPrescriptions = warmupDoses.length
+          ? warmupDoses
+          : fallbackWarmup
+            ? [{ id: fallbackWarmup[0], ...fallbackWarmup[1].prescription, phase: 'warmup' }]
+            : [];
+        if (!seedPrescriptions.length) throw inner;
+        const seeded = {
+          ...todaySession,
+          sessionType: 'training',
+          routine: [...seedPrescriptions.map(dose => dose.id), ...(todaySession.routine || [])],
+          prescriptions: [...seedPrescriptions, ...(todaySession.prescriptions || [])],
+        };
+        next = quickAddExerciseToDay(seeded, id, { exercises, eligibleExercises: weeklyAvailable, lang });
+        addedWarmup = true;
+      }
+      const msg = addedWarmup
+        ? (lang === 'zh' ? `已加入今日課表「${name}」（同步附帶暖身）` : `Added "${name}" to today’s workout (with warm-up)`)
+        : (lang === 'zh' ? `已加入今日課表「${name}」` : `Added "${name}" to today’s workout`);
+      return await quickSaveDay(today, next, msg);
+    } catch (error) {
+      const text = error?.message === 'MANUAL_CAPACITY'
+        ? (lang === 'zh' ? '今日課表動作數已達上限。' : 'Today’s workout has reached its exercise limit.')
+        : t('toastSaveFail');
+      showToast(text);
+      return false;
+    }
+  };
   const openManual = (sessions, sourceItem = null, activeDateArg = null, options = {}) => {
     if (editing || savingPlan) return;
     dispatchNav({
@@ -566,7 +652,7 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
   const subnav = (items, value, change, label) => <div aria-label={label} role="group" className="segmented-control">{items.map(([id, key]) => <button key={id} type="button" aria-pressed={value === id} onClick={() => change(id)}>{t(key)}</button>)}</div>;
 
   return <div className={`app-shell ${activeTab === 'plan' ? 'planner-scope' : ''} ${activeTab === 'plan' && (['manual', 'assign'].includes(planScreen) || periodCreating) ? 'planner-immersive' : ''}`}>
-    {toast && <div role="status" className="pointer-events-none fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-white border border-sky-200 shadow-xl rounded-xl px-5 py-3 flex gap-2 text-sm max-w-[90vw]"><Info size={18} className="shrink-0 text-sky-600" />{toast}</div>}
+    {toast && <div key={toast.id} role="status" className="app-toast-fade pointer-events-none fixed top-[66px] left-1/2 z-[60] w-max max-w-[calc(100vw-32px)] bg-white border border-sky-200 shadow-lg rounded-xl px-4 py-2.5 flex items-center gap-2 text-sm font-medium text-slate-800"><Info size={17} className="shrink-0 text-sky-600" /><span>{toast.text}</span></div>}
     <aside className="app-sidebar">
       <header className="app-brand">
         <h1 className="brand-lockup"><span className="brand-mark"><Feather size={20} /></span>{t('appTitle')}</h1>
@@ -639,7 +725,7 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
       <Suspense fallback={<div role="status" className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>}>
         {activeTab === 'library' && (libraryView === 'saved'
           ? <SavedWorkouts onEdit={item => openManual([{ ...savedWorkoutDay(item, lang), date: today }], item)} store={workoutStore} exercises={exercises} lang={lang} onUse={useWorkout} onShare={item => shareDays(savedWorkoutDay(item, lang), item.name)} />
-          : <ExerciseLibrary weeklyExerciseIds={planningContext.weeklyExerciseIds} weeklyAvailable={weeklyAvailable} planningContext={planningContext} onUpdateContext={updatePlanningConditions} onToggleWeekly={toggleWeeklyChoice} t={periodQuestionnaireText(lang, t)} lang={lang} canManage={!!user} onOrganize={organizeExercise} onSignIn={() => navigate('settings')} exercises={exercises} createScope={user ? 'account' : 'device'} adding={adding} onAdd={addExercise} onToggle={toggleActive} onDelete={deleteExercise} busy={busy} />)}
+          : <ExerciseLibrary todayExerciseIds={todayRoutineIds} todayRecordedIds={todayRecordedIds} onToggleTodayExercise={toggleTodayExerciseFromLibrary} quickSaving={quickSaving} weeklyAvailable={weeklyAvailable} planningContext={planningContext} onUpdateContext={updatePlanningConditions} t={periodQuestionnaireText(lang, t)} lang={lang} canManage={!!user} onOrganize={organizeExercise} onSignIn={() => navigate('settings')} exercises={exercises} createScope={user ? 'account' : 'device'} adding={adding} onAdd={addExercise} onToggle={toggleActive} onDelete={deleteExercise} busy={busy} />)}
         {activeTab === 'records' && <div className="max-w-3xl"><div className="screen-header"><p className="eyebrow">{t('recordsEyebrow')}</p><h2 className="screen-title">{t('navRecords')}</h2></div>{subnav([['training', 'trainingRecordsTab'], ['body', 'bodyRecordsTab']], recordsView, view => dispatchNav({ type: 'SET_RECORDS_VIEW', view }), t('navRecords'))}
           {recordsView === 'body' ? (!user ? login : <Metrics t={t} form={metricForm} onChange={changeMetric} onSave={saveMetrics} history={data.metrics} saving={busy} hasMore={data.metrics.length >= metricLimit} onLoadMore={() => setMetricLimit(previous => previous + 365)} />)
             : !user && !publicDraft && !localPeriod ? login : stats && <History t={t} lang={lang} exportUid={user?.uid} publicDraft={localPeriod ? { ...publicDraft, periodDraft: localPeriod, logs: localPeriod.logs } : publicDraft} exportProgress={allProgress} exportDisabled={coachingBusy || busy || savingPlan || generating || editing || !!pendingDraft || (!!user && (!trainingData.loaded || !data.loaded.progress || !data.loaded.exercises))} previewOnly={!user} exercises={exercises} stats={stats} months={months} weeks={heatmapWeeks} logs={exerciseLogs} onUpdateNextDay={recordNextDay} loggingBusy={coachingBusy || busy || savingPlan || generating || editing || !!pendingDraft || (!!user && !trainingData.loaded)} today={today} hasMore={data.hasMoreProgress} onLoadMore={() => setWeekLimit(previous => previous + 104)} />}

@@ -235,3 +235,15 @@ form[data-guided="true"] .setup-actions { position: sticky; bottom: calc(82px + 
   .preview-actions button { min-width: 0; }
   .preview-actions button svg { display: none; }
 }
+
+@keyframes appToastFade {
+  0% { opacity: 0; transform: translate(-50%, -8px); }
+  10% { opacity: 1; transform: translate(-50%, 0); }
+  76% { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, -6px); }
+}
+
+.app-toast-fade {
+  transform: translate(-50%, 0);
+  animation: appToastFade 2.6s ease forwards;
+}

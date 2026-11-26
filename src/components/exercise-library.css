@@ -472,6 +472,12 @@
   color: #92400e;
 }
 
+.library-meta-badge.is-today {
+  background: var(--brand-tint);
+  color: var(--brand-primary);
+  border: 1px solid var(--brand-soft-border);
+}
+
 .library-meta-badge.is-fav {
   background: #fffbeb;
   color: #b45309;
@@ -509,10 +515,16 @@
   cursor: default;
 }
 
-.library-icon-btn.is-weekly[aria-pressed="true"] {
+.library-icon-btn.is-today[aria-pressed="true"] {
   background: var(--brand-soft);
   border-color: var(--brand-soft-border);
   color: var(--brand-primary);
+}
+
+.library-icon-btn.is-today[aria-pressed="true"]:hover:not(:disabled) {
+  background: #fee2e2;
+  border-color: #fecaca;
+  color: #b91c1c;
 }
 
 .library-icon-btn.is-fav-active {

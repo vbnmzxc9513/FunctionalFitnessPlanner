@@ -1,4 +1,4 @@
-import { Check, ChevronDown, ChevronRight, Loader2, Plus, Search, SlidersHorizontal, Star, Trash2 } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, Loader2, Minus, Plus, Search, SlidersHorizontal, Star, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { EQUIPMENT, EXERCISE_CATEGORIES } from '../domain/exerciseCatalog.js';
 import { LIBRARY_EQUIPMENT_FILTERS, LIBRARY_PURPOSES, libraryGroups, matchesEquipmentFilter, matchesLibraryPurpose, suggestedUses } from '../domain/library.js';
@@ -8,10 +8,9 @@ import ExerciseGuide from './ExerciseGuide.jsx';
 import ExerciseTags, { BodyPartFilter } from './ExerciseTags.jsx';
 import { exerciseBodyParts, matchesBodyPart, matchesExerciseQuery } from '../domain/exerciseTags.js';
 import { weeklyChoiceBlockReason } from '../domain/weeklyChoices.js';
-import { MAX_WEEKLY_CHOICES } from '../domain/trainingPreferences.js';
 import './exercise-library.css';
 
-export default function ExerciseLibrary({ t, exercises, adding, onAdd, createScope = 'device', onToggle, onDelete, busy, canManage = true, lang = 'zh', onOrganize, onSignIn, weeklyExerciseIds = [], weeklyAvailable = {}, planningContext = {}, onUpdateContext, onToggleWeekly }) {
+export default function ExerciseLibrary({ t, exercises, adding, onAdd, createScope = 'device', onToggle, onDelete, busy, canManage = true, lang = 'zh', onOrganize, onSignIn, todayExerciseIds = [], todayRecordedIds, onToggleTodayExercise, quickSaving = false, weeklyAvailable = {}, planningContext = {}, onUpdateContext }) {
   const [creating, setCreating] = useState(false);
   const [conditionsOpen, setConditionsOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -25,6 +24,7 @@ export default function ExerciseLibrary({ t, exercises, adding, onAdd, createSco
   const [managing, setManaging] = useState(false);
   const [expandedIds, setExpandedIds] = useState({});
   const [pendingId, setPendingId] = useState(null);
+  const [pendingTodayId, setPendingTodayId] = useState(null);
   const [organizeError, setOrganizeError] = useState('');
   const en = lang === 'en';
   const text = LIBRARY_TEXT[en ? 'en' : 'zh'];
@@ -48,10 +48,17 @@ export default function ExerciseLibrary({ t, exercises, adding, onAdd, createSco
   const entries = Object.entries(exercises).filter(([id, exercise]) => matchesLibraryPurpose(id, exercise, purpose, scope)
     && (!category || exercise.category === category) && matchesBodyPart(id, exercise, bodyPart)
     && matchesEquipmentFilter(exercise, equipmentFilter)
-    && (!onlyEligible || !onToggleWeekly || id.startsWith('custom_') || !weeklyChoiceBlockReason(id, exercises, planningContext, weeklyAvailable))
+    && (!onlyEligible || id.startsWith('custom_') || !weeklyChoiceBlockReason(id, exercises, planningContext, weeklyAvailable))
     && matchesExerciseQuery(id, exercise, query, lang)).sort(([, left], [, right]) => Number(left.active === false) - Number(right.active === false));
 
   const toggleExpand = id => setExpandedIds(previous => ({ ...previous, [id]: !previous[id] }));
+
+  async function toggleToday(id) {
+    if (!onToggleTodayExercise || quickSaving || pendingTodayId || busy) return;
+    setPendingTodayId(id);
+    try { await onToggleTodayExercise(id); }
+    finally { setPendingTodayId(null); }
+  }
 
   async function organize(id, groups, { expandOnAdd = false } = {}) {
     if (!canManage) { onSignIn?.(); return; }
@@ -239,13 +246,13 @@ export default function ExerciseLibrary({ t, exercises, adding, onAdd, createSco
             {LIBRARY_EQUIPMENT_FILTERS.slice(1).map(key => <option key={key} value={key}>{t(`equipment_${key}`)}</option>)}
           </select>
         </label>
-        {onToggleWeekly && <button
+        <button
           type="button"
           data-testid="library-only-eligible"
           aria-pressed={onlyEligible}
           onClick={() => { setOnlyEligible(value => !value); setVisibleCount(20); }}
           className="library-eligible-toggle"
-        >{en ? 'Eligible only' : '只看目前可做'}</button>}
+        >{en ? 'Eligible only' : '只看目前可做'}</button>
         <details className="library-more-filters">
           <summary>{text.moreFilters}{category && ` · ${t(`category_${category}`)}`}</summary>
           <select aria-label={t('filterCategory')} value={category} onChange={event => { setCategory(event.target.value); setVisibleCount(20); }} className="mt-2 max-w-full rounded-lg border border-sky-200 bg-white p-2 text-sm">
@@ -258,18 +265,22 @@ export default function ExerciseLibrary({ t, exercises, adding, onAdd, createSco
 
     <div className="library-count-bar">
       <span aria-live="polite">{text.count(entries.length)}</span>
-      <span>{en ? 'Tap arrow for details' : '點右側箭頭查看詳細說明'}</span>
+      <span>{en ? 'Tap + for today · arrow for details' : '點 ＋ 加入今日課表 · 箭頭看詳情'}</span>
     </div>
     {organizeError && <p role="alert" className="text-sm text-red-600 m-0">{organizeError}</p>}
 
     <div className="library-grid">{entries.slice(0, visibleCount).map(([id, exercise]) => {
       const groups = libraryGroups(exercise);
-      const selectedThisWeek = weeklyExerciseIds.includes(id);
+      const inToday = todayExerciseIds.includes(id);
+      const recordedToday = !!todayRecordedIds?.has?.(id);
       const weeklyBlock = weeklyChoiceBlockReason(id, exercises, planningContext, weeklyAvailable);
       const isExpanded = !!expandedIds[id];
       const isCustom = id.startsWith('custom_');
       const favLabel = !canManage ? text.favoriteLogin : groups.length ? text.removeFavorite : text.favorite;
-      const weeklyLabel = t(selectedThisWeek ? 'choiceRemove' : 'choiceSelect');
+      const todayLabel = inToday
+        ? (en ? 'Remove from today’s workout' : '從今日課表移除')
+        : (en ? 'Add to today’s workout' : '加入今日課表');
+      const canAddToday = !!weeklyAvailable[id] && !exercise.legacySequence;
 
       return <article key={id} data-testid={`library-exercise-${id}`} data-expanded={isExpanded} data-inactive={exercise.active === false} className="library-card">
         <div className="library-row-head">
@@ -288,8 +299,9 @@ export default function ExerciseLibrary({ t, exercises, adding, onAdd, createSco
             </span>
             <span className="library-row-meta">
               <span className="library-meta-cat">{exercise.category ? t(`category_${exercise.category}`) : t(`type_${exercise.type}`)}</span>
+              {inToday && <span className="library-meta-badge is-today">{en ? 'In today' : '今日課表'}</span>}
               {groups.length > 0 && <span className="library-meta-badge is-fav">{`${text.currentGroups}：${groups.map(group => text[group]).join(' · ')}`}</span>}
-              {!isExpanded && onToggleWeekly && weeklyBlock && !isCustom && <span className="library-meta-badge is-amber">{en ? 'Restricted' : '條件限制'}</span>}
+              {!isExpanded && weeklyBlock && !isCustom && <span className="library-meta-badge is-amber">{en ? 'Restricted' : '條件限制'}</span>}
             </span>
           </button>
 
@@ -298,18 +310,18 @@ export default function ExerciseLibrary({ t, exercises, adding, onAdd, createSco
               <button type="button" disabled={busy} role="switch" aria-checked={exercise.active !== false} aria-label={exercise.name} onClick={() => onToggle(id)} className={`w-12 h-6 rounded-full relative shrink-0 ${exercise.active === false ? 'bg-slate-200' : 'bg-sky-500'}`}><span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${exercise.active === false ? '' : 'translate-x-6'}`} /></button>
               <button type="button" disabled={busy} aria-label={`${t('removeExercise')} ${exercise.name}`} onClick={() => onDelete(id)} className="library-icon-btn text-red-500"><Trash2 size={17} /></button>
             </> : <>
-              {onToggleWeekly && !isCustom && <button
+              {onToggleTodayExercise && !exercise.legacySequence && <button
                 type="button"
-                data-testid={`library-weekly-${id}`}
-                aria-pressed={selectedThisWeek}
-                aria-label={`${weeklyLabel} ${exercise.name}`}
-                title={weeklyLabel}
-                disabled={busy || (!selectedThisWeek && (!!weeklyBlock || weeklyExerciseIds.length >= MAX_WEEKLY_CHOICES))}
-                onClick={() => onToggleWeekly(id)}
-                className="library-icon-btn is-weekly"
+                data-testid={`library-today-${id}`}
+                aria-pressed={inToday}
+                aria-label={`${todayLabel} ${exercise.name}`}
+                title={recordedToday ? (en ? 'Already recorded today' : '今天已有完成紀錄') : todayLabel}
+                disabled={busy || quickSaving || !!pendingTodayId || (!inToday && !canAddToday)}
+                onClick={() => toggleToday(id)}
+                className="library-icon-btn is-today"
               >
-                {selectedThisWeek ? <Check size={17} /> : <Plus size={17} />}
-                <span className="sr-only">{weeklyLabel}</span>
+                {pendingTodayId === id ? <Loader2 size={16} className="animate-spin" /> : inToday ? <Minus size={17} /> : <Plus size={17} />}
+                <span className="sr-only">{todayLabel}</span>
               </button>}
               {(canManage || !isCustom) && <button
                 type="button"
@@ -341,7 +353,7 @@ export default function ExerciseLibrary({ t, exercises, adding, onAdd, createSco
         {isExpanded && <div id={`library-detail-${id}`} className="library-row-detail" data-testid={`library-detail-${id}`}>
           <ExerciseTags id={id} exercise={exercise} lang={lang} />
 
-          {onToggleWeekly && weeklyBlock && !isCustom && <p className="library-detail-notice is-block">{t(`choice_reason_${weeklyBlock}`)}</p>}
+          {weeklyBlock && !isCustom && <p className="library-detail-notice is-block">{t(`choice_reason_${weeklyBlock}`)}</p>}
           {isCustom && <div className="library-detail-footer">
             <p className="library-detail-notice flex-1">{en ? 'Custom · available in manual planning' : '自訂動作 · 可手動加入課表'}</p>
             {!canManage && <button type="button" className="library-custom-delete" onClick={() => onDelete(id)}>{en ? 'Delete my exercise' : '刪除自訂動作'}</button>}
