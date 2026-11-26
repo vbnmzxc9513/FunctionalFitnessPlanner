@@ -1,0 +1,474 @@
+.records-dashboard {
+  display: grid;
+  gap: 1rem;
+}
+
+.records-dashboard-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+
+.records-dashboard-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--ink-strong);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.records-range-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.2rem;
+  border-radius: 0.85rem;
+  border: 1px solid var(--brand-soft-border);
+  background: var(--surface-card);
+}
+
+.records-range-switch button {
+  min-height: 2.15rem;
+  padding: 0.3rem 0.7rem;
+  border: 0;
+  border-radius: 0.65rem;
+  background: transparent;
+  color: var(--ink-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.records-range-switch button[aria-pressed='true'] {
+  background: var(--brand-primary);
+  color: #ffffff;
+}
+
+.records-range-switch button:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.records-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin: 0;
+}
+
+.records-kpi-card {
+  background: var(--surface-card);
+  border: 1px solid var(--brand-soft-border);
+  border-radius: 1rem;
+  padding: 0.8rem 0.65rem;
+  display: grid;
+  gap: 0.25rem;
+  text-align: center;
+  align-content: start;
+}
+
+.records-kpi-card.is-highlight {
+  background: linear-gradient(180deg, var(--brand-tint) 0%, var(--surface-card) 100%);
+}
+
+.records-kpi-card dt {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--ink-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.records-kpi-card dd {
+  margin: 0;
+  font-size: 1.45rem;
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--ink-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.records-kpi-card.is-highlight dd {
+  color: var(--brand-primary);
+}
+
+.records-kpi-unit {
+  font-size: 0.74rem;
+  font-weight: 500;
+  color: var(--ink-muted);
+  margin-left: 0.15rem;
+}
+
+.records-kpi-sub {
+  font-size: 0.7rem;
+  color: var(--ink-muted);
+  line-height: 1.25;
+}
+
+.records-kpi-delta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0.05rem auto 0;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  background: var(--brand-soft);
+  color: var(--brand-primary);
+}
+
+.records-kpi-delta.is-down {
+  background: #f1f5f9;
+  color: var(--ink-secondary);
+}
+
+.records-card {
+  background: var(--surface-card);
+  border: 1px solid var(--brand-soft-border);
+  border-radius: 1.1rem;
+  padding: 1rem;
+  display: grid;
+  gap: 0.8rem;
+}
+
+.records-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.35rem 0.75rem;
+}
+
+.records-card-head h3 {
+  margin: 0;
+  font-size: 0.94rem;
+  font-weight: 700;
+  color: var(--ink-strong);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.records-card-meta {
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+  font-weight: 500;
+}
+
+.records-card-meta.is-accent {
+  color: var(--brand-primary);
+  font-weight: 600;
+}
+
+.records-radar-wrap {
+  width: 100%;
+  max-width: 300px;
+  margin: 0 auto;
+}
+
+.records-radar-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+
+.records-tip-banner {
+  margin: 0;
+  border-radius: 0.8rem;
+  background: var(--brand-tint);
+  border: 1px solid var(--brand-soft-border);
+  padding: 0.6rem 0.8rem;
+  font-size: 0.78rem;
+  color: var(--brand-primary);
+  line-height: 1.5;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+}
+
+.records-tip-banner svg {
+  flex: none;
+  margin-top: 0.12rem;
+}
+
+/* Shared anatomical muscle map layout (self-contained for lazy-loaded Records chunk) */
+.records-card .muscle-map-stage {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  align-items: center;
+  justify-items: center;
+  padding: 0.25rem 0;
+}
+
+.records-card .muscle-figure-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  width: 100%;
+}
+
+.records-card .muscle-figure-caption {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+
+.records-card .muscle-figure-svg {
+  width: 100%;
+  max-width: 124px;
+  height: auto;
+  display: block;
+}
+
+.records-card .muscle-region {
+  cursor: pointer;
+  transition: fill 0.15s ease, stroke 0.15s ease, opacity 0.15s ease;
+}
+
+.records-card .muscle-region:hover {
+  opacity: 0.86;
+}
+
+.records-card .muscle-region:focus-visible {
+  outline: none;
+  stroke: #0c4a6e;
+  stroke-width: 2.5;
+}
+
+.records-card .muscle-map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+  font-size: 0.72rem;
+  color: var(--ink-muted);
+}
+
+.records-card .muscle-map-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+}
+
+.records-card .muscle-map-legend i {
+  display: inline-block;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 3px;
+}
+
+.records-card .muscle-detail-bar {
+  background: var(--brand-tint);
+  border: 1px solid var(--brand-soft-border);
+  border-radius: 0.8rem;
+  padding: 0.65rem 0.8rem;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.records-card .muscle-detail-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.records-card .muscle-detail-head strong {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--ink-strong);
+}
+
+.records-card .muscle-detail-count {
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+
+.records-card .muscle-detail-count.is-active {
+  color: var(--brand-primary);
+  font-weight: 600;
+}
+
+.records-card .muscle-detail-moves {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--ink-secondary);
+  line-height: 1.45;
+}
+
+.records-card .muscle-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.38rem;
+}
+
+.records-card .muscle-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 1.9rem;
+  padding: 0.22rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-card);
+  color: var(--ink-muted);
+  font-size: 0.74rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.records-card .muscle-chip b {
+  font-weight: 700;
+}
+
+.records-card .muscle-chip.has-load {
+  border-color: var(--brand-soft-border);
+  background: var(--brand-tint);
+  color: var(--brand-primary);
+}
+
+.records-card .muscle-chip.is-selected {
+  border-color: var(--brand-primary);
+  background: var(--brand-primary);
+  color: #ffffff;
+}
+
+/* Weekly Combo Bar + Line Chart */
+.records-weekly-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.records-weekly-bar {
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.records-weekly-bar:hover {
+  opacity: 0.85;
+}
+
+.records-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  font-size: 0.73rem;
+  color: var(--ink-muted);
+}
+
+.records-chart-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.records-legend-bar {
+  display: inline-block;
+  width: 0.68rem;
+  height: 0.68rem;
+  border-radius: 3px;
+  background: #7dd3fc;
+}
+
+.records-legend-dot {
+  display: inline-block;
+  width: 0.68rem;
+  height: 0.68rem;
+  border-radius: 999px;
+  border: 2px solid #0369a1;
+  background: #ffffff;
+}
+
+/* Monthly Donut Progress Rings */
+.records-monthly-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.records-month-card {
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-subtle, #f8fafc);
+  border-radius: 0.9rem;
+  padding: 0.65rem 0.55rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.records-month-ring {
+  width: 2.85rem;
+  height: 2.85rem;
+  flex: none;
+}
+
+.records-month-info {
+  min-width: 0;
+  display: grid;
+  gap: 0.12rem;
+}
+
+.records-month-info strong {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--ink-strong);
+  line-height: 1.25;
+}
+
+.records-month-info span {
+  font-size: 0.7rem;
+  color: var(--ink-muted);
+}
+
+.records-scope-note {
+  margin: 0;
+  font-size: 0.74rem;
+  color: var(--ink-muted);
+  line-height: 1.45;
+}
+
+.records-load-more {
+  justify-self: start;
+  min-height: var(--touch-min);
+  padding: 0.45rem 0.95rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--brand-soft-border);
+  background: var(--surface-card);
+  color: var(--brand-primary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (max-width: 350px) {
+  .records-kpi-grid {
+    gap: 0.4rem;
+  }
+
+  .records-kpi-card {
+    padding: 0.65rem 0.35rem;
+  }
+
+  .records-kpi-card dd {
+    font-size: 1.2rem;
+  }
+
+  .records-monthly-grid {
+    grid-template-columns: 1fr;
+  }
+}
