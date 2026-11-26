@@ -5,13 +5,13 @@ import { estimateSessionMinutes } from './sessions.js';
 export { estimateSessionMinutes } from './sessions.js';
 import { SESSION_PHASES, SESSION_TYPES } from './phases.js';
 import { isCalendarDate } from './dates.js';
-import { eligibleExercises, validSequenceDose } from './exerciseCatalog.js';
+import { EQUIPMENT, eligibleExercises, validSequenceDose } from './exerciseCatalog.js';
 
 export const MAX_DAILY_REQUIRED = 4;
 
 export const DEFAULT_PLANNING_CONTEXT = {
   trainingDays: [1, 2, 3, 4, 5], badmintonDays: [], badmintonMinutes: '', badmintonIntensity: 'unknown',
-  equipment: [], partnerAvailable: false, experience: 'beginner',
+  equipment: [...EQUIPMENT], partnerAvailable: false, experience: 'beginner',
   targetRegions: [], stiffnessRegions: [], sorenessRegions: [], weeklyExerciseIds: [],
   dailyRequiredWarmup: true, dailyRequiredExerciseIds: [],
   warmupFamiliar: false, recoveryState: 'unknown', sorenessImpact: 'unknown', competitionDate: '', healthStatus: 'unrestricted', healthNotes: '', recoveryNotes: '',

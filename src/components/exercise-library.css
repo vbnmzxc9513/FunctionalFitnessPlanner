@@ -96,6 +96,12 @@
   color: var(--ink-secondary);
 }
 
+.library-conditions-quick-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .library-conditions-clear {
   border: 0;
   background: transparent;

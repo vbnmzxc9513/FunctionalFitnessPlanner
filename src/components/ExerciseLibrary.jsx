@@ -13,7 +13,7 @@ import './exercise-library.css';
 
 export default function ExerciseLibrary({ t, exercises, adding, onAdd, createScope = 'device', onToggle, onDelete, busy, canManage = true, lang = 'zh', onOrganize, onSignIn, weeklyExerciseIds = [], weeklyAvailable = {}, planningContext = {}, onUpdateContext, onToggleWeekly }) {
   const [creating, setCreating] = useState(false);
-  const [conditionsOpen, setConditionsOpen] = useState(true);
+  const [conditionsOpen, setConditionsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('');
   const [bodyPart, setBodyPart] = useState('all');
@@ -31,6 +31,7 @@ export default function ExerciseLibrary({ t, exercises, adding, onAdd, createSco
   const showManagement = canManage && managing;
   const organizing = !!pendingId || busy;
   const selectedEquipment = Array.isArray(planningContext.equipment) ? planningContext.equipment : [];
+  const allEquipmentSelected = EQUIPMENT.every(item => selectedEquipment.includes(item));
   const healthStatus = planningContext.healthStatus || 'unrestricted';
   const toggleEquipment = item => onUpdateContext?.(previous => {
     const current = Array.isArray(previous.equipment) ? previous.equipment : [];
@@ -67,9 +68,11 @@ export default function ExerciseLibrary({ t, exercises, adding, onAdd, createSco
   }
 
   const conditionSummary = [
-    selectedEquipment.length
-      ? (en ? `${selectedEquipment.length} equipment` : `已選 ${selectedEquipment.length} 項器材`)
-      : (en ? 'Bodyweight only' : '僅徒手'),
+    allEquipmentSelected
+      ? (en ? 'All equipment enabled' : '全部器材已啟用')
+      : selectedEquipment.length
+        ? (en ? `${selectedEquipment.length} equipment` : `已選 ${selectedEquipment.length} 項器材`)
+        : (en ? 'Bodyweight only' : '僅徒手'),
     planningContext.partnerAvailable ? (en ? 'Partner' : '有搭檔') : null,
     healthStatus === 'restricted'
       ? (en ? 'Restricted' : '有疼痛／治療受限')
@@ -106,16 +109,28 @@ export default function ExerciseLibrary({ t, exercises, adding, onAdd, createSco
             <div className="library-conditions-group">
               <div className="library-conditions-label-row">
                 <span className="library-conditions-label">{en ? 'Available equipment (bodyweight always included)' : '可用器材（徒手動作預設可用，可複選）'}</span>
-                {selectedEquipment.length > 0 && (
-                  <button
-                    type="button"
-                    data-testid="library-equip-clear"
-                    className="library-conditions-clear"
-                    onClick={() => onUpdateContext(previous => ({ ...previous, equipment: [] }))}
-                  >
-                    {en ? 'Bodyweight only' : '改為僅徒手'}
-                  </button>
-                )}
+                <div className="library-conditions-quick-actions">
+                  {!allEquipmentSelected && (
+                    <button
+                      type="button"
+                      data-testid="library-equip-all"
+                      className="library-conditions-clear"
+                      onClick={() => onUpdateContext(previous => ({ ...previous, equipment: [...EQUIPMENT] }))}
+                    >
+                      {en ? 'Select all' : '全部啟用'}
+                    </button>
+                  )}
+                  {selectedEquipment.length > 0 && (
+                    <button
+                      type="button"
+                      data-testid="library-equip-clear"
+                      className="library-conditions-clear"
+                      onClick={() => onUpdateContext(previous => ({ ...previous, equipment: [] }))}
+                    >
+                      {en ? 'Bodyweight only' : '改為僅徒手'}
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="library-condition-chips" role="group" aria-label={t('equipmentLabel')} data-testid="library-conditions-equipment">
                 {EQUIPMENT.map(item => {
