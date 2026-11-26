@@ -13,39 +13,39 @@
 .period-preview-issues h3 { font-weight: 700; }
 .period-agenda-week + .period-agenda-week { margin-top: 18px; }
 .period-agenda-card { border: 1px solid var(--border-subtle, #e2e8f0); background: var(--surface-card, #fff); border-radius: 18px; overflow: hidden; }
-.period-agenda-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 14px 16px 10px; border-bottom: 1px solid var(--border-subtle, #e2e8f0); }
-.period-agenda-card-head h3 { margin: 0; font-size: 16px; font-weight: 750; color: var(--ink-strong, #0f172a); }
-.period-agenda-summary { font-size: 12px; font-weight: 600; color: var(--ink-muted, #64748b); }
+.period-agenda-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 13px 16px 10px; border-bottom: 1px solid var(--border-subtle, #e2e8f0); }
+.period-agenda-card-head h3 { margin: 0; font-size: 15px; font-weight: 600; color: var(--ink-strong, #0f172a); }
+.period-agenda-summary { font-size: 12px; font-weight: 500; color: var(--ink-muted, #64748b); }
 .period-agenda-rows { display: flex; flex-direction: column; }
-.period-agenda-row { width: 100%; display: grid; grid-template-columns: 46px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 11px 14px; min-height: 68px; text-align: left; background: transparent; transition: background-color .15s ease; }
+.period-agenda-row { width: 100%; display: grid; grid-template-columns: 46px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 11px 14px; min-height: 66px; text-align: left; background: transparent; transition: background-color .15s ease; }
 .period-agenda-row + .period-agenda-row { border-top: 1px solid var(--border-subtle, #e2e8f0); }
 .period-agenda-row:hover { background: var(--surface-page, #f8fafc); }
 .period-agenda-row.is-today { background: var(--brand-tint, #f0f9ff); }
 .period-agenda-row.is-today:hover { background: var(--brand-soft, #e0f2fe); }
 .period-agenda-row:focus-visible { outline: 2px solid var(--brand-accent, #0284c7); outline-offset: -2px; }
 .period-agenda-date-badge { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 46px; height: 46px; border-radius: 12px; background: var(--surface-subtle, #f1f5f9); color: var(--ink-strong, #0f172a); line-height: 1.15; flex: none; }
-.period-agenda-date-badge strong { font-size: 16px; font-weight: 750; }
-.period-agenda-date-badge span { font-size: 10.5px; font-weight: 600; color: var(--ink-muted, #64748b); margin-top: 1px; }
+.period-agenda-date-badge strong { font-size: 15px; font-weight: 600; }
+.period-agenda-date-badge span { font-size: 10.5px; font-weight: 500; color: var(--ink-muted, #64748b); margin-top: 1px; }
 .period-agenda-date-badge.is-today { background: var(--brand-primary, #0369a1); color: #fff; }
 .period-agenda-date-badge.is-today span { color: #e0f2fe; }
 .period-agenda-date-badge.is-empty { background: var(--surface-page, #f8fafc); color: var(--ink-muted, #64748b); border: 1px solid var(--border-subtle, #e2e8f0); }
 .period-agenda-content { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-.period-agenda-content > strong { font-size: 14.5px; line-height: 1.35; font-weight: 700; color: var(--ink-strong, #0f172a); overflow-wrap: anywhere; }
-.period-agenda-row.is-empty .period-agenda-content > strong { font-weight: 550; color: var(--ink-muted, #64748b); }
+.period-agenda-content > strong { font-size: 14.5px; line-height: 1.35; font-weight: 600; color: var(--ink-strong, #0f172a); overflow-wrap: anywhere; }
+.period-agenda-row.is-empty .period-agenda-content > strong { font-weight: 400; color: var(--ink-muted, #64748b); }
 .period-agenda-pills { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
-.period-agenda-pill { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; border-radius: 6px; font-size: 11px; font-weight: 650; background: var(--surface-subtle, #f1f5f9); color: var(--ink-secondary, #475569); line-height: 1.4; }
+.period-agenda-pill { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; border-radius: 6px; font-size: 11px; font-weight: 500; background: var(--surface-subtle, #f1f5f9); color: var(--ink-secondary, #475569); line-height: 1.4; }
 .period-agenda-pill.is-today { background: var(--brand-primary, #0369a1); color: #fff; }
 .period-agenda-pill.is-done { background: #dcfce7; color: #166534; }
 .period-agenda-pill.is-event { background: #fef3c7; color: #92400e; }
 .period-agenda-counts { font-size: 11.5px; color: var(--ink-muted, #64748b); }
 .period-agenda-trailing { display: inline-flex; align-items: center; gap: 4px; flex: none; }
-.period-agenda-minutes { color: var(--ink-secondary, #475569); font-size: 13px; font-weight: 650; white-space: nowrap; }
-.period-agenda-row.is-today .period-agenda-minutes { color: var(--brand-primary, #0369a1); }
+.period-agenda-minutes { color: var(--ink-secondary, #475569); font-size: 13px; font-weight: 500; white-space: nowrap; }
+.period-agenda-row.is-today .period-agenda-minutes { color: var(--brand-primary, #0369a1); font-weight: 600; }
 .period-agenda-chevron { color: var(--ink-muted, #94a3b8); }
-.period-agenda-plan-pill { display: inline-flex; align-items: center; gap: 3px; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--brand-soft-border, #bae6fd); background: var(--surface-card, #fff); color: var(--brand-primary, #0369a1); font-size: 12px; font-weight: 650; white-space: nowrap; }
-.period-plan-extras { display: grid; gap: 10px; margin-top: 16px; }
+.period-agenda-plan-pill { display: inline-flex; align-items: center; gap: 3px; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--brand-soft-border, #bae6fd); background: var(--surface-card, #fff); color: var(--brand-primary, #0369a1); font-size: 12px; font-weight: 500; white-space: nowrap; }
+.period-plan-extras { display: grid; gap: 10px; margin-top: 14px; }
 .period-secondary { border: 1px solid var(--border-subtle, #e2e8f0); border-radius: 14px; background: var(--surface-card, #fff); padding: 0 16px; }
-.period-secondary > summary { min-height: 48px; padding: 13px 0; cursor: pointer; font-size: 13.5px; font-weight: 650; color: var(--ink-secondary, #475569); }
+.period-secondary > summary { min-height: 48px; padding: 13px 0; cursor: pointer; font-size: 14px; font-weight: 500; color: var(--ink-strong, #0f172a); }
 .period-secondary-content { display: grid; gap: 18px; padding: 3px 0 18px; }
 .period-readonly-hint { color: #718297; font-size: 12px; line-height: 1.8; margin-top: 22px; }
 .period-preview-actions { margin-top: 22px; }

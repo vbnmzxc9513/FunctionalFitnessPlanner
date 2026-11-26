@@ -96,4 +96,7 @@ test('buildPeriodAnalytics generates daily rhythm, 7 badminton pillars, and 8 mo
   const pullPillar = analytics.patternDistribution.find(item => item.key === 'pull');
   assert.equal(squatPillar.targeted, true);
   assert.equal(pullPillar.targeted, true);
+  assert.equal(analytics.muscleCoverage.length, 9);
+  assert.ok(analytics.totals.coveredMuscleGroups >= 3);
+  assert.ok(analytics.muscleCoverage.some(item => item.days > 0 && item.exercises.length > 0));
 });

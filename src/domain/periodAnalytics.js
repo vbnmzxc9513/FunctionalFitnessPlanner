@@ -5,16 +5,29 @@ import { classifyBalanceExercise } from './weeklyBalance.js';
 import { enumeratePeriodDates } from './periodPlanning.js';
 import { normalizePlanningContext } from './planning.js';
 import { matchesTrainingTarget } from './trainingTargets.js';
+import { exerciseBodyParts } from './exerciseTags.js';
 
 const DAY_MS = 86400000;
 
+export const MUSCLE_MAP_GROUPS = [
+  { key: 'shoulder', zh: '肩／肩胛', en: 'Shoulders', parts: ['shoulder', 'neck'] },
+  { key: 'chest', zh: '胸肌', en: 'Chest', parts: ['chest', 'serratus'] },
+  { key: 'back', zh: '背部', en: 'Back', parts: ['back', 'thoracic'] },
+  { key: 'arms', zh: '手臂／前臂', en: 'Arms', parts: ['arms', 'forearm'] },
+  { key: 'core', zh: '核心／腹部', en: 'Core', parts: ['core'] },
+  { key: 'glutes', zh: '臀部', en: 'Glutes', parts: ['glutes', 'hip'] },
+  { key: 'quads', zh: '大腿前側', en: 'Quads', parts: ['quadriceps', 'adductors', 'legs'] },
+  { key: 'hamstrings', zh: '大腿後側', en: 'Hamstrings', parts: ['hamstrings'] },
+  { key: 'calves', zh: '小腿／腳踝', en: 'Calves', parts: ['calves', 'ankle', 'foot'] },
+];
+
 const PATTERN_META = [
-  { key: 'squat_lunge', zh: '下肢蹲／分腿煞車', en: 'Squat & lunge', targets: ['legs', 'quadriceps', 'glutes', 'adductors'] },
-  { key: 'hinge', zh: '髖鉸鏈／臀腿後', en: 'Hinge & posterior', targets: ['posterior', 'glutes', 'hamstrings'] },
+  { key: 'squat_lunge', zh: '下肢蹲／分腿', en: 'Squat & lunge', targets: ['legs', 'quadriceps', 'glutes', 'adductors'] },
+  { key: 'hinge', zh: '髖鉸鏈／臀後', en: 'Hinge & posterior', targets: ['posterior', 'glutes', 'hamstrings'] },
   { key: 'push', zh: '上肢推力', en: 'Upper push', targets: ['upper', 'chest', 'serratus'] },
-  { key: 'pull', zh: '上肢拉力／肩胛', en: 'Upper pull & scapula', targets: ['upper', 'back', 'scapular', 'rotator_cuff'] },
-  { key: 'core', zh: '核心穩定／抗旋', en: 'Core stability', targets: ['core'] },
-  { key: 'footwork_reaction', zh: '步法／爆發協調', en: 'Footwork & power', targets: ['calves'] },
+  { key: 'pull', zh: '上肢拉／肩胛', en: 'Upper pull', targets: ['upper', 'back', 'scapular', 'rotator_cuff'] },
+  { key: 'core', zh: '核心抗旋', en: 'Core stability', targets: ['core'] },
+  { key: 'footwork_reaction', zh: '步法／爆發', en: 'Footwork & power', targets: ['calves'] },
   { key: 'mobility', zh: '動態活動度', en: 'Dynamic mobility', targets: [] },
 ];
 
@@ -362,6 +375,39 @@ export function buildPeriodAnalytics({
     };
   });
 
+  const muscleDaySets = Object.fromEntries(MUSCLE_MAP_GROUPS.map(group => [group.key, new Set()]));
+  const muscleExerciseSets = Object.fromEntries(MUSCLE_MAP_GROUPS.map(group => [group.key, new Set()]));
+  const muscleSlots = Object.fromEntries(MUSCLE_MAP_GROUPS.map(group => [group.key, 0]));
+  for (const date of dates) {
+    const session = sessionByDate[date];
+    if (!session?.routine?.length) continue;
+    const workingIds = Array.isArray(session.prescriptions) && session.prescriptions.length
+      ? session.prescriptions.filter(dose => ['strength', 'accessory', 'skill'].includes(dose.phase)).map(dose => dose.id)
+      : session.routine.filter(id => !['warmup', 'cooldown', 'recovery'].includes(exercises[id]?.category));
+    for (const id of workingIds) {
+      const exercise = exercises[id];
+      const parts = exerciseBodyParts(id, exercise || {});
+      for (const group of MUSCLE_MAP_GROUPS) {
+        if (parts.some(part => group.parts.includes(part))) {
+          muscleDaySets[group.key].add(date);
+          muscleSlots[group.key] += 1;
+          if (exercise?.name) muscleExerciseSets[group.key].add(exercise.name);
+        }
+      }
+    }
+  }
+  const muscleCoverage = MUSCLE_MAP_GROUPS.map(group => {
+    const coveredDates = dates.filter(date => muscleDaySets[group.key].has(date));
+    return {
+      key: group.key,
+      label: en ? group.en : group.zh,
+      days: coveredDates.length,
+      slots: muscleSlots[group.key],
+      dates: coveredDates,
+      exercises: [...muscleExerciseSets[group.key]].slice(0, 4),
+    };
+  });
+
   const plannedDays = dailySeries.filter(day => day.kind !== 'unplanned').length;
   const strengthDays = dailySeries.filter(day => day.kind === 'strength').length;
   const controlDays = dailySeries.filter(day => day.kind === 'control').length;
@@ -374,6 +420,7 @@ export function buildPeriodAnalytics({
   return {
     dailySeries,
     patternDistribution,
+    muscleCoverage,
     targetCoverage,
     mobilityCoverage,
     totals: {
@@ -389,6 +436,7 @@ export function buildPeriodAnalytics({
       totalMinutes,
       avgActiveMinutes: activeDays.length ? Math.round(totalMinutes / activeDays.length) : 0,
       coveredMobilityRegions: mobilityCoverage.filter(item => item.count > 0).length,
+      coveredMuscleGroups: muscleCoverage.filter(item => item.days > 0).length,
     },
     recent: recentSummary,
     typeLabels: TYPE_LABELS[en ? 'en' : 'zh'],

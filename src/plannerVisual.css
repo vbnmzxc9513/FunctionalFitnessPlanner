@@ -1,6 +1,5 @@
 /* Approved planner-v2 visual system. Keep training and record screens independent. */
-.planner-scope { background:#f5f8fc; color:#172b43; }
-.planner-scope,.workout-ui,.manual-workspace,.assignment-flow { font-family:"Inter","Noto Sans TC","Noto Sans CJK TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; font-synthesis:weight; }
+.planner-scope { background:var(--surface-page, #f8fafc); color:var(--ink-strong, #0f172a); }
 .planner-scope .app-main { padding:18px 16px 100px; }
 .planner-browse-details { max-width:760px; margin:16px auto; color:#53667c; font-size:13px; }
 .planner-browse-details > label { margin-top:8px; }
