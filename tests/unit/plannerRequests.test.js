@@ -44,15 +44,39 @@ test('five selected lower-body movements and selected mobility are actually dist
   }
 });
 
-test('running and walking disappear from questionnaire recommendations and old selections receive an accurate policy reason', () => {
-  const available = manualPlanningExercises(exercises, context);
-  const recommended = recommendWeeklyChoices(exercises, context, 'balanced', available);
-  for (const id of ['bf_A01', 'bf_I01']) {
-    assert.ok(!recommended.includes(id));
-    assert.equal(weeklyChoiceBlockReason(id, exercises, context, available), 'stretch_opening');
+test('aerobic and conditioning moves (A01, I01–I04) are selectable without stretch_opening/metadata blocks while legacy A12/A13 stay excluded', () => {
+  const fullContext = { ...context, equipment: ['dumbbell', 'band', 'cable', 'foam_roller', 'jump_rope', 'racket', 'shuttlecock'], partnerAvailable: true };
+  const available = manualPlanningExercises(exercises, fullContext);
+  const recommended = recommendWeeklyChoices(exercises, fullContext, 'balanced', available);
+  for (const id of ['bf_A01', 'bf_I01', 'bf_I02', 'bf_I03', 'bf_I04']) {
+    assert.equal(weeklyChoiceBlockReason(id, exercises, fullContext, available), null, `${id} should not be blocked`);
+    assert.ok(recommended.includes(id), `${id} should appear in eligible recommendations`);
   }
-  const result = make({ weeklyExerciseIds: ['bf_A01', 'bf_I01'] });
-  assert.ok(result.sessions.every(day => !day.routine.some(id => ['bf_A01', 'bf_I01'].includes(id))));
+  for (const id of ['bf_A12', 'bf_A13']) {
+    assert.equal(weeklyChoiceBlockReason(id, exercises, fullContext, available), 'stretch_opening');
+  }
+  const withAerobic = make({ weeklyExerciseIds: ['bf_A01', 'bf_I02'] }, 40);
+  assert.ok(withAerobic.sessions.some(day => day.routine.includes('bf_A01')));
+  assert.ok(withAerobic.sessions.some(day => day.routine.includes('bf_I02')));
+  for (const day of withAerobic.sessions.filter(item => item.routine.length)) {
+    assert.deepEqual(day.routine.slice(0, 8), DAILY_WARMUP_IDS);
+  }
+});
+
+test('starred favorite exercises are softly preferred within matching movement-pattern slots without breaking balance or warmup', () => {
+  const withFavs = {
+    ...exercises,
+    bf_B02: { ...exercises.bf_B02, libraryGroups: ['training'] },
+    bf_C02: { ...exercises.bf_C02, libraryGroups: ['training'] },
+  };
+  const result = make({ trainingDays: [1, 4], badmintonDays: [] }, 40, withFavs);
+  const trainingDays = result.sessions.filter(day => day.sessionType === 'training');
+  assert.ok(trainingDays.some(day => day.routine.includes('bf_B02')), 'starred lateral lunge should be preferred for squat/lunge slot');
+  assert.ok(trainingDays.some(day => day.routine.includes('bf_C02')), 'starred cable chest press should be preferred for push slot');
+  for (const day of trainingDays) {
+    assert.deepEqual(day.routine.slice(0, 8), DAILY_WARMUP_IDS);
+    assert.ok(estimateSessionMinutes(day, withFavs) <= 40);
+  }
 });
 
 test('legacy flow availability does not change the independent opening or invent coverage for unlisted stretches', () => {

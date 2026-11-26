@@ -12,6 +12,7 @@ import { exercisePhase, SESSION_PHASES, SESSION_TYPES } from './phases.js';
 import { validSequenceDose } from './exerciseCatalog.js';
 import { prescription } from './training.js';
 import { summarizeRecentPerformance } from './periodAnalytics.js';
+import { libraryGroups } from './library.js';
 
 const LOCKED_WARMUP_SET = new Set(DAILY_WARMUP_IDS);
 const DAY_MS = 86400000;
@@ -300,6 +301,7 @@ export function buildAIPeriodChunkPrompt({
         ...(exercise.jumpContacts > 0 ? { jumpContacts: exercise.jumpContacts } : {}),
         ...(exercise.advanced ? { advanced: true } : {}),
         ...(exercise.priority ? { priority: true } : {}),
+        ...(libraryGroups(exercise).length ? { favorite: true } : {}),
         ...(exercise.requiresPartner ? { requiresPartner: true } : {}),
         ...(exercise.shoulderLoaded ? { shoulderLoaded: true } : {}),
         ...(exercise.restrictionTags?.length ? { restrictionTags: exercise.restrictionTags } : {}),
@@ -388,13 +390,13 @@ ${JSON.stringify({
 
 【專業排課約束】
 1. 球場負荷與體能合併考量：每週通常安排 1–2 次主要肌力＋短協調品質練習，其餘安排恢復或休息；避免連續兩天高強度肌力或緊鄰高強度球日重訓下肢。
-2. 全面照顧羽球動力鏈與 A/B 日分流原則：在整段期間均衡涵蓋蹲／分腿、髖鉸鏈、上肢推與拉、核心抗旋、步法協調與八區活動度。當一週有 2 天以上訓練日時，刻意交替肌力重點（例如 Day A 下肢膝主導／分腿蹲＋上肢拉，Day B 下肢髖鉸鏈＋上肢推），參考各候選動作的 parts 避免相鄰訓練日重複相同主力動作，同日也不堆疊兩個同性質主項。優先納入合理的 weeklyExerciseIds 與 targetRegions（但不為硬塞而超時或違規）。
+2. 全面照顧羽球動力鏈與 A/B 日分流原則：在整段期間均衡涵蓋蹲／分腿、髖鉸鏈、上肢推與拉、核心抗旋、步法協調與八區活動度。當一週有 2 天以上訓練日時，刻意交替肌力重點（例如 Day A 下肢膝主導／分腿蹲＋上肢拉，Day B 下肢髖鉸鏈＋上肢推），參考各候選動作的 parts 避免相鄰訓練日重複相同主力動作，同日也不堆疊兩個同性質主項。優先納入合理的 weeklyExerciseIds 與 targetRegions（但不為硬塞而超時或違規）。標記 favorite: true 的動作是學員在動作庫標星的常用動作，在符合專業教練的負荷、恢復與肌群平衡前提下可優先考慮納入，但仍以整體課表品質與安全為最優先。
 3. 多週漸進節奏（Multi-week progression）：當總週數 > 1 或橫跨多週（目前第 ${chunkIndex + 1} / ${totalChunks} 週）時，跨週保留核心主項方便追蹤進步：第 1 週建立基礎動作模式與穩定劑量，第 2–3 週在安全時間上限內小幅進階組數、次數或動作變化；若有臨近比賽日（competitionDaysAway <= 7）則自然減量保鮮、降低下肢與跳躍疲勞。
 4. 日內階段順序嚴格為：warmup → skill → strength → accessory → recovery → cooldown。
    - power / footwork / reaction 類動作的 phase 必須是 "skill"。
    - 每個 training 日的第一個 strength 動作**必須提供 preparation 準備組**（sets 1–2、value "4–6" 或短秒數、restSeconds 0–120、具體輕量暖身指令 instruction）。
    - 參考候選動作的 jumpContacts：額外 E 類跳躍單日總落地（jumpContacts × sets × 最大次數 × 雙側2）上限 24 次，且不與跳繩 I04 同日。
-   - 禁止使用舊序列 bf_A12、bf_A13，且不可用 bf_A01 當暖身或恢復。
+   - 禁止使用舊序列 bf_A12、bf_A13；預設採八段動態拉伸暖身（不以 bf_A01 取代暖身），若學員明確手選 bf_A01 或 bf_I01–I04 可依時間與負荷納入 accessory／恢復有氧槽位。
 5. 時間控管：請直接加總所選候選動作的 estMin（含雙側、組間休息與轉換；若增減組數或加上準備組請依比例估算），務必安全落在各日 remainingMinutes 內且總時間不超過每日上限 ${dailyTime} 分鐘；估時會對每個階段無條件進位，請預留 2–3 分鐘安全緩衝，不足時減少組數或動作數，不硬塞。
 6. 劑量限制：sets 1–5 整數；value 為數字或範圍如 "8–10"（reps/seconds/breaths 上限 120，minutes 上限 ${dailyTime}）；restSeconds 0–300 整數；preparation 的 value reps/breaths 上限 8、seconds 上限 30。
 7. 每天提供非空 theme（當日重點）、concept（與羽球動作的動力鏈連結）、coachAdvice（與球日銜接與當日體感提醒）、warmupNote（說明暖身與主項銜接）、cooldownNote（說明收尾安排或省略原因）。

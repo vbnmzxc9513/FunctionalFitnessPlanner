@@ -52,9 +52,9 @@ test('single-leg stability preserves a knee-dominant main lift instead of duplic
   }
 });
 
-test('all ordinary warm-ups and court-day recovery use the eight-part stretching flow without aerobic substitutes', () => {
+test('all ordinary warm-ups and court-day recovery use the eight-part stretching flow without unrequested aerobic substitutes', () => {
   for (const recoveryState of ['normal', 'reduce', 'recover']) {
-    const result = make({ recoveryState, weeklyExerciseIds: ['bf_A01'] });
+    const result = make({ recoveryState });
     for (const day of result.sessions.filter(day => day.routine.length)) {
       assert.deepEqual(day.routine.slice(0, 8), DAILY_WARMUP_IDS);
       assert.equal(day.prescriptions[0].value, '4');
@@ -62,6 +62,12 @@ test('all ordinary warm-ups and court-day recovery use the eight-part stretching
       assert.ok(estimateSessionMinutes(day, exercises) <= 35);
     }
     assert.ok(scheduledMobility(result.sessions).every(row => row.dates.length > 0));
+  }
+  const explicit = make({ recoveryState: 'normal', weeklyExerciseIds: ['bf_A01'] });
+  for (const day of explicit.sessions.filter(day => day.routine.length)) {
+    assert.deepEqual(day.routine.slice(0, 8), DAILY_WARMUP_IDS);
+    const a01 = day.prescriptions.find(dose => dose.id === 'bf_A01');
+    if (a01) assert.equal(a01.phase, 'accessory');
   }
 });
 

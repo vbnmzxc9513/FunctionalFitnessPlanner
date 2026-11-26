@@ -2,6 +2,7 @@ import { dailyWarmupPrescriptions } from './quickWorkouts.js';
 import { exerciseTrainingTargets } from './trainingTargets.js';
 import { mobilityAreas } from './mobility.js';
 import { catalogExercises } from './exerciseCatalog.js';
+import { libraryGroups } from './library.js';
 
 export const DEFAULT_MAX_PROMPT_BYTES = 56000;
 
@@ -148,6 +149,7 @@ export function selectPromptCandidates(
   const tier0Previous = [];
   const tier0Target = [];
   const tier0Stiffness = [];
+  const tier0Favorite = [];
   const tier1Priority = [];
   const tier2Rest = [];
 
@@ -169,6 +171,8 @@ export function selectPromptCandidates(
         tier0Target.push(record);
       } else if (matchesStiffnessRegion(id, exercise, stiffnessRegions, exercisesById)) {
         tier0Stiffness.push(record);
+      } else if (libraryGroups(exercise).length > 0 || record.serialized?.favorite) {
+        tier0Favorite.push(record);
       } else if (exercise.priority) {
         tier1Priority.push(record);
       } else {
@@ -182,6 +186,7 @@ export function selectPromptCandidates(
   tier0Previous.sort((a, b) => a.index - b.index || a.id.localeCompare(b.id));
   tier0Target.sort((a, b) => a.index - b.index || a.id.localeCompare(b.id));
   tier0Stiffness.sort((a, b) => a.index - b.index || a.id.localeCompare(b.id));
+  tier0Favorite.sort((a, b) => a.index - b.index || a.id.localeCompare(b.id));
 
   const ordered = [
     ...tier0Warmup,
@@ -189,6 +194,7 @@ export function selectPromptCandidates(
     ...tier0Previous,
     ...tier0Target,
     ...tier0Stiffness,
+    ...tier0Favorite,
     ...interleaveByCategory(tier1Priority),
     ...interleaveByCategory(tier2Rest),
   ];

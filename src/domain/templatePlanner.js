@@ -8,6 +8,7 @@ import { classifyBalanceExercise } from './weeklyBalance.js';
 import { createWeeklyIntent } from './trainingPreferences.js';
 import { catalogExercises } from './exerciseCatalog.js';
 import { DAILY_WARMUP_IDS, dailyWarmupPrescriptions, isDailyWarmupComplete } from './quickWorkouts.js';
+import { libraryGroups } from './library.js';
 import { applyWeeklyChoices } from './weeklyChoices.js';
 import { exercisePhase } from './phases.js';
 import { resolveExerciseId } from './training.js';
@@ -41,7 +42,7 @@ export function manualPlanningExercises(exercises, context) {
   const mode = clinicalMode(profile);
   if (mode === 'rest') return {};
   const available = planningExercises(exercises, mode === 'normal' ? profile : { ...profile, healthStatus: 'restricted' });
-  return mode === 'normal' ? Object.fromEntries(Object.entries(available).filter(([, exercise]) => !['A01', 'I01', 'A12', 'A13'].includes(exercise.catalogCode))) : Object.fromEntries(Object.entries(available).filter(([id, exercise]) => CURATED[id]?.catalogCode === 'I01' && exercise.catalogCode === 'I01'));
+  return mode === 'normal' ? Object.fromEntries(Object.entries(available).filter(([, exercise]) => !['A12', 'A13'].includes(exercise.catalogCode))) : Object.fromEntries(Object.entries(available).filter(([id, exercise]) => CURATED[id]?.catalogCode === 'I01' && exercise.catalogCode === 'I01'));
 }
 
 function emptyDay(day, lang) {
@@ -111,15 +112,23 @@ function addTraining(day, available, lang, focus, kind, sets, familiar, variant 
     if (kind === 'skill') add(day, available, skillCodes[1], 'skill', { sets: 1, value: '3', restSeconds: 60 });
   }
   if (kind === 'strength') {
-    const pick = codes => codes.find(code => Object.values(available).some(exercise => exercise.catalogCode === code));
+    const isFav = exercise => libraryGroups(exercise).length > 0;
+    const pick = codes =>
+      codes.find(code => Object.values(available).some(exercise => exercise.catalogCode === code && isFav(exercise)))
+      || codes.find(code => Object.values(available).some(exercise => exercise.catalogCode === code));
+    const favByPattern = (category, pattern) => Object.entries(available)
+      .filter(([id, exercise]) => exercise.category === category && !exercise.requiresPartner && !(exercise.jumpContacts > 0) && isFav(exercise)
+        && classifyBalanceExercise(id, exercise).patterns.includes(pattern) && !day.routine.includes(id))
+      .map(([, exercise]) => exercise.catalogCode)
+      .filter(Boolean);
     // Stable A/B lower-body slots span calendar weeks, including one-session weeks.
     const kneeCodes = focus === 'stability' || variant % 2 ? ['B01', 'B10', 'B02'] : ['B10', 'B01', 'B02'];
-    const knee = pick(preferences.targetRegions?.includes('adductors') ? ['B02', ...kneeCodes] : kneeCodes);
+    const knee = pick([...(preferences.targetRegions?.includes('adductors') ? ['B02'] : []), ...kneeCodes, ...favByPattern('lower', 'squat_lunge')]);
     const hingeCodes = focus === 'stability' ? ['B05', 'B11', 'B03', 'B06'] : ['B11', 'B03', 'B04', 'B06', 'B05'];
-    const hinge = pick(focus !== 'stability' && preferences.targetRegions?.includes('glutes') && !preferences.targetRegions.includes('hamstrings') ? ['B06', ...hingeCodes] : hingeCodes);
+    const hinge = pick([...(focus !== 'stability' && preferences.targetRegions?.includes('glutes') && !preferences.targetRegions.includes('hamstrings') ? ['B06'] : []), ...hingeCodes, ...favByPattern('lower', 'hinge')]);
     const lower = reduced ? [variant % 2 ? hinge || knee : knee || hinge] : focus === 'stability' ? [hinge, knee] : [knee, hinge];
     for (const code of lower.filter(Boolean)) add(day, available, code, 'strength', { sets, value: '6', restSeconds: 90 });
-    const upper = pattern => pick(['C01', 'C11', 'C10', 'C03', 'C02', 'C04'].filter(code => Object.entries(available).some(([id, exercise]) => exercise.catalogCode === code && classifyBalanceExercise(id, exercise).patterns.includes(pattern))));
+    const upper = pattern => pick([...['C01', 'C11', 'C10', 'C03', 'C02', 'C04'].filter(code => Object.entries(available).some(([id, exercise]) => exercise.catalogCode === code && classifyBalanceExercise(id, exercise).patterns.includes(pattern))), ...favByPattern('upper', pattern)]);
     const pull = upper('pull'), push = upper('push');
     const uppers = variant % 2 ? [push, pull] : [pull, push];
     for (const code of uppers.filter(Boolean)) add(day, available, code, 'strength', { sets: !reduced && !familiar && sets > 1 && warmupMinutes >= 40 ? 2 : 1, value: '6', restSeconds: 90 });
@@ -211,7 +220,7 @@ export function generateTemplatePlan(exercises, context, dailyTime, lang = 'zh',
   const mode = clinicalMode(profile);
   const safeProfile = mode === 'normal' ? profile : { ...profile, healthStatus: 'restricted' };
   const eligible = planningExercises(exercises, safeProfile);
-  const available = Object.fromEntries(Object.entries(eligible).filter(([id, exercise]) => CURATED[id]?.catalogCode === exercise.catalogCode && !['A01', 'I01', 'A12', 'A13'].includes(exercise.catalogCode) && exercise.prescription && Array.isArray(exercise.equipmentOptions)));
+  const available = Object.fromEntries(Object.entries(eligible).filter(([id, exercise]) => CURATED[id]?.catalogCode === exercise.catalogCode && !['A12', 'A13'].includes(exercise.catalogCode) && exercise.prescription && Array.isArray(exercise.equipmentOptions)));
   const focus = FOCUSES.includes(options.focus || options.goalFocus) ? options.focus || options.goalFocus : 'balanced';
   const today = isCalendarDate(options.currentDate) ? options.currentDate : localDate();
   const week = dateForWeekDay(options.currentWeek, 1) ? options.currentWeek : getWeekString(new Date(`${today}T12:00:00`));

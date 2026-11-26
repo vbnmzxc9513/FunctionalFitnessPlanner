@@ -15,13 +15,13 @@ const CURATED = catalogExercises();
 
 export function weeklyChoicePhase(id, exercise) {
   if (!exercise || CURATED[id]?.catalogCode !== exercise.catalogCode || !exercise.prescription) return null;
+  if (exercise.legacySequence || ['A12', 'A13'].includes(exercise.catalogCode)) return null;
   if (exercise.catalogCode === 'D09') return 'cooldown';
-  if (['A07', 'A08', 'A18', 'B07', 'B08', 'B13', 'B14', 'B15', 'B16', 'B17', 'C05', 'C06', 'C07', 'C08', 'C09', 'C12', 'C13', 'C18', 'C19', 'C20', 'C21'].includes(exercise.catalogCode)) return 'accessory';
+  if (['A01', 'A07', 'A08', 'A18', 'B07', 'B08', 'B13', 'B14', 'B15', 'B16', 'B17', 'C05', 'C06', 'C07', 'C08', 'C09', 'C12', 'C13', 'C18', 'C19', 'C20', 'C21'].includes(exercise.catalogCode)) return 'accessory';
   if (['power', 'footwork', 'reaction'].includes(exercise.category)) return 'skill';
   if (['lower', 'upper'].includes(exercise.category)) return 'strength';
   if (exercise.category === 'core') return exercise.type === 'mobility' ? 'cooldown' : 'accessory';
-  if (exercise.catalogCode === 'I01') return 'recovery';
-  if (exercise.category === 'conditioning') return null;
+  if (exercise.category === 'conditioning') return 'accessory';
   return suggestedUses(id, exercise).includes('warmup') ? 'warmup' : 'cooldown';
 }
 
@@ -30,7 +30,7 @@ export function weeklyChoiceBlockReason(id, exercises, context, available) {
   const exercise = exercises[id];
   const profile = normalizePlanningContext(context);
   if (!exercise || exercise.deleted || exercise.active === false) return 'unavailable';
-  if (['A01', 'A12', 'A13', 'I01'].includes(exercise.catalogCode)) return 'stretch_opening';
+  if (exercise.legacySequence || ['A12', 'A13'].includes(exercise.catalogCode)) return 'stretch_opening';
   if (!weeklyChoicePhase(id, exercise)) return 'metadata';
   if (exercise.requiresPartner && !profile.partnerAvailable) return 'partner';
   if (!equipmentChoices(exercise, profile.equipment).length) return 'equipment';
@@ -88,7 +88,7 @@ export function buildWeeklyChoiceReport(plan, exercises, context = {}, available
 
 // Schedule fresh choices before repeating selected defaults. Main patterns remain
 // complementary; a spare accessory slot can take one selected assistance lift.
-// Recovery days only accept comfortable mobility, never strength or skill work.
+// Recovery days only accept comfortable mobility or low-intensity aerobic work (I01), never strength or skill work.
 export function applyWeeklyChoices(day, available, ids, used, lang = 'zh', minutes = Infinity) {
   if (day.sessionType === 'rest') return day;
   const selected = weeklyChoiceIds(ids);
@@ -99,11 +99,15 @@ export function applyWeeklyChoices(day, available, ids, used, lang = 'zh', minut
   for (const id of pending) {
     const exercise = available[id];
     const phase = weeklyChoicePhase(id, exercise);
-    if (!phase || phase === 'recovery' || ['A01', 'A12', 'A13', 'I01'].includes(exercise.catalogCode)) continue;
-    if (recovery && (!['warmup', 'cooldown'].includes(phase) || !['warmup', 'recovery', 'core'].includes(exercise.category))) continue;
+    if (!phase || exercise.legacySequence || ['A12', 'A13'].includes(exercise.catalogCode)) continue;
+    const aerobicRecovery = recovery && exercise.catalogCode === 'I01';
+    if (recovery && !aerobicRecovery && (!['warmup', 'cooldown'].includes(phase) || !['warmup', 'recovery', 'core'].includes(exercise.category))) continue;
+    // Jump rope (I04) cannot share a day with additional jump-contact drills.
+    if (exercise.catalogCode === 'I04' && day.routine.some(item => available[item]?.jumpContacts > 0)) continue;
+    if (exercise.jumpContacts > 0 && day.routine.some(item => available[item]?.catalogCode === 'I04')) continue;
     const patterns = classifyBalanceExercise(id, exercise).patterns;
     let index = exercise.sequenceMinutes ? day.prescriptions.findIndex(dose => available[dose.id]?.sequenceMinutes && !locked.has(dose.id)) : -1;
-    if (index < 0) index = day.prescriptions.findIndex(dose => {
+    if (index < 0 && !aerobicRecovery) index = day.prescriptions.findIndex(dose => {
       if (locked.has(dose.id) || opening.has(dose.id) || available[dose.id]?.sequenceMinutes || available[dose.id]?.catalogCode === 'A01') return false;
       if (['warmup', 'cooldown'].includes(phase)) return dose.phase === phase || recovery && dose.phase === 'recovery';
       if (phase === 'accessory') return dose.phase === 'accessory';
@@ -118,13 +122,15 @@ export function applyWeeklyChoices(day, available, ids, used, lang = 'zh', minut
     // The fixed flow stays intact. Explicit single stretches can use a spare
     // mobility/finish slot rather than being silently ignored by the flow.
     if (index < 0 && !recovery && phase === 'warmup' && !exercise.sequenceMinutes) index = day.prescriptions.findIndex(dose => dose.phase === 'cooldown' && available[dose.id]?.catalogCode === 'D09' && !selected.includes(dose.id));
-    const extraMobility = index < 0 && recovery && day.routine.length < 3;
-    if (index < 0 && !extraMobility) continue;
+    const extraMobility = index < 0 && recovery && (day.routine.length < 3 || aerobicRecovery);
+    const extraAccessory = index < 0 && !recovery && phase === 'accessory' && day.routine.length < MAX_DAY_EXERCISES;
+    if (index < 0 && !extraMobility && !extraAccessory) continue;
     const old = index >= 0 ? day.prescriptions[index] : null;
     const base = exercise.prescription;
+    if (base.unit === 'minutes' && Math.max(...String(base.value).split(/[–-]/).map(Number)) > minutes) continue;
     const value = !exercise.sequenceMinutes && old?.unit === base.unit ? String(Math.min(...String(old.value).split(/[–-]/).map(Number), ...String(base.value).split(/[–-]/).map(Number))) : base.value;
-    const targetPhase = recovery ? 'recovery' : phase === 'warmup' ? 'warmup' : old.phase;
-    const replacement = { id, ...base, phase: targetPhase, sets: Math.min(old?.sets || 1, base.sets), value, restSeconds: exercise.sequenceMinutes ? base.restSeconds : Math.max(old?.restSeconds || 0, base.restSeconds) };
+    const targetPhase = recovery ? 'recovery' : phase === 'warmup' ? 'warmup' : old ? old.phase : phase;
+    const replacement = { id, ...base, phase: targetPhase, sets: Math.min(old?.sets || base.sets || 1, base.sets), value, restSeconds: exercise.sequenceMinutes ? base.restSeconds : Math.max(old?.restSeconds || 0, base.restSeconds) };
     const prescriptions = [...day.prescriptions];
     if (old) prescriptions[index] = replacement; else prescriptions.push(replacement);
     prescriptions.sort((a, b) => SESSION_PHASES.indexOf(a.phase) - SESSION_PHASES.indexOf(b.phase));

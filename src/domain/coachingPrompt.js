@@ -3,6 +3,7 @@ import { competitionDaysAway, normalizePlanningContext } from './planning.js';
 import { createMobilityContext } from './mobility.js';
 import { dailyWarmupPrescriptions } from './quickWorkouts.js';
 import { DEFAULT_MAX_PROMPT_BYTES, selectPromptCandidates, utf8Bytes } from './promptCandidates.js';
+import { libraryGroups } from './library.js';
 
 // Historical planning facts preserve identity and dose, without repeatedly
 // sending the old plan's long notes or copying unrecognized private fields.
@@ -40,6 +41,7 @@ export function buildPlanningPrompt({ lastWeekData, currentLevel, lastWeekFeedba
       id, name: exercise.name, type: exercise.type, category: exercise.category || 'custom',
       equipmentOptions: exercise.equipmentOptions ?? '未分類；不得假設器材',
       ...(exercise.advanced ? { advanced: true } : {}), ...(exercise.priority ? { priority: true } : {}),
+      ...(libraryGroups(exercise).length ? { favorite: true } : {}),
       ...(exercise.requiresPartner ? { requiresPartner: true } : {}), shoulderLoaded: exercise.shoulderLoaded ?? '未分類',
       ...(exercise.restrictionTags?.length ? { restrictionTags: exercise.restrictionTags } : {}),
       starterDose: exercise.prescription ? ['sets','value','unit','restSeconds','perSide'].map(key => exercise.prescription[key] ?? null) : null, cue: String(exercise.tip || '').slice(0, 56), ...(specificTargets(id, exercise).length ? { trainingTargets: specificTargets(id, exercise) } : {}),
@@ -62,7 +64,7 @@ ${JSON.stringify({ goal: userGoal || '', message: userMessage || '', profile,
 
 【排課核心策略】
 1. 球場與健身房合併評估。以每週 1–2 次主要肌力、短協調品質練習、其餘恢復／短啟動為起點；依實際球量調整，不強制五天高負荷。三場球要分球量與強度，連續的30分鐘輕技術課不自動永遠限一堂。若高強度球日使可用日期沒有合適肌力日，可全恢復，但須明說長期目標衝突及可調球量／時段，不硬塞課。協調不只每週三次接觸，可用幾分鐘低疲勞品質練習，疲勞週更少。
-2. 優先使用已熟悉的蹲／分腿支撐、髖伸展、推、拉、核心基本動作，保留數週以追蹤；每次不要全部放入，也不為了全新課表隨機換動作。編輯重排應保留仍適合的主動作，回應使用者修改理由。
+2. 優先使用已熟悉的蹲／分腿支撐、髖伸展、推、拉、核心基本動作，保留數週以追蹤；每次不要全部放入，也不為了全新課表隨機換動作。編輯重排應保留仍適合的主動作，回應使用者修改理由。標記 favorite: true 的動作為學員動作庫常用動作，在符合負荷、恢復與肌群平衡的前提下可優先納入考量，但仍以專業教練週期化與安全為先。
    本週已完成日不安排補課；參考既有課表和完成紀錄，必要時標示已完成／恢復，不為提高完成率增加新動作。
 3. 依球日排：例如二四五球局，週一可少量肌力、週三短肌力或恢復，四五午休輕活動；二五六球局，一三可肌力、四短協調、五恢復。這只是可調整範例；前一天疲勞、重要球局或治療限制優先。球局日期未提供時用一般範例並明說假設。
 4. 日內順序：動態暖身→短協調／反應／低量落地→主要肌力→輔助→選配拉伸。速度／反應每趟短、休息充分；體能間歇另列任務，不能把疲勞循環當成反應品質課。單腳跳停→連跳→增加發力。
