@@ -46,7 +46,7 @@ try {
   await click('[data-testid="batch-option-bf_B01"]'); await click('[data-testid="batch-option-bf_B05"]'); await click('[data-testid="batch-picker-add"]');
   await shot('04-manual');
   await textClick('儲存為課表'); await page.waitForSelector('dialog[open]'); await page.type('dialog[open] input', '全身肌力 A'); await shot('06-name'); await click('[data-testid="save-workout-confirm"]');
-  await page.waitForFunction(() => !document.querySelector('dialog[open]')); await textClick('返回課表'); await click('[data-testid="open-saved-workouts"]'); await page.waitForSelector('[data-testid="saved-workout-open"]'); await page.waitForFunction(() => !document.querySelector('.app-shell > [role="status"]')); await shot('07-library');
+  await page.waitForFunction(() => !document.querySelector('dialog[open]')); await textClick('返回課表'); await textClick('動作庫'); await click('[data-testid="open-saved-workouts"]'); await page.waitForSelector('[data-testid="saved-workout-open"]'); await page.waitForFunction(() => !document.querySelector('.app-shell > [role="status"]')); await shot('07-library');
   await click('[data-testid="saved-workout-open"]'); await shot('08-library-detail'); await click('[data-testid="saved-workout-share"]'); await page.waitForSelector('[data-testid="plan-share-create"]'); await shot('09-share'); await click('[data-testid="plan-share-create"]'); await page.waitForSelector('[role="dialog"] input[readonly]'); const link = await page.$eval('[role="dialog"] input[readonly]', el => el.value);
   const recipient = await context.newPage(); await recipient.setViewport({ width: 390, height: 844, deviceScaleFactor: 2 }); await setup(recipient, false);
   // A second browser context keeps the recipient's dates and records independent.

@@ -124,6 +124,7 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
   useEffect(() => { dispatchNav({ type: 'SET_LOCAL_BROWSE_WEEK', week: currentWeek }); }, [currentWeek]);
 
   const workoutStore = useSavedWorkouts(user?.uid);
+  const [libraryView, setLibraryView] = useState('exercises');
   const [overviewSessions, setOverviewSessions] = useState({});
   const periodKey = `fitness_saved_period_${user?.uid || 'signed-out'}`;
   const [savedPeriod, setSavedPeriod] = useState(() => user ? readSavedPeriod(periodKey) : localPeriod);
@@ -403,7 +404,7 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
     const day = savedWorkoutDay(item, lang);
     if (day.routine.some(id => !exercises[id] || exercises[id].deleted)) { showToast(lang === 'zh' ? '這份收藏包含已刪除或找不到的自訂動作，請先在動作庫還原，再套用。' : 'This saved workout includes unavailable custom exercises. Restore them in your library before applying.'); return; }
     if (workoutStore.markUsed) await workoutStore.markUsed(item.id, item.revision);
-    dispatchNav({ type: 'USE_SAVED_WORKOUT', day, name: item.name });
+    dispatchNav({ type: 'USE_SAVED_WORKOUT', day, name: item.name, returnTab: activeTab });
   };
 
   const [coachOpen, setCoachOpen] = useState(false);
@@ -460,7 +461,6 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
         <button type="button" aria-label={lang === 'zh' ? '查看下一週' : 'Next week'} onClick={() => shiftOverviewWeek(1)}><ChevronRight size={19} /></button>
       </div>
       <div className="planner-week-bar-tools">
-        <button type="button" data-testid="planner-top-saved" aria-label={lang === 'zh' ? '我的收藏' : 'My favorites'} title={lang === 'zh' ? '我的收藏' : 'My favorites'} onClick={() => dispatchNav({ type: 'SET_PLAN_SCREEN', screen: 'saved' })} className="session-hero-icon-btn"><Bookmark size={17} aria-hidden="true" /></button>
         {displayWeekSessions.length > 0 && <button type="button" data-testid="share-week-plan" aria-label={lang === 'zh' ? '選擇日期分享課表' : 'Share selected days'} title={lang === 'zh' ? '選擇日期分享課表' : 'Share selected days'} onClick={() => shareDays(displayWeekSessions)} className="session-hero-icon-btn"><Share2 size={17} aria-hidden="true" /></button>}
       </div>
     </div>
@@ -492,12 +492,6 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
       <button type="button" data-testid="open-manual-planner" onClick={() => openManual()} className="button-secondary"><Plus size={17} aria-hidden="true" />{lang === 'zh' ? '手動排課' : 'Create workout'}</button>
     </div>
   </header>;
-  const plannerTools = <div className="planner-home-tools">
-    <button type="button" data-testid="open-saved-workouts" onClick={() => dispatchNav({ type: 'SET_PLAN_SCREEN', screen: 'saved' })} className="planner-tool-card">
-      <span className="planner-tool-card-left"><Bookmark size={17} aria-hidden="true" /><span>{lang === 'zh' ? (savedCount > 0 ? `我的收藏（${savedCount}）` : '我的收藏課表') : (savedCount > 0 ? `My favorites (${savedCount})` : 'My saved workouts')}</span></span>
-      <ChevronRight size={16} aria-hidden="true" />
-    </button>
-  </div>;
   // A stable conversion prevents overview load -> parent update -> reload loops.
   const publicPeriodBase = useMemo(() => localPeriod || (!user ? periodFromWeeklyDraft(publicDraft) : null), [localPeriod, user, publicDraft]);
   const periodHistory = useMemo(() => ({ logs: exerciseLogs, progress: allProgress, readiness: readinessRecords }), [exerciseLogs, allProgress, readinessRecords]);
@@ -596,6 +590,17 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
         <button disabled={savingPlan} onClick={onConsumeDraft} className="ml-3 underline">{t('discardPreview')}</button>
       </div>}
       {activeTab === 'library' && <div className="screen-header"><h2 className="screen-title">{t('libraryTab')}</h2></div>}
+      {activeTab === 'library' && (
+        <div aria-label={t('libraryTab')} role="group" className="segmented-control" data-testid="library-subnav">
+          <button type="button" data-testid="library-tab-exercises" aria-pressed={libraryView === 'exercises'} onClick={() => setLibraryView('exercises')}>
+            {lang === 'zh' ? '動作清單' : 'Exercises'}
+          </button>
+          <button type="button" data-testid="open-saved-workouts" aria-pressed={libraryView === 'saved'} onClick={() => setLibraryView('saved')}>
+            <Bookmark size={14} className="inline mr-1 -mt-0.5" aria-hidden="true" />
+            {lang === 'zh' ? (savedCount > 0 ? `我的收藏 (${savedCount})` : '我的收藏') : (savedCount > 0 ? `My favorites (${savedCount})` : 'My favorites')}
+          </button>
+        </div>
+      )}
       {showPlanArea && !planLoaded && <p role="status" className="p-6 text-sm">{t('loadingPlan')}</p>}
       {activeTab === 'plan' && planScreen === 'overview' && !periodCreating && plannerActions}
       {showPlanArea && planLoaded && !hasCurrentPlan && !pendingDraft && activeTab === 'train' && !['manual', 'saved', 'assign', 'legacy-ai', 'legacy-preview'].includes(planScreen) && firstPlan}
@@ -607,13 +612,12 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
           recordAppliedPeriod(preview);
           dispatchNav({ type: 'ASSIGNMENT_APPLIED', editOrigin: assignment.editOrigin, periodId: preview.periodId || '', browseWeek: preview.sessions?.[0]?.week || currentWeek });
         }} />}
-        {saveWorkoutDay && <SaveWorkoutDialog sourceItem={planScreen === 'manual' ? manualSavedSource : null} store={workoutStore} day={saveWorkoutDay} exercises={exercises} level={difficultyLevel} lang={lang} onClose={() => dispatchNav({ type: 'SET_SAVE_WORKOUT_DAY', day: null })} onSaved={() => { dispatchNav({ type: 'SET_SAVE_WORKOUT_DAY', day: null }); showToast(lang === 'zh' ? '已存入我的收藏，下次排課可直接加入。' : 'Saved to my favorites. Add it to your next draft.'); }} />}
+        {saveWorkoutDay && <SaveWorkoutDialog sourceItem={planScreen === 'manual' ? manualSavedSource : null} store={workoutStore} day={saveWorkoutDay} exercises={exercises} level={difficultyLevel} lang={lang} onClose={() => dispatchNav({ type: 'SET_SAVE_WORKOUT_DAY', day: null })} onSaved={() => { dispatchNav({ type: 'SET_SAVE_WORKOUT_DAY', day: null }); showToast(lang === 'zh' ? '已存入我的收藏，可在動作庫「我的收藏」查看。' : 'Saved to my favorites in Library.'); }} />}
         {shareRequest && <PlanShareDialog days={shareRequest.days} name={shareRequest.name} exercises={exercises} level={difficultyLevel} uid={user?.uid} lang={lang} onClose={() => dispatchNav({ type: 'SET_SHARE_REQUEST', request: null })} onSignIn={() => { dispatchNav({ type: 'SET_SHARE_REQUEST', request: null }); navigate('settings'); }} />}
       </Suspense>
       {activeTab === 'plan' && hasCurrentPlan && !periodCreating && ['day', 'settings'].includes(planScreen) && <button type="button" data-testid="back-to-week" disabled={editing || savingPlan} onClick={() => openPlanScreen('overview')} className="screen-back"><ArrowLeft size={16} />{t('backToWeek')}</button>}
       {activeTab === 'plan' && hasCurrentPlan && !dateOverview && !periodCreating && planScreen === 'overview' && <Suspense fallback={<p role="status" className="py-8 text-sm text-slate-500">{t('loadingPlan')}</p>}><WeekOverview compact schedule={schedule} exercises={exercises} week={currentWeek} plan={weeklyPlan} context={planningContext} focus={focus} time={time} level={difficultyLevel} lang={lang} t={t} currentDate={today} onEdit={() => openPlanScreen('settings')} onSelectDay={selectPlanDay}><WeeklyChoiceReport report={buildWeeklyChoiceReport(weeklyPlan, exercises)} exercises={exercises} t={t} /><WeeklyBalance schedule={schedule} exercises={exercises} context={planningContext} week={currentWeek} currentDate={today} lang={lang} /></WeekOverview></Suspense>}
       {activeTab === 'plan' && (hasCurrentPlan || dateOverview) && (periodCreating || (dateOverview && planScreen === 'overview')) && <Suspense fallback={<p role="status" className="p-6 text-sm">{t('loadingPlan')}</p>}>{renderPeriodWorkspace()}</Suspense>}
-      {activeTab === 'plan' && planScreen === 'overview' && !periodCreating && plannerTools}
       {activeTab === 'plan' && planScreen === 'overview' && !periodCreating && !user && localPeriod && (localWeeks.length > 1 || Object.keys(localPeriod.sessionsByDate).length > (localPeriod.dates?.length || 0)) && <details className="planner-browse-details"><summary>{lang === 'zh' ? '其他已安排日期' : 'Other scheduled dates'}</summary><label className="block text-sm mb-4">{lang === 'zh' ? '查看已安排的週' : 'Browse scheduled weeks'}<select data-testid="local-plan-view" className="block w-full mt-2 border rounded-xl p-3 bg-white" value={localBrowseWeek} onChange={event => dispatchNav({ type: 'SET_LOCAL_BROWSE_WEEK', week: event.target.value })}><option value="">{lang === 'zh' ? '最近套用日期' : 'Most recently applied dates'} · {localPeriod.range.from} — {localPeriod.range.to}</option>{localWeeks.map(week => <option key={week} value={week}>{dateForWeekDay(week, 1)} — {dateForWeekDay(week, 7)}</option>)}</select></label></details>}
       {activeTab === 'plan' && planScreen === 'overview' && !periodCreating && periodsData.periods.length > 1 && <label className="block text-sm mb-4">{lang === 'zh' ? '已儲存的日期規劃' : 'Saved date ranges'}<select className="block w-full mt-2 border rounded-xl p-3 bg-white" value={selectedPeriod?.periodId || ''} onChange={event => { dispatchNav({ type: 'SET_SELECTED_PERIOD_ID', periodId: event.target.value, resetBrowseWeek: true }); setSavedPeriod(null); }}>{periodsData.periods.map(period => <option key={period.periodId} value={period.periodId}>{period.range.from} — {period.range.to}</option>)}</select></label>}
 
@@ -630,7 +634,9 @@ function FitnessApp({ account, calendar, publicDraft, onPublicDraft, pendingDraf
       </div>}
       {showPlanArea && hasCurrentPlan && (activeTab === 'train' || !['settings', 'saved', 'manual', 'assign'].includes(planScreen)) && !user && (publicDraft || localPeriod) && <details className="save-panel"><summary className="cursor-pointer text-sky-800">{t('localPreview')} · {localPeriod ? (lang === 'zh' ? '登入後重新預覽' : 'Sign in and re-preview') : t('saveAccount')}</summary><p className="mt-2 text-slate-600">{localPeriod ? (lang === 'zh' ? '登入後需要重新預覽並套用日期課表。這台裝置的暫存實際紀錄會保留，可在設定匯出，不會自動存入帳號。' : 'After signing in, preview and apply your date plan again. Temporary actual records stay on this device and can be exported in Settings; they are not automatically saved to your account.') : t('localPreviewHint')}</p><div className="flex flex-wrap gap-2 mt-3"><button disabled={account.busy} onClick={account.guestLogin} className="bg-indigo-600 text-white px-3 py-2 rounded-lg">{localPeriod ? (lang === 'zh' ? '訪客登入後重新預覽' : 'Guest sign-in and re-preview') : t('savePreviewGuest')}</button><button disabled={account.busy} onClick={account.googleLogin} className="bg-white text-sky-800 px-3 py-2 rounded-lg">{localPeriod ? (lang === 'zh' ? 'Google 登入後重新預覽' : 'Google sign-in and re-preview') : t('savePreviewGoogle')}</button></div></details>}
       <Suspense fallback={<div role="status" className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>}>
-        {activeTab === 'library' && <ExerciseLibrary weeklyExerciseIds={planningContext.weeklyExerciseIds} weeklyAvailable={weeklyAvailable} planningContext={planningContext} onToggleWeekly={toggleWeeklyChoice} onOpenWeeklySelection={openWeeklySelection} t={periodQuestionnaireText(lang, t)} lang={lang} canManage={!!user} onOrganize={organizeExercise} onSignIn={() => navigate('settings')} exercises={exercises} createScope={user ? 'account' : 'device'} adding={adding} onAdd={addExercise} onToggle={toggleActive} onDelete={deleteExercise} busy={busy} />}
+        {activeTab === 'library' && (libraryView === 'saved'
+          ? <SavedWorkouts onEdit={item => openManual([{ ...savedWorkoutDay(item, lang), date: today }], item)} store={workoutStore} exercises={exercises} lang={lang} onUse={useWorkout} onShare={item => shareDays(savedWorkoutDay(item, lang), item.name)} />
+          : <ExerciseLibrary weeklyExerciseIds={planningContext.weeklyExerciseIds} weeklyAvailable={weeklyAvailable} planningContext={planningContext} onToggleWeekly={toggleWeeklyChoice} onOpenWeeklySelection={openWeeklySelection} t={periodQuestionnaireText(lang, t)} lang={lang} canManage={!!user} onOrganize={organizeExercise} onSignIn={() => navigate('settings')} exercises={exercises} createScope={user ? 'account' : 'device'} adding={adding} onAdd={addExercise} onToggle={toggleActive} onDelete={deleteExercise} busy={busy} />)}
         {activeTab === 'records' && <div className="max-w-3xl"><div className="screen-header"><p className="eyebrow">{t('recordsEyebrow')}</p><h2 className="screen-title">{t('navRecords')}</h2></div>{subnav([['training', 'trainingRecordsTab'], ['body', 'bodyRecordsTab']], recordsView, view => dispatchNav({ type: 'SET_RECORDS_VIEW', view }), t('navRecords'))}
           {recordsView === 'body' ? (!user ? login : <Metrics t={t} form={metricForm} onChange={changeMetric} onSave={saveMetrics} history={data.metrics} saving={busy} hasMore={data.metrics.length >= metricLimit} onLoadMore={() => setMetricLimit(previous => previous + 365)} />)
             : !user && !publicDraft && !localPeriod ? login : stats && <History t={t} lang={lang} exportUid={user?.uid} publicDraft={localPeriod ? { ...publicDraft, periodDraft: localPeriod, logs: localPeriod.logs } : publicDraft} exportProgress={allProgress} exportDisabled={coachingBusy || busy || savingPlan || generating || editing || !!pendingDraft || (!!user && (!trainingData.loaded || !data.loaded.progress || !data.loaded.exercises))} previewOnly={!user} exercises={exercises} stats={stats} months={months} weeks={heatmapWeeks} logs={exerciseLogs} onUpdateNextDay={recordNextDay} loggingBusy={coachingBusy || busy || savingPlan || generating || editing || !!pendingDraft || (!!user && !trainingData.loaded)} today={today} hasMore={data.hasMoreProgress} onLoadMore={() => setWeekLimit(previous => previous + 104)} />}

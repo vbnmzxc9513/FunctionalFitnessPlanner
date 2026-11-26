@@ -207,6 +207,17 @@ test('openLegacyAI, periodApplied, saved workout assignment, and plan sub-naviga
 
   state = navigationReducer(state, { type: 'ASSIGNMENT_CANCEL' });
   assert.equal(state.planScreen, 'saved');
+
+  // Using a saved workout from Library tab opens date assignment in Plan and returns to Library on cancel.
+  let fromLibrary = init({ activeTab: 'library', planScreen: 'overview' });
+  fromLibrary = navigationReducer(fromLibrary, { type: 'USE_SAVED_WORKOUT', day: { routine: ['bf_A01'] }, name: 'Library fav', returnTab: 'library' });
+  assert.equal(fromLibrary.activeTab, 'plan');
+  assert.equal(fromLibrary.planScreen, 'assign');
+  assert.equal(fromLibrary.assignment.returnTab, 'library');
+
+  fromLibrary = navigationReducer(fromLibrary, { type: 'ASSIGNMENT_CANCEL' });
+  assert.equal(fromLibrary.activeTab, 'library');
+  assert.equal(fromLibrary.planScreen, 'overview');
 });
 
 test('modal and period browse state updates work cleanly', () => {

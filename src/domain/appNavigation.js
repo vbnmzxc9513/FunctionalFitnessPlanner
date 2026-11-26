@@ -113,12 +113,17 @@ export function navigationReducer(state, action) {
     case 'USE_SAVED_WORKOUT':
       return {
         ...state,
-        assignment: { days: [action.day], name: action.name, returnScreen: 'saved' },
+        activeTab: 'plan',
+        assignment: { days: [action.day], name: action.name, returnScreen: 'saved', returnTab: action.returnTab || state.activeTab },
         planScreen: 'assign',
       };
     case 'ASSIGNMENT_CANCEL':
       return state.assignment
-        ? { ...state, planScreen: state.assignment.returnScreen }
+        ? {
+          ...state,
+          activeTab: state.assignment.returnTab || state.activeTab,
+          planScreen: state.assignment.returnTab === 'library' ? 'overview' : state.assignment.returnScreen,
+        }
         : state;
     case 'ASSIGNMENT_APPLIED': {
       const editOrigin = action.editOrigin;

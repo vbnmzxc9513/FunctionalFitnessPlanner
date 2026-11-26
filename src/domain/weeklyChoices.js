@@ -58,11 +58,22 @@ export function weeklyChoiceCoverage(ids, exercises) {
 }
 
 export function buildWeeklyChoiceReport(plan, exercises, context = {}, available = {}, week, source = 'template') {
+  const provenEquipment = new Set();
+  for (const day of plan?.schedule || []) {
+    for (const itemId of day.routine || []) {
+      const options = exercises[itemId]?.equipmentOptions;
+      if (!Array.isArray(options) || !options.length) continue;
+      const required = options[0].filter(eq => options.every(opt => opt.includes(eq)));
+      for (const eq of required) provenEquipment.add(eq);
+    }
+  }
+  const provenEquipmentList = [...provenEquipment];
   return weeklyChoiceIds(plan?.weeklyIntent?.weeklyExerciseIds).map(id => {
     const days = (plan.schedule || []).filter(day => day.routine.includes(id)).map(day => day.day);
     if (days.length) return { id, days, reason: 'planned' };
     if (!week) return { id, days, reason: 'omitted' };
     const conditionsKnown = Array.isArray(context.equipment);
+    const equipmentProvenAvailable = Boolean(exercises[id]) && equipmentChoices(exercises[id], provenEquipmentList).length > 0;
     const blocked = conditionsKnown ? weeklyChoiceBlockReason(id, exercises, context, available) : null;
     const protectedWeek = (plan.schedule || []).length > 0 && plan.schedule.every(day => {
       const away = competitionDaysAway(context.competitionDate, day.date || dateForWeekDay(week, day.day));
@@ -71,7 +82,7 @@ export function buildWeeklyChoiceReport(plan, exercises, context = {}, available
     const hasFixedOpening = day => isDailyWarmupComplete(day) || day.routine.some(item => exercises[item]?.sequenceMinutes);
     const fixedOpening = weeklyChoicePhase(id, exercises[id]) === 'warmup' && (plan.schedule || []).some(hasFixedOpening) && !(plan.schedule || []).some(day => day.sessionType === 'training' && !hasFixedOpening(day));
     const noStrength = weeklyChoicePhase(id, exercises[id]) === 'strength' && !(plan.schedule || []).some(day => day.prescriptions?.some(dose => dose.phase === 'strength'));
-    return { id, days, reason: blocked || (source !== 'template' ? 'omitted' : protectedWeek ? 'competition' : noStrength ? 'no_strength' : fixedOpening ? 'warmup_flow' : !conditionsKnown ? 'conditions_unknown'
+    return { id, days, reason: blocked || (source !== 'template' ? 'omitted' : protectedWeek ? 'competition' : noStrength ? 'no_strength' : fixedOpening ? 'warmup_flow' : (!conditionsKnown && !equipmentProvenAvailable) ? 'conditions_unknown'
       : recoveryDecision(context).action !== 'normal' ? 'recovery' : 'capacity') };
   });
 }

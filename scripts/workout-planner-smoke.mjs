@@ -162,7 +162,7 @@ try {
     await page.waitForFunction(date => JSON.parse(localStorage.getItem('fitness_date_period_v1')).sessionsByDate[date], {}, thirdDate);
     assert.equal((await period()).sessionsByDate[thirdDate].routine.length, 14, `${layout}: full strength quick workout can review and apply to a new date`);
     step = `${layout}: traditional saved workout date assignment remains available`;
-    await clickSelector('[data-testid="open-saved-workouts"]'); await visible('[data-testid="saved-workout-open"]'); await clickSelector('[data-testid="saved-workout-open"]');
+    await click('動作庫'); await clickSelector('[data-testid="open-saved-workouts"]'); await visible('[data-testid="saved-workout-open"]'); await clickSelector('[data-testid="saved-workout-open"]');
     await visible('[data-testid="saved-workout-detail"]');
     assert.equal(await page.$eval('[data-testid="saved-workouts"] h2', item => item.innerText), `手動排課煙霧測試 ${layout}`);
     await click('選日期套用'); await click('逐天指定'); await fill('input[aria-label="第 1 天套用日期"]', secondDate);
@@ -184,7 +184,7 @@ try {
     await visible(`[data-testid="period-day-${secondDate}"]`);
 
     step = `${layout}: share a copy from saved workouts`;
-    await clickSelector('[data-testid="open-saved-workouts"]'); await clickSelector('[data-testid="saved-workout-open"]'); await clickSelector(`article button[aria-label="分享 手動排課煙霧測試 ${layout}"]`);
+    await click('動作庫'); await clickSelector('[data-testid="open-saved-workouts"]'); await clickSelector('[data-testid="saved-workout-open"]'); await clickSelector(`article button[aria-label="分享 手動排課煙霧測試 ${layout}"]`);
     await click('建立分享連結'); await visible('[role="dialog"] input[readonly]');
     const link = await page.$eval('[role="dialog"] input[readonly]', item => item.value);
     const payload = decodePlanPayload(new URL(link).hash.slice('#program='.length));

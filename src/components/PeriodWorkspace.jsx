@@ -590,6 +590,7 @@ export default function PeriodWorkspace({
       preview.profile?.context,
       manualPlanningExercises(exercises, preview.profile?.context),
       preview.sessions?.[0]?.week,
+      preview.source || 'template',
     )
     : [];
   const update = (key, value) => setProfile(previous => ({ ...previous, [key]: typeof value === 'function' ? value(previous[key]) : value }));
@@ -647,9 +648,13 @@ export default function PeriodWorkspace({
         {en ? `Scheduled ${choices.filter(item => item.days.length).length} / ${choices.length}` : `已排入 ${choices.filter(item => item.days.length).length} / ${choices.length}`}
         {choices.some(item => !item.days.length) && (
           <span className="block text-amber-800 mt-1">
-            {en
-              ? 'Some selected movements are missing. Review the reasons below or go back to adjust before applying.'
-              : '有手選動作未安排。請查看下方原因，或返回調整後再套用。'}
+            {stage === 'overview'
+              ? (en
+                ? 'Some selected movements were not included in this week. Check the reasons below, or add them on any day with +/- Exercises.'
+                : '部分手選動作未排入本週，下方為原因說明；需要時可在當日點「± 增減動作」手動加入。')
+              : (en
+                ? 'Some selected movements are missing. Review the reasons below or go back to adjust before applying.'
+                : '有手選動作未安排。請查看下方原因，或返回調整後再套用。')}
           </span>
         )}
       </p>

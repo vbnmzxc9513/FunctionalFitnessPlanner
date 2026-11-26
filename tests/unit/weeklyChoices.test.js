@@ -109,3 +109,42 @@ test('new preferences stay out of public links and hosted AI rejects malformed s
   for (const change of [{ weeklyExerciseIds: ['bad/id'] }, { weeklyExerciseIds: ['bf_B03', 'bf_B03'] }, { sorenessRegions: ['fake'] }, { sorenessRegions: ['hip', 'ankle', 'thoracic'] }]) assert.throws(() => normalizeTrialInput({ context: { ...profile, ...change }, dailyTime: 35 }, normalizePlanningContext, EQUIPMENT));
   assert.deepEqual(Object.keys(SELECTION_TRANSLATIONS.zh).sort(), Object.keys(SELECTION_TRANSLATIONS.en).sort());
 });
+
+test('saved overview without stored equipment distinguishes bodyweight/proven-equipment capacity from unproven equipment and AI trade-offs', () => {
+  const savedPlan = {
+    weeklyIntent: { weeklyExerciseIds: ['bf_B01', 'bf_B02', 'bf_B10', 'bf_C02'] },
+    schedule: [
+      { day: 2, date: '2026-11-24', sessionType: 'training', routine: ['bf_B02'], prescriptions: [{ id: 'bf_B02', phase: 'strength' }] },
+      { day: 3, date: '2026-11-25', sessionType: 'training', routine: ['bf_C02'], prescriptions: [{ id: 'bf_C02', phase: 'strength' }] },
+    ],
+  };
+  // Without stored equipment and without any dumbbell-only scheduled move:
+  // bf_B01 (split squat, bodyweight-capable) -> capacity (not conditions_unknown)
+  // bf_B10 (goblet squat, dumbbell-only, unproven) -> conditions_unknown
+  const cloudReport = buildWeeklyChoiceReport(savedPlan, exercises, {}, {}, '2026-W48', 'template');
+  assert.deepEqual(
+    cloudReport.map(({ id, reason }) => [id, reason]),
+    [['bf_B01', 'capacity'], ['bf_B02', 'planned'], ['bf_B10', 'conditions_unknown'], ['bf_C02', 'planned']],
+  );
+
+  // When another scheduled move strictly requires dumbbell (e.g. bf_C11), bf_B10 is also proven available -> capacity.
+  const planWithDumbbell = {
+    ...savedPlan,
+    schedule: [
+      ...savedPlan.schedule,
+      { day: 5, date: '2026-11-27', sessionType: 'training', routine: ['bf_C11'], prescriptions: [{ id: 'bf_C11', phase: 'strength' }] },
+    ],
+  };
+  const provenReport = buildWeeklyChoiceReport(planWithDumbbell, exercises, {}, {}, '2026-W48', 'template');
+  assert.deepEqual(
+    provenReport.map(({ id, reason }) => [id, reason]),
+    [['bf_B01', 'capacity'], ['bf_B02', 'planned'], ['bf_B10', 'capacity'], ['bf_C02', 'planned']],
+  );
+
+  // AI-generated plans report 'omitted' rather than 'conditions_unknown'.
+  const aiReport = buildWeeklyChoiceReport(savedPlan, exercises, {}, {}, '2026-W48', 'ai');
+  assert.deepEqual(
+    aiReport.map(({ id, reason }) => [id, reason]),
+    [['bf_B01', 'omitted'], ['bf_B02', 'planned'], ['bf_B10', 'omitted'], ['bf_C02', 'planned']],
+  );
+});
