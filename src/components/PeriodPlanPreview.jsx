@@ -314,15 +314,16 @@ export default function PeriodPlanPreview({ preview, lang = 'zh', t = key => key
             </div>
           </details>
         )}
-        <details data-testid="period-plan-conditions" className="period-secondary"><summary>{en ? 'Goals, conditions and weekly balance' : '查看規劃重點、條件與部位平衡'}</summary><div className="period-secondary-content">
-          <p data-testid="period-equipment-summary" className="text-sm text-slate-600">{t('equipmentLabel')}：{equipmentKnown ? conditions.equipment.length ? conditions.equipment.map(item => t(`equipment_${item}`)).join('、') : t('equipment_bodyweight') : en ? 'Not preserved in this saved summary; check preferences before replanning.' : '這份儲存摘要未保留器材條件；重排前請確認問卷。'}</p>
-          <PlanningConditions context={conditions} time={preview.profile?.time} {...{ lang, t }} equipment={false} />
-          <section className="space-y-3" aria-label={p('summary')}><h3 className="font-bold">{p('summary')}</h3><p data-testid="period-minutes-scope" className="text-xs text-slate-500">{p('minutesScope')}</p>{weeklySummaries.map(summary => <div key={summary.week} className="rounded-xl bg-sky-50 p-4 text-sm space-y-2"><p className="font-semibold">{summary.from} – {summary.to}</p><p>{p('goal')} · {p(summary.focus || 'balanced')}</p>{eventSummary(summary) && <p className="text-amber-800" data-testid="period-event-summary">{eventSummary(summary)}</p>}<p>{summary.trainingSessions ?? 0} {p('count')} · {summary.recoverySessions ?? 0} {p('recovery')} · {summary.restDays ?? 0} {p('rest')} · {summary.minutes ?? 0} {p('minutes')}</p></div>)}</section>
-          <TrainingTargetOverview {...{ sessions, exercises, lang, t }} regions={conditions?.targetRegions} />
-          <MobilityOverview sessions={sessions} exercises={exercises} context={conditions} lang={lang} testId="period-mobility-overview" />
-        </div></details>
+        {onApply && (
+          <details data-testid="period-plan-conditions" className="period-secondary"><summary>{en ? 'Goals, conditions and weekly balance' : '查看規劃重點、條件與部位平衡'}</summary><div className="period-secondary-content">
+            <p data-testid="period-equipment-summary" className="text-sm text-slate-600">{t('equipmentLabel')}：{equipmentKnown ? conditions.equipment.length ? conditions.equipment.map(item => t(`equipment_${item}`)).join('、') : t('equipment_bodyweight') : en ? 'Not preserved in this saved summary; check preferences before replanning.' : '這份儲存摘要未保留器材條件；重排前請確認問卷。'}</p>
+            <PlanningConditions context={conditions} time={preview.profile?.time} {...{ lang, t }} equipment={false} />
+            <section className="space-y-3" aria-label={p('summary')}><h3 className="font-bold">{p('summary')}</h3><p data-testid="period-minutes-scope" className="text-xs text-slate-500">{p('minutesScope')}</p>{weeklySummaries.map(summary => <div key={summary.week} className="rounded-xl bg-sky-50 p-4 text-sm space-y-2"><p className="font-semibold">{summary.from} – {summary.to}</p><p>{p('goal')} · {p(summary.focus || 'balanced')}</p>{eventSummary(summary) && <p className="text-amber-800" data-testid="period-event-summary">{eventSummary(summary)}</p>}<p>{summary.trainingSessions ?? 0} {p('count')} · {summary.recoverySessions ?? 0} {p('recovery')} · {summary.restDays ?? 0} {p('rest')} · {summary.minutes ?? 0} {p('minutes')}</p></div>)}</section>
+            <TrainingTargetOverview {...{ sessions, exercises, lang, t }} regions={conditions?.targetRegions} />
+            <MobilityOverview sessions={sessions} exercises={exercises} context={conditions} lang={lang} testId="period-mobility-overview" />
+          </div></details>
+        )}
         {choiceReport}
-        {preview.conclusion && <details className="period-secondary"><summary>{p('conclusion')}</summary><p className="period-secondary-content whitespace-pre-wrap text-sm text-slate-600 leading-relaxed">{preview.conclusion}</p></details>}
       </div>
       {onApply && onEditWorkout && <button type="button" className="period-text-action" data-testid="period-edit-draft" onClick={() => onEditWorkout(sessions)}><Pencil size={17} />{en ? 'Adjust this draft with quick combos or my favorites' : '用快速組合或我的收藏調整這份草稿'}</button>}
       {onApply && <p className="period-readonly-hint">{p('previewHint')} {p('scope')}</p>}

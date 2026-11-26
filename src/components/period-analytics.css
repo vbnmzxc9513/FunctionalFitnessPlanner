@@ -157,11 +157,12 @@
 .coach-report-card {
   border: 1px solid var(--brand-soft-border);
   background: linear-gradient(180deg, var(--brand-tint) 0%, var(--surface-card) 48%);
-  border-radius: 1.15rem;
-  padding: 1.1rem;
-  margin-bottom: 1.15rem;
+  border-radius: 1.05rem;
+  padding: 1rem;
+  margin-top: 14px;
+  margin-bottom: 14px;
   display: grid;
-  gap: 0.9rem;
+  gap: 0.8rem;
 }
 
 .coach-report-header {
@@ -175,8 +176,8 @@
 .coach-report-header h3 {
   margin: 0;
   color: var(--ink-strong);
-  font-size: 1.05rem;
-  font-weight: 700;
+  font-size: 0.98rem;
+  font-weight: 600;
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
